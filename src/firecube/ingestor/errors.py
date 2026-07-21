@@ -1,0 +1,79 @@
+# Copyright 2025-2026 EUMETSAT
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Exceptions for Firecube Ingestor."""
+
+from firecube.core.errors import (
+    FirecubeError,
+    ManifestError,
+    SchemaDriftError,
+    StorageError,
+)
+
+
+class IngestorError(FirecubeError):
+    """Base exception for all ingestor-layer errors."""
+
+
+class ConfigurationError(IngestorError):
+    """Configuration validation failed."""
+
+
+class SchemaSizeMismatchError(IngestorError):
+    """Raised when an existing Zarr array's shape is smaller than the global expected size.
+
+    Existing arrays mismatch the plan. Either delete them or update the plan to match.
+    """
+
+
+class ResumeConflictError(IngestorError):
+    """Resume/overwrite conflict detected."""
+
+
+class RangeOverlapError(ResumeConflictError):
+    """Raised when a new slot-range invocation overlaps with an active non-terminal run.
+
+    Overlapping ranges risk Zarr chunk-boundary corruption.
+    Abandon the conflicting run first: firecube chunks runs abandon ...
+    """
+
+
+class StagedMetadataError(IngestorError):
+    """Staged metadata seeding failed for an existing staged-write target.
+
+    Raised by ``seed_staged_store_metadata`` (strict mode) when zarr.json
+    metadata cannot be copied from the final target into the temp store.
+    """
+
+
+class WriteIntentRangeError(IngestorError):
+    """Raised when a WriteIntent's ts_index falls outside the assigned slot range.
+
+    This is a correctness violation — the plugin filter is advisory; this error
+    is the mandatory backstop. NEVER silently drop out-of-range intents.
+    """
+
+
+__all__ = [
+    "ConfigurationError",
+    "IngestorError",
+    "ManifestError",
+    "RangeOverlapError",
+    "ResumeConflictError",
+    "SchemaDriftError",
+    "SchemaSizeMismatchError",
+    "StagedMetadataError",
+    "StorageError",
+    "WriteIntentRangeError",
+]

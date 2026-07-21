@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "slot-shape-test-plugin"
+version = "0.1.0"
+dependencies = ["numpy"]
+
+[project.entry-points."firecube.plugins"]
+fixed_epoch_shape_plugin = "slot_shape_test_plugin:FixedEpochShapeIngestor"
+option_epoch_shape_plugin = "slot_shape_test_plugin:OptionEpochShapeIngestor"

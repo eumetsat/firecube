@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 420" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube performance phases</title>
+  <desc id="desc">A Firecube run has preprocessing, write, and optional staged upload phases. Metrics help identify which phase is the bottleneck.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5d6b78}
+      .source{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .work{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .write{fill:#ffffff;stroke:#2f9d65;stroke-width:2}
+      .upload{fill:#fff9e8;stroke:#d89b00;stroke-width:2}
+      .metrics{fill:#f3f1ff;stroke:#6f62d2;stroke-width:2}
+      .line{stroke:#3b4652;stroke-width:2.3;fill:none;marker-end:url(#arrow)}
+      .thin{stroke:#667381;stroke-width:1.7;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="56" y="106" width="172" height="96" rx="12" class="source"/>
+  <text x="142" y="142" text-anchor="middle" class="label">Source files</text>
+  <text x="142" y="168" text-anchor="middle" class="small">discover, read</text>
+  <text x="142" y="188" text-anchor="middle" class="hint">file count, bytes</text>
+
+  <path class="line" d="M228 154 H292"/>
+
+  <rect x="292" y="86" width="188" height="136" rx="12" class="work"/>
+  <text x="386" y="127" text-anchor="middle" class="label">Preprocess</text>
+  <text x="386" y="153" text-anchor="middle" class="small">parse, decode, shape</text>
+  <text x="386" y="177" text-anchor="middle" class="hint">pipeline_workers</text>
+  <text x="386" y="198" text-anchor="middle" class="hint">pipeline_batch_size</text>
+
+  <path class="line" d="M480 154 H544"/>
+
+  <rect x="544" y="86" width="188" height="136" rx="12" class="write"/>
+  <text x="638" y="127" text-anchor="middle" class="label">Write</text>
+  <text x="638" y="153" text-anchor="middle" class="small">Zarr or Parquet</text>
+  <text x="638" y="177" text-anchor="middle" class="hint">chunks, sharding</text>
+  <text x="638" y="198" text-anchor="middle" class="hint">compression</text>
+
+  <path class="line" d="M732 154 H796"/>
+
+  <rect x="796" y="86" width="188" height="136" rx="12" class="upload"/>
+  <text x="890" y="127" text-anchor="middle" class="label">Upload</text>
+  <text x="890" y="153" text-anchor="middle" class="small">staged mode only</text>
+  <text x="890" y="177" text-anchor="middle" class="hint">upload_workers</text>
+  <text x="890" y="198" text-anchor="middle" class="hint">network bandwidth</text>
+
+  <rect x="292" y="282" width="440" height="74" rx="12" class="metrics"/>
+  <text x="512" y="313" text-anchor="middle" class="label">Measure the split</text>
+  <text x="512" y="337" text-anchor="middle" class="small">pipeline time, upload time, wait time, errors, files processed</text>
+
+  <path class="thin" d="M386 222 V274"/>
+  <path class="thin" d="M638 222 V274"/>
+  <path class="thin" d="M890 222 V250 H732 V282"/>
+</svg>

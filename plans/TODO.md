@@ -1,0 +1,376 @@
+# TODO
+
+Accepted work only. Speculative ideas go to [IDEAS.md](IDEAS.md) until a design discussion promotes them.
+New decisions are recorded in [DONE.md](DONE.md) with a date.
+
+## Active Work
+
+### §29 Test suite overhaul
+
+**Goal:** Reduce noisy static/docs failures and raise behavioral bug-detection
+power in the default test loop.
+
+**Current state:**
+- The default test loop must prioritize runtime behavior over static prose,
+  broad snapshots, and implementation-shape checks.
+- Test quality rules live in [TESTING_STANDARDS.md](TESTING_STANDARDS.md).
+- High-risk missing behavior coverage lives in [TEST_GAPS.md](TEST_GAPS.md).
+- Generic tests must use neutral sample product/plugin names unless the test is
+  explicitly about an external plugin migration path.
+
+**Direction:**
+1. Keep the fast lane focused on behavior and failure modes.
+2. Keep docs/static/help checks narrow, semantic, and outside the default
+   behavioral signal when practical.
+3. Replace mock-heavy or assertion-light tests with real behavior tests around
+   deletion, workspace cleanup, storage operations, plugin management, and
+   source readers.
+4. Prioritize the P0/P1 gaps in [TEST_GAPS.md](TEST_GAPS.md).
+
+**Acceptance criteria:**
+- Default development and CI lanes are explicit and documented.
+- A one-line help/prose diff does not fail the fast behavioral lane.
+- Strict collection has no unexpected dependency skips.
+- Every remaining xfail names an accepted TODO item and removal condition.
+- The highest-risk control-plane and deletion bugs are covered by behavior
+  tests, not only static checks.
+
+---
+
+### §8 Tensogram ingest routing
+
+**Goal:** Clarify whether `GenericTensogramIngestor` is a public plugin base class, an internal write-path adapter, or both.
+
+**Current state:**
+- `GenericTensogramIngestor` exists in `src/firecube/ingestor/templates/generic_tensogram.py` and is exported from `firecube.ingestor.api`.
+- `firecube ingest --output-format tensogram` currently accepts only plugins based on `GenericZarrIngestor`, then dynamically borrows `GenericTensogramIngestor._process_batch`.
+- A plugin that directly subclasses `GenericTensogramIngestor` appears likely to be rejected by the current CLI guard because it is not a `GenericZarrIngestor` subclass.
+- `GenericTensogramIngestor` currently supports only local `.tgm` targets.
+
+**Decision (2026-06-11):** Tensogram is BOTH the archive format and a proper public output format, with the same first-class status as `GenericZarrIngestor`. `GenericTensogramIngestor` is a public plugin base class: direct subclassing must be supported and CLI-routable, the runtime `type()` class synthesis in `cli/main.py` must be replaced with explicit strategy/capability routing, and the local-only target restriction must be lifted via staged upload (reusing the `archive create` temp-file + transfer pattern). See `plans/AUDIT.md` (C4).
+
+**Phase 0 — DONE (2026-06-11):** tensogram dependency upgraded `0.17.0` → `0.21.0` (all three packages, pins `>=0.21.0,<0.22`). See DONE.md 2026-06-11 for details, including the legacy-archive validate fix and the checked-in 0.17 compat fixture.
+
+**Verified broken today (evidence for Phase 1, confirmed identical on tensogram 0.17 and 0.21 — pre-existing, not upgrade regressions):**
+- `firecube ingest <plugin> --output-format tensogram --target file://.../out.tgm` fails with `[Errno 21] Is a directory`: the control-plane root (`.firecube/`) is created *inside* the `.tgm` target path before the strategy writes, turning the target into a directory. The synthesized-class path inherits zarr-oriented target preparation that is wrong for a single-file format.
+- Archive restore loses time-coordinate encoding: CF `units`/`calendar` live in xarray `.encoding` and are never serialized by the converter, so restored cubes get a raw float64 ns-epoch time coord that xarray cannot decode back to datetime64. Restored variables also receive the raw base-entry dict (`name`, `zarr_chunks`, `zarr_compressor`, `zarr_fill_value`, nested `attrs`) as variable attrs — metadata pollution. Fix: serialize variable `.encoding` (at least time units/calendar) into the firecube message metadata and reapply on restore; map only real attrs onto restored variables. **Ownership: this is a firecube bug, not a tensogram one** — the metadata frame is free-form (room to store encoding), the engine's base-entry passthrough is fed by keys we put there, and our restore path already post-processes the decoded dataset. No upstream change required; optional upstream nice-to-haves (a variable-attrs convention in tensogram-xarray base entries, a logical datetime64 dtype hint in tensogram descriptors) are tracked in IDEAS.md, not blockers.
+
+**Phase 1 — DONE (2026-06-11):** `DatasetProducer` protocol defined in `ingestor/contracts/`; CLI `type()` synthesis removed; direct `GenericTensogramIngestor` subclasses are now CLI-routable via protocol-checked strategy selection. `_GenericBatchIngestor` dissolved; `GenericZarrIngestor` and `GenericTensogramIngestor` re-parented directly onto `BaseIngestor`. Evidence: `tests/unit/test_tensogram_routing.py`, `tests/unit/test_template_hierarchy.py`. See DONE.md 2026-06-11 audit dispositions C3, C4.
+
+**Phase 2 plan (separate feature branch) — OPEN:**
+1. Fix single-file target handling: control-plane root must not be created inside a `.tgm` path (product-local control plane next to the file, or workspace-local) — resolves the `Is a directory` failure above.
+2. Lift the local-only restriction via staged write: `.tgm` to the run workspace, upload through `StorageSession`/`create_filesystem` (extract the existing `archive create` remote pattern). `--write-mode staged` for remote targets; `direct` stays local-only with a loud error. One-driver invariant respected.
+3. Control-plane parity: record spans with `SpanCoverage(write_strategy="tensogram", time_dim_name=...)`. Decide ResumeGuard semantics for an overwrite-only format (recommended: each run replaces prior spans for the same slice, `force_reingest`-like).
+4. Restore fidelity: fix the time-encoding loss and attrs pollution described above; adopt `verify_hash=True` on decode/restore when frames carry `HASH_PRESENT` (0.21 feature; legacy frames skip with a note, mirroring the validate behavior shipped in Phase 0).
+5. Config hygiene: implement or delete the unused `tensogram_message_granularity` field in `TensogramTemplateConfig`.
+6. Public surface: scaffolding template, `tests/fixtures/tensogram_capable_test_plugin` (added to the conftest sessionstart guard), remote staged-upload integration test (moto), golden-help regen.
+7. Docs + doctrine: output-format page under `docs/concepts/output-formats/` (via `write-user-doc`/`write-plugin-doc` prompts), DONE.md entry closing §8, AGENTS.md "Where things live" update.
+
+---
+
+### §5 Catalog and standards integration
+
+**Goal:** Build a bridge from Firecube's internal view (Zarr + WAL-backed control-plane records) to higher-level discovery standards.
+
+**Direction:**
+- Starting from existing Intake support, explore emitting STAC or OGC EDR-style metadata as optional helpers.
+- Keep this layer optional and generic. Firecube should not lock users into a single discovery stack.
+
+---
+
+### §7 Safe parallel ingestion patterns
+
+**Goal:** Parallelize ingestion on Kubeflow/Argo safely without ACID/Icechunk complexity.
+
+**Current state:**
+- `AppendStrategy` (used by `GenericZarrIngestor`) serializes writes with a process-local lock. `pipeline_workers>1` parallelizes preprocessing but still writes one batch at a time.
+- `IndexedRegionStrategy` (used by `DirectZarrIngestor`) writes pre-planned, disjoint index ranges via `RegionZarrWriter`. No appends. `IndexedRegionStrategy.write_groups()` auto-computes `expected_time_count` from `WriteIntent.ts_index`; undersized timestamped arrays hard-fail instead of resizing at write time. This is the building block for safe parallelism.
+- `FilesystemClaimService` (`src/firecube/core/controlplane/claims.py`) provides exclusive write claims with heartbeat-based stale detection.
+- T3 (§7-GENERIC) complete: `GenericZarrIngestor` now uses `WriteDomain(category="zarr_append", ...)` — the construction lives in `src/firecube/ingestor/runtime/zarr/batch_runner.py` since the §22 facade thinning, wired from `templates/generic.py`; integration fixtures updated in `tests/integration/test_maintenance_claims.py` and `tests/integration/test_obstore_claim_atomicity.py`. Code commit: `6329217`.
+- T2 (§7-DIRECT) complete: `DirectZarrIngestor` now uses `WriteDomain(category="zarr_region", name=f"{group}:schema")` for schema setup and `WriteDomain(category="zarr_region", name=f"{group}:slot={ts_index}")` for per-slot intent dispatch via optional `claim_for_slot`. `IndexedRegionStrategy.write_groups()` groups intents by `ts_index` and uses fallback `claim_for_slot → claim_for_group → nullcontext`.
+
+**Verified evidence (from review)**: `DirectZarrIngestor.claim_for_group()` used to build `WriteDomain(product=product, category="zarr_group", name=str(group_name))` — per-group granularity only. §7-DIRECT changed this to schema and per-slot `zarr_region` claims. The remaining safe-parallelism gap is the planner/orchestrator layer that assigns deterministic, disjoint index ranges before dispatch.
+
+**Recommended safe model today:** Append writes serialize to one writer per `(product, group)`. DirectZarr writes may run concurrently only across pods with pre-planned disjoint slot/group ranges via the `firecube zarr slots` planner. Do not rely on intra-pod `pipeline_workers > 1` for write parallelism on DirectZarr templates: the per-slot claim has no retry loop, so any same-slot collision between in-flight batches fails hard (empirically reproduced 2026-07-12). For large per-slot payload plugins (e.g. MTG FCI FDHSI: ~14.8 GiB/slot measured), scale via `pipeline_workers=1` × N disjoint-range pods; total cluster memory is unchanged but sized per-pod it fits standard nodes.
+
+**§7-sub / Phase 3 planner — DONE (2026-05-28):** See DONE.md (section 7-sub) for full deliverables. Engine/template-level planner with deterministic time-to-index mappings, chunk-aligned ranges, `firecube zarr slots` JSON output, `firecube zarr preallocate` schema preflight, `--slot-start/--slot-end/--slot-size` CLI flags, K8s env discovery, 6-row ResumeGuard conflict matrix, and per-pod `run_id` derivation are all shipped. (These commands originally shipped as `firecube plan` / `firecube zarr setup-schema` and were later renamed.)
+
+    **§7-Phase 3.1 hardening — DONE (2026-05-28):** See DONE.md §7-Phase 3.1 for full deliverables. Closes 5 safety gaps surfaced by external review: strict `global_expected` coverage enforcement, intent-group-in-schema hard fail, all-arrays chunk validation, `--slot-group` CLI flag + env var, group-aware ResumeGuard, slot-range-aware completed-span check, split bypass semantics (`resume_existing` vs `force_reingest`), and `--slot-group` propagation through capability gate + plan output. All 4 Final Verification reviewers approved. Commits: C1=94d167e, C2=4a5212e, C3=ba90260.
+    **Phase 3.2 follow-up DONE (2026-05-29):** See DONE.md §7-Phase 3.2 for full deliverables. Closes 6 review issues: run_id slot_group isolation, strict schema validation via SchemaDriftError + verify_array_spec, per-group slot_size in firecube plan, _ParallelExecutionState + ctx._ctx escape removal, pod-startup schema verification + audit record, docs drift cleanup. All 4 Final Verification reviewers approved. Commits: C1=37f7521, C2=80583a2, C3=84bb1bb, C4=6b6f3a1, C5=450f8f7, C6=416a4b6.
+    **Phase 3.3 external-review follow-up DONE (2026-05-29):** See DONE.md §7-Phase 3.3 for full deliverables. Closes 6 external-review issues: sequential slot filter parity, terminal partial chunk + plan-to-ingest contract, URL-encoded slot_group in run_id + WAL reader, phantom group prevention in capability gate + pod-startup, operator docs refresh, sharding test assertion strengthening. All 4 Final Verification reviewers approved. Commits: C1=9fce649, C2=545689f, C3=40977ca, C4=8fc455d, C5=c6fd238, C6=269acdf.
+    **Phase 3.4 external-review follow-up DONE (2026-05-30):** See DONE.md §7-Phase 3.4 for full deliverables. Closes 3 additional review issues: phantom global_expected validation added to the planner CLI preflights (now `firecube zarr slots` + `firecube zarr preallocate`), warn_if_misaligned terminal-partial awareness, sharding test spy on xr.Dataset.chunk. All 4 Final Verification reviewers approved. Commits: C1=604a4d8, C2=a9fc6e8, C3=adf41dd.
+    **Phase 3.5 external-review follow-up DONE (2026-05-30):** See DONE.md §7-Phase 3.5 for full deliverables. Closes 2 additional review issues: firecube plan fail-closed on blocked partial-chunk ranges (silent slot-loss bug fixed), zarr_schema() called exactly once per plan invocation. All 4 Final Verification reviewers approved. Commits: C1=2992425, C2=8fda71a. Phase 3.6 follow-up DONE 2026-05-30 (closes 1 additional review issue). Phase 3.7 follow-up DONE 2026-05-30 (closes 2 additional review issues: CLI error remediation text + operator docs refresh). Phase 3.8 follow-up DONE 2026-05-31 (closes 2 additional review issues: delete-span remediation now includes --product/--force/full safety flow + regression test strengthened to lock runnable shape).
+
+    **Builds on:** §4a (DONE.md) — `IndexedRegionStrategy` is the missing primitive that enables disjoint-region writes. §21, §23, §23-AUTO, §7-DIRECT, §7-sub, and Phase 3.1 are all DONE as of 2026-05-28. Safe within-group parallelism is fully delivered for `DirectZarrIngestor` plugins.
+
+---
+
+### §F3 Lazy WriteIntent payload (generalized to time-indexed data)
+
+**Goal:** Reduce DirectZarr per-slot peak memory during the write phase without changing the plugin API contract, by making `WriteIntent.data` support just-in-time payload materialization.
+
+**Trigger evidence (2026-07-12):**
+- MTG FCI L1C FDHSI baseline measured ~14.8 GiB retained per worker (single-worker smoke tests, full memray attribution 99.9% accounted). Dominant payload: `pixel_time` float64, ~9.4 GiB (~66%), time-indexed region intents.
+- Operator-observed 12-worker × 12-slot 2h ingest reached ~178 GiB total per pod, consistent with linear scaling of the per-worker per-slot retention.
+- Plugin-side sub-batching empirically ruled out (2026-07-12 POC): three configurations (baseline / naive internal iteration / cached internal iteration) plateau together within noise at the baseline retention level. Root cause: `build_write_intents()` returns a materialized `list[WriteIntent]` whose ndarrays remain live until `write_groups()` completes; internal iteration reshapes order but not retention.
+- Multi-batch sub-batching variants (yield-per-nc_part `discover_source_files`) additionally blocked by: per-slot claim has no retry (deterministic reproduction of `ClaimConflictError`, 2026-07-12); `CoverageTracker` records at `(group, ts_index)` only (mid-slot crash-resume produces silently incomplete data).
+
+**Architectural shape:**
+- `WriteIntent.data: np.ndarray | Callable[[], np.ndarray] | Any` — additive union.
+- Core resolves the callable just before dispatch in `_dispatch_intent` / `_dispatch_static_intent` (`indexed_region.py`).
+- Eager `ndarray` path remains valid. Existing plugins unchanged.
+- All six preflight invariants preserved: slot-range validation, `expected_time_count` autosize, `allow_grow`, group presence validation, per-slot claim grouping, `len(intents)` metric.
+
+**Design constraints that must be addressed:**
+1. **Scratch lifetime.** Plugin-side batch scratch that deletes on `build_write_intents` exit (e.g. MTG's `BatchScratch`) invalidates closures that read from scratch files. Either extend scratch past write time (new lifecycle contract), or require callables to read from stable source inputs only.
+2. **Plugin-side provider caches.** Providers like `LatLonProvider._cache` retain arrays independently of the intent list. Lazy intent payloads do not free them. This is a separate plugin concern to document, not fix here.
+3. **Static array resume check.** `_dispatch_static_intent` in `indexed_region.py` fully materializes the existing on-disk array for NaN-aware comparison on resume. Until this comparison is revisited, lazy static payloads do not shrink resume peak.
+4. **`kind="1d"` and `kind="timestamp"` payloads.** Small enough that laziness is not required; scope may be limited to `kind="region"` and `kind="static"` initially.
+
+**Alternatives explicitly rejected:**
+- Iterator-lazy `build_write_intents` (`-> Iterable[WriteIntent]`): breaks all six preflight invariants; saves list-container refs only, not payload bytes. See DESIGN.md "Risks To Avoid".
+- Plugin-side sub-batching with shared `ts_index` (nc_part / tile / channel per batch): per-slot claim raises `ClaimConflictError` on any concurrent second acquirer (no retry loop at the dispatch site); `CoverageTracker` records at `(group, ts_index)` only, so mid-slot crash-resume produces silently incomplete slots (data-integrity hazard); per-batch `BatchScratch` cleanup on the multi-batch variant would force ~40× ZIP re-extraction. Internal-iteration sub-batching (single batch, chunked emission) is safe but empirically ineffective (2026-07-12 POC: three configurations plateau within noise at the baseline retention level). See DESIGN.md "Risks To Avoid".
+
+**Acceptance criteria:**
+- Callable payloads accepted by `_dispatch_intent` and `_dispatch_static_intent` for at least `kind="region"` and `kind="static"`.
+- Peak-retained-payload regression test (see TEST_GAPS.md P2 §4) shows the new floor is bounded by "one materialized payload + writer overhead", not by "sum of all intents' payloads". For MTG FCI FDHSI reference workload, must measurably improve on the ~14.8 GiB current floor.
+- No behavior change for eager `ndarray` payloads; existing plugin fixtures unchanged.
+- Documented lifetime contract for callable payloads relative to `build_write_intents` return: what the plugin must keep alive.
+
+**Prerequisites before merging:**
+- Peak-retained-payload regression harness (TEST_GAPS.md P2 §4).
+- Retained-root capture (memray) demonstrating pixel_time as the retention source under the current eager path, and the reduction under the new lazy path.
+
+**Effort:** 1-2 weeks. Not "days" — safety scaffolding (lifetime contract, resume-check interaction, regression harness) dominates.
+
+**References:** IDEAS.md §F3 (superseded 2026-07-12); DONE.md "DirectZarr plugin parity — core fixes" (2026-06-25); DONE.md "DirectZarr per-slot payload retention — bite-the-pill + §F3 promotion" (2026-07-12).
+
+---
+
+### §9 Span planning (optional pre-declared spans)
+
+**Goal:** Make spans a stable unit of work for orchestration and maintenance without making ChunkManager product-aware.
+
+**Current state:** Spans are recorded post-hoc from write coverage (`span.time_index_ranges` + `meta.time_min/time_max`).
+
+**Next step:** Optional SDK hook for "span intent":
+- Plugins/templates may pre-declare spans (month windows or chunk-aligned index ranges).
+- Engine records `status="started"` spans at begin and finalizes to `complete/failed/noop` with actual coverage at end.
+
+**Builds on:** §4a (DONE.md) — Write strategies now produce explicit write intents; pre-declared spans become a natural extension where templates declare spans before executing strategies.
+
+---
+
+### §11 Multires as a post-step — DONE (2026-05-26)
+
+See DONE.md §25 for details.
+
+**Current state (post-§25):** The post-step CLI `firecube zarr multires <target> --storage-type <local|s3> --storage-driver <fsspec|obstore>` exists and wraps `ZarrMultiresBuilder`. Ingest-time multires has been removed: `AppendMultiresHandler` no longer exists (deleted in §25, commit `89b2737`). The `zarr_multi_res` config field is rejected with a `ValueError` pointing to the CLI subcommand.
+
+**Direction:** Use `firecube zarr multires` as a post-step after ingestion completes. No ingest-time multires path remains.
+
+**Builds on:** §4a (DONE.md) — Zarr is now a runtime subsystem with explicit finalize/commit boundaries. §25 completed the removal of the broken ingest-time path.
+
+---
+
+## Harden Implicit Logic and Heuristics
+
+These items identify areas where the system used greedy logic to guess user intentions. The goal is to make these explicit or more robust. Status re-verified against the code on 2026-06-11.
+
+### §12.2 CLI and Execution Engine
+
+- **BASENAME heuristics — DONE:** `output_name` is no longer guessed from the target path basename. `ProductIdentity.from_uri` hard-fails without an explicit product name, and the `default_output_name` config key is rejected at parse time.
+- **Magic output detection — DONE:** the CLI and engine read typed `PipelineResult.outputs` / `result.output_path` attributes; no dict key sniffing remains. The legacy `output_path=` constructor kwarg was removed entirely (DONE.md 2026-06-11).
+- **Explicit safety — OPEN:** refusal to upload `HOME` or `/` is hardcoded in the engine's upload-source resolution; should be documented or configurable.
+- **Free-form option overload — DONE (2026-06-11):** keys owned by dedicated `firecube ingest` flags (`write_mode`, `slot_start`, `slot_end`, `slot_size`, `slot_group`) are hard-rejected at `--option` parse time with remediation naming the owning flag (`_TYPED_FLAG_OWNED_KEYS` in `cli/_typed_options.py`); the silent post-resolution override is closed. All other typed flags were never config fields and were already rejected as unknown keys. Engine options without a dedicated flag (`force_reingest`, `no_progress`, ...) remain the sanctioned `--option` surface.
+
+### §12.3 Configuration Derivation
+
+- **Automatic env resolution — PARTIALLY FIXED:** `${VAR}` expansion is now scoped to `[storage]` values only (not all config strings), but remains unconditional within that scope — a literal `${FOO}` storage value is impossible when `FOO` is set. Remaining work: opt-in flag or escape syntax.
+- **Database leakage — OPEN (now in core):** `get_plugin_defaults` in `src/firecube/core/config.py` merges global `[database.duckdb]` settings into every plugin's defaults. Allowlisted to 3 keys, but still implicit cross-section coupling.
+
+### §12.4 Plugin Heuristics
+
+- **Option aliases — DONE (2026-06-11):** `zarr_chunk` deleted (no shim, per STYLE.md); `zarr_chunk_shape` is the single chunking option and `zarr_chunk` now fails strict unknown-key rejection. Locked by `tests/unit/test_zarr_chunk_alias_removed.py`.
+- **Regex guessing — FIXED in-repo:** no filename-regex horizon extraction or `F*` folder discovery remains in core or templates. The msg_frm occurrences live in the external plugin repository.
+- **Hardcoded defaults — DONE (2026-06-11):** lat/lon soft limits gone; multires `(1.0, 0.5)` single-sourced as `DEFAULT_MULTIRES_RESOLUTIONS` (no silent fallback); `group="FWI"` fallback removed from `core/zarr/layers.py`; `"fire_risk.duckdb"` default removed from `extensions/duck.py`. Evidence: `tests/unit/test_domain_defaults_removed.py`.
+- **Typed-vs-free-form drift — DONE (2026-06-11):** strict unknown-key rejection enforced on all declared typed configs; `x_*` experimental namespace implemented — keys matching `x_*` pass through without rejection. Evidence: `tests/unit/test_experimental_options.py`.
+
+---
+
+### §13 Harden PluginContext boundary
+
+**Goal:** Make plugin hook context truly read-only and non-bypassable in normal usage.
+
+**Current state (partially addressed):**
+- `options` is a detached copy wrapped in `MappingProxyType`. Mutations to `RuntimeIngestContext.options` after `PluginContext` creation are invisible to plugins.
+- `option()` reads from the frozen proxy. `ctx.options["k"]` and `ctx.option("k")` are consistent.
+- `__getattr__` blocks direct access to `storage`, `_chunk_manager`, `_materializer`.
+- 6 boundary tests in `tests/unit/test_plugin_context_boundary.py`.
+
+**Remaining (structural):**
+- `_ctx` escape hatch: `pctx._ctx` still gives full access to `RuntimeIngestContext` (see `src/firecube/ingestor/types/context.py:198`). Python cannot enforce true private attributes, but a frozen-snapshot design would eliminate the reference entirely.
+- **Phase 3.2 partial closure**: The `_parallel_global_schema` escape hatch (the specific `ctx._ctx._parallel_global_schema` pattern used by `DirectZarrIngestor`) was removed in Phase 3.2 C4 (commit `6b6f3a1`). The broader `_ctx` reference-sharing issue remains open.
+- Frozen snapshot blocked by initialization order: `PluginContext` is created in `BaseIngestor.run()` (`src/firecube/ingestor/runtime/base.py`) before `runtime_ctx.telemetry` is assigned a few lines later. Fixing this requires restructuring `run()` so telemetry is assigned before context construction.
+- Per-worker snapshots: all workers share one `PluginContext` instance wrapping the same `RuntimeIngestContext`. Safe for reads (options detached), but `_ctx` reference-sharing means a convention-breaking plugin could mutate shared state.
+- No tests assert `_ctx` is inaccessible (Python cannot enforce this without structural change).
+
+---
+
+### §14 Expand concurrency and race-condition coverage — DONE (2026-06-11)
+
+**Goal:** Catch production-only failures before deployment.
+
+All four open points closed. Evidence:
+- Concurrent ingestor instances (same product, `resume_existing`/`force_reingest` combinations): `tests/integration/test_concurrent_same_product.py`
+- Workspace materialization races on the same remote URI: `tests/integration/test_workspace_materialization_race.py`
+- Control-plane write ordering/consistency under concurrent batch completion: `tests/integration/test_wal_concurrent_ordering.py`
+- OTel/thread context propagation under error and retry scenarios: `tests/integration/test_otel_context_concurrency.py`
+
+---
+
+## Zarr Runtime Follow-ups
+
+These items address gaps and bugs surfaced after §4a landed. They are sequenced as refinements/fixes to work that has already shipped, not as new architectural directions. Items §25 and §26 are runtime-crashing bugs and should be prioritised.
+
+### §21 Strategy Protocol unification — DONE (2026-05-27)
+
+See DONE.md §21 for details.
+
+Follow-up: Check `firecube-msg-frm` external plugin for `ZarrWriteStrategy` import and migrate — out of scope for Phase 1.
+
+---
+
+### §22 GenericZarrIngestor full thinning — DONE (2026-05-27)
+
+**Goal:** Move `GenericZarrIngestor._process_batch` toward a true thin facade.
+
+**Original state (pre-§22):** `_process_batch` was 144 lines and owned five responsibilities inline: staged metadata seeding, lock construction, strategy construction, claim closure construction, and metrics assembly.
+
+**Completed (2026-05-27):** §22 helper extraction is done in `src/firecube/ingestor/runtime/zarr/batch_runner.py` with 5 named helpers and `tests/unit/test_batch_runner.py` (13 tests). T5 wired those helpers into `GenericZarrIngestor._process_batch`, replacing all five inline blocks.
+
+The core write step remains delegated to `AppendStrategy.write_groups()`.
+
+**Result:** `_process_batch` is now a thin orchestrator around preparation, URI/option resolution, batch_runner helper wiring, `strategy.write_groups()`, and final result construction. ~66 lines (down from 143). See DONE.md §22 (helpers) and §22 (wiring complete).
+
+**Builds on:** §4a (DONE.md).
+
+---
+
+### §23 RegionZarrWriter resize-on-write contradicts documented contract — DONE (2026-05-27)
+
+See DONE.md §23 for details.
+
+### §23-AUTO Auto-compute expected_time_count from WriteIntent.ts_index — DONE (2026-05-27)
+
+See DONE.md §23-AUTO for details.
+
+---
+
+---
+
+### §25 AppendMultiresHandler stale kwarg — DONE (2026-05-26)
+
+See DONE.md §25 for details.
+
+Follow-up: Check `firecube-msg-frm` external plugin for `zarr_multi_res` usage and update if needed — out of scope for this PR.
+
+---
+
+### §27 Stale `build_dataset` documentation — DONE (2026-05-26)
+
+See DONE.md §27 for details.
+
+---
+
+### Phase 2.1 Legacy zarr_group claim sweep removal — DONE (2026-05-28)
+
+`_sweep_legacy_zarr_group_claims` removed in Phase 3 (T18). See DONE.md §7-sub.
+
+---
+
+### §30 `ensure_timestamp_slot` should treat `time_indexed=False` arrays as coords — DONE (2026-06-25)
+
+**Goal:** Stop static (non-time-indexed) coordinate arrays from being mistaken for time axes during the time-slot bounds check, so declaring `time_indexed=False` is sufficient on its own.
+
+**Current state:** `RegionZarrWriter.ensure_timestamp_slot` skips an array from the `ts_index < shape[0]` bounds check only if its name is in `coord_names` (constructor param, default `{"y","x","channel"}`) or it is scalar (`ndim == 0`). It does **not** consult the schema's `ZarrArraySpec.time_indexed=False` flag. The strategy builds `coord_names_by_group` from `spec.coord_names` only.
+
+**Bug it caused:** A DirectZarr plugin (OPERA SEVIRI/NORDLIS) declared static 2-D `lat`/`lon` and 1-D `ny`/`nx` projection coords with `time_indexed=False` but did not also list them in `coord_names`. `ensure_timestamp_slot` then read each static coord's dim-0 (the grid size, e.g. 1072/1332) as a time axis and raised "ts_index out of bounds" for any `ts_index` beyond it — i.e. any day far from the reference epoch (slot ~622080 for a 2023 day against a 2018 epoch). Latent for any multi-day ingest; was masked earlier by the axis-size error. The plugin worked around it by adding the names to `coord_names`.
+
+**Direction:** Fold every `time_indexed=False` array into the writer's coord-skip set (the schema already knows which arrays have no time axis), as a union with the existing `spec.coord_names`. Then `time_indexed=False` alone is sufficient and a plugin never has to *also* name the array in `coord_names`.
+
+**Acceptance criteria:**
+- A DirectZarr group whose static coords are declared only via `time_indexed=False` (not in `coord_names`) ingests a high-`ts_index` timestamp without a spurious "ts_index out of bounds" error.
+- `coord_names` remains honored for back-compat (union, not replacement).
+
+**Surfaced by:** OPERA plugin fix declaring `lat`/`lon`/`ny`/`nx` in `coord_names` (plugin commit `bb9cf7a`).
+
+See: DONE.md "DirectZarr plugin parity — core fixes" (2026-06-25) and `.sisyphus/plans/directzarr-plugin-parity-core-fixes.md`
+
+---
+
+## Zarr migration framework (deferred from CF-1.8 plan)
+
+**Goal**: a generic Zarr migration framework so future migrations (rename-dim, rename-array, set-default-attrs, schema upgrades, etc.) plug in via a Protocol implementation rather than each shipping its own CLI command. Decided against `migrate-dim` and similar name-coupled one-offs.
+
+**Shape**: `MigrationStrategy` Protocol (`@runtime_checkable`) + in-source registry + a generic safety runner.
+
+**Generic runner responsibilities**:
+- Refuse to run if `ChunkManager.list_runs(non_terminal=True)` returns any non-terminal runs.
+- Refuse to run if `ChunkManager.list_claims()` returns active claims on target groups.
+- Acquire and release a write claim around the migration.
+- Provide `--dry-run`.
+- Group-explicit `--group <g>` or `--all-groups`.
+- Use `ChunkManager` facade + `create_filesystem(config)` — never raw `.firecube/` writes or `fsspec.filesystem(...)`.
+
+**CLI shape**: `firecube zarr migrate <strategy-name> [strategy-args] [--dry-run] [--group <g> | --all-groups]`, with `firecube zarr migrate --list` and per-strategy `--help`.
+
+**First strategy to ship**: `rename-dim` (the operation the CF-1.8 plan would have shipped). Required behavior:
+- Walk every Zarr array in the target.
+- Rewrite `dimension_names` in each array's metadata.
+- Rename the coordinate variable folder (`{group}/timestamp` to `{group}/time`).
+- Rebuild consolidated metadata if present.
+- Preserve internal control-plane array names (e.g. `firecube_timestamp_state` stays — only its inner dim name changes).
+
+**Out of scope for v1**: multi-resolution pyramid groups; `--force` to bypass safety; auto-migration on append.
+
+**Acceptance criteria for the follow-up plan**:
+- Compatibility matrix tests for at least the 8 rows defined in `cf18-compliance` plan.
+- E2E `legacy cube -> migrate -> append with new dim -> readback` test.
+- Integration tests covering refusal-on-active-claim and dry-run-no-mutation.
+
+---
+
+## CF advisor enhancements (deferred from CF-1.8 plan)
+
+- `firecube advise compliance --profile cf-18 --all-groups`: walk all Zarr groups in a product instead of requiring `--group`.
+- Tier 2 — CF Standard Name Table vocabulary validation (check `standard_name` values against the canonical table).
+- Tier 3 — UDUNITS-based unit validation. Likely via optional `cf-checker` runtime dependency or a NetCDF temp-export bridge.
+
+---
+
+### Concurrent-metadata-read follow-ups (deferred from the 2026-06-22 `read_bytes` fix)
+
+The 2026-06-22 `StorageFilesystem.read_bytes` change fixed the s3fs 412 crash on the
+existing-cube dim-compat read. Two optional hardening items were deliberately NOT
+bundled (they change a safety check's timing / touch a separate path):
+
+- **Reduce redundant dim-compat reads.** `_verify_existing_cube_batch_groups` runs
+  the dim-compat check once *per batch* (`engine._create_batches_with_parallel_filter`),
+  so a pod re-reads the same group `zarr.json` many times. Cache the result per-pod,
+  and/or gate the check in parallel slot-range mode where `_verify_schema_at_pod_startup`
+  already guarantees the dims from the plugin-declared `time_dim_name`. Care: this
+  changes when a public safety check (`verify_dim_compatibility`, DONE.md 2026-06-20)
+  runs — preserve the genuine pre-existing-cube append guard.
+- **Route `core/zarr/validation.py::_load_array_metadata` through `read_bytes`** for
+  consistency (still uses `open().read()`). Lower priority — it's the `firecube zarr
+  validate` maintenance path, not the concurrent ingest hot path.
+
+---
+
+### §28 Audit closeout follow-ups (minor)
+
+- **Dead `plugin` marker** — registered in `pyproject.toml`, applied zero times. Decide: delete the registration or apply it to plugin-specific suites.
+- **T4 residual** — `tests/unit/test_append_strategy.py` still patches the strategy's own internals; real-store coverage lives in `tests/integration/test_append_strategy_behavior.py`. Candidate for a behavior-based rewrite of the remaining wiring test.
+- **A7 watch-item** — the archive-create path (`src/firecube/core/tensogram/converter.py`, `_find_time_dim` call around line 112) does not thread a plugin-declared `time_dim_name`; only the ingest path does.
+- **C3 watch-item** — the hierarchy flatten grew `BaseIngestor` to ~815 lines (flatten-by-hoisting); the depth test pins templates only, not plugin-subclassing-plugin chains. Watch for god-base growth; consider extracting batch-lifecycle hooks into a composed collaborator if it keeps growing.

@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "firecube-cf-time-dim-test-plugin"
+version = "0.1.0"
+dependencies = ["firecube>=0.1.0", "xarray", "numpy"]
+
+[project.entry-points."firecube.plugins"]
+cf_time_dim = "cf_time_dim_test_plugin"
+cf_time_dim_value_dedup = "cf_time_dim_test_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cf_time_dim_test_plugin"]

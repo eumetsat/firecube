@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.ipynb_checkpoints
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.*
+!.gitignore
+!.prompts/
+!.prompts/*.md
+!.github/
+
+# Environments
+.venv/
+.env/
+
+# MkDocs
+site/
+
+# Plugin Development
+plugins_dev/
+
+# Build artifacts
+build/
+dist/
+
+# Project outputs
+artifacts/
+outputs/
+data/
+*.zarr
+*.parquet
+
+# Logs
+*.log
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Coverage / testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.python-version
+.ruff_cache
+
+# Generated SBOM / dependency-license reports (regenerate locally)
+reports/

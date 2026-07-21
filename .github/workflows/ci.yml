@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - run: uv python install 3.12
+      - run: uv sync --locked --extra test --group dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - run: uv python install 3.12
+      - run: uv sync --locked --extra test --group dev
+      - name: Install test fixture plugins
+        run: |
+          uv pip install -e tests/fixtures/cli_test_plugin
+          uv pip install -e tests/fixtures/direct_zarr_capable_test_plugin
+          uv pip install -e tests/fixtures/direct_zarr_non_capable_test_plugin
+          uv pip install -e tests/fixtures/multi_group_capable_test_plugin
+          uv pip install -e tests/fixtures/cf_time_dim_test_plugin
+          uv pip install -e tests/fixtures/slot_shape_test_plugin
+      - run: uv run pyright
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - run: uv python install 3.12
+      - run: uv sync --locked --extra test --group dev
+      - name: Install test fixture plugins
+        run: |
+          uv pip install -e tests/fixtures/cli_test_plugin
+          uv pip install -e tests/fixtures/direct_zarr_capable_test_plugin
+          uv pip install -e tests/fixtures/direct_zarr_non_capable_test_plugin
+          uv pip install -e tests/fixtures/multi_group_capable_test_plugin
+          uv pip install -e tests/fixtures/cf_time_dim_test_plugin
+          uv pip install -e tests/fixtures/slot_shape_test_plugin
+      - run: uv run pytest --strict-deps -m "not slow and not s3" -n auto --cov=firecube --cov-report=term-missing -q
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - run: uv python install 3.12
+      - run: uv sync --locked --extra test --group docs
+      - run: uv run mkdocs build --strict --site-dir /tmp/firecube-mkdocs-check

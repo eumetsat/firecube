@@ -1,0 +1,22 @@
+[project]
+name = "firecube-demo-plugin"
+version = "0.1.0"
+description = "A demo plugin for Firecube testing"
+authors = [{name = "Test User", email = "test@example.com"}]
+requires-python = ">=3.12"
+# dependencies = [
+#     "firecube-ingestor",
+# ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.entry-points."firecube.plugins"]
+demo_plugin = "demo_plugin.plugin:DemoIngestor"
+
+[project.entry-points."firecube.plugin_cli"]
+demo_plugin = "demo_plugin.plugin_cli:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/demo_plugin"]

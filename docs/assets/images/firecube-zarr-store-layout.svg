@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 390" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube Zarr product layout</title>
+  <desc id="desc">A Firecube Zarr product contains Zarr groups and arrays plus ChunkManager run, span, and claim records.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:13px;fill:#5a6673}
+      .root{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .control{fill:#fff8df;stroke:#d6a400;stroke-width:2}
+      .group{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .array{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .chunk{fill:#ffffff;stroke:#4f8bd6;stroke-width:1.5}
+      .record{fill:#ffffff;stroke:#d6a400;stroke-width:1.5}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .softline{stroke:#9aa7b3;stroke-width:2;fill:none}
+    </style>
+  </defs>
+
+  <rect x="36" y="48" width="220" height="94" rx="10" class="root"/>
+  <text x="146" y="88" text-anchor="middle" class="label">MY_PRODUCT.zarr</text>
+  <text x="146" y="116" text-anchor="middle" class="small">one product URI</text>
+
+  <path class="line" d="M256 95 H336"/>
+  <rect x="336" y="34" width="220" height="118" rx="10" class="group"/>
+  <text x="446" y="72" text-anchor="middle" class="label">Zarr groups</text>
+  <rect x="370" y="96" width="76" height="32" rx="4" fill="#ffffff" stroke="#2f9d65"/>
+  <rect x="462" y="96" width="76" height="32" rx="4" fill="#ffffff" stroke="#2f9d65"/>
+  <text x="408" y="117" text-anchor="middle" class="small">data</text>
+  <text x="500" y="117" text-anchor="middle" class="small">quality</text>
+
+  <path class="line" d="M556 95 H636"/>
+  <rect x="636" y="34" width="286" height="118" rx="10" class="array"/>
+  <text x="779" y="72" text-anchor="middle" class="label">Arrays</text>
+  <rect x="666" y="94" width="108" height="34" rx="4" fill="#ffffff" stroke="#4f8bd6"/>
+  <rect x="794" y="94" width="108" height="34" rx="4" fill="#ffffff" stroke="#4f8bd6"/>
+  <text x="720" y="116" text-anchor="middle" class="small">temperature</text>
+  <text x="848" y="116" text-anchor="middle" class="small">timestamp</text>
+
+  <path class="line" d="M779 152 V202"/>
+  <rect x="618" y="202" width="322" height="116" rx="10" class="array"/>
+  <text x="779" y="236" text-anchor="middle" class="label">Physical Zarr chunks</text>
+  <g transform="translate(680 258)">
+    <rect x="0" y="0" width="46" height="32" class="chunk"/>
+    <rect x="46" y="0" width="46" height="32" class="chunk"/>
+    <rect x="92" y="0" width="46" height="32" class="chunk"/>
+    <rect x="138" y="0" width="46" height="32" class="chunk"/>
+    <text x="23" y="53" text-anchor="middle" class="hint">0.0.0</text>
+    <text x="69" y="53" text-anchor="middle" class="hint">1.0.0</text>
+    <text x="115" y="53" text-anchor="middle" class="hint">2.0.0</text>
+    <text x="161" y="53" text-anchor="middle" class="hint">3.0.0</text>
+  </g>
+
+  <path class="line" d="M146 142 V214"/>
+  <rect x="36" y="214" width="326" height="104" rx="10" class="control"/>
+  <text x="199" y="244" text-anchor="middle" class="label">ChunkManager</text>
+  <text x="199" y="266" text-anchor="middle" class="small">run and write records</text>
+  <rect x="74" y="284" width="82" height="30" rx="4" class="record"/>
+  <rect x="174" y="284" width="82" height="30" rx="4" class="record"/>
+  <rect x="274" y="284" width="82" height="30" rx="4" class="record"/>
+  <text x="115" y="304" text-anchor="middle" class="small">runs</text>
+  <text x="215" y="304" text-anchor="middle" class="small">spans</text>
+  <text x="315" y="304" text-anchor="middle" class="small">claims</text>
+
+  <path class="softline" d="M362 265 C478 265 510 265 618 265"/>
+  <text x="480" y="350" text-anchor="middle" class="hint">ChunkManager records operational state; Zarr chunks store array data.</text>
+</svg>

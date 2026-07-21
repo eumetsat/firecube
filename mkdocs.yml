@@ -1,0 +1,161 @@
+site_name: Firecube
+site_description: A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.
+repo_url: https://github.com/eumetsat/firecube
+repo_name: eumetsat/firecube
+theme:
+  name: material
+  logo: assets/firecube-amblem-white.png
+  favicon: assets/firecube-favicon.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - mkdocs-click
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
+  - pymdownx.inlinehilite
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+  - mermaid2:
+      arguments:
+        theme: neutral
+        flowchart:
+          curve: linear
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_category_heading: true
+            show_root_heading: true
+            members_order: alphabetical
+  - macros:
+      module_name: docs/_macros
+
+nav:
+  - Home: index.md
+  - Quickstart:
+    - Overview: quickstart/index.md
+    - Installation: quickstart/installation.md
+    - Plugin Setup: quickstart/plugins.md
+    - Run Ingestion: quickstart/ingestion.md
+    - Intake Catalogs: quickstart/catalogs.md
+    - Configuration: quickstart/configuration.md
+  - Concepts:
+    - Overview: concepts/index.md
+    - Glossary: concepts/glossary.md
+    - Configuration Model: concepts/configuration.md
+    - Plugins:
+      - Overview: concepts/plugins/index.md
+      - Create a Plugin: concepts/plugins/create-a-plugin.md
+      - Base Classes:
+        - GenericZarrIngestor: concepts/plugins/generic-zarr.md
+        - GenericParquetIngestor: concepts/plugins/generic-parquet.md
+        - DirectZarrIngestor: concepts/plugins/direct-zarr.md
+        - BaseIngestor: concepts/plugins/base-ingestor.md
+      - Plugin Contract: concepts/plugins/contract.md
+      - CLI And Config: concepts/plugins/cli-and-config.md
+      - Storage Access: concepts/plugins/storage-access.md
+      - Observability: concepts/plugins/observability.md
+      - Mixins: concepts/plugins/mixins.md
+    - Output Formats:
+      - Overview: concepts/output-formats/index.md
+      - Zarr:
+        - Overview: concepts/output-formats/zarr/index.md
+        - GenericZarrIngestor (Append): concepts/output-formats/zarr/generic-append.md
+        - DirectZarrIngestor (Region): concepts/output-formats/zarr/direct-region.md
+        - Parallel Zarr Writes: concepts/output-formats/zarr/parallel-writes.md
+      - Parquet: concepts/output-formats/parquet.md
+      - Tensogram: concepts/output-formats/archive.md
+    - Storage & ChunkManager:
+      - Overview: concepts/chunkmanager.md
+      - Product Storage: concepts/storage.md
+      - ChunkManager Records: concepts/chunk-management.md
+    - Orchestration:
+      - Overview: concepts/orchestration.md
+      - Orchestrator Contract: concepts/orchestration/external-orchestrator.md
+      - Execution Shapes: concepts/orchestration/execution-shapes.md
+      - Scheduling And Write Safety: concepts/orchestration/write-safety.md
+      - Retries And Recovery: concepts/orchestration/retries.md
+    - Observability:
+      - Overview: concepts/observability/index.md
+      - Metrics: concepts/observability/metrics.md
+      - Logs: concepts/observability/logs.md
+      - Traces: concepts/observability/traces.md
+    - Best Practices & Performance:
+      - Overview: concepts/best-practices.md
+      - Production Guide: concepts/production-guide.md
+      - Performance Tuning: concepts/performance.md
+      - Parallelism: concepts/parallelism.md
+      - Benchmarks: concepts/benchmarks.md
+  - Operations:
+    - Overview: operations/index.md
+    - ChunkManager:
+      - Overview: operations/chunk-manager/index.md
+      - Inspect: operations/chunk-manager/inspect.md
+      - Recover Runs And Claims: operations/chunk-manager/recover.md
+      - Post-Crash Recovery: operations/chunk-manager/post-crash-recovery.md
+      - Delete And Reingest: operations/chunk-manager/delete.md
+      - Snapshots: operations/chunk-manager/snapshots.md
+    - Archive:
+      - Overview: operations/archive/index.md
+      - Create: operations/archive/create.md
+      - Inspect And Validate: operations/archive/inspect.md
+      - Restore: operations/archive/restore.md
+  - Tutorials:
+    - Overview: tutorials/index.md
+    - First Plugin:
+      - Weather CSV Plugin: tutorials/weather-csv.md
+      - "Weather CSV: Source Discovery": tutorials/source-discovery.md
+      - "Weather CSV: Observability": tutorials/observability.md
+    - Product Examples:
+      - Sentinel-3 FRP Plugin: tutorials/sentinel3-frp.md
+    - Advanced Zarr:
+      - Direct Parallel Zarr: tutorials/direct-zarr-parallel.md
+  - Contributing:
+    - Overview: contributing/index.md
+    - Plugin Authors: contributing/plugin-authors.md
+    - Firecube Contributors: contributing/firecube-contributors.md
+  - Reference:
+    - API Reference: reference/api.md
+    - CLI Reference: reference/cli.md
+    - Observability: reference/observability.md
+    - Configuration: reference/config.md
+    - Storage Driver Compatibility: reference/storage-drivers.md

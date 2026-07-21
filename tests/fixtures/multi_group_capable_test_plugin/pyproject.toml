@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "multi-group-capable-test-plugin"
+version = "0.1.0"
+dependencies = ["numpy"]
+
+[project.entry-points."firecube.plugins"]
+multi_group_capable_test_plugin = "multi_group_capable_test_plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/multi_group_capable_test_plugin"]
