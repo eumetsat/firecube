@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/eumetsat/firecube/discussions
+    about: Ask usage questions, propose ideas, or discuss plugin development here.
+  - name: Documentation
+    url: https://github.com/eumetsat/firecube/tree/main/docs
+    about: Check the docs before filing — many workflows and recovery steps are covered there.
