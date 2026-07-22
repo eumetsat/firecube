@@ -1,0 +1,73 @@
+name: Feature request
+description: Propose a new capability, integration, or improvement for Firecube.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing an improvement. Firecube favors small, explicit changes that
+        respect existing module boundaries (see `CONTRIBUTING.md` and `plans/DESIGN.md`).
+        Please describe the problem before the solution, and be concrete about scope.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do, and why is it hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should Firecube do? Sketch the CLI surface, config, or API if relevant.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Firecube does this touch?
+      multiple: true
+      options:
+        - CLI / UX
+        - Ingest runtime / Zarr write path
+        - Control plane (.firecube / ChunkManager)
+        - Storage / filesystem backends
+        - Plugin contracts / API
+        - Compute / array backend
+        - Observability
+        - Packaging / extras / dependencies
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches, existing workarounds, or why they fall short.
+    validations:
+      required: false
+  - type: textarea
+    id: compat
+    attributes:
+      label: Compatibility & scope
+      description: >-
+        Would this change public CLI flags, plugin contracts, config, or stored formats?
+        Should it be opt-in (e.g. an optional extra) to keep the default install lean?
+    validations:
+      required: false
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to help implement this.
+          required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true

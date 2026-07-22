@@ -1,0 +1,101 @@
+name: Bug report
+description: Report incorrect behavior, a crash, or corrupted output in Firecube.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please give us enough detail to
+        reproduce it. Firecube requires **explicit product and storage flags** — include
+        the full command you ran so we can see them.
+
+        Do **not** paste credentials, tokens, or private data URIs. Redact them.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear, one- or two-sentence description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The exact command(s), including all product/storage flags. Redact secrets.
+      placeholder: |
+        1. uv run firecube <command> --product ... --storage ... <uri>
+        2. ...
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the full error message and traceback if there is one.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Firecube version
+      description: Output of `uv run firecube --version`.
+      placeholder: "0.1.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install source
+      options:
+        - PyPI
+        - Git checkout (source)
+        - Container image
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, and any relevant extras installed (obstore, tensogram, healpix, virtualzarr).
+      placeholder: |
+        - Python: 3.12.x
+        - OS: Linux / macOS / Windows (+ version)
+        - Extras: e.g. obstore
+        - Storage backend: local / S3 (endpoint type)
+    validations:
+      required: true
+  - type: input
+    id: plugin
+    attributes:
+      label: Plugin involved (if any)
+      description: Package name and version of the ingest plugin, if the bug is in an ingest run.
+      placeholder: "my-firecube-plugin==1.2.0"
+    validations:
+      required: false
+  - type: textarea
+    id: data
+    attributes:
+      label: Data / state impact
+      description: >-
+        Did this affect stored output (Zarr), the `.firecube/` control plane, or resume/append
+        state? Is any output store now corrupt or partially written?
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I removed all credentials, tokens, and private URIs from this report.
+          required: true
