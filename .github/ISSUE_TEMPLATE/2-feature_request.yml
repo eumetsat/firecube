@@ -29,8 +29,8 @@ body:
       description: Which part of Firecube does this touch?
       multiple: true
       options:
+        - Output Formats
         - CLI / UX
-        - Ingest runtime / Zarr write path
         - Control plane (.firecube / ChunkManager)
         - Storage / filesystem backends
         - Plugin contracts / API
