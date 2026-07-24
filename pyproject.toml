@@ -41,7 +41,7 @@ test = [
     "tensogram-zarr>=0.22.0,<0.23",
     "obstore>=0.4.0",
     "healpix-geo>=0.1.2",
-    "moto[s3,server]>=5.0.0",
+    "moto[s3,server]>=5.2.2",
 ]
 
 [project.scripts]

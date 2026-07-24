@@ -848,7 +848,7 @@ requires-dist = [
     { name = "h5py", specifier = ">=3.11.0" },
     { name = "healpix-geo", marker = "extra == 'healpix'", specifier = ">=0.1.2" },
     { name = "healpix-geo", marker = "extra == 'test'", specifier = ">=0.1.2" },
-    { name = "moto", extras = ["s3", "server"], marker = "extra == 'test'", specifier = ">=5.0.0" },
+    { name = "moto", extras = ["s3", "server"], marker = "extra == 'test'", specifier = ">=5.2.2" },
     { name = "netcdf4", specifier = ">=1.7.1.post2" },
     { name = "numpy", specifier = ">=2.3.3" },
     { name = "obstore", marker = "extra == 'obstore'", specifier = ">=0.4.0" },
