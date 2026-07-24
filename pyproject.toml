@@ -1,7 +1,7 @@
 [project]
 name = "firecube"
-version = "0.1.4"
-description = "Ingestion API for EO datasets"
+version = "0.1.4.post0"
+description = "A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }

@@ -7,6 +7,13 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.1.4.post0] - 2026-07-24
+
+### Changed
+
+- Package metadata only: updated the PyPI package description. No code changes
+  relative to 0.1.4.
+
 ## [0.1.4] - 2026-06-29
 
 ### Added
