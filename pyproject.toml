@@ -44,6 +44,14 @@ test = [
     "moto[s3,server]>=5.0.0",
 ]
 
+[project.urls]
+Homepage = "https://eumetsat.github.io/firecube/"
+"Bug Tracker" = "https://github.com/eumetsat/firecube/issues"
+Documentation = "https://github.com/eumetsat/firecube/blob/main/README.md"
+"Source Code" = "https://github.com/eumetsat/firecube"
+Organization = "https://www.eumetsat.int/"
+"Release Notes" = "https://github.com/eumetsat/firecube/blob/main/CHANGELOG.md"
+
 [project.scripts]
 firecube = "firecube.cli.main:cli"
 
