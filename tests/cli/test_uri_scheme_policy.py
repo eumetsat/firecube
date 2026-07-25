@@ -175,3 +175,65 @@ def test_apply_smart_default_accepts_explicit_s3_storage_type() -> None:
     uri = parse_product_uri("s3://bucket/path.zarr")
 
     assert apply_smart_default(uri, "s3") == "s3"
+
+
+# ---------------------------------------------------------------------------
+# Archive subcommands: archive parameter must carry a URI scheme
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("subcommand", ["create", "restore"])
+def test_archive_subcommand_rejects_bare_archive_path(
+    subcommand: str,
+    tmp_path: Path,
+) -> None:
+    """create and restore must reject bare local paths (no file:// scheme)."""
+    archive_path = tmp_path / "archive.tgm"
+    archive_path.write_bytes(b"not a real archive")
+    base = ["archive", subcommand, "--archive", str(archive_path)]
+
+    if subcommand == "create":
+        base.extend(["--source", "file:///tmp/fake.zarr"])
+        base.append("--dry-run")
+    else:
+        base.extend(["--target", "file:///tmp/restored.zarr"])
+        base.append("--dry-run")
+
+    result = CliRunner().invoke(cli, base)
+    assert result.exit_code != 0
+    assert "URI scheme required" in result.output
+
+
+def test_archive_create_accepts_file_uri(tmp_path: Path) -> None:
+    """create accepts a proper file:// URI for --archive."""
+    archive_path = tmp_path / "archive.tgm"
+    archive_path.write_bytes(b"not a real archive")
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "archive", "create",
+            "--source", "file:///tmp/fake.zarr",
+            "--archive", archive_path.as_uri(),
+            "--dry-run",
+        ],
+    )
+    # Should not fail with URI-scheme error (may fail for other reasons)
+    assert "URI scheme required" not in result.output
+
+
+def test_archive_restore_accepts_file_uri(tmp_path: Path) -> None:
+    """restore accepts a proper file:// URI for --archive."""
+    archive_path = tmp_path / "archive.tgm"
+    archive_path.write_bytes(b"not a real archive")
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "archive", "restore",
+            "--archive", archive_path.as_uri(),
+            "--target", "file:///tmp/restored.zarr",
+            "--dry-run",
+        ],
+    )
+    # Should not fail with URI-scheme error
+    assert "URI scheme required" not in result.output

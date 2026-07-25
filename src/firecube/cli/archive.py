@@ -230,9 +230,13 @@ def create(
 
     parsed_source = parse_product_uri(source)
     storage_type = apply_smart_default(parsed_source, storage_type)
+
+    # Enforce URI scheme on archive parameter (same as info/validate/list)
+    parsed_archive = parse_product_uri(archive)  # raises UsageError if bare path
+
     if is_remote_target(archive):
         raise click.ClickException("Remote .tgm artifacts not yet supported")
-    archive_abs = str(local_path_from_target(archive))
+    archive_abs = str(parsed_archive.normalized.removeprefix("file://"))
 
     storage_config = get_storage_config(
         ctx,
@@ -390,9 +394,13 @@ def restore(
     """
     parsed_target = parse_product_uri(target)
     storage_type = apply_smart_default(parsed_target, storage_type)
+
+    # Enforce URI scheme on archive parameter (same as info/validate/list)
+    parsed_archive = parse_product_uri(archive)  # raises UsageError if bare path
+
     if is_remote_target(archive):
         raise click.ClickException("Remote .tgm artifacts not yet supported")
-    archive_abs = str(local_path_from_target(archive))
+    archive_abs = str(parsed_archive.normalized.removeprefix("file://"))
 
     _require_overwrite_confirmation(overwrite=overwrite, yes_i_really_mean_it=yes_i_really_mean_it)
 
