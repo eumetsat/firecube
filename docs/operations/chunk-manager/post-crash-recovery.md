@@ -12,8 +12,13 @@ runs and clearing claims one at a time.
     stopped before running the sweep.
 
 ```bash
+PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
 PRODUCT_NAME="MY_PRODUCT"
 ```
+
+Pass the full URI through `--product-name` for every ChunkManager command on
+this page. This binds the command directly to the product without a storage
+configuration.
 
 ## Prerequisites
 
@@ -28,7 +33,7 @@ List runs that are still in a non-terminal state (`started`):
 
 ```bash
 firecube chunks runs list \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --status started
 ```
 
@@ -44,7 +49,7 @@ run-20260710-def456   started  active  2     2
 List all active write claims for the product:
 
 ```bash
-firecube chunks claims list --product-name "$PRODUCT_NAME"
+firecube chunks claims list --product-name "$PRODUCT_URI"
 ```
 
 Expected output when claims are blocking:
@@ -52,9 +57,9 @@ Expected output when claims are blocking:
 ```text
 Product       State   Owner                        Domain
 ---------------------------------------------------------------------------
-product.zarr  active  run-20260710-abc123:F001      product.zarr:zarr_region:F001
-product.zarr  active  run-20260710-abc123:F002      product.zarr:zarr_region:F002
-product.zarr  active  run-20260710-def456:F003      product.zarr:zarr_region:F003
+MY_PRODUCT.zarr  active  run-20260710-abc123:F001   MY_PRODUCT:zarr_region:F001
+MY_PRODUCT.zarr  active  run-20260710-abc123:F002   MY_PRODUCT:zarr_region:F002
+MY_PRODUCT.zarr  active  run-20260710-def456:F003   MY_PRODUCT:zarr_region:F003
 ```
 
 If both lists are empty, the product is already clean. Skip to
@@ -66,7 +71,7 @@ Run a dry-run to see which claims `--all-stale` would clear:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --all-stale \
   --dry-run
 ```
@@ -74,12 +79,16 @@ firecube chunks claims clear \
 Expected output:
 
 ```text
-[dry-run] Would clear claim product.zarr:zarr_region:F001
-[dry-run] Would clear claim product.zarr:zarr_region:F002
-[dry-run] Would clear claim product.zarr:zarr_region:F003
+Previewed stale claims:
+  - MY_PRODUCT:zarr_region:F001
+  - MY_PRODUCT:zarr_region:F002
+  - MY_PRODUCT:zarr_region:F003
+Dry run only; no claims cleared.
+Skipped fresh claims: 0
+Skipped missing claims: 0
 ```
 
-If the dry-run output matches the claims you saw in Step 1, proceed to Step 4.
+If the dry-run output matches the claims you saw in Step 1, proceed to Step 3.
 If some claims are missing from the dry-run output, those claims are not yet
 stale. Wait for the staleness threshold to pass, or use `--domain` with
 `--force` for individual claims after confirming the writer is gone.
@@ -90,7 +99,7 @@ Run a dry-run to see which runs `--all-stale` would abandon:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --all-stale \
   --reason "cluster-crash" \
   --dry-run
@@ -99,8 +108,9 @@ firecube chunks runs abandon \
 Expected output:
 
 ```text
-[dry-run] Would abandon run 'run-20260710-abc123' for MY_PRODUCT (reason: cluster-crash)
-[dry-run] Would abandon run 'run-20260710-def456' for MY_PRODUCT (reason: cluster-crash)
+[dry-run] Would abandon stale runs for MY_PRODUCT.zarr:
+  - run-20260710-abc123
+  - run-20260710-def456
 ```
 
 ## Step 4: Commit the Sweep
@@ -111,12 +121,12 @@ abandoned but its claims still block the next ingest.
 
 ```bash
 firecube chunks claims clear \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --all-stale \
   --yes-i-really-mean-it
 
 firecube chunks runs abandon \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --all-stale \
   --reason "cluster-crash" \
   --yes-i-really-mean-it
@@ -125,8 +135,10 @@ firecube chunks runs abandon \
 Verify the product is clean:
 
 ```bash
-firecube chunks runs list --product-name "$PRODUCT_NAME" --status started
-firecube chunks claims list --product-name "$PRODUCT_NAME"
+firecube chunks runs list \
+  --product-name "$PRODUCT_URI" \
+  --status started
+firecube chunks claims list --product-name "$PRODUCT_URI"
 ```
 
 Both commands should return empty tables.
@@ -137,19 +149,19 @@ After a bulk sweep, rebuild the chunk snapshot to restore fast query
 performance:
 
 ```bash
-firecube chunks snapshots rebuild --product-name "$PRODUCT_NAME"
+firecube chunks snapshots rebuild --product-name "$PRODUCT_URI"
 ```
 
 Expected output:
 
 ```text
-Rebuilt snapshot for MY_PRODUCT: N chunks indexed.
+Rebuilt snapshot for MY_PRODUCT.zarr: N chunks indexed.
 ```
 
 Preview first if you want to confirm what the rebuild will touch:
 
 ```bash
-firecube chunks snapshots rebuild --product-name "$PRODUCT_NAME" --dry-run
+firecube chunks snapshots rebuild --product-name "$PRODUCT_URI" --dry-run
 ```
 
 ## Flag Reference
@@ -159,7 +171,7 @@ firecube chunks snapshots rebuild --product-name "$PRODUCT_NAME" --dry-run
 | `--all-stale` | `claims clear` | Yes (or `--domain`) | Clear every stale claim for the product in one pass. |
 | `--all-stale` | `runs abandon` | Yes (or `--run-id`) | Abandon every stale non-terminal run in one pass. |
 | `--dry-run` | both | No | Preview changes without applying them. |
-| `--yes-i-really-mean-it` | both | Yes (non-TTY) | Confirm destructive operation. Required in CI and scripts. |
+| `--yes-i-really-mean-it` | both | To mutate | Commit the bulk sweep. Without it, the command automatically uses preview mode. |
 | `--reason` | `runs abandon` | Yes | Operator note recorded with the abandoned run. |
 
 ## Failure Recovery
@@ -177,8 +189,8 @@ Once the product is clean, rerun ingestion with resume enabled:
 
 ```bash
 firecube ingest <plugin> \
-  --source /data/source \
-  --target "file:///data/products/$PRODUCT_NAME.zarr" \
+  --input-data /data/source \
+  --target "$PRODUCT_URI" \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \

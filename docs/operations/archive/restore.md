@@ -32,7 +32,7 @@ Zarr restored: file:///data/restored/MY_PRODUCT.zarr
 Inspect the restored product's run history:
 
 ```bash
-firecube chunks runs list --product-name MY_PRODUCT.zarr
+firecube chunks runs list --product-name "$RESTORED_URI"
 ```
 
 Expected output resembles:
@@ -47,7 +47,7 @@ direct_zarr_capable_test_plugin-...  complete  active  1     7
 Inspect restored ChunkManager records:
 
 ```bash
-firecube chunks list --product-name MY_PRODUCT.zarr
+firecube chunks list --product-name "$RESTORED_URI"
 ```
 
 ## Overwrite An Existing Restore Target

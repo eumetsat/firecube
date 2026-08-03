@@ -1,38 +1,48 @@
 # Installation
 
-Firecube requires **Python 3.12+**. We recommend using `uv` for lightning-fast dependency management and isolated environments.
+Firecube requires Python 3.12 or later. This quickstart uses `uv` to create an
+isolated environment and install the released package from PyPI.
 
-### 1. Clone the Repository
+## Create The Environment
 
-Clone the core Firecube ingestor repository:
-
-```bash
-git clone https://github.com/eumetsat/firecube.git
-cd firecube
-```
-
-### 2. Setup Environment
-
-Use `uv` to install dependencies and prepare the virtual environment:
+Create a working directory and a Python 3.12 environment:
 
 ```bash
+mkdir firecube-quickstart
+cd firecube-quickstart
 uv venv --python 3.12
-uv sync
 ```
 
-### 3. Verify CLI
+Keep the remaining quickstart commands in this directory so `uv run` uses the
+same environment.
 
-Confirm the installation by checking the version:
+## Install Firecube
+
+Install Firecube from PyPI:
+
+```bash
+uv pip install firecube
+```
+
+The next step installs plugins into this environment so the Firecube CLI can
+discover them.
+
+## Verify The Installation
 
 ```bash
 uv run firecube --version
 ```
 
-Output:
+Expected output:
+
 ```text
 Firecube {{ firecube_version() }}
 ```
 
+To change Firecube itself, use the source setup in
+[Contributing To Firecube](../contributing/firecube-contributors.md) instead.
+
 ## Next Steps
 
-- **[Plugin Setup](plugins.md)** — install or create a plugin
+- **[Install a Plugin](plugins.md)** — install an existing product plugin
+- **[Build a Plugin](../guides/plugins/index.md)** — create a plugin for a new product

@@ -1,7 +1,7 @@
 # Operations
 
-Use these pages when you already have a Firecube product and need to inspect,
-recover, clean up, archive, or restore it.
+Use these pages to run coordinated write workflows and to inspect, recover,
+clean up, archive, or restore Firecube products.
 
 Operations commands work against a product URI:
 
@@ -40,6 +40,7 @@ For S3 products, configure the S3 storage settings and credentials described in
 
 | Task | Start here |
 |---|---|
+| Run several workers against one Zarr group | [Run Parallel Zarr Writes](parallel-zarr-writes.md) |
 | Inspect product state | [Inspect ChunkManager State](chunk-manager/inspect.md) |
 | Recover from a crashed run | [Recover Runs And Claims](chunk-manager/recover.md) |
 | Delete stale data or reingest a range | [Delete And Reingest](chunk-manager/delete.md) |
@@ -60,6 +61,7 @@ For S3 products, configure the S3 storage settings and credentials described in
 
 ## Next Steps
 
+- **[Run Parallel Zarr Writes](parallel-zarr-writes.md)** — preallocate, plan, and run slot workers
 - **[ChunkManager Operations](chunk-manager/index.md)** — operate the product-local `.firecube/` control plane
 - **[Archive Operations](archive/index.md)** — create, inspect, validate, or restore `.tgm` archives
 - **[ChunkManager Records](../concepts/chunk-management.md)** — understand the model before running commands

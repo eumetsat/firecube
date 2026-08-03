@@ -1,67 +1,74 @@
 # GenericZarrIngestor (Append)
 
-Use `GenericZarrIngestor` when your source products naturally become
-time-ordered `xarray.Dataset` batches. This is the default Zarr path and the
-right starting point for most gridded products.
+`GenericZarrIngestor` uses a dataset-append write model. For each group and
+batch, the plugin returns a complete `xarray.Dataset`. Firecube appends that
+dataset along the plugin's declared append dimension and records the write.
 
-## User Story
+Before each append, Firecube reads the current group length to find where the
+next dataset begins. The group shape, metadata, and trailing chunk are shared
+mutable state, so dataset construction and append mutations pass through one
+serialized Zarr write section.
 
-You have files that arrive in chronological order. For each batch, your plugin
-reads the measurements, builds an `xarray.Dataset`, and hands it back to
-Firecube. Firecube writes the dataset into the Zarr store, appends along the time
-axis, records what happened in ChunkManager, and moves on to the next batch.
+Choose this model when complete dataset batches are a natural representation
+of the product. The source format is not part of the contract.
+
+## How Sequential Appends Work
+
+1. Firecube discovers source items and forms a batch.
+2. The plugin reads the batch and returns an `xarray.Dataset` for a Zarr group.
+3. Firecube validates the append dimension and appends the dataset to that
+   group.
+4. The next dataset continues after the data already written.
 
 <figure markdown="span">
-  ![GenericZarrIngestor builds xarray datasets from time-ordered files and appends them to a Zarr group.](../../../assets/images/firecube-generic-zarr-append.svg){ width="820" }
-  <figcaption markdown="span">Append is the simple path: each batch becomes an `xarray.Dataset`, then Firecube appends it to the group in order.</figcaption>
+  ![GenericZarrIngestor converts ordered source items into xarray datasets and appends each batch along the declared dimension of a Zarr group.](../../../assets/images/firecube-generic-zarr-append.svg){ width="820" }
+  <figcaption markdown="span">Each returned dataset is appended along the declared dimension. The plugin shapes the dataset; Firecube performs the append.</figcaption>
 </figure>
 
-## What The Plugin Provides
+## Data Contract
 
-The plugin implements `build_dataset(group, items, ctx)` and returns an
-`xarray.Dataset` for that group and batch. Firecube handles the surrounding
-work: source discovery, batching, storage access, write claims, run records,
-metrics, logs, and traces.
+Each returned dataset must:
 
-For the plugin hook surface, see
-[GenericZarrIngestor](../../plugins/generic-zarr.md).
+- contain the declared append dimension;
+- be ordered on that dimension;
+- use values that are unique and do not overlap another batch; and
+- keep variables, dimensions, coordinates, and data types compatible with
+  earlier batches.
 
-## When To Use It
-
-- Source files can be processed in order.
-- Each batch represents new data to append along time.
-- Coordinate alignment should be handled by Firecube.
-- You want the smallest plugin surface for a gridded Zarr product.
+Firecube writes the dataset it receives. It does not sort or align the plugin's
+product data.
 
 ## Parallelism Model
 
-Append writes are safe because Firecube treats a Zarr group as a shared write
-domain. Within one run, `pipeline_workers` can prepare batches in parallel, but
-Firecube still writes one append at a time for the group.
+Pipeline workers can perform work before the Zarr write section concurrently,
+but `build_dataset` and the append to one group pass through one writer. This
+prevents two appends from reading the same cursor or changing shared group state
+at the same time.
 
 <figure markdown="span">
-  ![GenericZarrIngestor parallelism model showing serialized appends to one group and concurrent jobs for distinct groups.](../../../assets/images/firecube-generic-zarr-parallel-groups.svg){ width="820" }
-  <figcaption markdown="span">Pipeline workers can prepare append batches in parallel. Appends to one group are serialized; distinct Zarr groups can be ingested concurrently as separate write domains.</figcaption>
+  ![GenericZarrIngestor parallelism model showing concurrent batch preparation, serialized appends to one group, and separate write domains for distinct groups.](../../../assets/images/firecube-generic-zarr-parallel-groups.svg){ width="820" }
+  <figcaption markdown="span">Preparation can run concurrently. Appends to one group are serialized; distinct products or groups are separate write domains.</figcaption>
 </figure>
 
-To scale append-Zarr ingestion safely:
+Pipeline workers help only when meaningful preparation happens before the
+serialized section. They do not make `build_dataset` or same-group appends
+concurrent. Do not run multiple append writers against the same group.
 
-- use pipeline workers when parsing or transformation is the bottleneck;
-- fan out across different products or different Zarr groups;
-- do not run two append writers against the same group.
+## When To Use Direct Writes
 
-If one group needs true concurrent writes, use
-[DirectZarrIngestor (Region)](direct-region.md) instead.
-
-## When To Move To Direct Region Writes
-
-Use direct region writes when source items arrive out of order, you need to fill
-sparse slices, you already know the full store shape, or one group needs many
-workers writing disjoint ranges.
+Use [`DirectZarrIngestor`](direct-region.md) when the plugin needs to declare
+the array layout and place data through explicit write intents instead of
+returning complete datasets. Use its optional parallel model when several
+processes must write disjoint, chunk-aligned ranges of one group. Direct writes
+replace the append cursor with absolute indexes supplied by the plugin.
 
 ## Next Steps
 
-- **[DirectZarrIngestor (Region)](direct-region.md)** — high-throughput, sparse, or out-of-order writes
-- **[GenericZarrIngestor](../../plugins/generic-zarr.md)** — implement the append-Zarr plugin hook
-- **[Weather CSV Plugin](../../../tutorials/weather-csv.md)** — build a working `GenericZarrIngestor` plugin
-- **[Performance Tuning](../../performance.md)** — batch-size alignment, sharding, compression, and Dask scheduler tuning
+- **[`GenericZarrIngestor` Guide](../../../guides/plugins/generic-zarr.md)** —
+  implement and verify the dataset hook
+- **[DirectZarrIngestor (Region)](direct-region.md)** — compare explicit array placement
+  with dataset appends
+- **[Weather CSV Plugin](../../../tutorials/weather-csv.md)** — follow a complete
+  `GenericZarrIngestor` example
+- **[Parallelism](../../parallelism.md)** — compare write domains across output
+  formats

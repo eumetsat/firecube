@@ -9,40 +9,26 @@
 <p align="center">
   <a href="docs/index.md">Documentation</a> |
   <a href="docs/quickstart/index.md">Quickstart</a> |
-  <a href="docs/concepts/plugins/create-a-plugin.md">Create a Plugin</a> |
-  <a href="docs/tutorials/weather-csv.md">Plugin Tutorial</a>
+  <a href="docs/guides/plugins/index.md">Plugin Development</a>
 </p>
 
 
 ## Installation
 
-Firecube requires **Python 3.12+**. We recommend using `uv` for lightning-fast dependency management and isolated environments.
-
-### 1. Clone the Repository
-
-Clone the core Firecube ingestor repository:
+Firecube requires **Python 3.12+**. Install the released package from PyPI in
+an isolated environment:
 
 ```bash
-git clone https://github.com/eumetsat/firecube.git
-cd firecube
-```
-
-### 2. Setup Environment
-
-Use `uv` to install dependencies and prepare the virtual environment:
-
-```bash
+mkdir firecube-quickstart
+cd firecube-quickstart
 uv venv --python 3.12
-uv sync
-```
-
-### 3. Verify CLI
-
-Confirm the installation by checking the version:
-
-```bash
+uv pip install firecube
 uv run firecube --version
 ```
+
+See the [Installation guide](docs/quickstart/installation.md) for the user
+quickstart. To change Firecube itself, use the setup in
+[Contributing to Firecube](docs/contributing/firecube-contributors.md).
 
 ## Use A Plugin
 
@@ -55,23 +41,25 @@ uv run firecube plugins list
 uv run firecube plugins describe <plugin>
 ```
 
-Then follow the plugin documentation for its source data and options. Firecube
-ingest commands always require explicit product flags; storage settings are
-inferred from the URI scheme by default:
+Then follow the plugin documentation for its source data and options. Ingestion
+requires a target and write mode, plus a product name from the command or plugin
+class. This example also spells out the storage and output choices:
 
 ```bash
 uv run firecube ingest <plugin> \
-  --input-data file://${PWD}/source-data \
+  --input-data ./source-data \
   --target "file://${PWD}/my_product.zarr" \
   --product-name my_product \
+  --storage-type local \
+  --storage-driver fsspec \
   --output-format zarr \
   --write-mode direct
 ```
 
 ```bash
-# explicit storage override if needed
+# use another supported storage driver explicitly
 uv run firecube ingest <plugin> \
-  --input-data file://${PWD}/source-data \
+  --input-data ./source-data \
   --target "file://${PWD}/my_product.zarr" \
   --product-name my_product \
   --storage-type local \
@@ -86,9 +74,9 @@ For the full first-run path, use the
 ## Documentation
 
 - [Installation](docs/quickstart/installation.md)
-- [Plugin setup](docs/quickstart/plugins.md)
+- [Install a plugin](docs/quickstart/plugins.md)
 - [Run ingestion](docs/quickstart/ingestion.md)
-- [Configuration](docs/quickstart/configuration.md)
+- [Configure S3 access](docs/quickstart/configuration.md)
 - [CLI reference](docs/reference/cli.md)
 
 Build or serve the docs locally:

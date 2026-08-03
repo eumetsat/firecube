@@ -16,7 +16,7 @@ environment variable, in `config.toml`, or in a plugin default.
 | CLI flags | Run identity and storage choices for one command, such as `--target`, `--product-name`, `--storage-type`, `--storage-driver`, and `--write-mode`. |
 | Environment variables | S3 credentials, endpoint, region, and deployment-specific storage defaults. |
 | `config.toml` | Reusable settings you want to keep between runs, such as storage defaults, metrics settings, and plugin defaults. |
-| `--option key=value` | Engine, output-format, DuckDB, or plugin options for one run. |
+| `--option key=value` | Engine, output-format, or plugin options for one run. |
 | Plugin defaults | Product defaults declared by the installed plugin. |
 
 ## Precedence
@@ -28,27 +28,35 @@ Storage settings loaded through the storage configuration use this precedence:
 3. `config.toml`
 4. Built-in defaults
 
-Product name has its own fallback order:
+Product name is resolved in this order:
 
 1. `--product-name`
-2. `[plugins.<name>].default_product_name`
+2. `default_product_name` in the plugin configuration
 3. the plugin's `PRODUCT_NAME`
 4. fail if no product name is available
 
+!!! warning "Current limitation"
+    `default_product_name` is currently rejected when plugin options are
+    validated. Until that is corrected, pass `--product-name` or declare
+    `PRODUCT_NAME` on the plugin class.
+
 ## Runtime Flags Stay Explicit
 
-Configuration does not replace required ingest flags. Each `firecube ingest`
-command still passes the product location and storage choices explicitly:
+The documentation examples keep each ingest decision visible by passing:
 
-- `--target`
 - `--product-name`
+- `--target`
 - `--storage-type`
 - `--storage-driver`
+- `--output-format`
 - `--write-mode`
 
 Use `--target` for the output product location. Use `--product-name` for the
-logical product identity. Use `--product` later when inspecting or maintaining an
-existing product with commands such as `firecube chunks ...`.
+logical product identity when the plugin does not declare `PRODUCT_NAME` or the
+run needs an override. Passing the storage type and driver explicitly keeps the
+selected backend unambiguous. For `firecube chunks ...`, pass the product URI
+through `--product-name` when the command needs to locate the control-plane
+records.
 
 For runnable examples, see [Run Ingestion](../quickstart/ingestion.md). For the
 complete command surface, see the [CLI Reference](../reference/cli.md).
@@ -97,7 +105,6 @@ driver = "fsspec"
 pushgateway_url = "http://localhost:9091"
 
 [plugins.my_plugin]
-default_product_name = "my_product"
 pipeline_parallel = true
 pipeline_workers = 4
 pipeline_batch_size = 40
@@ -123,8 +130,7 @@ silently ignored.
 | Tier | Examples | Applies to |
 |---|---|---|
 | Engine options | `pipeline_parallel`, `pipeline_workers`, `pipeline_batch_size`, `include_patterns`, `resume_existing` | Runtime behavior shared by plugins. |
-| Output options | `zarr_chunk_shape`, `zarr_compression`, `zarr_consolidate`, `parquet_partition_by` | Zarr, Parquet, or other output-template behavior. |
-| DuckDB defaults | `duckdb_memory_limit`, `duckdb_threads`, `duckdb_max_temp_directory_size` | Plugins that use DuckDB-backed helpers. |
+| Output options | `zarr_chunk_shape`, `zarr_compression`, `zarr_consolidate` | Zarr template behavior. |
 | Plugin options | `region`, thresholds, filters, product-specific switches | Options declared by the installed plugin. |
 
 Options with the `x_` prefix (e.g. `--option x_foo=1`) are in the experimental
@@ -146,13 +152,13 @@ firecube plugins explain <plugin_name>.engine.pipeline_workers
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `Unknown option` | The key is not accepted by any active option tier. | Run `firecube ingest <plugin_name> --show-options` and use one of the listed keys. |
-| Missing required flag | Runtime identity or storage choice was omitted. | Add `--target`, `--product-name`, `--storage-type`, `--storage-driver`, or `--write-mode`. |
+| Missing required flag | The target or write mode was omitted, or no product name fallback exists. | Add `--target` and `--write-mode`; add `--product-name` when the plugin has no `PRODUCT_NAME`. |
 | Storage mismatch error | The target URI and `--storage-type` do not agree. | Use `file://` with `--storage-type local` or `s3://` with `--storage-type s3`. |
 | Plugin defaults do not apply | The `[plugins.<name>]` section name does not match the installed plugin. | Run `firecube plugins describe <plugin_name>` and use that plugin name in `config.toml`. |
 | S3 credentials are ignored | The variables or config keys are not visible to the process running Firecube, or a CLI override is winning. | Print the environment in the same shell before running Firecube and check for explicit CLI overrides. |
 
 ## Next Steps
 
-- **[Quickstart Configuration](../quickstart/configuration.md)** — first-run config examples
+- **[Configure S3 Access](../quickstart/configuration.md)** — set credentials and connection settings
 - **[Configuration Reference](../reference/config.md)** — complete generated schema
 - **[Run Ingestion](../quickstart/ingestion.md)** — local and S3 ingest examples

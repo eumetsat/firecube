@@ -1,22 +1,57 @@
-# Weather CSV: Observability
+# NetCDF To Zarr: Observability
 
 ## Goal
 
-Add one domain-specific metric to the Weather CSV plugin and verify the plugin
-still writes a Zarr product.
+Add one domain-specific metric to the plugin from the first tutorial, run
+ingestion with a Prometheus Pushgateway, and inspect the exported metric.
 
-Continue from [Weather CSV Plugin](weather-csv.md). You will keep the same
+Continue from [NetCDF To Zarr](weather-netcdf.md). You will keep the same
 plugin and add one metric through `ctx.telemetry`.
+
+## Prerequisites
+
+- The completed [NetCDF To Zarr](weather-netcdf.md) project in the current
+  directory.
+- Docker available with local port `9091` free.
+
+## Start A Pushgateway
+
+This tutorial uses Docker to run a temporary local Pushgateway:
+
+```bash
+docker run --rm -d \
+  --name firecube-tutorial-pushgateway \
+  -p 9091:9091 \
+  prom/pushgateway:v1.11.1
+```
+
+Set its URL for the remaining commands:
+
+```bash
+export FIRECUBE_PUSHGATEWAY_URL="http://localhost:9091"
+```
+
+Confirm that it is ready:
+
+```bash
+curl -s "$FIRECUBE_PUSHGATEWAY_URL/-/ready"
+```
+
+Expected output:
+
+```text
+OK
+```
 
 ## Add One Metric
 
-In `plugins_dev/firecube-weather-csv/src/firecube_weather_csv/ingestor.py`, add
-this block near the end of `build_dataset`, just before `return ds`:
+In `plugins_dev/firecube-weather-netcdf/src/firecube_weather_netcdf/ingestor.py`,
+add this block near the end of `build_dataset`, just before `return result`:
 
 ```python
         if ctx.telemetry is not None:
             ctx.telemetry.emit(
-                "weather_csv_files",
+                "weather_netcdf_files",
                 len(items),
                 kind="counter",
                 meta={"group": group, "status": "success"},
@@ -27,23 +62,22 @@ this block near the end of `build_dataset`, just before `return ds`:
 during the run. Firecube exports it as:
 
 ```text
-firecube_weather_csv_files_total
+firecube_weather_netcdf_files_total
 ```
 
 ## Run The Plugin
 
 ```bash
-PRODUCT_URI="file://$PWD/tutorial-output/weather_csv_observed.zarr"
+PRODUCT_URI="file://$PWD/tutorial-output/weather_netcdf_observed.zarr"
 
-uv run firecube ingest weather_csv \
-  --input-data tutorial-data/weather-csv \
+uv run firecube ingest weather_netcdf \
+  --input-data tutorial-data/weather-netcdf \
   --target "$PRODUCT_URI" \
-  --product-name weather_csv_observed \
+  --product-name weather_netcdf_observed \
   --storage-type local \
   --storage-driver fsspec \
   --output-format zarr \
-  --write-mode direct \
-  --option 'include_patterns=["*.csv"]'
+  --write-mode direct
 ```
 
 Expected logs on stderr include:
@@ -55,12 +89,12 @@ Expected logs on stderr include:
 Expected command output on stdout includes:
 
 ```text
-"plugin": "weather_csv"
+"plugin": "weather_netcdf"
 ...
 "files_processed": 4
 ...
 "count": 4
-"product": "weather_csv_observed"
+"product": "weather_netcdf_observed"
 ```
 
 ## Verify The Product
@@ -70,7 +104,7 @@ uv run python - <<'PY'
 import xarray as xr
 
 ds = xr.open_zarr(
-    "tutorial-output/weather_csv_observed.zarr",
+    "tutorial-output/weather_netcdf_observed.zarr",
     group="default",
     consolidated=False,
 )
@@ -85,34 +119,36 @@ Expected output:
 ok
 ```
 
-## Optional: Push Metrics
+## Verify The Metric
 
-When a Prometheus Pushgateway is available, set its URL before running
-ingestion:
-
-```bash
-export FIRECUBE_PUSHGATEWAY_URL="http://localhost:9091"
-```
-
-Rerun ingestion, then query the pushed metric:
+Firecube flushes buffered metrics at the end of the run. Query the Pushgateway
+and select the metric added above:
 
 ```bash
 curl -s "$FIRECUBE_PUSHGATEWAY_URL/metrics" \
-  | grep "firecube_weather_csv_files_total"
+  | grep "firecube_weather_netcdf_files_total"
 ```
 
-Expected output includes:
+Expected output includes a sample with the value `4`:
 
 ```text
-firecube_weather_csv_files_total{group="default",status="success",...} 4.0
+firecube_weather_netcdf_files_total{group="default",status="success",...} 4
 ```
 
-Pushgateway grouping, labels, and environment variables are listed in
-[Observability Reference](../reference/observability.md).
+If the metric is absent, check the ingestion logs for `Failed to push metrics
+to Pushgateway`, then confirm the configured URL is reachable from the Firecube
+process.
+
+Stop the tutorial Pushgateway when verification is complete:
+
+```bash
+docker stop firecube-tutorial-pushgateway
+```
 
 ## Next Steps
 
-- **[Metrics](../concepts/observability/metrics.md)** — metric kinds, labels, and Pushgateway behavior
-- **[Plugin Observability](../concepts/plugins/observability.md)** — plugin telemetry rules
-- **[Sentinel-3 FRP Plugin](sentinel3-frp.md)** — build a Parquet plugin from downloaded data
-- **[Direct Parallel Zarr](direct-zarr-parallel.md)** — continue to the advanced write path
+- **[Metrics](../concepts/observability/metrics.md)** — understand metric kinds, labels, and Pushgateway behavior
+- **[Add Plugin Telemetry](../guides/plugins/observability.md)** — plugin telemetry rules
+- **[Observability Reference](../reference/observability.md)** — configure and inspect telemetry backends
+- **[Sentinel-3 FRP To Parquet](sentinel3-frp.md)** — download and ingest a real EUMETSAT product
+- **[Parallel DirectZarrIngestor](direct-zarr-parallel.md)** — continue to the advanced write path

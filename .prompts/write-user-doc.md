@@ -18,6 +18,8 @@ or recovering from one concrete Firecube workflow.
 - Write for users, not maintainers.
 - Start with the task and expected outcome.
 - Prefer commands, expected output, verification, and troubleshooting.
+- Assume the reader is competent to perform the task. Keep teaching,
+  alternatives, and exhaustive reference out of the action flow.
 - Avoid internal service names, phase history, line numbers, source paths, commit labels, and `.sisyphus/` or `plans/` references.
 
 ## Template

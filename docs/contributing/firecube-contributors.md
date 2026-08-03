@@ -6,7 +6,7 @@ This page is for changes to Firecube internals: the engine, core libraries, CLI,
 storage drivers, ChunkManager, observability, tests, or documentation.
 
 Plugin authors do not need this page for normal plugin work. Start with
-[Plugin Authors](plugin-authors.md) instead.
+[Plugin Development](../guides/plugins/index.md) instead.
 
 ## Keep The Layers Intact
 
@@ -29,7 +29,6 @@ Public plugin code relies on the API modules:
 
 - `firecube.ingestor.api`
 - `firecube.core.api`
-- documented extension modules under `firecube.ingestor.extensions`
 
 If a change moves or renames a public symbol, update the API reference and keep a
 compatibility path for the documented deprecation window.
@@ -46,7 +45,7 @@ When changing the engine, identify the runtime area first:
   registration;
 - batching and pipeline execution: source batches, workers, result aggregation,
   and finalization;
-- write strategies: append Zarr, direct-region Zarr, Parquet, and Tensogram
+- write strategies: append Zarr, direct Zarr, Parquet, and Tensogram
   packaging;
 - storage and filesystem drivers: local/S3 behavior, fsspec, obstore, and URI
   handling;
@@ -154,6 +153,7 @@ the matching unit and integration tests rather than only the changed file.
 
 ## Next Steps
 
-- **[API Reference](../reference/api.md)** — public `firecube.ingestor.api` and `firecube.core.api` surfaces
+- **[Plugin Template API](../reference/api.md)** — standard plugin authoring surface
+- **[Advanced Plugin API](../reference/advanced-plugin-api.md)** — custom pipeline types
 - **[ChunkManager Records](../concepts/chunk-management.md)** — product state, runs, spans, claims, and snapshots
-- **[Plugin Authors](plugin-authors.md)** — plugin-facing runtime model
+- **[Plugin Development](../guides/plugins/index.md)** — external plugin guides

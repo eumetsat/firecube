@@ -5,7 +5,7 @@ configuration surface.
 
 For the operational model, see [Observability](../concepts/observability/index.md).
 For plugin telemetry rules, see
-[Plugin Observability](../concepts/plugins/observability.md).
+[Plugin Observability](../guides/plugins/observability.md).
 
 ## Metric Kinds
 
@@ -133,4 +133,4 @@ Plugins should not construct this object manually.
 
 - **[Observability](../concepts/observability/index.md)** — metrics, logs, and traces model
 - **[Metrics](../concepts/observability/metrics.md)** — metric usage and plugin emission
-- **[Plugin Observability](../concepts/plugins/observability.md)** — plugin telemetry rules
+- **[Plugin Observability](../guides/plugins/observability.md)** — plugin telemetry rules

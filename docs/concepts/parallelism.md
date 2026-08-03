@@ -19,9 +19,9 @@ mutable output file.
 to one Zarr group are serialized. Separate jobs can run safely only when they
 target disjoint products or disjoint Zarr groups.
 
-`DirectZarrIngestor` can write fixed Zarr regions. Slot workers can write the
-same Zarr group only when the plugin opts in and each worker owns a disjoint,
-chunk-aligned slot range.
+`DirectZarrIngestor` declares Zarr arrays and emits explicit writes to them.
+Slot workers can write the same Zarr group only when the plugin opts in and each
+worker owns a disjoint, chunk-aligned slot range.
 
 Staged upload parallelism is separate. `upload_workers` controls the upload
 phase after staged pipeline writes have completed.
@@ -60,8 +60,8 @@ writes. Firecube records write claims in ChunkManager, but the safe domain still
 depends on output format:
 
 - Parquet: one writer per output file path.
-- Generic Zarr append: one append writer per Zarr group.
-- Direct Zarr region: one writer per disjoint, chunk-aligned slot range.
+- `GenericZarrIngestor`: one append writer per Zarr group.
+- `DirectZarrIngestor` slots: one writer per disjoint, chunk-aligned range.
 - Tensogram packaging: one writer per `.tgm` output.
 
 For append-Zarr products, splitting source files by date is not enough if both
@@ -83,7 +83,7 @@ commands.
 ## Next Steps
 
 - **[Performance Tuning](performance.md)** — decide whether workers, staged mode, sharding, or upload tuning helps
-- **[GenericZarrIngestor (Append)](output-formats/zarr/generic-append.md)** — understand serialized appends and group fan-out
+- **[GenericZarrIngestor](../guides/plugins/generic-zarr.md)** — implement serialized Zarr appends
 - **[Parquet](output-formats/parquet.md)** — write tabular outputs with parallel batch files
-- **[Parallel Zarr Writes](output-formats/zarr/parallel-writes.md)** — operate `DirectZarrIngestor` slot workers
+- **[Run Parallel Zarr Writes](../operations/parallel-zarr-writes.md)** — operate `DirectZarrIngestor` slot workers
 - **[Orchestration](orchestration.md)** — schedule multiple Firecube jobs

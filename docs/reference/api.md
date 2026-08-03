@@ -1,124 +1,133 @@
-# Public API Reference
+# Plugin Template API Reference
 
-This page contains the automatically generated public SDK reference for Firecube.
-Plugin code should import these symbols from `firecube.ingestor.api` or
-`firecube.core.api` — never from deeper internal modules.
+This reference covers the public authoring members of
+`GenericZarrIngestor`, `GenericParquetIngestor`, and `DirectZarrIngestor`.
+Import the symbols from `firecube.ingestor.api` unless a section names
+`firecube.core.api` explicitly.
 
-The reference is organized in three tiers so plugin authors can find the right
-surface for the task at hand:
+Plugins that own the complete batch pipeline use a separate, advanced
+contract. See the
+[Advanced Custom Pipeline API](advanced-plugin-api.md) for that surface.
 
-1. **Primary Plugin Authoring Surface** — everything required to build a working
-   plugin from scratch. Start here.
-2. **Advanced Plugin Authoring** — exceptions, advanced context types,
-   write-strategy customization, and pipeline internals for non-trivial plugins.
-3. **Utilities & Type System** — range/slot helpers, source-file types,
-   protocols, and core infrastructure (`firecube.core.api`).
+## Shared Template Surface
 
-## Primary Plugin Authoring Surface
-
-Start here. Everything needed to write a working plugin. Import from
-`firecube.ingestor.api` unless noted.
-
-### Registration & Discovery
+### Registration
 
 ::: firecube.ingestor.api.register_ingestor
     options:
         show_root_heading: true
         show_source: false
 
-::: firecube.ingestor.api.discover_ingestors
-    options:
-        show_root_heading: true
-        show_source: false
+Every concrete plugin class must also declare a non-empty
+`PRODUCT_NAME: ClassVar[str]`. Firecube checks this when the class is defined.
 
-### Base Class
-
-::: firecube.ingestor.api.BaseIngestor
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Context & Configuration
+### Plugin Context
 
 ::: firecube.ingestor.api.PluginContext
     options:
         show_root_heading: true
         show_source: false
+        show_bases: false
+        members:
+          - source
+          - target
+          - temp_root
+          - run_id
+          - options
+          - option
+          - materialize
+          - telemetry
 
-::: firecube.ingestor.api.EngineConfig
-    options:
-        show_root_heading: true
-        show_source: false
+### Plugin Configuration
 
 ::: firecube.ingestor.api.PluginConfig
     options:
         show_root_heading: true
         show_source: false
 
-### Results & Metrics
+### Batch Input
 
-::: firecube.ingestor.api.PipelineResult
+`GenericParquetIngestor` and `DirectZarrIngestor` receive a `PipelineBatch`.
+`GenericZarrIngestor` receives the batch's source items directly.
+
+::: firecube.ingestor.api.PipelineBatch
     options:
         show_root_heading: true
         show_source: false
 
-::: firecube.ingestor.api.OutputPaths
-    options:
-        show_root_heading: true
-        show_source: false
+### Source Discovery
 
-::: firecube.ingestor.api.ResultMetrics
-    options:
-        show_root_heading: true
-        show_source: false
+All three templates inherit
+`discover_source_files(self, ctx: PluginContext) -> Iterable[Any]`. By default,
+it recursively discovers `.zip`, `.h5`, and `.nc` files below `ctx.source`.
+When `include_patterns` is set, those patterns select the source names instead.
+Override the method only when source layout rules cannot be expressed as
+patterns.
 
-::: firecube.ingestor.api.merge_batch_metrics
-    options:
-        show_root_heading: true
-        show_source: false
+## GenericZarrIngestor
 
-### Generic Template Classes
+Subclass `GenericZarrIngestor` and implement `build_dataset`.
 
 ::: firecube.ingestor.api.GenericZarrIngestor
     options:
         show_root_heading: true
         show_source: false
+        show_bases: false
+        members:
+          - build_dataset
 
-::: firecube.ingestor.api.GenericParquetIngestor
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.GenericTensogramIngestor
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.DirectZarrIngestor
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Template Configurations
+The inherited `time_dim_name: ClassVar[str]` selects the append dimension and
+defaults to `"timestamp"`. It is a class declaration, not a `--option` field.
 
 ::: firecube.ingestor.api.ZarrTemplateConfig
     options:
         show_root_heading: true
         show_source: false
 
+## GenericParquetIngestor
+
+Subclass `GenericParquetIngestor` and implement `build_dataset`. The remaining
+methods are optional customizations.
+
+::: firecube.ingestor.api.GenericParquetIngestor
+    options:
+        show_root_heading: true
+        show_source: false
+        show_bases: false
+        members:
+          - build_dataset
+          - get_batch_groups
+          - output_relpath
+          - write_parquet
+
+### Parquet Template Configuration
+
+`ParquetTemplateConfig` currently declares `parquet_partition_by` and
+`parquet_row_group_size`, but the default writer does not apply either field.
+Do not configure them until writer support is implemented.
+
 ::: firecube.ingestor.api.ParquetTemplateConfig
     options:
         show_root_heading: true
         show_source: false
 
-::: firecube.ingestor.api.TensogramTemplateConfig
+## DirectZarrIngestor
+
+Subclass `DirectZarrIngestor` and implement `zarr_schema` and
+`build_write_intents`.
+
+::: firecube.ingestor.api.DirectZarrIngestor
     options:
         show_root_heading: true
         show_source: false
+        show_bases: false
+        members:
+          - zarr_schema
+          - build_write_intents
 
-### DirectZarrIngestor Types
+### Schema And Write Types
 
-::: firecube.ingestor.api.WriteIntent
+::: firecube.ingestor.api.ZarrGroupSpec
     options:
         show_root_heading: true
         show_source: false
@@ -128,360 +137,57 @@ Start here. Everything needed to write a working plugin. Import from
         show_root_heading: true
         show_source: false
 
-::: firecube.ingestor.api.ZarrGroupSpec
+::: firecube.ingestor.api.WriteIntent
     options:
         show_root_heading: true
         show_source: false
 
-## Advanced Plugin Authoring
+### Optional Slot-Range Parallelism
 
-Errors to catch, advanced context types, write-strategy customization, and
-pipeline internals for complex plugins.
+Set `SUPPORTS_SLOT_RANGE_PARALLELISM = True` only when the plugin implements
+all three required methods below. Firecube checks the overrides when the class
+is defined.
 
-### Exceptions
-
-::: firecube.ingestor.api.IngestorError
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.ConfigurationError
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.StorageError
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.ManifestError
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.RangeOverlapError
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.ResumeConflictError
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.SchemaDriftError
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.SchemaSizeMismatchError
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.WriteIntentRangeError
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Advanced Context Types
-
-::: firecube.ingestor.api.RuntimeIngestContext
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.StorageContext
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.IngestContext
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Pipeline Internals
-
-::: firecube.ingestor.api.IngestManifest
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.PipelineRunState
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.PipelineBatch
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.IngestResult
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Metrics Types
-
-::: firecube.ingestor.api.PipelineMetrics
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.StorageMetrics
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Write Strategies
-
-::: firecube.ingestor.api.AppendWriteStrategy
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.RegionWriteStrategy
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.AppendStrategy
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.IndexedRegionStrategy
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.TensogramWriteStrategy
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Advanced Configuration
-
-::: firecube.ingestor.api.TemplateConfig
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.CatalogGroupInfo
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.config_keys
-    options:
-        show_root_heading: true
-        show_source: false
-
-## Utilities & Type System
-
-Range/slot helpers, source-file types, protocols, and core infrastructure.
-Most symbols here come from `firecube.ingestor.api` or `firecube.core.api`.
-
-### Range & Slot Utilities
-
-::: firecube.ingestor.api.chunk_align_ranges
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.compute_covered_ranges
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.validate_chunk_alignment
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.validate_slot_range
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.warn_if_misaligned
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Source File Types
-
-::: firecube.ingestor.api.SourceFile
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.LocalSourceFile
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Run Tracking
-
-::: firecube.ingestor.api.SpanCoverage
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.PlannedRange
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.SlotRange
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.WriteDomain
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Protocols
-
-::: firecube.ingestor.api.Ingestor
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.PipelineHost
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.DatasetProducer
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.is_dataset_producer
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.ingestor.api.SlotRangeCapable
-    options:
-        show_root_heading: true
-        show_source: false
-
-### Core Infrastructure (firecube.core.api)
-
-::: firecube.core.api.parse_uri
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.create_filesystem_for_uri
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.discover_input_files
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.StorageConfig
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.RunInfo
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.describe_control_plane
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.RegionZarrWriterProtocol
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.delete_path
+::: firecube.ingestor.api.DirectZarrIngestor.timestamp_to_ts_index
     options:
         show_root_heading: true
         show_source: false
 
-::: firecube.core.api.ensure_directory
+::: firecube.ingestor.api.DirectZarrIngestor.global_expected_time_count
     options:
         show_root_heading: true
         show_source: false
 
-::: firecube.core.api.ensure_product_uri
+::: firecube.ingestor.api.DirectZarrIngestor.slot_index_model
     options:
         show_root_heading: true
         show_source: false
 
-::: firecube.core.api.resolve_dataset_target
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.infer_target_protocol
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.is_remote_target
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.local_path_from_target
-    options:
-        show_root_heading: true
-        show_source: false
+`filter_items_to_slot_range` is optional but recommended. Its default returns
+all items unchanged. Firecube still rejects any resulting intent whose index is
+outside the worker's assigned half-open range.
 
-::: firecube.core.api.path_stats
+::: firecube.ingestor.api.DirectZarrIngestor.filter_items_to_slot_range
     options:
         show_root_heading: true
         show_source: false
 
-::: firecube.core.api.clean_netcdf_encoding
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.prepare_netcdf_for_zarr
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.read_hdf5_array
-    options:
-        show_root_heading: true
-        show_source: false
-
-::: firecube.core.api.materialize_hdf5_path
-    options:
-        show_root_heading: true
-        show_source: false
+The slot-index model types are imported from `firecube.core.api`:
 
-::: firecube.core.api.rename_time_dim
+::: firecube.core.api.SlotIndexModel
     options:
         show_root_heading: true
         show_source: false
 
-::: firecube.core.api.require_tensogram
+::: firecube.core.api.SlotAxis
     options:
         show_root_heading: true
         show_source: false
 
-## Next Steps
+## See Also
 
-- **[Plugin Contract](../concepts/plugins/contract.md)** — check required plugin rules
-- **[Plugin Storage Access](../concepts/plugins/storage-access.md)** — use `PluginContext` storage safely
-- **[Plugins](../concepts/plugins/index.md)** — choose a base class and plugin path
+- [Plugin Development Overview](../guides/plugins/index.md)
+- [Implement `GenericZarrIngestor`](../guides/plugins/generic-zarr.md)
+- [Implement `GenericParquetIngestor`](../guides/plugins/generic-parquet.md)
+- [Implement `DirectZarrIngestor`](../guides/plugins/direct-zarr.md)
+- [Advanced Custom Pipeline API](advanced-plugin-api.md)

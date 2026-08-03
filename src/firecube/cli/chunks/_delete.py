@@ -30,15 +30,15 @@ from ._manager import resolve_cli_product, resolve_manager, storage_config_from_
     epilog="""\b
 Examples:
   # preview what would be deleted (always do this first)
-  firecube chunks delete --product-name <product> --dry-run
+  firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # delete all chunks for a product
-  firecube chunks delete --product-name <product> --yes-i-really-mean-it
+  firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --yes-i-really-mean-it
 
 \b
   # delete chunks in a date range
-  firecube chunks delete --product-name <product> --range 2024-01-01,2024-03-31 --dry-run
+  firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --range 2024-01-01,2024-03-31 --dry-run
 
 \b
   # preview deletions across all products
@@ -55,7 +55,7 @@ See also: firecube chunks list, firecube chunks delete-span,
 @click.option(
     "--pattern", multiple=True, help="glob pattern to match chunk keys (can specify multiple)"
 )
-@click.option("-n", "--product-name", "product_name", help="Filter by product name.")
+@click.option("-n", "--product-name", "product_name", help="Full product URI to delete from.")
 @click.option(
     "--all-products",
     "all_products",
@@ -253,21 +253,25 @@ def delete_cmd(
     epilog="""\b
 Examples:
   # preview span deletion for a product
-  firecube chunks delete-span -n <product> --dry-run
+  firecube chunks delete-span -n file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # delete spans for a specific run
-  firecube chunks delete-span -n <product> --run-id <run-id> --yes-i-really-mean-it
+  firecube chunks delete-span -n file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --yes-i-really-mean-it
 
 \b
   # force-delete non-aligned spans
-  firecube chunks delete-span -n <product> --run-id <run-id> --force --yes-i-really-mean-it
+  firecube chunks delete-span -n file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --force --yes-i-really-mean-it
 
 See also: firecube chunks delete, firecube chunks runs list
 """,
 )
 @click.option(
-    "-n", "--product-name", "product_name", required=True, help="target product (e.g. product.zarr)"
+    "-n",
+    "--product-name",
+    "product_name",
+    required=True,
+    help="full product URI to delete spans from",
 )
 @click.option("--run-id", help="filter span records by run_id")
 @click.option("--batch-id", help="filter span records by batch_id")

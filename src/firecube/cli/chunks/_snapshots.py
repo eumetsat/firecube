@@ -36,15 +36,15 @@ def snapshots_group() -> None:
     epilog="""\b
 Examples:
   # preview a snapshot rebuild
-  firecube chunks snapshots rebuild --product-name <product> --dry-run
+  firecube chunks snapshots rebuild --product-name file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # rebuild snapshot for a product
-  firecube chunks snapshots rebuild --product-name <product>
+  firecube chunks snapshots rebuild --product-name file:///data/products/MY_PRODUCT.zarr
 
 \b
   # rebuild and output result as JSON
-  firecube chunks snapshots rebuild --product-name <product> -f json
+  firecube chunks snapshots rebuild --product-name file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks snapshots status, firecube chunks list
 """,
@@ -54,7 +54,7 @@ See also: firecube chunks snapshots status, firecube chunks list
     "--product-name",
     "product_name",
     required=True,
-    help="product to rebuild into a fresh chunk snapshot",
+    help="full product URI to rebuild into a fresh chunk snapshot",
 )
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
 @click.option(
@@ -109,11 +109,11 @@ def rebuild_cmd(
     epilog="""\b
 Examples:
   # check snapshot status for a product
-  firecube chunks snapshots status --product-name <product>
+  firecube chunks snapshots status --product-name file:///data/products/MY_PRODUCT.zarr
 
 \b
   # output as JSON
-  firecube chunks snapshots status --product-name <product> -f json
+  firecube chunks snapshots status --product-name file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks snapshots rebuild, firecube chunks list
 """,
@@ -123,7 +123,7 @@ See also: firecube chunks snapshots rebuild, firecube chunks list
     "--product-name",
     "product_name",
     required=True,
-    help="product to check snapshot status for",
+    help="full product URI to check snapshot status for",
 )
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
 @click.option(

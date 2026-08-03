@@ -59,6 +59,31 @@ What this shows:
 - aligned batches reduce append-Zarr read-modify-write overhead;
 - resume checks add some overhead, but keep retries inspectable.
 
+## Same-Group Slot Scaling
+
+This workload measured the optional parallel contract of a
+`DirectZarrIngestor` plugin. An MTG FCI L1C FDHSI product used a preallocated
+12-slot Zarr extent on S3, the `obstore` driver, `--write-mode direct`, shared
+geolocation grids, and one disjoint slot per local ingest process.
+
+For the same 12-slot window, a same-day run took 4,341 seconds with one process
+and 371 seconds with 12 concurrent processes. That is an 11.70x speedup and
+97.5% parallel efficiency for this workload.
+
+Across the self-normalized, balanced strong-scaling points at 1, 2, 3, 4, 6,
+and 12 processes, a least-squares Amdahl fit estimated a parallel fraction of
+0.9976. In a separate self-normalized weak-scaling series with one slot per
+process, measured efficiency remained between 96.6% and 100% through 12
+processes; the Gustafson fit estimated a serial fraction of 0.0261.
+
+These results demonstrate that preallocated, disjoint slot ranges can remove
+the serialized same-group append bottleneck for a suitable product. They do not
+show that `DirectZarrIngestor` is inherently faster than
+`GenericZarrIngestor`: no comparison between those classes was made. Most
+points had one repetition, the processes shared one host, and S3 endpoint and
+background load varied during the campaign. Treat the result as workload
+evidence, not a performance guarantee or an extrapolation beyond 12 processes.
+
 ## Benchmark Your Own Product
 
 Start with one representative day or one bounded source window. Record:

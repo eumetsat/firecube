@@ -1,72 +1,36 @@
 # Parquet
 
-Use Parquet for **tabular / columnar** outputs — point records, feature tables,
-detection lists. Tabular plugins subclass `GenericParquetIngestor` and run with
-`--output-format parquet`.
-
-Unlike Zarr, Parquet writes are **fully parallel** — there is no process-wide
-write lock — so `pipeline_workers > 1` scales across both preprocessing and
-writing.
+Parquet stores tabular data in a columnar format. Use it when the product is a
+collection of rows rather than a multidimensional array.
 
 <figure markdown="span">
   ![Firecube Parquet output layout showing batches, independent Parquet files, row groups, column chunks, and footer metadata.](../../assets/images/firecube-parquet-file-layout.svg){ width="820" }
-  <figcaption markdown="span">Parquet batches write independent files; each file stores tabular data in row groups and column chunks.</figcaption>
+  <figcaption markdown="span">Written batches are stored as independent Parquet parts below the dataset root.</figcaption>
 </figure>
 
-## The contract
+The Firecube target is a Parquet dataset root, not one output file. It contains
+independent part files; parts for non-default groups use their own
+subdirectories.
 
-Implement one required hook:
+Readers should open the target as a Parquet dataset so the query engine can
+combine the parts and select only the required columns.
 
-```python
-from typing import ClassVar
-from firecube.ingestor.api import (
-    GenericParquetIngestor,
-    PipelineBatch,
-    PluginContext,
-    register_ingestor,
-)
+## Write And Concurrency Model
 
+Each group and batch writes its own part rather than appending to one shared
+file. Pipeline workers can therefore prepare data and write distinct parts
+concurrently. Non-default groups are separated below the dataset root so their
+parts do not share paths.
 
-@register_ingestor("my_table_plugin")
-class MyTableIngestor(GenericParquetIngestor):
-    PRODUCT_NAME: ClassVar[str] = "my_table_product"
-    name = "my_table_plugin"
+This differs from sequential Zarr appends, where writes to one group must pass
+through one writer. The tradeoff is that consumers must treat the Parquet target
+as a dataset of parts and keep the table schema compatible across batches.
 
-    def build_dataset(self, group: str, batch: PipelineBatch, ctx: PluginContext):
-        # Return a pyarrow.Table or pandas.DataFrame for this group/batch,
-        # or None to skip writing.
-        ...
-```
-
-- `build_dataset(group, batch, ctx)` returns a `pyarrow.Table` or
-  `pandas.DataFrame` (or `None` to skip). Note this signature takes the whole
-  `batch`, unlike the Zarr template's `items` form.
-- The template writes one Parquet file per group/batch — `part-<batch_id>.parquet`,
-  placed under a `<group>/` subdirectory when the group is not `default`.
-
-See [GenericParquetIngestor](../plugins/generic-parquet.md) for the
-full hook surface (`batch_setup`, `prepare_batch_data`, `cleanup_batch_data`,
-`batch_teardown`).
-
-## Customizing the write
-
-Override `write_parquet(...)` for custom behavior such as GeoParquet metadata or
-bespoke compression. Two template options tune the default writer (pass as
-`--option key=value`):
-
-| Option | Type | Purpose |
-|--------|------|---------|
-| `parquet_partition_by` | list[str] | Hive-style partition columns. |
-| `parquet_row_group_size` | int | Rows per Parquet row group. |
-
-`parquet_partition_by` is a list, so pass it as a JSON array, e.g.
-`--option 'parquet_partition_by=["year","month"]'`.
-
-Format-specific tuning guidance is in
-[Performance — Parquet Tuning](../performance.md#parquet-tuning).
+For plugin implementation, see
+[GenericParquetIngestor](../../guides/plugins/generic-parquet.md).
 
 ## Next Steps
 
-- **[GenericParquetIngestor](../plugins/generic-parquet.md)** — implement the Parquet plugin hook
-- **[Sentinel-3 FRP Plugin](../../tutorials/sentinel3-frp.md)** — build a small Parquet plugin end to end
-- **[Performance Tuning](../performance.md)** — tune Parquet batch size, workers, partitions, and row groups
+- **[GenericParquetIngestor](../../guides/plugins/generic-parquet.md)** — implement a Parquet plugin
+- **[Parallelism](../parallelism.md)** — understand independent part-file writes
+- **[Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md)** — follow a Parquet plugin tutorial

@@ -21,7 +21,7 @@ title: Firecube
 
 <div class="grid cards" markdown>
 
--   :material-puzzle:{ .lg .middle } **[Easy plugin system](concepts/plugins/index.md)**
+-   :material-puzzle:{ .lg .middle } **[Build a plugin](guides/plugins/index.md)**
 
     ---
 
@@ -46,7 +46,8 @@ title: Firecube
 
     ---
 
-    Plugins write through a unified storage layer, so you can switch between local, remote, `fsspec`, and `obstore` writes with a simple flag.
+    Plugin hooks return product data and Firecube writes it through the selected
+    local or remote storage driver.
 
 -   :material-chart-line:{ .lg .middle } **[Observability](concepts/observability/index.md)**
 

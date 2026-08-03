@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Generic Zarr ingestor for {plugin_name}."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -33,7 +34,7 @@ class {class_name}Config(PluginConfig):
     """Plugin configuration.
 
     To accept ``--option key=value`` flags, add dataclass fields here.
-    See docs/concepts/plugins/create-a-plugin.md.
+    See the Firecube plugin development guide.
     """
 
     pass
@@ -44,12 +45,12 @@ class {class_name}(GenericZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "{plugin_name}"
     plugin_config_class = {class_name}Config
 
-    def build_dataset(
-        self, group: str, items: list[Any], ctx: PluginContext
-    ) -> xr.Dataset | None:
+    def build_dataset(self, group: str, items: list[Any], ctx: PluginContext) -> xr.Dataset | None:
+        # Materialize items before passing them to readers that require local paths:
+        # local_paths = [ctx.materialize(item) for item in items]
         raise NotImplementedError(
             "{class_name}.build_dataset(): implement this hook to convert a batch of "
             "source items into an xarray.Dataset for the given group. Return None to "
             "intentionally skip writing this group/batch. "
-            "See docs/concepts/plugins/generic-zarr.md for examples."
+            "See the Firecube GenericZarrIngestor guide for examples."
         )

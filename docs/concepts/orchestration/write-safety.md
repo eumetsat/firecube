@@ -45,6 +45,6 @@ jobs are disjoint, run them sequentially.
 ## Next Steps
 
 - **[Parallelism](../parallelism.md)** — choose workers and write domains by plugin class
-- **[Parallel Zarr Writes](../output-formats/zarr/parallel-writes.md)** — operate `DirectZarrIngestor` slot workers
+- **[Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md)** — operate `DirectZarrIngestor` slot workers
 - **[Recover Runs And Claims](../../operations/chunk-manager/recover.md)** — recover stuck runs or stale claims
 - **[ChunkManager Operations](../../operations/chunk-manager/index.md)** — inspect runs, claims, spans, or snapshots

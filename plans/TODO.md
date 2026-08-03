@@ -187,7 +187,34 @@ These items identify areas where the system used greedy logic to guess user inte
 ### §12.3 Configuration Derivation
 
 - **Automatic env resolution — PARTIALLY FIXED:** `${VAR}` expansion is now scoped to `[storage]` values only (not all config strings), but remains unconditional within that scope — a literal `${FOO}` storage value is impossible when `FOO` is set. Remaining work: opt-in flag or escape syntax.
-- **Database leakage — OPEN (now in core):** `get_plugin_defaults` in `src/firecube/core/config.py` merges global `[database.duckdb]` settings into every plugin's defaults. Allowlisted to 3 keys, but still implicit cross-section coupling.
+- **DuckDB option tier is disconnected — OPEN:**
+  `src/firecube/core/config.py:get_plugin_defaults()` deliberately does not
+  merge `[database.duckdb]`, while
+  `src/firecube/ingestor/runtime/configure.py:TierConfigurator` allowlists
+  `duckdb_max_temp_directory_size`, `duckdb_memory_limit`, and
+  `duckdb_threads` only after they are already present in `ctx.options`.
+  `src/firecube/cli/_typed_options.py:_enumerate_all_valid_keys()` does not
+  include that tier, so `--show-options` omits the keys and typed `--option`
+  rejects them. `DuckDbMixin` in
+  `src/firecube/ingestor/extensions/duck.py` therefore has no coherent public
+  route for receiving its resource settings. Define one typed owner for these
+  fields, load `[database.duckdb]` only for plugins that declare the DuckDB
+  capability, and expose the same keys through CLI discovery and coercion.
+  Acceptance: config-file and `--option` values reach `DuckDbMixin` with typed
+  values; `--show-options` lists the keys only for compatible plugins; plugins
+  without the capability reject them; public configuration docs describe the
+  same surface.
+- **`default_product_name` leaks into plugin option validation — OPEN:**
+  `src/firecube/cli/main.py` reads the key from plugin defaults to resolve the
+  product name, but leaves it in the `options` mapping passed to
+  `IngestContext`. `TierConfigurator.configure()` in
+  `src/firecube/ingestor/runtime/configure.py` then rejects it because
+  `SYSTEM_KEYS` in `src/firecube/ingestor/config/engine.py` does not include the
+  key and `PluginConfig` in `src/firecube/ingestor/types/config.py` does not own
+  it. Consume this CLI-owned key before tier validation; do not weaken strict
+  unknown-key rejection. Acceptance: a config-only `default_product_name`
+  completes runtime configuration, while product-name precedence remains CLI
+  flag > config `default_product_name` > plugin `PRODUCT_NAME` > hard failure.
 
 ### §12.4 Plugin Heuristics
 
@@ -214,6 +241,73 @@ These items identify areas where the system used greedy logic to guess user inte
 - Frozen snapshot blocked by initialization order: `PluginContext` is created in `BaseIngestor.run()` (`src/firecube/ingestor/runtime/base.py`) before `runtime_ctx.telemetry` is assigned a few lines later. Fixing this requires restructuring `run()` so telemetry is assigned before context construction.
 - Per-worker snapshots: all workers share one `PluginContext` instance wrapping the same `RuntimeIngestContext`. Safe for reads (options detached), but `_ctx` reference-sharing means a convention-breaking plugin could mutate shared state.
 - No tests assert `_ctx` is inaccessible (Python cannot enforce this without structural change).
+
+---
+
+### §31 Parquet template configuration parity
+
+**Goal:** Eliminate accepted Parquet configuration keys that silently have no
+effect on persisted output.
+
+**Current state:** `ParquetTemplateConfig` in
+`src/firecube/ingestor/templates/config.py` declares `parquet_partition_by` and
+`parquet_row_group_size`. `GenericParquetIngestor.write_parquet()` in
+`src/firecube/ingestor/templates/generic.py` calls `pyarrow.parquet.write_table`
+without applying either value. Both keys therefore pass strict configuration
+validation but do not change the output.
+
+**Direction:**
+1. Pass `parquet_row_group_size` to the default writer and validate invalid
+   values before the first write.
+2. Remove `parquet_partition_by` from the accepted config until the template has
+   an explicit dataset-directory layout, deterministic part naming, write-domain
+   ownership, and resume semantics for partitioned output. Do not emulate
+   partitioning inside the current one-file-per-batch contract.
+3. Keep `docs/reference/config.md` and
+   `docs/guides/plugins/generic-parquet.md` aligned with the implemented surface.
+
+**Acceptance criteria:**
+- Every accepted `ParquetTemplateConfig` field changes persisted Parquet output;
+  unsupported fields fail as unknown configuration.
+- Row-group behavior is verified from real Parquet metadata for local output and
+  through the selected storage driver for remote output.
+- No plugin needs to override `write_parquet()` to use the advertised row-group
+  setting.
+
+---
+
+### §32 Public output-writer contract for custom pipelines
+
+**Goal:** Let an external `BaseIngestor` plugin write through Firecube's selected
+storage driver using a stable, typed public contract.
+
+**Current state:** `StorageContext` is exported by
+`src/firecube/ingestor/api.py`, and `PluginContext.storage.output` exposes the
+bound session at runtime. Its annotation in
+`src/firecube/ingestor/types/context.py`, however, names the concrete
+`StorageSession` from `src/firecube/core/storage/session.py` under
+`TYPE_CHECKING`. That concrete class is not exported by
+`src/firecube/ingestor/api.py` or `src/firecube/core/api.py`. A custom
+`BaseIngestor._process_batch()` implementation can therefore use the object only
+through an internal import, implicit duck typing, or `Any`; none defines a
+supported plugin contract.
+
+**Direction:** Define a narrow writer `Protocol` in the plugin contract layer,
+type `StorageContext.output` against it, and export it from the appropriate
+public `api.py` surface. Keep the concrete `StorageSession` internal. The
+protocol must expose only operations required by custom output pipelines and
+must preserve the one-driver rule; it must not provide a route around Firecube's
+write coordination or control-plane ownership.
+
+**Acceptance criteria:**
+- An external `BaseIngestor` plugin can type-check and perform its output writes
+  using imports from `firecube.ingestor.api` and `firecube.core.api` only.
+- The public protocol has behavior-backed local and S3 driver coverage for its
+  declared operations.
+- Existing template implementations continue to use the same bound session and
+  selected driver without deep imports becoming part of the plugin API.
+- Public plugin documentation names only the protocol, not
+  `firecube.core.storage.session.StorageSession`.
 
 ---
 

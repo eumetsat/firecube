@@ -46,7 +46,7 @@ Firecube ignores generic `LOG_LEVEL`, `LOG_FORMAT`, and
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \
@@ -63,7 +63,7 @@ emitted because they are operational evidence, not progress noise.
 
 Plugins must not configure logging handlers (`basicConfig`, `dictConfig`,
 `addHandler`, `setLevel`). Firecube CLI configures logging before plugin code
-runs. See [Plugin Observability](../plugins/observability.md#logging-rules) for
+runs. See [Plugin Observability](../../guides/plugins/observability.md) for
 the full logging boundary.
 
 ## Next Steps
