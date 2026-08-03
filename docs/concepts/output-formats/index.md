@@ -1,8 +1,8 @@
 # Output Formats
 
-Choose the output format from the product you want to build. Firecube can write
-gridded datacubes as **Zarr**, tabular products as **Parquet**, and package
-finished Zarr products as single **Tensogram** `.tgm` files.
+Choose the output format from the product you want to build. Firecube uses
+**Zarr** for multidimensional arrays, **Parquet** for tables, and **Tensogram**
+to package Zarr products as `.tgm` files.
 
 The output format is separate from storage. The same product shape can be written
 to a local `file://` target or an `s3://` target by changing the ingest flags.
@@ -16,27 +16,19 @@ to a local `file://` target or an `s3://` target by changing the ingest flags.
 
 | Your product is | Use | Why |
 |---|---|---|
-| A gridded datacube with dimensions such as time, latitude, longitude, channel, or forecast step | **[Zarr](zarr/index.md)** | Readers can open subsets of a large array product without downloading everything. |
+| A multidimensional array product | **[Zarr](zarr/index.md)** | Readers can open subsets of a large array product without downloading everything. |
 | Rows, detections, point observations, or feature records | **[Parquet](parquet.md)** | Each batch can write independent columnar files that downstream tools can filter efficiently. |
 | A finished Zarr product that needs to move as one file | **[Tensogram](archive.md)** | The product can be packaged as a `.tgm` file for transfer, download, or archival cold storage. |
 
-## How The Choice Affects Firecube
-
-| Format | Plugin path | Parallel behavior |
-|---|---|---|
-| Zarr append | `GenericZarrIngestor` | Source parsing can run in parallel; appends to one Zarr group are serialized. |
-| Zarr direct region | `DirectZarrIngestor` | Disjoint regions can be written directly; slot workers can write the same group in parallel when the plugin opts in. |
-| Parquet | `GenericParquetIngestor` | Batches write independent files, so pipeline workers can parallelize both preparation and writes. |
-| Tensogram | Archive commands | Package a finished Zarr product as `.tgm`, then inspect, validate, or restore it back to Zarr. |
-
-If you are building a plugin, choose the output format first, then choose the
-matching plugin base class. If you are running an existing plugin, the plugin
-documentation should tell you which `--output-format` and `--write-mode` to use.
+If you are building a plugin, use the
+[Plugin Development overview](../../guides/plugins/index.md) to choose the public class
+that produces the required format. The format pages here describe the persisted
+product, not the plugin implementation.
 
 ## Next Steps
 
-- **[Zarr](zarr/index.md)** — choose append or direct region writes for gridded arrays
-- **[Parquet](parquet.md)** — write tabular records
-- **[Tensogram](archive.md)** — package a finished product as `.tgm`
-- **[Create a Plugin](../plugins/create-a-plugin.md)** — scaffold a plugin after choosing the product shape
+- **[Zarr](zarr/index.md)** — understand groups, arrays, and chunks
+- **[Parquet](parquet.md)** — understand the dataset and part-file layout
+- **[Tensogram](archive.md)** — understand the portable `.tgm` representation
+- **[Create a Plugin](../../guides/plugins/create-a-plugin.md)** — create a plugin after choosing the product shape
 - **[Performance Tuning](../performance.md)** — tune chunking, sharding, compression, and batch size

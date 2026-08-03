@@ -1,49 +1,53 @@
 # Zarr
 
-Use Zarr for gridded datacubes: N-dimensional arrays over axes such as time,
-latitude, longitude, channel, forecast step, or another product-specific
-dimension.
+Zarr stores multidimensional data as chunked arrays. A product can contain one
+or more groups, and each group can contain arrays with their own dimensions,
+data types, chunk shapes, and attributes.
 
-In Firecube, the plugin shapes the data, while the engine handles discovery,
-batching, storage, write coordination, validation, and recovery state.
+Chunking lets readers retrieve part of a large product without reading every
+value. The chunk layout also affects write safety and performance because a
+physical chunk is the smallest shared storage unit that writers can touch.
 
 <figure markdown="span">
   ![Firecube Zarr product layout showing groups, arrays, physical chunks, and ChunkManager.](../../../assets/images/firecube-zarr-store-layout.svg){ width="820" }
   <figcaption markdown="span">A Firecube Zarr product keeps array data in Zarr groups and physical chunks. ChunkManager keeps run, span, and claim records beside the store.</figcaption>
 </figure>
 
-After choosing Zarr, the next key decision is the write strategy: whether to
-append `xarray.Dataset` batches sequentially, or write directly to fixed Zarr
-regions using `zarr-python`.
+## Zarr Chunks And ChunkManager Records
 
-## Choose A Zarr Write Path
+A Zarr chunk is a physical block of array data. ChunkManager records are
+Firecube control-plane metadata stored beside the product under `.firecube/`.
+They describe runs, written spans, and active claims; they are not Zarr chunks.
 
-| If your source data... | Start with | Why |
+This distinction matters when inspecting or recovering a product. Zarr tools
+read the arrays. Firecube's `chunks` commands inspect and manage the associated
+run and coordination state.
+
+## Choose A Zarr Write Model
+
+Firecube supports two Zarr authoring classes. Parallel writes are an optional
+extension of one of them, not a third plugin class.
+
+| Data your plugin can supply | Write model | Write consequence |
 |---|---|---|
-| Arrives in order and each batch can become an `xarray.Dataset` | **[GenericZarrIngestor (Append)](generic-append.md)** | Firecube aligns coordinates and appends along time for you. |
-| Can be split into independent Zarr groups | **[GenericZarrIngestor (Append)](generic-append.md)** with one job per group | Append writes are serialized per group, but distinct groups are separate write domains. |
-| Arrives out of order, covers sparse slices, or maps to fixed time/grid slots | **[DirectZarrIngestor (Region)](direct-region.md)** | The plugin declares the store layout and writes exact regions. |
-| Needs many workers writing the same Zarr group | **[DirectZarrIngestor (Region)](direct-region.md)**, then **[Parallel Zarr Writes](parallel-writes.md)** | Slot workers need fixed, disjoint, chunk-aligned ranges. |
+| Complete `xarray.Dataset` batches, already ordered along the append dimension | [GenericZarrIngestor (Append)](generic-append.md) | Firecube finds the end of the group and serializes dataset construction and append mutations. |
+| A declared array schema and exact indexed write locations | [DirectZarrIngestor (Region)](direct-region.md) | The plugin controls placement; serial stores may grow as later indexes are written. |
+| The direct-write contract plus a fixed extent and deterministic indexes | [Parallel Zarr Writes](parallel-writes.md) | Separate processes can own disjoint, chunk-aligned ranges of one group. |
 
-Start with append unless the data forces direct region writes. Direct region
-writes are more powerful, but the plugin has to know the final layout and map
-source items to exact indexes. If one Zarr group itself needs concurrent
-writers, use `DirectZarrIngestor`.
-
-## What Firecube Keeps Safe
-
-- Firecube records run history, spans, and write claims in ChunkManager.
-- Use `firecube chunks` to inspect and recover that state.
-- Firecube ChunkManager records are not physical Zarr chunks. Zarr chunks are
-  array storage units; Firecube records are operational metadata about what a run
-  wrote.
-- Storage location is still explicit. Use a full `file://` or `s3://` target and
-  pass `--storage-type`, `--storage-driver`, and `--write-mode`.
+Choose sequential appends when complete dataset batches represent the product
+naturally. Choose direct writes when the plugin must control individual array
+writes or must remove the serialized same-group append path. Add slot-range
+parallelism only when several processes must write one Zarr group and the
+product can satisfy its fixed-layout safety requirements. A
+`DirectZarrIngestor` without the slot contract remains a serial writer.
 
 ## Next Steps
 
-- **[GenericZarrIngestor (Append)](generic-append.md)** — append `xarray.Dataset` batches in time order
-- **[DirectZarrIngestor (Region)](direct-region.md)** — write fixed regions or sparse slices
-- **[Parallel Zarr Writes](parallel-writes.md)** — run many direct-Zarr workers against the same group
-- **[Create a Plugin](../../plugins/create-a-plugin.md)** — scaffold a plugin and choose a base class
-- **[Performance Tuning](../../performance.md)** — tune chunking, sharding, compression, and batch size
+- **[GenericZarrIngestor (Append)](generic-append.md)** — understand the
+  `GenericZarrIngestor` write model
+- **[DirectZarrIngestor (Region)](direct-region.md)** — understand the
+  `DirectZarrIngestor` write model
+- **[Plugin Development](../../../guides/plugins/index.md)** — choose and
+  implement a plugin authoring class
+- **[Performance Tuning](../../performance.md)** — tune chunking, sharding,
+  compression, and batch size

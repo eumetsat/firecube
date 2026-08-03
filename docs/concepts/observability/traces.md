@@ -48,7 +48,7 @@ disconnected root spans.
 ## Plugin Spans
 
 Use `ctx.telemetry.span(...)` for product-specific phases. See
-[Plugin Observability](../plugins/observability.md#span-usage) for the full span
+[Plugin Observability](../../guides/plugins/observability.md) for the full span
 contract and usage guidance.
 
 ## Run Correlation
@@ -65,7 +65,7 @@ export KFP_RUN_ID="<external-job-id>"
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target s3://bucket/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type s3 \

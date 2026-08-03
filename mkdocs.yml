@@ -1,5 +1,8 @@
 site_name: Firecube
 site_description: A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.
+not_in_nav: |
+  concepts/plugins/index.md
+  tutorials/weather-csv.md
 repo_url: https://github.com/eumetsat/firecube
 repo_name: eumetsat/firecube
 theme:
@@ -74,27 +77,31 @@ nav:
   - Quickstart:
     - Overview: quickstart/index.md
     - Installation: quickstart/installation.md
-    - Plugin Setup: quickstart/plugins.md
+    - Install a Plugin: quickstart/plugins.md
     - Run Ingestion: quickstart/ingestion.md
-    - Intake Catalogs: quickstart/catalogs.md
-    - Configuration: quickstart/configuration.md
+    - Create an Intake Catalog: quickstart/catalogs.md
+    - Configure S3 Access: quickstart/configuration.md
+  - Plugin Development:
+    - Overview: guides/plugins/index.md
+    - Create a Plugin: guides/plugins/create-a-plugin.md
+    - Install Your Plugin: guides/plugins/install-a-plugin.md
+    - Implement Your Plugin:
+      - GenericZarrIngestor (Append): guides/plugins/generic-zarr.md
+      - GenericParquetIngestor (Tabular): guides/plugins/generic-parquet.md
+      - DirectZarrIngestor (Region): guides/plugins/direct-zarr.md
+    - Develop Further:
+      - Read Source Data: guides/plugins/storage-access.md
+      - Configure a Plugin: guides/plugins/cli-and-config.md
+      - Add Telemetry: guides/plugins/observability.md
+    - Advanced Customization:
+      - Plugin Extensions: guides/plugins/extensions.md
+      - Custom Pipeline Plugins: guides/plugins/base-ingestor.md
+    - Publish Your Plugin:
+      - Package and Register: guides/plugins/contract.md
   - Concepts:
     - Overview: concepts/index.md
     - Glossary: concepts/glossary.md
     - Configuration Model: concepts/configuration.md
-    - Plugins:
-      - Overview: concepts/plugins/index.md
-      - Create a Plugin: concepts/plugins/create-a-plugin.md
-      - Base Classes:
-        - GenericZarrIngestor: concepts/plugins/generic-zarr.md
-        - GenericParquetIngestor: concepts/plugins/generic-parquet.md
-        - DirectZarrIngestor: concepts/plugins/direct-zarr.md
-        - BaseIngestor: concepts/plugins/base-ingestor.md
-      - Plugin Contract: concepts/plugins/contract.md
-      - CLI And Config: concepts/plugins/cli-and-config.md
-      - Storage Access: concepts/plugins/storage-access.md
-      - Observability: concepts/plugins/observability.md
-      - Mixins: concepts/plugins/mixins.md
     - Output Formats:
       - Overview: concepts/output-formats/index.md
       - Zarr:
@@ -127,6 +134,8 @@ nav:
       - Benchmarks: concepts/benchmarks.md
   - Operations:
     - Overview: operations/index.md
+    - Zarr:
+      - Run Parallel Zarr Writes: operations/parallel-zarr-writes.md
     - ChunkManager:
       - Overview: operations/chunk-manager/index.md
       - Inspect: operations/chunk-manager/inspect.md
@@ -142,20 +151,20 @@ nav:
   - Tutorials:
     - Overview: tutorials/index.md
     - First Plugin:
-      - Weather CSV Plugin: tutorials/weather-csv.md
-      - "Weather CSV: Source Discovery": tutorials/source-discovery.md
-      - "Weather CSV: Observability": tutorials/observability.md
+      - NetCDF To Zarr: tutorials/weather-netcdf.md
+      - "NetCDF To Zarr: Source Discovery": tutorials/source-discovery.md
+      - "NetCDF To Zarr: Observability": tutorials/observability.md
     - Product Examples:
-      - Sentinel-3 FRP Plugin: tutorials/sentinel3-frp.md
+      - Sentinel-3 FRP To Parquet: tutorials/sentinel3-frp.md
     - Advanced Zarr:
-      - Direct Parallel Zarr: tutorials/direct-zarr-parallel.md
+      - Parallel DirectZarrIngestor: tutorials/direct-zarr-parallel.md
   - Contributing:
     - Overview: contributing/index.md
-    - Plugin Authors: contributing/plugin-authors.md
     - Firecube Contributors: contributing/firecube-contributors.md
   - Reference:
-    - API Reference: reference/api.md
+    - Plugin Template API: reference/api.md
+    - Advanced Plugin API: reference/advanced-plugin-api.md
     - CLI Reference: reference/cli.md
     - Observability: reference/observability.md
     - Configuration: reference/config.md
-    - Storage Driver Compatibility: reference/storage-drivers.md
+    - Storage Drivers: reference/storage-drivers.md

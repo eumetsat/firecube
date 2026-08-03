@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Generic Parquet ingestor for {plugin_name}."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -32,7 +33,7 @@ class {class_name}Config(PluginConfig):
     """Plugin configuration.
 
     To accept ``--option key=value`` flags, add dataclass fields here.
-    See docs/concepts/plugins/create-a-plugin.md.
+    See the Firecube plugin development guide.
     """
 
     pass
@@ -43,9 +44,10 @@ class {class_name}(GenericParquetIngestor):
     PRODUCT_NAME: ClassVar[str] = "{plugin_name}"
     plugin_config_class = {class_name}Config
 
-    def build_dataset(
-        self, group: str, batch: PipelineBatch, ctx: PluginContext
-    ) -> Any | None:
+    def build_dataset(self, group: str, batch: PipelineBatch, ctx: PluginContext) -> Any | None:
+        # Materialize items before passing them to readers that require local paths:
+        # local_paths = [ctx.materialize(item) for item in batch.items]
+        #
         # Return a pyarrow.Table or pandas.DataFrame for this group/batch.
         # Returning None skips writing for this group/batch (intentional skip).
         #
@@ -55,5 +57,5 @@ class {class_name}(GenericParquetIngestor):
             "{class_name}.build_dataset(): implement this hook to convert a batch of "
             "source items into a pyarrow.Table or pandas.DataFrame for the given group. "
             "Return None to intentionally skip this group/batch. "
-            "See docs/concepts/plugins/generic-parquet.md for examples."
+            "See the Firecube GenericParquetIngestor guide for examples."
         )

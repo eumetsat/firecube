@@ -68,8 +68,7 @@ dev = [
 ]
 """
 
-PLUGIN_INIT_TEMPLATE = """
-from .ingestor import {class_name}
+PLUGIN_INIT_TEMPLATE = """from .ingestor import {class_name}
 
 # Importing the package registers the ingestor via @register_ingestor.
 __all__ = ["{class_name}"]
@@ -77,16 +76,16 @@ __all__ = ["{class_name}"]
 
 TEST_INGESTOR_TEMPLATE = '''"""Tests for {class_name}.
 
-This file is intentionally empty. The firecube scaffold cannot guess what your
+This file is intentionally empty. The generated project cannot guess what your
 plugin does, so it does not generate placeholder tests that might give false
 confidence in coverage. ``pytest`` will collect zero tests from this file
 until you add them.
 
 Test ideas to consider once your hooks are implemented:
 
-  1. Registration check: import {import_name}, then assert {class_name} is
-     present in firecube's AVAILABLE_INGESTORS registry (proves the
-     @register_ingestor decorator fired correctly).
+  1. Registration check: import {import_name}, call
+     firecube.ingestor.api.discover_ingestors(), and assert the
+     "{plugin_name}" entry resolves to {class_name}.
   2. PRODUCT_NAME assertion: verify {class_name}.PRODUCT_NAME equals
      "{plugin_name}".
   3. Hook contract: instantiate {class_name}, invoke your hook(s) with a
@@ -95,7 +94,7 @@ Test ideas to consider once your hooks are implemented:
   4. Edge cases specific to your input format: empty input, partial input,
      malformed input.
 
-See docs/concepts/plugins/create-a-plugin.md for full testing guidance.
+See the Firecube plugin development guide for testing guidance.
 """
 '''
 

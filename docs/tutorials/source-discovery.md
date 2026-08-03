@@ -1,37 +1,32 @@
-# Weather CSV: Source Discovery
+# NetCDF To Zarr: Source Discovery
 
 ## Goal
 
-Control which files Firecube sends to your plugin without writing discovery code.
+See which files Firecube discovers automatically, then add another filename
+pattern without writing discovery code in the plugin.
 
-Continue from [Weather CSV Plugin](weather-csv.md). You will keep the same
-plugin and change the ingest command so Firecube discovers only CSV files.
+Continue from [NetCDF To Zarr](weather-netcdf.md). You will keep the same
+plugin and input directory.
 
-The Weather plugin does not implement `discover_source_files`; the CLI pattern
-tells Firecube which files to include.
-
-## Built-In Discovery
+## Use Built-In Discovery
 
 For file-based templates such as `GenericZarrIngestor` and
-`GenericParquetIngestor`, Firecube recursively discovers files under
-`--input-data` and batches them before calling your hook. The built-in discovery
-is conservative: it includes common EO container suffixes such as `.zip`, `.h5`,
-and `.nc` by default.
+`GenericParquetIngestor`, Firecube searches recursively under `--input-data`.
+NetCDF `.nc`, HDF5 `.h5`, and ZIP `.zip` files are included by default.
 
-For CSV input, pass `include_patterns`:
+Run the Weather plugin without a discovery option:
 
 ```bash
-PRODUCT_URI="file://$PWD/tutorial-output/weather_csv_discovery.zarr"
+PRODUCT_URI="file://$PWD/tutorial-output/weather_netcdf_discovery.zarr"
 
-uv run firecube ingest weather_csv \
-  --input-data tutorial-data/weather-csv \
+uv run firecube ingest weather_netcdf \
+  --input-data tutorial-data/weather-netcdf \
   --target "$PRODUCT_URI" \
-  --product-name weather_csv_discovery \
+  --product-name weather_netcdf_discovery \
   --storage-type local \
   --storage-driver fsspec \
   --output-format zarr \
-  --write-mode direct \
-  --option 'include_patterns=["*.csv"]'
+  --write-mode direct
 ```
 
 Expected output includes:
@@ -42,107 +37,107 @@ Expected output includes:
 "files_processed": 4
 ...
 "count": 4
-"product": "weather_csv_discovery"
+"product": "weather_netcdf_discovery"
 ```
 
-## Filter Files From The CLI
+## Add Another Filename Pattern
 
-Add a file the Weather plugin should ignore:
-
-```bash
-printf "notes for humans\n" > tutorial-data/weather-csv/README.txt
-```
-
-Run with the same `include_patterns` value so only CSV files are batched:
-
-```bash
-PRODUCT_URI="file://$PWD/tutorial-output/weather_csv_filtered.zarr"
-
-uv run firecube ingest weather_csv \
-  --input-data tutorial-data/weather-csv \
-  --target "$PRODUCT_URI" \
-  --product-name weather_csv_filtered \
-  --storage-type local \
-  --storage-driver fsspec \
-  --output-format zarr \
-  --write-mode direct \
-  --option 'include_patterns=["*.csv"]'
-```
-
-Expected output includes:
-
-```text
-"message":"Found 4 files"
-...
-"files_processed": 4
-...
-"count": 4
-"product": "weather_csv_filtered"
-```
-
-Use a JSON list when a plugin accepts more than one file pattern:
-
-```bash
---option 'include_patterns=["*.csv","*.csv.gz"]'
-```
-
-## Override Discovery Only For Special Layouts
-
-Most plugins should use `include_patterns`. Override `discover_source_files` only
-when the file layout itself carries domain rules, such as excluding temporary
-files or pairing files before batching.
-
-Inside the Weather plugin class, an override would look like this:
-
-```python
-from collections.abc import Iterable
-from pathlib import Path
-from typing import Any
-
-from firecube.ingestor.api import PluginContext
-
-
-def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
-    source = Path(ctx.source)
-    return sorted(source.rglob("weather_*.csv"))
-```
-
-## Verify
-
-Open the filtered product:
+Create one more NetCDF file, this time with the `.nc4` suffix:
 
 ```bash
 uv run python - <<'PY'
+from pathlib import Path
+
+import numpy as np
 import xarray as xr
 
-ds = xr.open_zarr(
-    "tutorial-output/weather_csv_filtered.zarr",
-    group="default",
-    consolidated=False,
+path = Path("tutorial-data/weather-netcdf/weather_05.nc4")
+ds = xr.Dataset(
+    data_vars={
+        "temperature_c": (
+            ("timestamp", "latitude", "longitude"),
+            np.full((1, 2, 3), 18.7, dtype="float64"),
+        ),
+        "humidity_pct": (
+            ("timestamp", "latitude", "longitude"),
+            np.full((1, 2, 3), 72.0, dtype="float64"),
+        ),
+    },
+    coords={
+        "timestamp": [np.datetime64("2024-07-02T00:00:00", "ns")],
+        "latitude": [50.0, 51.0],
+        "longitude": [7.0, 8.0, 9.0],
+    },
+    attrs={"title": "Weather observations"},
 )
-print(ds)
-assert ds.sizes["timestamp"] == 4
+ds.to_netcdf(path)
+print(path)
 PY
 ```
 
 Expected output:
 
 ```text
-<xarray.Dataset> Size: ...
-Dimensions:                   (timestamp: 4)
-Coordinates:
-  * timestamp                 (timestamp) datetime64[ns] ...
-Data variables:
-    firecube_timestamp_state  (timestamp) uint8 ...
-    temperature_c             (timestamp) float64 ...
-    humidity_pct              (timestamp) float64 ...
-    wind_m_s                  (timestamp) float64 ...
-Attributes:
-    title:    Weather CSV demo
+tutorial-data/weather-netcdf/weather_05.nc4
+```
+
+The `.nc4` suffix is not in the built-in set. Add it with `include_patterns`:
+
+```bash
+PRODUCT_URI="file://$PWD/tutorial-output/weather_netcdf_extended.zarr"
+
+uv run firecube ingest weather_netcdf \
+  --input-data tutorial-data/weather-netcdf \
+  --target "$PRODUCT_URI" \
+  --product-name weather_netcdf_extended \
+  --storage-type local \
+  --storage-driver fsspec \
+  --output-format zarr \
+  --write-mode direct \
+  --option 'include_patterns=["*.nc4"]'
+```
+
+Expected output includes:
+
+```text
+"message":"Found 5 files"
+...
+"files_processed": 5
+...
+"count": 5
+"product": "weather_netcdf_extended"
+```
+
+`include_patterns` adds matching files to the built-in formats. It does not
+exclude `.nc`, `.h5`, or `.zip` files that Firecube would otherwise discover.
+
+## Verify
+
+Open the product and confirm that it contains all five time steps:
+
+```bash
+uv run python - <<'PY'
+import xarray as xr
+
+ds = xr.open_zarr(
+    "tutorial-output/weather_netcdf_extended.zarr",
+    group="default",
+    consolidated=False,
+)
+print(ds.sizes)
+assert ds.sizes == {"timestamp": 5, "latitude": 2, "longitude": 3}
+PY
+```
+
+Expected output:
+
+```text
+Frozen({'timestamp': 5, 'latitude': 2, 'longitude': 3})
 ```
 
 ## Next Steps
 
-- **[Weather CSV: Observability](observability.md)** — add one custom metric to the same plugin
-- **[Sentinel-3 FRP Plugin](sentinel3-frp.md)** — build a Parquet plugin from downloaded data
-- **[Plugins](../concepts/plugins/index.md)** — understand plugin base classes and hooks
+- **[NetCDF To Zarr: Observability](observability.md)** — add one custom metric to the same plugin
+- **[Read Plugin Source Data](../guides/plugins/storage-access.md)** — materialize discovered items for a product reader
+- **[Plugin Template API](../reference/api.md)** — look up the public plugin context and template hooks
+- **[Sentinel-3 FRP To Parquet](sentinel3-frp.md)** — download and ingest a real EUMETSAT product

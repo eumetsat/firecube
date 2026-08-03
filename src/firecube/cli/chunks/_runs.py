@@ -79,30 +79,29 @@ def _echo_abandon_sweep_result(
     epilog="""\b
 Examples:
   # list all runs for a product
-  firecube chunks runs list --product-name <product>
+  firecube chunks runs list --product-name file:///data/products/MY_PRODUCT.zarr
 
 \b
   # filter by status
-  firecube chunks runs list --product-name <product> --status started
+  firecube chunks runs list --product-name file:///data/products/MY_PRODUCT.zarr --status started
 
 \b
   # output as JSON
-  firecube chunks runs list --product-name <product> -f json
+  firecube chunks runs list --product-name file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks runs abandon, firecube chunks list
 """,
 )
-@click.option("-n", "--product-name", "product_name", required=True, help="product to inspect")
+@click.option("-n", "--product-name", "product_name", required=True, help="full product URI")
 @click.option(
     "--target",
     "target",
     default=None,
     metavar="URI",
+    hidden=True,
     help=(
-        "Explicit product target URI (file://... or s3://...). "
-        "Overrides config/env backend resolution. Use when --product-name "
-        "alone resolves to the wrong backend (e.g. after moving a product "
-        "or when config points elsewhere)."
+        "Legacy product target override. Prefer passing the full product URI "
+        "through --product-name."
     ),
 )
 @click.option(
@@ -185,27 +184,35 @@ def list_cmd(
     epilog="""\b
 Examples:
   # preview what would be abandoned
-  firecube chunks runs abandon --product-name <product> --run-id <run-id> --reason "crashed" --dry-run
+  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "crashed" --dry-run
 
 \b
   # abandon a stuck run in non-interactive context
-  firecube chunks runs abandon --product-name <product> --run-id <run-id> --reason "process crashed" \\
+  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "process crashed" \\
+      --yes-i-really-mean-it
+
+\b
+  # preview every stale non-terminal run (bulk mode never prompts)
+  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash"
+
+\b
+  # abandon every stale non-terminal run
+  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash" \\
       --yes-i-really-mean-it
 
 See also: firecube chunks runs list, firecube chunks list
 """,
 )
-@click.option("-n", "--product-name", "product_name", required=True, help="product owning the run")
+@click.option("-n", "--product-name", "product_name", required=True, help="full product URI")
 @click.option(
     "--target",
     "target",
     default=None,
     metavar="URI",
+    hidden=True,
     help=(
-        "Explicit product target URI (file://... or s3://...). "
-        "Overrides config/env backend resolution. Use when --product-name "
-        "alone resolves to the wrong backend (e.g. after moving a product "
-        "or when config points elsewhere)."
+        "Legacy product target override. Prefer passing the full product URI "
+        "through --product-name."
     ),
 )
 @click.option(
@@ -217,7 +224,10 @@ See also: firecube chunks runs list, firecube chunks list
     "--all-stale",
     is_flag=True,
     default=False,
-    help=("abandon all stale non-terminal runs for the product (mutually exclusive with --run-id)"),
+    help=(
+        "preview all stale non-terminal runs for the product; abandon them only with "
+        "--yes-i-really-mean-it (mutually exclusive with --run-id)"
+    ),
 )
 @click.option("--reason", required=True, help="operator reason for abandonment")
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
@@ -239,7 +249,11 @@ def abandon_cmd(
 
     mark a non-terminal ingestion run as abandoned to unblock resume. a run
     stuck in 'started' state blocks future ingestion for that product. use this
-    after confirming the original process is no longer active"""
+    after confirming the original process is no longer active.
+
+    --all-stale never prompts. without --yes-i-really-mean-it it lists stale
+    runs as a dry run; with the flag it abandons them. single-run operations
+    prompt in a terminal and require the flag in non-TTY contexts."""
     if target is not None:
         require_full_uri(target, option_name="--target")
         try:

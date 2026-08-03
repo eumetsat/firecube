@@ -15,7 +15,7 @@ products, dates, regions, or other independent work at the external job level.
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \
@@ -28,8 +28,9 @@ This keeps failures understandable: one job has one product URI, one run record,
 and one set of ChunkManager records to inspect.
 
 Use full product URIs such as `file:///data/products/MY_PRODUCT.zarr` or
-`s3://bucket/products/MY_PRODUCT.zarr`. Firecube does not infer storage type,
-driver, product name, output format, or write mode from the target path.
+`s3://bucket/products/MY_PRODUCT.zarr`. Firecube infers storage type from the
+URI and defaults the driver to configured settings or `fsspec`. Product name,
+output format, and write mode remain separate choices.
 
 ## Keep ChunkManager Records With The Product
 
@@ -51,7 +52,7 @@ from scratch:
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \
@@ -104,7 +105,7 @@ and clean it up on successful runs:
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target s3://bucket/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type s3 \

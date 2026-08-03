@@ -16,10 +16,31 @@ Use this prompt for public SDK and plugin-author documentation.
 - Apply `.prompts/docs-policy.md` first.
 - Write for plugin authors using the public SDK.
 - Use imports from `firecube.ingestor.api` unless the page is explicitly about an advanced public API.
-- Explain required methods, config, and verification commands.
+- Classify the page with the action/cognition and acquisition/application
+  compass before choosing its structure.
 - Avoid private runtime modules, internal service names, and implementation history.
+- Inspect the predecessor, successor, and comparable sibling pages before
+  writing. Preserve established headings, command prefixes, verification
+  style, and transition-link formatting when they remain consistent with the
+  selected type and current documentation policy.
+- Keep Concepts explanations separate from Guides procedures. A write-model
+  explanation and an implementation guide may cover the same public class when
+  they develop context and tradeoffs versus direct action, respectively.
 
-## Template
+Plugin authors need all four documentation types:
+
+- Tutorials use one concrete plugin and one controlled, reliable learning path.
+- How-to guides address a real plugin-author goal, assume competence, and keep
+  only the API facts needed for the action.
+- Reference describes exact classes, hooks, fields, defaults, and constraints.
+- Explanation develops the mental model, context, and tradeoffs without a task
+  sequence or exhaustive API table.
+
+Landing pages orient and route among those types without duplicating them. For
+plugin lifecycle and implementation how-tos, use the scaffold below as a local
+presentation convention, removing sections the task does not need.
+
+## How-To Template
 
 ````markdown
 # Implement X In A Plugin
@@ -48,25 +69,10 @@ class MyPlugin(GenericZarrIngestor):
         ...
 ```
 
-## Required API
+Explain only the public API facts required to perform this task. Link complete
+signatures, fields, defaults, and constraints to Reference.
 
-List only public methods, attributes, flags, or config keys the plugin author
-must use.
-
-| API | Required | Purpose |
-|-----|----------|---------|
-| `PRODUCT_NAME` | Yes | Logical product identity |
-
-## Configuration
-
-Show the config or CLI options needed to exercise the feature.
-
-```toml
-[plugins.my_plugin]
-...
-```
-
-## Test It
+## Verify
 
 Give one local command that validates the plugin behavior.
 
@@ -80,7 +86,7 @@ uv run firecube ingest my_plugin ...
 |---------|-----|
 | Importing private runtime modules | Import from `firecube.ingestor.api` |
 
-## See Also
+## Next Steps
 
 Link to task-oriented or reference pages. Avoid internal design notes unless the
 reader is implementing Firecube itself.

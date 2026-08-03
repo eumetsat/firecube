@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">Sentinel-3 FRP product to Parquet tutorial flow</title>
+  <desc id="desc">The tutorial plugin reads the standard MWIR CSV member from a downloaded Sentinel-3 FRP product into a pandas DataFrame and Firecube writes a Parquet part.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .source{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .plugin{fill:#fff8df;stroke:#d6a400;stroke-width:2}
+      .parquet{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="45" y="76" width="210" height="136" rx="10" class="source"/>
+  <text x="150" y="116" text-anchor="middle" class="label">FRP product</text>
+  <text x="150" y="150" text-anchor="middle" class="small">downloaded with EUMDAC</text>
+  <text x="150" y="178" text-anchor="middle" class="small">standard MWIR CSV</text>
+
+  <path class="line" d="M255 144 H360"/>
+  <rect x="360" y="68" width="240" height="152" rx="10" class="plugin"/>
+  <text x="480" y="108" text-anchor="middle" class="label">Sentinel-3 plugin</text>
+  <text x="480" y="143" text-anchor="middle" class="small">read CSV member</text>
+  <text x="480" y="173" text-anchor="middle" class="small">return pandas.DataFrame</text>
+
+  <path class="line" d="M600 144 H705"/>
+  <rect x="705" y="76" width="210" height="136" rx="10" class="parquet"/>
+  <text x="810" y="116" text-anchor="middle" class="label">Parquet dataset</text>
+  <text x="810" y="150" text-anchor="middle" class="small">one part file</text>
+  <text x="810" y="178" text-anchor="middle" class="small">938 rows</text>
+</svg>

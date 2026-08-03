@@ -10,18 +10,21 @@ PRODUCT_NAME="MY_PRODUCT"
 
 ## Preflight
 
-For local products, storage-deleting operations need local storage config:
+The full URI locates the product. Deleting storage objects also requires the
+storage type and driver. For a local product:
 
 ```bash
 export FIRECUBE_STORAGE_TYPE=local
 export FIRECUBE_STORAGE_DRIVER=fsspec
-export FIRECUBE_TARGET_PATH=/data/products
 ```
 
-Always inspect before deleting:
+`--manifest-only` does not require this storage configuration because it keeps
+the product data.
+
+Confirm no writer is using the product, then inspect the tracked records:
 
 ```bash
-firecube chunks list --product-name "$PRODUCT_NAME" --include-span
+firecube chunks list --product-name "$PRODUCT_URI" --include-span
 ```
 
 ## Delete Tracked Records And Storage
@@ -30,7 +33,7 @@ Preview first:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --dry-run
 ```
 
@@ -39,14 +42,14 @@ Expected output:
 ```text
 DRY RUN - Would delete:
   Chunks: 2
-  Products: product.zarr
+  Products: MY_PRODUCT.zarr
 ```
 
 Delete after the dry-run matches your intent:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --yes-i-really-mean-it
 ```
 
@@ -59,7 +62,7 @@ Deleted 2 chunks
 Verify:
 
 ```bash
-firecube chunks list --product-name "$PRODUCT_NAME"
+firecube chunks list --product-name "$PRODUCT_URI"
 ```
 
 Expected output:
@@ -75,7 +78,7 @@ forget the tracked records:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --manifest-only \
   --yes-i-really-mean-it
 ```
@@ -92,7 +95,7 @@ Preview a date range:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --range 2024-03-01,2024-03-02 \
   --dry-run
 ```
@@ -101,7 +104,7 @@ Delete it:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --range 2024-03-01,2024-03-02 \
   --yes-i-really-mean-it
 ```
@@ -118,7 +121,7 @@ Preview:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --run-id docs-span-run \
   --dry-run
 ```
@@ -133,7 +136,7 @@ Delete:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --run-id docs-span-run \
   --yes-i-really-mean-it
 ```
@@ -149,7 +152,7 @@ time-chunk aligned:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --run-id docs-span-run \
   --force \
   --yes-i-really-mean-it
@@ -161,19 +164,19 @@ Delete the range, then run ingestion again with `force_reingest`:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --range 2024-03-01,2024-03-02 \
   --dry-run
 
 firecube chunks delete \
-  --product-name "$PRODUCT_NAME" \
+  --product-name "$PRODUCT_URI" \
   --range 2024-03-01,2024-03-02 \
   --yes-i-really-mean-it
 
 firecube ingest <plugin> \
-  --source /data/source/2024-03-01 \
+  --input-data /data/source/2024-03-01 \
   --target "$PRODUCT_URI" \
-  --product-name MY_PRODUCT \
+  --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
   --output-format zarr \
@@ -184,14 +187,14 @@ firecube ingest <plugin> \
 Rebuild the snapshot after a large cleanup or reingest:
 
 ```bash
-firecube chunks snapshots rebuild --product-name "$PRODUCT_NAME"
+firecube chunks snapshots rebuild --product-name "$PRODUCT_URI"
 ```
 
 ## Failure Recovery
 
 | Symptom | Meaning | Recovery |
 |---|---|---|
-| Real `chunks delete` fails after dry-run worked | Storage config does not match the product. | Set `FIRECUBE_TARGET_PATH` locally or configure S3. |
+| `Storage configuration not available` | Storage deletion needs a storage type and driver even when the product URI is explicit. | Set `FIRECUBE_STORAGE_TYPE` and `FIRECUBE_STORAGE_DRIVER`; also configure credentials for S3. |
 | Span is not aligned | It does not map cleanly to Zarr time chunks. | Use `--force` only if expanded deletion is acceptable. |
 | `does not contain expected time dimension` | The cube uses a custom time dimension that older span records do not capture. | Re-run with `--time-dim <name>` matching the cube layout. |
 | `explicit time dimension ... contradicts` | `--time-dim` disagrees with the span record or cube metadata. | Drop `--time-dim`, or fix the span records if they are wrong. |

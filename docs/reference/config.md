@@ -30,11 +30,6 @@ endpoint_url = "https://your-s3-endpoint"
 path_style = true
 # driver = "fsspec"  # or "obstore" (requires firecube[obstore])
 
-[database.duckdb]
-duckdb_max_temp_directory_size = "100GiB"
-duckdb_memory_limit = "8GB"
-duckdb_threads = 4
-
 [metrics]
 pushgateway_url = "http://localhost:9091"
 label_allowlist = ["frp_variant"]
@@ -73,9 +68,10 @@ For storage settings loaded through `StorageConfig`, precedence is:
 3. `config.toml`
 4. Built-in defaults
 
-For `firecube ingest`, required command flags remain explicit even when storage
-defaults exist in the config file or environment. Always pass `--input-data`,
-`--target`, `--product-name`, and `--write-mode` on ingest.
+For `firecube ingest`, `--target` and `--write-mode` remain explicit. Pass
+`--input-data` when the plugin reads command-supplied input, and pass
+`--product-name` when the plugin has no `PRODUCT_NAME` or the run needs an
+override.
 
 ## Generated Schemas
 
@@ -118,6 +114,10 @@ Public import: `from firecube.ingestor.api import ZarrTemplateConfig`
 ### ParquetTemplateConfig
 
 Public import: `from firecube.ingestor.api import ParquetTemplateConfig`
+
+The current default Parquet writer does not apply `parquet_partition_by` or
+`parquet_row_group_size`. Do not configure these fields until the corresponding
+writer support is implemented.
 
 ::: firecube.ingestor.api.ParquetTemplateConfig
     options:

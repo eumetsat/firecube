@@ -1,6 +1,6 @@
 # {start_case_name} Ingestor Plugin
 
-> ⚠️ **This scaffold is incomplete.** You must implement `{hook_summary}` before this plugin will produce output. Until then, ingestion runs will raise `NotImplementedError`.
+> **This plugin project is incomplete.** Implement `{hook_summary}` before this plugin can produce output. Until then, ingestion runs will raise `NotImplementedError`.
 
 ## What this plugin does
 
@@ -10,8 +10,9 @@
 
 ```bash
 uv sync
-uv run pytest
 ```
+
+Add product behavior and behavior-based tests before running `pytest`.
 
 ## Install into firecube
 

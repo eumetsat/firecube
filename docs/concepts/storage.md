@@ -8,17 +8,16 @@ to local disk or S3-compatible object storage by changing the ingest flags.
 
 ## What You Set On Ingest
 
-Every ingest run sets the storage choices explicitly:
+Every ingest run sets the product target and write mode explicitly:
 
 - `--target` is the full product URI, such as `file:///data/products/demo.zarr`
   or `s3://bucket/products/demo.zarr`.
-- `--storage-type` tells Firecube whether the target is `local` or `s3`.
-- `--storage-driver` selects the I/O implementation, usually `fsspec` or
-  `obstore`.
+- `--storage-type` optionally overrides the type inferred from the URI.
+- `--storage-driver` optionally overrides configuration, environment, or the
+  `fsspec` default.
 - `--write-mode` selects the write strategy, usually `direct` or `staged`.
 
-Firecube does not infer these choices from the URI. The URI tells Firecube where
-the product lives; the flags tell Firecube how to operate there.
+Firecube rejects an explicit storage type that conflicts with the target URI.
 
 ## Local Targets
 
@@ -27,7 +26,7 @@ a shared filesystem:
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target file:///data/products/demo.zarr \
   --product-name demo \
   --storage-type local \
@@ -46,7 +45,7 @@ storage:
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target s3://bucket/products/demo.zarr \
   --product-name demo \
   --storage-type s3 \
@@ -56,7 +55,7 @@ uv run firecube ingest <plugin> \
 ```
 
 Set S3 credentials, endpoint, and region in the environment or config before the
-run. See [Configuration](../quickstart/configuration.md) for the quickstart path
+run. See [Configure S3 Access](../quickstart/configuration.md) for the quickstart path
 and [Configuration Reference](../reference/config.md) for the full list.
 
 ## Choose A Driver
@@ -96,6 +95,6 @@ when you want later inspection, resume, recovery, or cleanup to work.
 ## Next Steps
 
 - **[Run Ingestion](../quickstart/ingestion.md)** — runnable local and S3 ingestion examples
-- **[Configuration](../quickstart/configuration.md)** — set credentials and common defaults
-- **[Storage Driver Compatibility](../reference/storage-drivers.md)** — compare fsspec and obstore support
+- **[Configure S3 Access](../quickstart/configuration.md)** — set credentials and connection settings
+- **[Storage Drivers](../reference/storage-drivers.md)** — inspect driver values and capabilities
 - **[ChunkManager Operations](../operations/chunk-manager/index.md)** — inspect, recover, delete, rebuild snapshots, or migrate a product

@@ -1,33 +1,38 @@
 # Quickstart Overview
 
-This quickstart walks you through setting up Firecube, creating a Python environment, installing or creating an ingestion plugin, and running your first local and S3 ingestion.
+This quickstart walks you through installing Firecube, adding an existing
+product plugin, and writing your first product to local storage. An optional S3
+path uses the same plugin and source data. To build a plugin for a new product,
+start with [Plugin Development](../guides/plugins/index.md).
 
-By the end, you will have an Intake catalog entry you can use to discover and work with your data.
+For a Zarr or Parquet product, you can finish by creating an Intake catalog and
+opening one of its discovered sources.
 
 ## Before You Start
 
 You need:
 
-- `Python 3.12+` and `uv` installed.
-- Access to an existing Firecube plugin, or a plan to create one
-- Example input data for that plugin
-- S3 credentials if you want to run the S3 example (optional)
+- `Python 3.12+` and `uv` installed
+- The package name of an existing Firecube plugin
+- Source data supported by that plugin
+- S3 credentials if you want to run the optional S3 path
 
-The installation step creates a project `.venv`. The commands in this quickstart use `uv run ...` from the repository root.
+The installation step creates a working directory with a `.venv` and installs
+Firecube from PyPI. Run the remaining `uv run ...` commands from that directory.
 
 ## Quickstart Path
 
-1. **[Installation](installation.md)**: Clone the repository, create `.venv`,
-   install dependencies, and verify the CLI.
-2. **[Plugin Setup](plugins.md)**: Install an existing plugin, or scaffold a
-   new plugin and continue with plugin-author docs.
-3. **[Run Ingestion](ingestion.md)**: Run the same plugin against local storage,
-   then against S3 when credentials are configured.
-4. **[Intake Catalogs](catalogs.md)**: Generate an analysis-ready catalog item
-   for the ingested product.
+1. **[Installation](installation.md)**: Create `.venv`, install Firecube from
+   PyPI, and verify the CLI.
+2. **[Install a Plugin](plugins.md)**: Install an existing product plugin and
+   confirm that Firecube discovers it.
+3. **[Run Ingestion](ingestion.md)**: Write a local product, inspect its
+   ChunkManager record, and optionally repeat the run against S3.
+4. **[Create an Intake Catalog](catalogs.md)**: Generate and open a catalog for
+   an ingested Zarr or Parquet product.
 
-Use **[Configuration](configuration.md)** when you need credentials, storage
-endpoints, or plugin defaults.
+Use **[Configure S3 Access](configuration.md)** before running the optional S3
+path.
 
 ## Next Steps
 

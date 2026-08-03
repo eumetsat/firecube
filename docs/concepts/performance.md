@@ -61,9 +61,10 @@ Start with these checks:
 - prefer `dask_scheduler=synchronous` when pipeline workers are already active,
   so dask does not add another competing thread pool.
 
-For append versus direct-region Zarr behavior, see [Zarr](output-formats/zarr/index.md).
-For multiple workers writing one Zarr group, see
-[Parallel Zarr Writes](output-formats/zarr/parallel-writes.md).
+For the Zarr product model, see [Zarr](output-formats/zarr/index.md). For
+the same-group concurrency model, see
+[Parallel Zarr Writes](output-formats/zarr/parallel-writes.md). To execute that
+model, use [Run Parallel Zarr Writes](../operations/parallel-zarr-writes.md).
 
 ## Parquet Tuning
 
@@ -71,16 +72,10 @@ When Parquet writes are slow, start with the file layout. Parquet batches write
 independent files, so `GenericParquetIngestor` can benefit from pipeline workers
 during both preparation and file writes.
 
-Use larger batches when you are producing too many tiny files. Use partitioning
-when downstream readers need predicate pushdown:
-
-```bash
---option parquet_partition_by='["year","month"]'
-```
-
-Use `parquet_row_group_size` when reader performance depends on row-group
-granularity. Start with the pyarrow default unless you have a concrete reader
-problem.
+Use larger batches when you are producing too many tiny files. The default
+writer does not currently apply partition-column or row-group-size options;
+plugins with those requirements must override `output_relpath()` or
+`write_parquet()` and measure the resulting reader behavior.
 
 ## If Staged Upload Is Slow
 
@@ -159,5 +154,5 @@ For tabular Parquet output:
 - **[Benchmarks](benchmarks.md)** — compare measured workload profiles
 - **[Parallelism](parallelism.md)** — choose safe concurrency
 - **[Metrics](observability/metrics.md)** — inspect timing and throughput signals
-- **[Zarr](output-formats/zarr/index.md)** — choose append, direct region, and Zarr write settings
+- **[Zarr](output-formats/zarr/index.md)** — understand the persisted Zarr layout
 - **[Observability Reference](../reference/observability.md)** — complete metric names and environment variables

@@ -19,12 +19,13 @@ PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
 | `firecube chunks delete-span` | Delete storage chunks described by span records. |
 | `firecube chunks snapshots` | Check or rebuild snapshot read models. |
 
-## Product URI
+## Locate The Product
 
-Pass the full product URI with `--product`:
+Pass the full product URI through `--product-name` so the command locates the
+product directly:
 
 ```bash
-firecube chunks list --product "$PRODUCT_URI"
+firecube chunks list --product-name "$PRODUCT_URI"
 ```
 
 Expected output resembles:
@@ -32,8 +33,8 @@ Expected output resembles:
 ```text
 Product      Key                       Type   Size (MB)  Date
 -----------------------------------------------------------------------
-product.zarr span_<run>_batch_0001...  span   0.0        2026-06-03 ...
-product.zarr span_<run>_batch_0000...  span   0.0        2026-06-03 ...
+MY_PRODUCT.zarr span_<run>_batch_0001...  span   0.0        2026-06-03 ...
+MY_PRODUCT.zarr span_<run>_batch_0000...  span   0.0        2026-06-03 ...
 
 Summary: 3 chunks, 0.0 MB total
 ```
@@ -43,17 +44,17 @@ is enabled. The command result is the table or JSON payload.
 
 ## Local Storage Preflight
 
-Commands that delete storage data need a storage config that points at the same
-local root as the product:
+Commands that delete storage data also need a storage type and driver. The full
+URI still supplies the product location:
 
 ```bash
 export FIRECUBE_STORAGE_TYPE=local
 export FIRECUBE_STORAGE_DRIVER=fsspec
-export FIRECUBE_TARGET_PATH=/data/products
 ```
 
-If `FIRECUBE_TARGET_PATH` is missing, a local `chunks delete` dry-run can work
-while the real storage deletion cannot locate the local base path.
+Without this storage configuration, `chunks delete` fails before deleting or
+previewing matched storage records. Record-only deletion with `--manifest-only`
+does not require it.
 
 ## Next Steps
 

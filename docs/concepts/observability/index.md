@@ -40,7 +40,7 @@ Use [Traces](traces.md) when you need timing across phases, batches, workers, or
 external orchestrator jobs.
 
 Plugin authors emit product-specific metrics and spans through
-`ctx.telemetry`. See [Plugin Observability](../plugins/observability.md) for the
+`ctx.telemetry`. See [Plugin Observability](../../guides/plugins/observability.md) for the
 plugin contract.
 
 ## Next Steps

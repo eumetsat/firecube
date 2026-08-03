@@ -1,4 +1,4 @@
-# Direct Parallel Zarr
+# Parallel DirectZarrIngestor
 
 ## Goal
 
@@ -8,13 +8,25 @@ This is the advanced Zarr path. Use it when each source item already knows its
 global time index and workers can safely write separate slot ranges. For ordinary
 time-ordered datasets, use `GenericZarrIngestor` instead.
 
+<figure markdown="span">
+  ![Two workers own separate slot ranges and separate physical chunks in one preallocated Zarr array.](../assets/images/firecube-tutorial-direct-zarr-slots.svg){ width="900" }
+  <figcaption markdown="span">Each slot range contains complete physical chunks, so the workers never modify the same chunk.</figcaption>
+</figure>
+
+Preallocation creates the complete array before either worker writes. The slot
+plan assigns the half-open ranges `[0, 4)` and `[4, 8)`. Because the array uses
+two rows per physical Zarr chunk, each worker owns two complete chunks and the
+workers never modify the same chunk.
+
 ## Prerequisites
 
-- `numpy` and `zarr` available in the environment
+- Firecube installed. Start with [Installation](../quickstart/installation.md).
+- Run every command below in the same Python environment where Firecube is
+  installed.
 
-If this is your first Firecube plugin, do [Weather CSV Plugin](weather-csv.md)
-first. This tutorial assumes you already know how plugin scaffolding,
-installation, and ingestion commands work.
+If this is your first Firecube plugin, complete
+[NetCDF To Zarr](weather-netcdf.md) first. This tutorial assumes you already
+know how plugin creation, installation, and ingestion commands work.
 
 ## 1. Create Tiny Grid Files
 
@@ -51,7 +63,7 @@ grid_000.npy  grid_001.npy  grid_002.npy  grid_003.npy
 grid_004.npy  grid_005.npy  grid_006.npy  grid_007.npy
 ```
 
-## 2. Scaffold A DirectZarrIngestor Plugin
+## 2. Create A DirectZarrIngestor Plugin
 
 ```bash
 uv run firecube plugins create grid-parallel \
@@ -77,6 +89,21 @@ Replace `plugins_dev/firecube-grid-parallel/src/firecube_grid_parallel/ingestor.
 with:
 
 ```python
+# Copyright 2025-2026 EUMETSAT
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
@@ -104,7 +131,6 @@ def _ts_index(item: Any) -> int:
 @register_ingestor("grid_parallel")
 class GridParallelIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "grid_parallel"
-    name = "grid_parallel"
     SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
@@ -369,8 +395,8 @@ Summary: 4 chunks, 0.0 MB total
 ## Troubleshooting
 
 - `plugin does not declare SUPPORTS_SLOT_RANGE_PARALLELISM = True`: set the
-  class variable and implement `timestamp_to_ts_index` and
-  `global_expected_time_count`.
+  class variable and implement `timestamp_to_ts_index`,
+  `global_expected_time_count`, and `slot_index_model`.
 - `SUPPORTS_SLOT_RANGE_PARALLELISM=True but does not override slot_index_model`:
   implement `slot_index_model` with one `SlotAxis` entry for every writable
   Zarr group.
@@ -381,6 +407,6 @@ Summary: 4 chunks, 0.0 MB total
 
 ## Next Steps
 
-- **[Parallel Zarr Writes](../concepts/output-formats/zarr/parallel-writes.md)** — operator workflow for slot workers
-- **[DirectZarrIngestor](../concepts/plugins/direct-zarr.md)** — plugin hooks for direct region writes
-- **[CLI Reference](../reference/cli.md)** — complete command surface
+- **[Parallel Zarr Writes](../concepts/output-formats/zarr/parallel-writes.md)** — understand the slot safety model
+- **[Run Parallel Zarr Writes](../operations/parallel-zarr-writes.md)** — operate slot workers
+- **[DirectZarrIngestor](../guides/plugins/direct-zarr.md)** — review the plugin hooks

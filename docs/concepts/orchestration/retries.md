@@ -18,8 +18,8 @@ a retry does not blindly overwrite or overlap product state.
 At that point, inspect the product before retrying again:
 
 ```bash
-uv run firecube chunks runs list --product file:///data/products/MY_PRODUCT.zarr
-uv run firecube chunks claims list --product file:///data/products/MY_PRODUCT.zarr
+uv run firecube chunks runs list \
+  --product-name file:///data/products/MY_PRODUCT.zarr
 ```
 
 Use [Recover Runs And Claims](../../operations/chunk-manager/recover.md) when a
@@ -32,7 +32,7 @@ started:
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \
@@ -52,7 +52,7 @@ with the external orchestrator job:
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \

@@ -43,12 +43,12 @@ Examples:
 
 \b
   # list claims for a specific product
-  firecube chunks claims list --product-name <product>
+  firecube chunks claims list --product-name file:///data/products/MY_PRODUCT.zarr
 
 See also: firecube chunks claims clear, firecube chunks runs list
 """,
 )
-@click.option("-n", "--product-name", "product_name", help="filter by product name")
+@click.option("-n", "--product-name", "product_name", help="full product URI to inspect")
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
 @click.option(
     "-f",
@@ -113,29 +113,38 @@ def list_cmd(
     epilog="""\b
 Examples:
   # clear a stale claim (interactive confirmation)
-  firecube chunks claims clear --product-name <product> --domain <domain>
+  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --domain <domain>
 
 \b
   # clear a stale claim in non-interactive context
-  firecube chunks claims clear --product-name <product> --domain <domain> --yes-i-really-mean-it
+  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --domain <domain> --yes-i-really-mean-it
 
 \b
   # bypass the is_stale check (--force) and confirm (--yes-i-really-mean-it)
-  firecube chunks claims clear --product-name <product> --domain <domain> --force --yes-i-really-mean-it
+  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --domain <domain> --force --yes-i-really-mean-it
+
+\b
+  # preview every stale claim (bulk mode never prompts)
+  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --all-stale
+
+\b
+  # clear every stale claim
+  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --all-stale --yes-i-really-mean-it
 
 See also: firecube chunks claims list, firecube chunks runs abandon
 """,
 )
-@click.option(
-    "-n", "--product-name", "product_name", required=True, help="product owning the claim"
-)
+@click.option("-n", "--product-name", "product_name", required=True, help="full product URI")
 @click.option("--domain", "domain_id", help="full write-domain identifier")
 @click.option(
     "--all-stale",
     "all_stale",
     is_flag=True,
     default=False,
-    help="clear all stale claims for the product (mutually exclusive with --domain)",
+    help=(
+        "preview all stale claims for the product; clear them only with "
+        "--yes-i-really-mean-it (mutually exclusive with --domain)"
+    ),
 )
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
 @click.option(
@@ -163,8 +172,11 @@ def clear_cmd(
     crashed process left a stale claim that blocks ingestion. verify the
     original writer is no longer running first.
 
-    --force bypasses the is_stale check (operational bypass for active claims).
-    --yes-i-really-mean-it is the confirmation flag, required in non-TTY contexts."""
+    --all-stale never prompts. without --yes-i-really-mean-it it lists the
+    stale claims as a dry run; with the flag it clears them. single-claim
+    operations prompt in a terminal and require the flag in non-TTY contexts.
+
+    --force bypasses the is_stale check for single active claims."""
     if bool(domain_id) == all_stale:
         raise click.UsageError("Provide exactly one of --domain or --all-stale.")
 

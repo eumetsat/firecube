@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Direct Zarr ingestor for {plugin_name}."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -24,7 +25,6 @@ from firecube.ingestor.api import (
     PluginConfig,
     PluginContext,
     WriteIntent,
-    ZarrArraySpec,
     ZarrGroupSpec,
     register_ingestor,
 )
@@ -35,7 +35,7 @@ class {class_name}Config(PluginConfig):
     """Plugin configuration.
 
     To accept ``--option key=value`` flags, add dataclass fields here.
-    See docs/concepts/plugins/create-a-plugin.md.
+    See the Firecube plugin development guide.
     """
 
     pass
@@ -50,17 +50,16 @@ class {class_name}(DirectZarrIngestor):
         raise NotImplementedError(
             "{class_name}.zarr_schema(): implement this hook to declare the Zarr store "
             "layout. Return a list[ZarrGroupSpec] describing groups, arrays, shapes, "
-            "dtypes, and chunks. The previous scaffold hard-coded fake shape "
-            "(1000, 100, 100) float32 here — you must replace that with your real schema. "
-            "See docs/concepts/plugins/direct-zarr.md for examples."
+            "dtypes, and chunks. "
+            "See the Firecube DirectZarrIngestor guide for examples."
         )
 
-    def build_write_intents(
-        self, batch: PipelineBatch, ctx: PluginContext
-    ) -> list[WriteIntent]:
+    def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
+        # Materialize items before passing them to readers that require local paths:
+        # local_paths = [ctx.materialize(item) for item in batch.items]
         raise NotImplementedError(
             "{class_name}.build_write_intents(): implement this hook to convert a batch "
             "into a list[WriteIntent] describing region writes, 1-D writes, or timestamp "
             "writes. Return an empty list to intentionally skip a batch. "
-            "See docs/concepts/plugins/direct-zarr.md for the WriteIntent API."
+            "See the Firecube DirectZarrIngestor guide for the WriteIntent API."
         )

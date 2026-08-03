@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
   <title id="title">GenericZarrIngestor append write flow</title>
-  <desc id="desc">Time-ordered source files become xarray datasets and are appended to a Zarr group one batch at a time.</desc>
+  <desc id="desc">A source batch becomes an ordered xarray dataset and is appended to a Zarr group along the plugin's declared append dimension.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
@@ -18,13 +18,13 @@
       .dash{stroke:#ff7043;stroke-width:2;stroke-dasharray:7 5;fill:none}
     </style>
   </defs>
-  <text x="38" y="40" class="label">Time-ordered source files</text>
+  <text x="38" y="40" class="label">Source batch</text>
   <rect x="46" y="76" width="110" height="42" rx="5" class="file"/>
   <rect x="46" y="138" width="110" height="42" rx="5" class="file"/>
   <rect x="46" y="200" width="110" height="42" rx="5" class="file"/>
-  <text x="101" y="102" text-anchor="middle" class="small">t0 file</text>
-  <text x="101" y="164" text-anchor="middle" class="small">t1 file</text>
-  <text x="101" y="226" text-anchor="middle" class="small">t2 file</text>
+  <text x="101" y="102" text-anchor="middle" class="small">item 0</text>
+  <text x="101" y="164" text-anchor="middle" class="small">item 1</text>
+  <text x="101" y="226" text-anchor="middle" class="small">item 2</text>
 
   <path class="line" d="M166 159 H282"/>
   <rect x="282" y="92" width="218" height="134" rx="10" class="dataset"/>
@@ -35,16 +35,16 @@
   <path class="line" d="M500 159 H608"/>
   <rect x="608" y="74" width="294" height="174" rx="10" class="zarr"/>
   <text x="755" y="112" text-anchor="middle" class="label">Zarr group</text>
-  <text x="755" y="138" text-anchor="middle" class="small">append along time</text>
+  <text x="755" y="138" text-anchor="middle" class="small">declared append dimension</text>
   <g transform="translate(650 165)">
     <rect x="0" y="0" width="42" height="48" class="filled"/>
     <rect x="42" y="0" width="42" height="48" class="filled"/>
     <rect x="84" y="0" width="42" height="48" class="filled"/>
     <rect x="126" y="0" width="42" height="48" class="slot"/>
     <rect x="168" y="0" width="42" height="48" class="slot"/>
-    <text x="21" y="75" text-anchor="middle" class="hint">t0</text>
-    <text x="63" y="75" text-anchor="middle" class="hint">t1</text>
-    <text x="105" y="75" text-anchor="middle" class="hint">t2</text>
+    <text x="21" y="75" text-anchor="middle" class="hint">0</text>
+    <text x="63" y="75" text-anchor="middle" class="hint">1</text>
+    <text x="105" y="75" text-anchor="middle" class="hint">2</text>
   </g>
   <path d="M636 286 H872" class="dash"/>
   <text x="754" y="312" text-anchor="middle" class="hint">one append writer per group</text>

@@ -211,6 +211,31 @@ def define_env(env):
         return "\n".join(rows)
 
     @env.macro
+    def render_storage_driver_capabilities() -> str:
+        """Render optional capabilities declared by each filesystem backend."""
+        from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
+        from firecube.core.filesystem.obstore_backend import ObstoreFilesystem
+        from firecube.core.filesystem.protocol import Multipart, RangedRead, Signer
+
+        drivers = {
+            "fsspec": FsspecFilesystem,
+            "obstore": ObstoreFilesystem,
+        }
+        capability_types = (Multipart, RangedRead, Signer)
+        declared: dict[str, set[type]] = {}
+        for name, driver_type in drivers.items():
+            instance = object.__new__(driver_type)
+            declared[name] = driver_type.capabilities(instance)
+
+        header = "| Capability | `fsspec` | `obstore` |"
+        separator = "|---|:---:|:---:|"
+        rows = [header, separator]
+        for capability in capability_types:
+            cells = ["yes" if capability in declared[name] else "no" for name in drivers]
+            rows.append(f"| `{capability.__name__}` | {cells[0]} | {cells[1]} |")
+        return "\n".join(rows)
+
+    @env.macro
     def firecube_version() -> str:
         """Return the Firecube package version for rendered docs."""
         try:

@@ -19,6 +19,8 @@ parallel ingestion, cleanup, and recovery.
 - Include preflight, operation, verification, and failure recovery.
 - Keep the mental model short and tied to operational decisions.
 - Make remediation commands paste-runnable when possible.
+- Assume operational competence and organize the page around the real-world
+  outcome or problem, including relevant conditions and branches.
 
 ## Template
 

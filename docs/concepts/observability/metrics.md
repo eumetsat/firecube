@@ -66,7 +66,7 @@ if ctx.telemetry is not None:
     )
 ```
 
-See [Plugin Observability](../plugins/observability.md) for the full plugin
+See [Plugin Observability](../../guides/plugins/observability.md) for the full plugin
 contract, including `ctx.telemetry.emit(...)`, span usage, and what plugins must
 not import.
 

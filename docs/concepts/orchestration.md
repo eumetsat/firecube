@@ -29,7 +29,7 @@ a larger workflow system:
 
 ```bash
 uv run firecube ingest <plugin> \
-  --source /data/source \
+  --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \

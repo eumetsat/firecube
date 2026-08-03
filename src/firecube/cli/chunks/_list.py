@@ -32,7 +32,7 @@ Examples:
 
 \b
   # list chunks for a specific product
-  firecube chunks list --product-name <product>
+  firecube chunks list --product-name file:///data/products/MY_PRODUCT.zarr
 
 \b
   # filter by date range
@@ -40,7 +40,7 @@ Examples:
 
 \b
   # output as JSON for scripting
-  firecube chunks list --product-name <product> -f json
+  firecube chunks list --product-name file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks delete, firecube chunks runs list,
           firecube chunks snapshots status
@@ -49,7 +49,7 @@ See also: firecube chunks delete, firecube chunks runs list,
 @click.option(
     "--pattern", multiple=True, help="glob pattern to match chunk keys (can specify multiple)"
 )
-@click.option("-n", "--product-name", "product_name", help="filter by product name")
+@click.option("-n", "--product-name", "product_name", help="full product URI to inspect")
 @click.option("--end-date", "end_date", help="show chunks created before date (YYYY-MM-DD)")
 @click.option("--start-date", "start_date", help="show chunks created after date (YYYY-MM-DD)")
 @click.option(

@@ -44,4 +44,4 @@ is a physical array shard inside a Zarr store.
 - **[Product Storage](storage.md)** — choose local/S3 storage, driver, and write mode
 - **[ChunkManager Records](chunk-management.md)** — understand runs, spans, claims, and snapshots
 - **[ChunkManager Operations](../operations/chunk-manager/index.md)** — inspect, recover, delete, rebuild snapshots, or migrate a product
-- **[Storage Driver Compatibility](../reference/storage-drivers.md)** — compare fsspec and obstore support
+- **[Storage Drivers](../reference/storage-drivers.md)** — inspect driver values and capabilities

@@ -1,105 +1,55 @@
-# Plugin Setup
+# Install a Plugin
 
-Firecube provides the ingestion engine. Dataset-specific logic lives in plugins, so either
-install an existing plugin or create one before running ingestion.
+## When To Use This
 
-## Option 1: Install An Existing Plugin
+Install an existing product plugin before running ingestion. Plugin authors
+should use [Plugin Development](../guides/plugins/index.md) instead.
 
-Install an external plugin package using the package name from that plugin's
-documentation:
+## Prerequisites
 
-```bash
-uv run firecube plugins install firecube-my-plugin
-```
+- Firecube installed in a Python environment.
+- The distribution name, local path, or Git URL of a compatible plugin package.
 
-Or install a local plugin checkout in editable mode:
+## Steps
 
-```bash
-uv run firecube plugins install --editable /path/to/firecube-my-plugin
-```
+1. Install the plugin into the environment that provides the Firecube CLI:
 
-## Option 2: Create A Plugin
+   ```bash
+   uv run firecube plugins install "PLUGIN_PACKAGE"
+   ```
 
-If no plugin exists for your data, start with the interactive scaffold:
+2. List installed plugins and inspect the plugin's options:
 
-```bash
-uv run firecube plugins create my-plugin
-```
+   ```bash
+   uv run firecube plugins list
+   ```
 
-For a first datacube plugin, choose `zarr` when the wizard asks for the
-template. Accept the default `xarray` write strategy unless you already need
-direct Zarr region writes. Choose `parquet` instead for row-based outputs.
+   The output contains the plugin name used by other Firecube commands. Replace
+   `PLUGIN_NAME` below with that value:
 
-Expected interaction:
+   ```bash
+   uv run firecube plugins describe PLUGIN_NAME
+   uv run firecube ingest PLUGIN_NAME --show-options
+   ```
 
-```text
-Creating a new Firecube plugin.
-Plugin Name [my-plugin]:
-Author Name [Firecube Developer]:
-Author Email [dev@example.com]:
-License [MIT]:
-Template (base, zarr, parquet) [base]: zarr
-Zarr write strategy (xarray, zarr-python) [xarray]:
+Read the plugin package documentation for its input data, output format, and
+product-specific options.
 
-Created plugin project: /path/to/firecube-my-plugin
+## Verify
 
-To install for development:
-  cd /path/to/firecube-my-plugin
-  uv sync
-```
+`plugins list` should contain the installed plugin name. `plugins describe`
+should then print its package, product, description, and option sections without
+an import error.
 
-The scaffold creates a small plugin project:
+## Troubleshooting
 
-```text
-firecube-my-plugin/
-  README.md
-  pyproject.toml
-  src/firecube_my_plugin/ingestor.py
-  tests/test_ingestor.py
-```
-
-Use non-interactive mode only for scripts or CI:
-
-```bash
-export FIRECUBE_PLUGIN_DIR="${PWD}/plugins-dev"
-uv run firecube plugins create my-plugin \
-  --target-dir "$FIRECUBE_PLUGIN_DIR" \
-  --template zarr \
-  --non-interactive
-```
-
-Then check out **[Create a Plugin](../concepts/plugins/create-a-plugin.md)** for the
-plugin options, or follow the **[Weather CSV walkthrough](../tutorials/weather-csv.md)**
-for a complete working example.
-
-## List Active Plugins
-
-```bash
-uv run firecube plugins list
-```
-
-## Inspect A Plugin
-
-To see metadata, the logical product name, and available options for a plugin:
-
-```bash
-uv run firecube plugins describe <plugin>
-```
-
-Output highlights:
-
-- **Module**: Python path to the ingestor.
-- **Product**: Logical output name supported by the plugin.
-- **Options Sections**: Available `--option` keys grouped by section (e.g. `ENGINE`), each with its type and built-in default.
-
-## Detailed Options
-
-To see all CLI flags and options supported during ingestion:
-
-```bash
-uv run firecube ingest <plugin> --show-options
-```
+| Symptom | Cause | Fix |
+|---|---|---|
+| Plugin is missing from `plugins list` | The package is installed in a different environment. | Install it with the same `uv` environment used to run Firecube. |
+| Plugin import fails | The plugin and Firecube versions are incompatible or a plugin dependency is missing. | Check the plugin's declared Firecube version and reinstall its dependencies. |
+| Plugin has no expected options | The wrong plugin name was inspected. | Use the exact name printed by `plugins list`. |
 
 ## Next Steps
 
-- **[Run Ingestion](ingestion.md)** — run the installed or generated plugin
+- **[Run Ingestion](ingestion.md)** — ingest source data with the installed plugin
+- **[Plugin Development](../guides/plugins/index.md)** — create a plugin for a new product

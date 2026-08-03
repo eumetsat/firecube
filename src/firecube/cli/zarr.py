@@ -280,9 +280,9 @@ def slots(
             "firecube zarr slots: cannot emit executable slots — chunk-alignment coverage would silently drop work. "
             f"Blocked: {details}. "
             "Remediation: preview with "
-            "`firecube chunks delete-span --product <product> --run-id <id> --force --dry-run`, "
+            "`firecube chunks delete-span --product-name <product-name> --run-id <id> --force --dry-run`, "
             "then commit with `--yes-i-really-mean-it` and re-ingest using `firecube ingest ... --option force_reingest=true`. "
-            "See docs/concepts/output-formats/zarr/parallel-writes.md#fail-closed-planning-behavior."
+            "See docs/operations/parallel-zarr-writes.md#recover-a-blocked-plan."
         )
 
     output = {
