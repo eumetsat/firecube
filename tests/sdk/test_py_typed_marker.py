@@ -1,0 +1,31 @@
+# Copyright 2025-2026 EUMETSAT
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.contract
+
+# Anchor to repo root — not cwd — so the test works from any invocation directory.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_MARKER = _REPO_ROOT / "src/firecube/py.typed"
+
+
+def test_py_typed_marker_exists_and_is_empty() -> None:
+    """PEP 561 marker must be present and zero-byte (partial\n is for stub packages only)."""
+    assert _MARKER.is_file(), f"PEP 561 marker missing: {_MARKER}"
+    assert _MARKER.stat().st_size == 0, (
+        f"PEP 561 marker must be empty (got {_MARKER.stat().st_size} bytes)"
+    )
