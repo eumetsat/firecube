@@ -1,5 +1,23 @@
 # Done
 
+Date: 2026-08-03 Task: #22
+
+Decision: Ship PEP 561 `py.typed` marker for downstream IDE type support
+
+Context: Downstream plugin authors' type checkers (pyright, mypy) could not resolve firecube imports with type information because the package lacked a PEP 561 marker. Root-level placement at `src/firecube/py.typed` is required — subpackage-only triggers mypy #16149. The marker is zero-byte per PEP 561 standard for typed packages (`partial\n` is for stub packages only). Attribution file `py.typed.ABOUT` added per repo convention for files that cannot carry header comments. One contract test added asserting both file existence and zero-byte size.
+
+Files changed:
+- `src/firecube/py.typed` (new — zero-byte PEP 561 marker)
+- `src/firecube/py.typed.ABOUT` (new — attribution metadata)
+- `tests/sdk/test_py_typed_marker.py` (new — contract test)
+- `plans/DONE.md` (this entry)
+
+Verification: `uv run pytest tests/sdk/test_py_typed_marker.py --strict-deps -q` → 1 passed. `unzip -l dist/firecube-*.whl | awk '{print $4}' | grep -x 'firecube/py.typed' | wc -l` → 1. `uv run ruff check .` clean; `uv run pyright` clean. Regression: test fails when marker deleted, passes when restored.
+
+Source: GitHub #22 — https://github.com/eumetsat/firecube/issues/22
+
+---
+
 ## 2026-07-13 — `write_1d` numpy>=2 one-slot idiom (production blocker)
 
 OPERA-SEVIRI-NORDLIS ingest failed under the pinned `numpy>=2.3.3` runtime with `ValueError: Could not convert object to NumPy datetime` at `RegionZarrWriter.write_1d`. Root cause: `arr[scalar_int] = one_element_ndarray` on a `datetime64[s]` Zarr array is silently accepted by numpy 1.x (broadcast) but rejected by numpy 2.x (strict shape). The failing pattern was `self._open_root()[f"{group}/{array_name}"][ts_index] = data` at `src/firecube/core/zarr/region_writer.py:639`. Reproduced end-to-end against real NORDLIS NetCDFs from CloudFerro S3.
