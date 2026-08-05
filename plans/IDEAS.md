@@ -126,7 +126,7 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
 
 ### §21 Promote shared slot-range machinery to core (cross-plugin dedup)
 
-- UNDECIDED
+- Idea 2: PROMOTED (2026-08-05) — accepted via GitHub #27; see TODO.md §33 for the accepted scope and mixin design constraints, and DONE.md 2026-08-05 for the decision. Ideas 1 and 3: UNDECIDED.
 
 - **Origin:** Surfaced while reviewing `firecube-opera-seviri-nordlis` and
   `firecube-mtg-fci-l1c`. Both plugins now opt into
@@ -257,6 +257,20 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
   - `_projection.py:182-193` — `_load_history_records` that iterates all runs; pruning must not silently break this.
 
 - **Blocked on:** Wave 2 landing (the active-run index and bitmap make it safe to reason about "no active runs" without a full scan, which is a prerequisite for the quiet-period heuristic in Fix 5).
+
+### §34 Gridding extensions — boundary correctness (grid/healpix binners)
+
+- UNDECIDED
+
+- **Origin:** Surfaced 2026-08-05 while evaluating GitHub #27 (slot-allocation automation) against the existing extension/mixin surface. These are spatial-binning findings in `src/firecube/ingestor/extensions/`, orthogonal to slot allocation and not previously recorded anywhere in plans/.
+- **Findings:**
+  - **`np.arange` float endpoint jitter** (`grid.py:113-114`; same pattern in `healpix.py:125-126` `cells_in_bbox`): `arange(min, max + spacing, spacing)` with a non-binary-representable step (e.g. 0.1°) can yield N or N+1 centers depending on accumulated rounding — the "extra empty last row/col" bug class the module docstring claims fixed persists in this variant. Fix direction: `np.linspace` with an integer count.
+  - **Bounds semantics mismatch** (`grid.py:79-83` docstring vs behavior): documented as "input points outside bounds are dropped", but cell edges extend half a cell beyond the declared bounds — effective coverage is `[min − s/2, max + s/2)` — and the top edge is half-open, so a point exactly on the last edge is silently dropped while one epsilon below is kept.
+  - **No antimeridian handling:** `lon_min > lon_max` boxes (crossing ±180) are unsupported in both `build_latlon_binner` and `cells_in_bbox`; points at exactly 180 vs −180 bin differently.
+  - **`cells_in_bbox` edge-cell coverage is probabilistic** (`healpix.py:107-129`): mesh sampling at half the mean cell side guarantees a sample in every *interior* cell only; boundary cells that barely intersect the box can be missed entirely, and input points in those cells are then silently dropped by the `target_cells` filter in `build_healpix_binner`.
+- **Impact:** pinned-axis workflows (the sanctioned cross-granule append pattern per `_binning.py`) can silently lose edge samples, or produce differently-shaped axes from nominally identical bounds. No known production incident yet.
+- **Why not TODO yet:** the fixes change output grid shape/coverage for existing cubes (a `linspace` fix can alter N for previously-jittered grids), so remediation needs a compat/design discussion before acceptance.
+- **Cross-links:** TODO.md §33 design constraint 1 cites this bug class as the anti-pattern the slot mixin must exclude by construction (integer-only slot math).
 
 ## Notes
 
