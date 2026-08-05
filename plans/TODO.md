@@ -5,6 +5,38 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 ## Active Work
 
+### §33 Automated slot allocation for `DirectZarrIngestor` (cadence mixin) — GitHub #27
+
+**Goal:** Let fixed-cadence DirectZarr plugins declare `(epoch/start, per-group slot duration, finite horizon)` and inherit the three parallel-contract hooks (`timestamp_to_ts_index`, `global_expected_time_count`, `slot_index_model`) instead of hand-implementing them.
+
+**Decision (2026-08-05):** Accepted (GitHub #27, milestone v0.2.0; promoted from IDEAS.md §21 Idea 2 — see DONE.md 2026-08-05). Shape is an **opt-in mixin**, not base-class defaults: with `class MyPlugin(CadenceSlotAllocation, DirectZarrIngestor)` the MRO satisfies the existing `__init_subclass__` guard (`templates/direct_zarr.py:500-517`) without relaxing it — the guard's invariant ("the three methods must be provided by something other than the abstract base") is preserved, its tests (`test_direct_zarr_init_subclass.py`, `test_direct_zarr_parallel_contract.py`) stay unmodified, and the base never learns about the mixin (avoids the `templates/generic.py` `isinstance(self, DuckDbMixin)` inverted-dependency smell). Irregular-cadence products (polar orbiters: non-integer orbital periods, drifting overpass times, schedule-driven allocation) are explicitly out of scope and keep the manual three-hook contract — that carve-out IS the backwards-compatibility clause of #27, not just migration safety.
+
+**Evidence (duplication):**
+- Near-verbatim boilerplate across `docs/tutorials/direct-zarr-parallel.md:130-166`, ~20 test fixtures (e.g. `tests/unit/test_cli_zarr_slots.py:40-76`), and both production parallel plugins (`firecube-opera-seviri-nordlis`, `firecube-mtg-fci-l1c`) per IDEAS.md §21.
+- `SlotAxis.cadence_s` / `mode` are declared, persisted, and content-addressed (`core/slot_index.py`) but never consumed for arithmetic anywhere in `src/` — the model already carries the parameters; only the derivation behavior is missing.
+
+**Design constraints:**
+1. **Integer arithmetic only** — `iso_to_epoch_s` (int) and integer `cadence_s`; index = `(ts_epoch_s - epoch_s) // cadence_s`. No float boundary math: the `extensions/grid.py` arange/boundary bug class (IDEAS.md §34) must be structurally impossible here. This is also the principled reason non-integer orbital periods are out of scope.
+2. **Half-open boundary convention, stated in the contract:** slot `i` covers `[epoch + i*cadence, epoch + (i+1)*cadence)`; horizon is `[start, end)`; `global_expected_time_count = (end_s - start_s) // cadence_s`. Matches the engine's existing `[slot_start, slot_end)` convention.
+3. **Hard validation, never silent floor:** timestamp before epoch → raise (Python floor division would return a negative `ts_index`; generalizes OPERA's epoch-mismatch guard). `mode="exact"` + misaligned timestamp → raise. `mode="floor"` documents the collision consequence (two granules in one slot → same `ts_index` → per-slot `ClaimConflictError`, no retry at the dispatch site).
+4. **Finite horizon required in v1.** Open-ended end dates (the issue's 01.01.9999 case) interact with parallel pre-sizing (`firecube zarr preallocate`; no axis growth in parallel mode) — horizon extension via re-preallocate is the supported growth path; open-ended support is deferred and needs its own design.
+5. **Identity vs campaign split:** epoch + cadence are product identity → ClassVar declarations (the `time_dim_name` precedent, DONE.md 2026-06-10). Horizon/end is a per-campaign knob → typed plugin config / ctx (the OPERA `--horizon` workflow).
+6. **Class-definition-time composition validation:** the mixin's own `__init_subclass__` checks it is combined with `DirectZarrIngestor` and that the declarations are present — the DirectZarrIngestor guard pattern, not the DuckDbMixin silent-shadow defensive-`getattr` pattern.
+7. **Chunk-alignment surfacing at derivation time:** derived count not a multiple of the group's time-chunk LCM (cf. `cli/_slot_planning.py:_resolve_per_group_slot_sizes`) → warn or fail closed, matching `_chunk_aligned_remaining`'s fail-closed philosophy. Do not let the planner rediscover the Phase 3.3–3.5 terminal-partial-chunk geometry.
+8. **Base-impl caching:** `timestamp_to_ts_index(group, timestamp_val)` takes no `ctx`; the mixin caches the model (precedents: `_slot_index_model_stamped`, `_cached_zarr_schema`).
+9. **Overrides always win via MRO** — partial adoption (e.g. custom `global_expected_time_count` with mixin-derived index math) works by construction.
+10. **Public surface:** export from `firecube.ingestor.api` alongside the existing contract types. No `ChunkManager`, `IndexedRegionStrategy`, or CLI changes expected — a derived `SlotIndexModel` is content-addressed identically to a hand-written one.
+
+**Acceptance criteria:**
+- A cadence-based plugin opts into parallelism by declaring only start/cadence(/horizon) — zero hand-written slot math.
+- Existing three-hook plugins work unchanged; the `__init_subclass__` guard and its tests are unmodified.
+- Boundary tests: ts == epoch, ts == end, one step inside each edge, ts < epoch, misaligned exact-mode timestamp, chunk-misaligned horizon.
+- Docs: tutorial rewritten around the mixin; parallel-contract table in `docs/guides/plugins/direct-zarr.md` updated; polar-orbiter carve-out documented.
+
+**References:** GitHub #27; IDEAS.md §21 (Idea 2 promoted; Ideas 1 and 3 remain UNDECIDED); IDEAS.md §34 (boundary findings from the same evaluation); DONE.md 2026-08-05.
+
+---
+
 ### §29 Test suite overhaul
 
 **Goal:** Reduce noisy static/docs failures and raise behavioral bug-detection

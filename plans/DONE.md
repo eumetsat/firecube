@@ -1,5 +1,17 @@
 # Done
 
+Date: 2026-08-05 Task: #27
+
+Decision: Accept GitHub #27 — automate slot allocation for `DirectZarrIngestor` via an opt-in cadence mixin. Promotes IDEAS.md §21 Idea 2 to TODO.md §33 (decision-only entry; implementation follows on a feature branch, milestone v0.2.0).
+
+Context: Plugins opting into `SUPPORTS_SLOT_RANGE_PARALLELISM` must hand-implement `timestamp_to_ts_index` / `global_expected_time_count` / `slot_index_model`, and the same epoch/cadence math is duplicated near-verbatim across the tutorial, ~20 test fixtures, and both production parallel plugins (`firecube-opera-seviri-nordlis`, `firecube-mtg-fci-l1c`) — the trigger condition IDEAS.md §21 set for promotion. `SlotIndexModel` already carries `(epoch, cadence_s, mode)` per group but those fields are inert identity metadata, never consumed for arithmetic anywhere in `src/`; only the derivation behavior is missing. Design decided: an opt-in mixin (working name `CadenceSlotAllocation`) rather than base-class defaults, so the `__init_subclass__` guard at `templates/direct_zarr.py` and its tests stay untouched (the MRO satisfies the guard naturally, and the base never learns about the mixin). Scope is fixed integer-second cadence with a finite horizon in v1; irregular-cadence products (polar orbiters: non-integer periods, drifting overpass times) explicitly keep the manual three-hook contract. `ChunkManager` is unchanged — a derived model is content-addressed identically to a hand-written one. Full design constraints and acceptance criteria in TODO.md §33.
+
+Consequences: TODO.md §33 created (accepted scope + mixin design constraints); IDEAS.md §21 Idea 2 marked PROMOTED (Ideas 1 and 3 remain UNDECIDED); IDEAS.md §34 added for the unrelated gridding-extension boundary findings surfaced by the same evaluation.
+
+Source: GitHub #27 — https://github.com/eumetsat/firecube/issues/27
+
+---
+
 Date: 2026-08-03 Task: #22
 
 Decision: Ship PEP 561 `py.typed` marker for downstream IDE type support
