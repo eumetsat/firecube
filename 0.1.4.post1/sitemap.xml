@@ -117,6 +117,46 @@
          <lastmod>2026-08-07</lastmod>
     </url>
     <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/base-ingestor/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/cli-and-config/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/contract/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/create-a-plugin/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/direct-zarr/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/generic-parquet/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/generic-zarr/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/mixins/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/observability/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/storage-access/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
          <loc>https://eumetsat.github.io/firecube/0.1.4.post1/contributing/</loc>
          <lastmod>2026-08-07</lastmod>
     </url>
@@ -125,59 +165,11 @@
          <lastmod>2026-08-07</lastmod>
     </url>
     <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/base-ingestor/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/cli-and-config/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/contract/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/create-a-plugin/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/direct-zarr/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/extensions/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/generic-parquet/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/generic-zarr/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/install-a-plugin/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/observability/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/storage-access/</loc>
+         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/contributing/plugin-authors/</loc>
          <lastmod>2026-08-07</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/0.1.4.post1/operations/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/operations/parallel-zarr-writes/</loc>
          <lastmod>2026-08-07</lastmod>
     </url>
     <url>
@@ -245,10 +237,6 @@
          <lastmod>2026-08-07</lastmod>
     </url>
     <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/reference/advanced-plugin-api/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
          <loc>https://eumetsat.github.io/firecube/0.1.4.post1/reference/api/</loc>
          <lastmod>2026-08-07</lastmod>
     </url>
@@ -290,10 +278,6 @@
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/0.1.4.post1/tutorials/weather-csv/</loc>
-         <lastmod>2026-08-07</lastmod>
-    </url>
-    <url>
-         <loc>https://eumetsat.github.io/firecube/0.1.4.post1/tutorials/weather-netcdf/</loc>
          <lastmod>2026-08-07</lastmod>
     </url>
 </urlset>

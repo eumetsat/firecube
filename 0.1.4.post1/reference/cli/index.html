@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://eumetsat.github.io/firecube/0.1.4.post1/reference/cli/">
       
       
-        <link rel="prev" href="../advanced-plugin-api/">
+        <link rel="prev" href="../api/">
       
       
         <link rel="next" href="../observability/">
@@ -256,26 +256,6 @@
   
   
   Quickstart
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../guides/plugins/" class="md-tabs__link">
-          
-  
-  
-  Plugin Development
 
         </a>
       </li>
@@ -580,7 +560,7 @@
   <span class="md-ellipsis">
     
   
-    Install a Plugin
+    Plugin Setup
   
 
     
@@ -636,7 +616,7 @@
   <span class="md-ellipsis">
     
   
-    Create an Intake Catalog
+    Intake Catalogs
   
 
     
@@ -664,7 +644,7 @@
   <span class="md-ellipsis">
     
   
-    Configure S3 Access
+    Configuration
   
 
     
@@ -717,7 +697,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin Development
+    Concepts
   
 
     
@@ -730,651 +710,6 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Plugin Development
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/create-a-plugin/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Create a Plugin
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/install-a-plugin/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Install Your Plugin
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Implement Your Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Implement Your Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/generic-zarr/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GenericZarrIngestor (Append)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/generic-parquet/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GenericParquetIngestor (Tabular)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/direct-zarr/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Develop Further
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Develop Further
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/storage-access/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Read Source Data
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/cli-and-config/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configure a Plugin
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/observability/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Add Telemetry
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Customization
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Advanced Customization
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/extensions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Plugin Extensions
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/base-ingestor/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Custom Pipeline Plugins
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Publish Your Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_7">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Publish Your Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/contract/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Package and Register
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Concepts
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1490,10 +825,442 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugins
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/create-a-plugin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Create a Plugin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4_3" id="__nav_3_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Base Classes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/generic-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenericZarrIngestor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/generic-parquet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenericParquetIngestor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/direct-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/base-ingestor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BaseIngestor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/cli-and-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI And Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/storage-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/plugins/mixins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mixins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
             
   
   
@@ -1511,8 +1278,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1572,10 +1339,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4_2" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_2" >
         
           
-          <label class="md-nav__link" for="__nav_4_4_2" id="__nav_4_4_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_5_2" id="__nav_3_5_2_label" tabindex="0">
             
   
   
@@ -1593,8 +1360,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_4_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_4_2">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_2">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1810,10 +1577,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
         
           
-          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
             
   
   
@@ -1831,8 +1598,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1956,10 +1723,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
         
           
-          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
             
   
   
@@ -1977,8 +1744,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2158,10 +1925,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
         
           
-          <label class="md-nav__link" for="__nav_4_7" id="__nav_4_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="0">
             
   
   
@@ -2179,8 +1946,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2332,10 +2099,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="0">
             
   
   
@@ -2353,8 +2120,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2541,10 +2308,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -2562,8 +2329,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2623,100 +2390,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
         
           
-          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Zarr
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Zarr
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/parallel-zarr-writes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Run Parallel Zarr Writes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
             
   
   
@@ -2734,8 +2411,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2943,10 +2620,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
         
           
-          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
             
   
   
@@ -2964,8 +2641,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3124,10 +2801,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -3145,8 +2822,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3206,10 +2883,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_2" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_2" >
         
           
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
             
   
   
@@ -3227,8 +2904,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3245,14 +2922,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/weather-netcdf/" class="md-nav__link">
+      <a href="../../tutorials/weather-csv/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr
+    Weather CSV Plugin
   
 
     
@@ -3280,7 +2957,7 @@
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Source Discovery
+    Weather CSV: Source Discovery
   
 
     
@@ -3308,7 +2985,7 @@
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Observability
+    Weather CSV: Observability
   
 
     
@@ -3352,10 +3029,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
         
           
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
             
   
   
@@ -3373,8 +3050,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3398,7 +3075,7 @@
   <span class="md-ellipsis">
     
   
-    Sentinel-3 FRP To Parquet
+    Sentinel-3 FRP Plugin
   
 
     
@@ -3442,10 +3119,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
         
           
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
             
   
   
@@ -3463,8 +3140,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3488,7 +3165,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    Direct Parallel Zarr
   
 
     
@@ -3539,10 +3216,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -3560,8 +3237,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3586,6 +3263,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/plugin-authors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Authors
   
 
     
@@ -3659,10 +3364,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
             
   
   
@@ -3680,8 +3385,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3705,35 +3410,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin Template API
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../advanced-plugin-api/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Plugin API
+    API Reference
   
 
     
@@ -4341,6 +4018,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#bulk-sweep-all-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk Sweep: --all-stale
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bulk Sweep: --all-stale">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#safety-gate-yes-i-really-mean-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety gate: --yes-i-really-mean-it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chunks-claims-clear-all-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chunks claims clear --all-stale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chunks-runs-abandon-all-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chunks runs abandon --all-stale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4420,7 +4158,7 @@
   <span class="md-ellipsis">
     
   
-    Storage Drivers
+    Storage Driver Compatibility
   
 
     
@@ -4995,6 +4733,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#bulk-sweep-all-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk Sweep: --all-stale
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bulk Sweep: --all-stale">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#safety-gate-yes-i-really-mean-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety gate: --yes-i-really-mean-it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chunks-claims-clear-all-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chunks claims clear --all-stale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chunks-runs-abandon-all-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chunks runs abandon --all-stale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5051,7 +4850,7 @@ start a job, or explore subcommands for storage management and diagnostics.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5077,7 +4876,7 @@ a recommended pipeline_batch_size before running large ingestion jobs.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5129,7 +4928,7 @@ set --option pipeline_batch_size=N.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5199,7 +4998,7 @@ emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5226,7 +5025,7 @@ and archive restore to extract it back to Zarr.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5338,7 +5137,7 @@ product group.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5377,7 +5176,7 @@ inspection.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5410,7 +5209,7 @@ restoring.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5478,7 +5277,7 @@ to the target Zarr store. archive groups restore to their original paths.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5517,7 +5316,7 @@ corrupted or incomplete.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5545,7 +5344,7 @@ library.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5609,7 +5408,7 @@ source specs and optional storage_options placeholders. Requires
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5650,7 +5449,7 @@ history</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5675,7 +5474,7 @@ history</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5688,10 +5487,8 @@ history</p>
 claims are normally released when a writer exits cleanly; use this when a
 crashed process left a stale claim that blocks ingestion. verify the
 original writer is no longer running first.</p>
-<p>--all-stale never prompts. without --yes-i-really-mean-it it lists the
-stale claims as a dry run; with the flag it clears them. single-claim
-operations prompt in a terminal and require the flag in non-TTY contexts.</p>
-<p>--force bypasses the is_stale check for single active claims.</p>
+<p>--force bypasses the is_stale check (operational bypass for active claims).
+--yes-i-really-mean-it is the confirmation flag, required in non-TTY contexts.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube chunks claims clear [OPTIONS]
 </code></pre></div>
@@ -5709,7 +5506,7 @@ operations prompt in a terminal and require the flag in non-TTY contexts.</p>
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>full product URI</td>
+<td>product owning the claim</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -5721,7 +5518,7 @@ operations prompt in a terminal and require the flag in non-TTY contexts.</p>
 <tr>
 <td><code>--all-stale</code></td>
 <td>boolean</td>
-<td>preview all stale claims for the product; clear them only with --yes-i-really-mean-it (mutually exclusive with --domain)</td>
+<td>clear all stale claims for the product (mutually exclusive with --domain)</td>
 <td><code>False</code></td>
 </tr>
 <tr>
@@ -5749,7 +5546,7 @@ operations prompt in a terminal and require the flag in non-TTY contexts.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5779,7 +5576,7 @@ claims clear to release them</p>
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>full product URI to inspect</td>
+<td>filter by product name</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -5795,7 +5592,7 @@ claims clear to release them</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5831,7 +5628,7 @@ removes both control-plane records and the underlying storage files. use
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>Full product URI to delete from.</td>
+<td>Filter by product name.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -5907,7 +5704,7 @@ removes both control-plane records and the underlying storage files. use
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5937,7 +5734,7 @@ first</p>
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>full product URI to delete spans from</td>
+<td>target product (e.g. product.zarr)</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -6001,7 +5798,7 @@ first</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6036,7 +5833,7 @@ supports table and JSON output for scripting</p>
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>full product URI to inspect</td>
+<td>filter by product name</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -6094,7 +5891,7 @@ supports table and JSON output for scripting</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6119,7 +5916,7 @@ supports table and JSON output for scripting</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6130,10 +5927,7 @@ supports table and JSON output for scripting</p>
 <p>mark a stuck run as abandoned</p>
 <p>mark a non-terminal ingestion run as abandoned to unblock resume. a run
 stuck in 'started' state blocks future ingestion for that product. use this
-after confirming the original process is no longer active.</p>
-<p>--all-stale never prompts. without --yes-i-really-mean-it it lists stale
-runs as a dry run; with the flag it abandons them. single-run operations
-prompt in a terminal and require the flag in non-TTY contexts.</p>
+after confirming the original process is no longer active</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>firecube chunks runs abandon [OPTIONS]
 </code></pre></div>
@@ -6151,8 +5945,14 @@ prompt in a terminal and require the flag in non-TTY contexts.</p>
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>full product URI</td>
+<td>product owning the run</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--target</code></td>
+<td>text</td>
+<td>Explicit product target URI (file://... or s3://...). Overrides config/env backend resolution. Use when --product-name alone resolves to the wrong backend (e.g. after moving a product or when config points elsewhere).</td>
+<td>None</td>
 </tr>
 <tr>
 <td><code>--run-id</code></td>
@@ -6163,7 +5963,7 @@ prompt in a terminal and require the flag in non-TTY contexts.</p>
 <tr>
 <td><code>--all-stale</code></td>
 <td>boolean</td>
-<td>preview all stale non-terminal runs for the product; abandon them only with --yes-i-really-mean-it (mutually exclusive with --run-id)</td>
+<td>abandon all stale non-terminal runs for the product (mutually exclusive with --run-id)</td>
 <td><code>False</code></td>
 </tr>
 <tr>
@@ -6191,7 +5991,7 @@ prompt in a terminal and require the flag in non-TTY contexts.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6220,8 +6020,14 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>full product URI</td>
+<td>product to inspect</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--target</code></td>
+<td>text</td>
+<td>Explicit product target URI (file://... or s3://...). Overrides config/env backend resolution. Use when --product-name alone resolves to the wrong backend (e.g. after moving a product or when config points elsewhere).</td>
+<td>None</td>
 </tr>
 <tr>
 <td><code>--status</code></td>
@@ -6242,7 +6048,7 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6267,7 +6073,7 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6296,7 +6102,7 @@ corrupt, or very stale to restore fast query performance for chunks list</p>
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>full product URI to rebuild into a fresh chunk snapshot</td>
+<td>product to rebuild into a fresh chunk snapshot</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -6318,7 +6124,7 @@ corrupt, or very stale to restore fast query performance for chunks list</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6347,7 +6153,7 @@ it was last rebuilt. use to decide whether a rebuild is needed</p>
 <tr>
 <td><code>-n</code>, <code>--product-name</code></td>
 <td>text</td>
-<td>full product URI to check snapshot status for</td>
+<td>product to check snapshot status for</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -6363,7 +6169,7 @@ it was last rebuilt. use to decide whether a rebuild is needed</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6396,7 +6202,7 @@ completion for all firecube commands and options.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6508,7 +6314,7 @@ a plugin.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6535,7 +6341,7 @@ a single optimized file.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6593,7 +6399,7 @@ is not modified.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6638,7 +6444,7 @@ not modify any data.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6665,7 +6471,7 @@ a plugin's options.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6692,7 +6498,7 @@ a plugin's options.</p>
 <td><code>--target-dir</code></td>
 <td>path</td>
 <td>target directory (default: current directory)</td>
-<td><code>/Users/armagan/Desktop/projects/opensource/firecube/firecube</code></td>
+<td><code>/private/tmp/claude-501/-Users-armagan-Desktop-projects-opensource-firecube-firecube/0de28f0a-a58a-4029-bd6b-353f854d851b/scratchpad/fc-v0.1.4.post1</code></td>
 </tr>
 <tr>
 <td><code>--author</code></td>
@@ -6731,7 +6537,7 @@ a plugin's options.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6764,7 +6570,7 @@ firecube ingest.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6797,7 +6603,7 @@ path format is <plugin>.<tier>.<field> (e.g. example_plugin.ingest.option).</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6846,7 +6652,7 @@ path format is <plugin>.<tier>.<field> (e.g. example_plugin.ingest.option).</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6879,7 +6685,7 @@ plugin. Use -f to control output format.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6910,7 +6716,7 @@ plugin. Use -f to control output format.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6938,7 +6744,7 @@ zarr slots to emit parallel ingestion plans.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6992,7 +6798,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7061,7 +6867,7 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7135,7 +6941,7 @@ JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 <td><code>json</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7204,10 +7010,126 @@ structured JSON summary.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="bulk-sweep-all-stale">Bulk Sweep: <code>--all-stale</code></h2>
+<p>Both <code>firecube chunks claims clear</code> and <code>firecube chunks runs abandon</code> support
+<code>--all-stale</code> for sweeping every stale entry for a product in one command. Use
+this after a cluster crash or pod eviction leaves multiple stuck runs or claims
+behind.</p>
+<h3 id="safety-gate-yes-i-really-mean-it">Safety gate: <code>--yes-i-really-mean-it</code></h3>
+<p>Both commands require explicit confirmation before mutating anything. In an
+interactive terminal you get a prompt. In a non-TTY context (CI, scripts,
+cron) the command exits with an error unless you pass
+<code>--yes-i-really-mean-it</code>. This prevents accidental bulk mutations from
+copy-pasted commands or automation that runs without human review.</p>
+<p><code>--dry-run</code> always works without the confirmation flag. Use it first to see
+exactly what would change.</p>
+<hr />
+<h3 id="chunks-claims-clear-all-stale"><code>chunks claims clear --all-stale</code></h3>
+<p>Clears every stale write-coordination claim for a product. A claim is
+considered stale when the writer that created it is no longer active.</p>
+<p><code>--all-stale</code> and <code>--domain</code> are mutually exclusive. Pass one or the other,
+not both.</p>
+<p><strong>Step 1: preview the sweep</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a><span class="w">  </span>--dry-run
+</code></pre></div>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>[dry-run] Would clear 3 stale claim(s) for MY_PRODUCT
+</code></pre></div>
+<p><strong>Step 2: commit the sweep</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-44-3" name="__codelineno-44-3" href="#__codelineno-44-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-44-4" name="__codelineno-44-4" href="#__codelineno-44-4"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>Cleared 3 stale claim(s) for MY_PRODUCT
+</code></pre></div>
+<p><strong>Verify:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span>MY_PRODUCT
+</code></pre></div>
+<p>Expected output when all claims are gone:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>No claims found.
+</code></pre></div>
+<hr />
+<h3 id="chunks-runs-abandon-all-stale"><code>chunks runs abandon --all-stale</code></h3>
+<p>Marks every non-terminal run for a product as abandoned. A run stuck in
+<code>started</code> state blocks future ingestion for that product.</p>
+<p><code>--all-stale</code> and <code>--run-id</code> are mutually exclusive. Pass one or the other,
+not both.</p>
+<p><code>--reason</code> is required even in bulk mode. It records why the runs were
+abandoned and appears in the run history.</p>
+<p><strong>Step 1: preview the sweep</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-48-2" name="__codelineno-48-2" href="#__codelineno-48-2"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-48-3" name="__codelineno-48-3" href="#__codelineno-48-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-48-4" name="__codelineno-48-4" href="#__codelineno-48-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;cluster-crash&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-48-5" name="__codelineno-48-5" href="#__codelineno-48-5"></a><span class="w">  </span>--dry-run
+</code></pre></div>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a>[dry-run] Would abandon 2 stale run(s) for MY_PRODUCT (reason: cluster-crash)
+</code></pre></div>
+<p><strong>Step 2: commit the sweep</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-50-2" name="__codelineno-50-2" href="#__codelineno-50-2"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-50-3" name="__codelineno-50-3" href="#__codelineno-50-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-50-4" name="__codelineno-50-4" href="#__codelineno-50-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;cluster-crash&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-50-5" name="__codelineno-50-5" href="#__codelineno-50-5"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a>Abandoned 2 stale run(s) for MY_PRODUCT
+</code></pre></div>
+<p><strong>Verify:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span>--status<span class="w"> </span>started
+</code></pre></div>
+<p>Expected output when no stuck runs remain:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a>No runs found.
+</code></pre></div>
+<hr />
+<h3 id="troubleshooting">Troubleshooting</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--all-stale and --domain are mutually exclusive</code></td>
+<td>Both flags passed to <code>claims clear</code></td>
+<td>Remove <code>--domain</code> when using <code>--all-stale</code></td>
+</tr>
+<tr>
+<td><code>--all-stale and --run-id are mutually exclusive</code></td>
+<td>Both flags passed to <code>runs abandon</code></td>
+<td>Remove <code>--run-id</code> when using <code>--all-stale</code></td>
+</tr>
+<tr>
+<td><code>--reason is required</code></td>
+<td><code>runs abandon --all-stale</code> called without <code>--reason</code></td>
+<td>Add <code>--reason "&lt;description&gt;"</code></td>
+</tr>
+<tr>
+<td>Command exits without mutating in non-TTY</td>
+<td><code>--yes-i-really-mean-it</code> not passed</td>
+<td>Add <code>--yes-i-really-mean-it</code> or run <code>--dry-run</code> first</td>
+</tr>
+<tr>
+<td>No stale entries found</td>
+<td>All claims/runs are already terminal or active</td>
+<td>Run <code>firecube chunks claims list</code> or <code>firecube chunks runs list</code> to inspect current state</td>
 </tr>
 </tbody>
 </table>

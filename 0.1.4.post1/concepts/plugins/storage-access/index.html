@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://eumetsat.github.io/firecube/0.1.4.post1/guides/plugins/">
+        <link rel="canonical" href="https://eumetsat.github.io/firecube/0.1.4.post1/concepts/plugins/storage-access/">
       
       
-        <link rel="prev" href="../../quickstart/configuration/">
+        <link rel="prev" href="../cli-and-config/">
       
       
-        <link rel="next" href="create-a-plugin/">
+        <link rel="next" href="../observability/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/firecube-favicon.png">
+      <link rel="icon" href="../../../assets/firecube-favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Overview - Firecube</title>
+        <title>Storage Access - Firecube</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#plugin-development-overview" class="md-skip">
+        <a href="#plugin-storage-access" class="md-skip">
           Skip to content
         </a>
       
@@ -98,9 +98,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href="../../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../../../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Storage Access
             
           </span>
         </div>
@@ -230,7 +230,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -251,7 +251,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../quickstart/" class="md-tabs__link">
+        <a href="../../../quickstart/" class="md-tabs__link">
           
   
   
@@ -273,27 +273,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
-          
-  
-  
-  Plugin Development
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../concepts/" class="md-tabs__link">
+        <a href="../../" class="md-tabs__link">
           
   
   
@@ -313,7 +293,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../operations/" class="md-tabs__link">
+        <a href="../../../operations/" class="md-tabs__link">
           
   
   
@@ -333,7 +313,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/" class="md-tabs__link">
+        <a href="../../../tutorials/" class="md-tabs__link">
           
   
   
@@ -353,7 +333,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../contributing/" class="md-tabs__link">
+        <a href="../../../contributing/" class="md-tabs__link">
           
   
   
@@ -373,7 +353,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/api/" class="md-tabs__link">
+        <a href="../../../reference/api/" class="md-tabs__link">
           
   
   
@@ -407,9 +387,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href="../../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../../../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     Firecube
@@ -436,7 +416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -517,7 +497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../../../quickstart/" class="md-nav__link">
         
   
   
@@ -545,7 +525,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/installation/" class="md-nav__link">
+      <a href="../../../quickstart/installation/" class="md-nav__link">
         
   
   
@@ -573,14 +553,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/plugins/" class="md-nav__link">
+      <a href="../../../quickstart/plugins/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Install a Plugin
+    Plugin Setup
   
 
     
@@ -601,7 +581,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/ingestion/" class="md-nav__link">
+      <a href="../../../quickstart/ingestion/" class="md-nav__link">
         
   
   
@@ -629,14 +609,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/catalogs/" class="md-nav__link">
+      <a href="../../../quickstart/catalogs/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Create an Intake Catalog
+    Intake Catalogs
   
 
     
@@ -657,14 +637,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/configuration/" class="md-nav__link">
+      <a href="../../../quickstart/configuration/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure S3 Access
+    Configuration
   
 
     
@@ -720,7 +700,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin Development
+    Concepts
   
 
     
@@ -736,11 +716,438 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin Development
+    Concepts
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugins
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../create-a-plugin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Create a Plugin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4_3" id="__nav_3_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Base Classes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenericZarrIngestor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-parquet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenericParquetIngestor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../base-ingestor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BaseIngestor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-and-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI And Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -765,7 +1172,7 @@
   <span class="md-ellipsis">
     
   
-    Overview
+    Storage Access
   
 
     
@@ -783,7 +1190,7 @@
   <span class="md-ellipsis">
     
   
-    Overview
+    Storage Access
   
 
     
@@ -809,10 +1216,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#how-template-plugins-work" class="md-nav__link">
+  <a href="#goal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How Template Plugins Work
+        Goal
       
     </span>
   </a>
@@ -820,10 +1227,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#choose-what-your-plugin-produces" class="md-nav__link">
+  <a href="#minimal-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Choose What Your Plugin Produces
+        Minimal Example
       
     </span>
   </a>
@@ -831,10 +1238,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#from-an-idea-to-a-first-run" class="md-nav__link">
+  <a href="#required-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        From An Idea To A First Run
+        Required API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test It
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-mistakes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Mistakes
       
     </span>
   </a>
@@ -868,14 +1308,14 @@
   
   
     <li class="md-nav__item">
-      <a href="create-a-plugin/" class="md-nav__link">
+      <a href="../observability/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Create a Plugin
+    Observability
   
 
     
@@ -896,155 +1336,14 @@
   
   
     <li class="md-nav__item">
-      <a href="install-a-plugin/" class="md-nav__link">
+      <a href="../mixins/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Install Your Plugin
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Implement Your Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Implement Your Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="generic-zarr/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GenericZarrIngestor (Append)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="generic-parquet/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GenericParquetIngestor (Tabular)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="direct-zarr/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
+    Mixins
   
 
     
@@ -1101,7 +1400,7 @@
   <span class="md-ellipsis">
     
   
-    Develop Further
+    Output Formats
   
 
     
@@ -1117,7 +1416,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Develop Further
+    Output Formats
   
 
           </label>
@@ -1130,14 +1429,96 @@
   
   
     <li class="md-nav__item">
-      <a href="storage-access/" class="md-nav__link">
+      <a href="../../output-formats/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Read Source Data
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5_2" id="__nav_3_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zarr
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Zarr
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output-formats/zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
   
 
     
@@ -1158,14 +1539,14 @@
   
   
     <li class="md-nav__item">
-      <a href="cli-and-config/" class="md-nav__link">
+      <a href="../../output-formats/zarr/generic-append/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    GenericZarrIngestor (Append)
   
 
     
@@ -1186,14 +1567,106 @@
   
   
     <li class="md-nav__item">
-      <a href="observability/" class="md-nav__link">
+      <a href="../../output-formats/zarr/direct-region/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Add Telemetry
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output-formats/zarr/parallel-writes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output-formats/parquet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parquet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output-formats/archive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tensogram
   
 
     
@@ -1250,7 +1723,7 @@
   <span class="md-ellipsis">
     
   
-    Advanced Customization
+    Storage & ChunkManager
   
 
     
@@ -1266,7 +1739,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Advanced Customization
+    Storage & ChunkManager
   
 
           </label>
@@ -1279,14 +1752,14 @@
   
   
     <li class="md-nav__item">
-      <a href="extensions/" class="md-nav__link">
+      <a href="../../chunkmanager/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Plugin Extensions
+    Overview
   
 
     
@@ -1307,14 +1780,42 @@
   
   
     <li class="md-nav__item">
-      <a href="base-ingestor/" class="md-nav__link">
+      <a href="../../storage/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Custom Pipeline Plugins
+    Product Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../chunk-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChunkManager Records
   
 
     
@@ -1371,7 +1872,7 @@
   <span class="md-ellipsis">
     
   
-    Publish Your Plugin
+    Orchestration
   
 
     
@@ -1387,7 +1888,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Publish Your Plugin
+    Orchestration
   
 
           </label>
@@ -1400,14 +1901,508 @@
   
   
     <li class="md-nav__item">
-      <a href="contract/" class="md-nav__link">
+      <a href="../../orchestration/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Package and Register
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../orchestration/external-orchestrator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orchestrator Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../orchestration/execution-shapes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution Shapes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../orchestration/write-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scheduling And Write Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../orchestration/retries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Retries And Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../observability/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../observability/logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../observability/traces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Traces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Best Practices & Performance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Best Practices & Performance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../best-practices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../production-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
   
 
     
@@ -1468,7 +2463,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts
+    Operations
   
 
     
@@ -1484,7 +2479,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Concepts
+    Operations
   
 
           </label>
@@ -1497,145 +2492,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/glossary/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Glossary
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/configuration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configuration Model
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Output Formats
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Output Formats
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/output-formats/" class="md-nav__link">
+      <a href="../../../operations/" class="md-nav__link">
         
   
   
@@ -1678,17 +2535,17 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4_2" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_2" >
         
           
-          <label class="md-nav__link" for="__nav_4_4_2" id="__nav_4_4_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    Zarr
+    ChunkManager
   
 
     
@@ -1699,12 +2556,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_4_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_4_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Zarr
+    ChunkManager
   
 
           </label>
@@ -1717,7 +2574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/" class="md-nav__link">
         
   
   
@@ -1745,14 +2602,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/inspect/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericZarrIngestor (Append)
+    Inspect
   
 
     
@@ -1773,14 +2630,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/recover/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Region)
+    Recover Runs And Claims
   
 
     
@@ -1801,50 +2658,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/post-crash-recovery/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/output-formats/parquet/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Parquet
+    Post-Crash Recovery
   
 
     
@@ -1865,14 +2686,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/archive/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/delete/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Tensogram
+    Delete And Reingest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../operations/chunk-manager/snapshots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Snapshots
   
 
     
@@ -1916,17 +2765,17 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
         
           
-          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    Storage & ChunkManager
+    Archive
   
 
     
@@ -1937,12 +2786,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Storage & ChunkManager
+    Archive
   
 
           </label>
@@ -1955,7 +2804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/chunkmanager/" class="md-nav__link">
+      <a href="../../../operations/archive/" class="md-nav__link">
         
   
   
@@ -1983,14 +2832,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/storage/" class="md-nav__link">
+      <a href="../../../operations/archive/create/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Product Storage
+    Create
   
 
     
@@ -2011,104 +2860,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/chunk-management/" class="md-nav__link">
+      <a href="../../../operations/archive/inspect/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ChunkManager Records
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Orchestration
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Orchestration
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/orchestration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
+    Inspect And Validate
   
 
     
@@ -2129,474 +2888,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/external-orchestrator/" class="md-nav__link">
+      <a href="../../../operations/archive/restore/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Orchestrator Contract
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/orchestration/execution-shapes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Execution Shapes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/orchestration/write-safety/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Scheduling And Write Safety
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/orchestration/retries/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Retries And Recovery
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_4_7" id="__nav_4_7_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Observability
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_7">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Observability
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/observability/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/observability/metrics/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Metrics
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/observability/logs/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Logs
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/observability/traces/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Traces
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_8" >
-        
-          
-          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Best Practices & Performance
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Best Practices & Performance
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/best-practices/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/production-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Production Guide
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/performance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Performance Tuning
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/parallelism/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Parallelism
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../concepts/benchmarks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Benchmarks
+    Restore
   
 
     
@@ -2657,7 +2956,7 @@
   <span class="md-ellipsis">
     
   
-    Operations
+    Tutorials
   
 
     
@@ -2673,7 +2972,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Operations
+    Tutorials
   
 
           </label>
@@ -2686,7 +2985,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/" class="md-nav__link">
+      <a href="../../../tutorials/" class="md-nav__link">
         
   
   
@@ -2739,7 +3038,7 @@
   <span class="md-ellipsis">
     
   
-    Zarr
+    First Plugin
   
 
     
@@ -2755,7 +3054,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Zarr
+    First Plugin
   
 
           </label>
@@ -2768,14 +3067,70 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/parallel-zarr-writes/" class="md-nav__link">
+      <a href="../../../tutorials/weather-csv/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Run Parallel Zarr Writes
+    Weather CSV Plugin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/source-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Weather CSV: Source Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Weather CSV: Observability
   
 
     
@@ -2829,7 +3184,7 @@
   <span class="md-ellipsis">
     
   
-    ChunkManager
+    Product Examples
   
 
     
@@ -2845,7 +3200,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    ChunkManager
+    Product Examples
   
 
           </label>
@@ -2858,154 +3213,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/" class="md-nav__link">
+      <a href="../../../tutorials/sentinel3-frp/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/inspect/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Inspect
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/recover/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Recover Runs And Claims
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/post-crash-recovery/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Post-Crash Recovery
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/delete/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Delete And Reingest
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/snapshots/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Snapshots
+    Sentinel-3 FRP Plugin
   
 
     
@@ -3059,7 +3274,7 @@
   <span class="md-ellipsis">
     
   
-    Archive
+    Advanced Zarr
   
 
     
@@ -3075,7 +3290,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Archive
+    Advanced Zarr
   
 
           </label>
@@ -3088,98 +3303,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/" class="md-nav__link">
+      <a href="../../../tutorials/direct-zarr-parallel/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/archive/create/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Create
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/archive/inspect/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Inspect And Validate
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../operations/archive/restore/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Restore
+    Direct Parallel Zarr
   
 
     
@@ -3240,7 +3371,7 @@
   <span class="md-ellipsis">
     
   
-    Tutorials
+    Contributing
   
 
     
@@ -3256,421 +3387,6 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Tutorials
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    First Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    First Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/weather-netcdf/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    NetCDF To Zarr
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/source-discovery/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    NetCDF To Zarr: Source Discovery
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/observability/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    NetCDF To Zarr: Observability
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Product Examples
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Product Examples
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/sentinel3-frp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Sentinel-3 FRP To Parquet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Zarr
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Advanced Zarr
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tutorials/direct-zarr-parallel/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Parallel DirectZarrIngestor
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Contributing
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
     Contributing
   
 
@@ -3684,7 +3400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   
@@ -3712,7 +3428,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/firecube-contributors/" class="md-nav__link">
+      <a href="../../../contributing/plugin-authors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Authors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../contributing/firecube-contributors/" class="md-nav__link">
         
   
   
@@ -3762,10 +3506,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
             
   
   
@@ -3783,8 +3527,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3801,14 +3545,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/" class="md-nav__link">
+      <a href="../../../reference/api/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Plugin Template API
+    API Reference
   
 
     
@@ -3829,35 +3573,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/advanced-plugin-api/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Plugin API
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/cli/" class="md-nav__link">
+      <a href="../../../reference/cli/" class="md-nav__link">
         
   
   
@@ -3885,7 +3601,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/observability/" class="md-nav__link">
+      <a href="../../../reference/observability/" class="md-nav__link">
         
   
   
@@ -3913,7 +3629,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/config/" class="md-nav__link">
+      <a href="../../../reference/config/" class="md-nav__link">
         
   
   
@@ -3941,14 +3657,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/storage-drivers/" class="md-nav__link">
+      <a href="../../../reference/storage-drivers/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Storage Drivers
+    Storage Driver Compatibility
   
 
     
@@ -3996,10 +3712,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#how-template-plugins-work" class="md-nav__link">
+  <a href="#goal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How Template Plugins Work
+        Goal
       
     </span>
   </a>
@@ -4007,10 +3723,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#choose-what-your-plugin-produces" class="md-nav__link">
+  <a href="#minimal-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Choose What Your Plugin Produces
+        Minimal Example
       
     </span>
   </a>
@@ -4018,10 +3734,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#from-an-idea-to-a-first-run" class="md-nav__link">
+  <a href="#required-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        From An Idea To A First Run
+        Required API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test It
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-mistakes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Mistakes
       
     </span>
   </a>
@@ -4059,91 +3808,148 @@
   
 
 
-<h1 id="plugin-development-overview">Plugin Development Overview</h1>
-<p>A Firecube plugin is a Python package that teaches Firecube how to turn source
-data into a product. Most plugins contain the product-specific reading and data
-shaping, while a Firecube template provides source discovery, batching,
-standard storage writes, run tracking, and recovery around that code.</p>
-<h2 id="how-template-plugins-work">How Template Plugins Work</h2>
-<figure>
-  <img alt="For a template plugin, Firecube discovers and batches source items, the plugin shapes each batch for the product, and Firecube writes and tracks the result." src="../../assets/images/firecube-plugin-authoring-flow.svg" width="900" />
-<br />
-<figcaption>With a template class, the plugin supplies the product-specific conversion and Firecube manages the surrounding ingestion workflow.</figcaption>
-</figure>
-<p>Most plugin authors use one of the three template classes. A template keeps the
-plugin focused on product data while Firecube uses its standard writer. A
-custom pipeline is available when none of those contracts represents the
-product.</p>
-<h2 id="choose-what-your-plugin-produces">Choose What Your Plugin Produces</h2>
+<h1 id="plugin-storage-access">Plugin Storage Access</h1>
+<h2 id="goal">Goal</h2>
+<p>Plugins write output through <code>ctx.storage.output</code>, access an engine-managed
+scratch directory via <code>ctx.temp_root</code>, and pull remote sources into a local path
+via <code>ctx.materialize(source)</code>. The engine owns all storage decisions: which
+backend, which credentials, and whether writes are staged or direct. Plugins
+never construct filesystems or parse URIs.</p>
+<h2 id="minimal-example">Minimal Example</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">GenericZarrIngestor</span><span class="p">,</span> <span class="n">PluginContext</span><span class="p">,</span> <span class="n">StorageContext</span><span class="p">,</span> <span class="n">register_ingestor</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_plugin&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">GenericZarrIngestor</span><span class="p">):</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;my_product&quot;</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">object</span><span class="p">],</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">):</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="c1"># ctx.storage is a StorageContext; ctx.storage.output is the active session.</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        <span class="n">output_uri</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">uri</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        <span class="c1"># Pull a remote source file to a local path before reading it.</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        <span class="n">local_path</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">items</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>        <span class="c1"># Use ctx.temp_root for any scratch files your plugin needs.</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>        <span class="n">scratch</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">temp_root</span> <span class="o">/</span> <span class="s2">&quot;work&quot;</span> <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">temp_root</span> <span class="k">else</span> <span class="kc">None</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="c1"># Write your data using the output session, not a raw filesystem handle.</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        <span class="n">store</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">open_zarr_store</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="o">...</span>
+</code></pre></div>
+<h2 id="required-api">Required API</h2>
+<p>All members are on <code>PluginContext</code>, importable from <code>firecube.ingestor.api</code>.
+<code>StorageContext</code> is also exported from <code>firecube.ingestor.api</code> for type
+annotations. See <a href="../../../reference/api/">Public API Reference</a> for full
+generated docs.</p>
 <table>
 <thead>
 <tr>
-<th>Product contract</th>
-<th>Start with</th>
-<th>Your plugin supplies</th>
+<th>API</th>
+<th>Type</th>
+<th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Complete, ordered multidimensional datasets</td>
-<td><a href="generic-zarr/"><code>GenericZarrIngestor</code> (Append)</a></td>
-<td>One <code>xarray.Dataset</code> for each group and batch; Firecube serializes appends to a group</td>
+<td><code>ctx.storage</code></td>
+<td><code>StorageContext \| None</code></td>
+<td>Container for storage role bindings</td>
 </tr>
 <tr>
-<td>Tables or data frames</td>
-<td><a href="generic-parquet/"><code>GenericParquetIngestor</code> (Tabular)</a></td>
-<td>One table or data frame for each group and batch</td>
+<td><code>ctx.storage.output</code></td>
+<td><code>StorageSession \| None</code></td>
+<td>Active output session; use <code>.uri</code> and <code>.open_zarr_store()</code></td>
 </tr>
 <tr>
-<td>Zarr data with known indexed positions, especially when several workers must write one group</td>
-<td><a href="direct-zarr/"><code>DirectZarrIngestor</code> (Region)</a></td>
-<td>The array schema and write locations; for parallel workers, a fixed extent and deterministic index model</td>
+<td><code>ctx.temp_root</code></td>
+<td><code>Path \| None</code></td>
+<td>Engine-managed scratch directory for this run</td>
 </tr>
 <tr>
-<td>A product no template represents</td>
-<td><a href="base-ingestor/">Custom Pipeline Plugins</a>, advanced</td>
-<td>Processing, writing, results, and coordination</td>
+<td><code>ctx.materialize(source)</code></td>
+<td><code>-&gt; Path</code></td>
+<td>Downloads or resolves a source item to a local path</td>
 </tr>
 </tbody>
 </table>
-<p>The source file format does not determine the class. Choose the contract that
-matches the data your plugin can supply.</p>
-<p>For Zarr, the important difference is how a write position is chosen.
-<code>GenericZarrIngestor</code> finds the end of the group and appends the next complete
-dataset, so mutations to that group pass through one serialized append path.
-<code>DirectZarrIngestor</code> places writes at indexes supplied by the plugin. Its
-optional parallel contract fixes the global extent first, then lets separate
-ingest processes own disjoint, chunk-aligned ranges of the same group.</p>
-<p>Choose <code>DirectZarrIngestor</code> only when exact placement or same-group slot
-parallelism justifies the additional schema and indexing work. The class also
-supports serial ingestion; selecting it does not enable parallel writes by
-itself. Compare the <a href="../../concepts/output-formats/zarr/">Zarr write models</a>
-before implementing the plugin.</p>
-<h2 id="from-an-idea-to-a-first-run">From An Idea To A First Run</h2>
-<ol>
-<li><strong>Choose the product contract.</strong> Use the table above to identify the public
-   class that matches the data the plugin will supply.</li>
-<li><strong><a href="create-a-plugin/">Create the plugin</a>.</strong> The interactive command creates
-   a Python package for the selected class.</li>
-<li><strong><a href="install-a-plugin/">Install the plugin</a>.</strong> Install it in development mode
-   so Firecube can discover it while you edit the code.</li>
-<li><strong>Implement the template hooks.</strong> Follow the class guide linked from the
-   table.</li>
-<li><strong>Verify plugin discovery.</strong> Inspect the registered plugin and its available
-   configuration.</li>
-<li><strong>Run ingestion.</strong> Give the plugin source data and a product target, then
-   verify the persisted output.</li>
-</ol>
-<p>Add source access, configuration, and telemetry after the plugin is installed
-and its main data-conversion method is working.</p>
+<p><code>ctx.storage</code> is a <code>StorageContext</code> with one public field: <code>output</code>. There is no
+<code>.filesystem</code> field and no <code>.staging_paths</code>. If <code>ctx.storage</code> or
+<code>ctx.storage.output</code> is <code>None</code>, the engine did not bind storage for this run
+(e.g. a dry run).</p>
+<h2 id="configuration">Configuration</h2>
+<p>Storage type, driver, and write mode are all operator-supplied CLI flags. Plugins
+don't set these. The engine reads them and wires up <code>ctx.storage.output</code>
+accordingly before calling your hook.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--source<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--target<span class="w"> </span>s3://my-bucket/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--storage-type<span class="w"> </span>s3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged
+</code></pre></div>
+<p>For local development, swap <code>--storage-type local</code> and <code>--write-mode direct</code>.
+The plugin code stays the same either way.</p>
+<h2 id="test-it">Test It</h2>
+<p>Run a dry-run pass to confirm the engine resolves storage without writing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--source<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">dry_run</span><span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<p>Check that <code>ctx.storage.output</code> is not <code>None</code> in your hook by adding a guard:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">storage</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ctx</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No output storage bound. Check CLI flags.&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="common-mistakes">Common Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Calling <code>fsspec.filesystem(...)</code> directly</td>
+<td>Use <code>ctx.storage.output</code> — the engine binds the right backend</td>
+</tr>
+<tr>
+<td>Using <code>ctx.workspace</code></td>
+<td>Use <code>ctx.temp_root</code> (the correct public name)</td>
+</tr>
+<tr>
+<td>Choosing write mode inside the plugin</td>
+<td>Operator sets <code>--write-mode</code>; plugin code is the same for staged and direct</td>
+</tr>
+<tr>
+<td>Parsing URI scheme (<code>s3://</code> vs <code>file://</code>)</td>
+<td>Don't. The engine resolves backend from explicit <code>--storage-type</code> and <code>--storage-driver</code> flags</td>
+</tr>
+<tr>
+<td>Building product URIs by string concatenation</td>
+<td>Use <code>ctx.storage.output.uri</code> — the engine constructs the correct target path</td>
+</tr>
+<tr>
+<td>Importing <code>StorageSession</code> from <code>firecube.ingestor.api</code></td>
+<td><code>StorageSession</code> is not exported; access it through <code>ctx.storage.output</code> by reference</td>
+</tr>
+</tbody>
+</table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="create-a-plugin/">Create a Plugin</a></strong> — create a package with the
-  interactive command</li>
-<li><strong><a href="../../concepts/output-formats/zarr/">Zarr Write Models</a></strong> — compare
-  sequential appends, direct writes, and optional parallel writes</li>
-<li><strong><a href="../../reference/api/">Plugin Template API</a></strong> — look up the public types
-  used by template plugins</li>
+<li><strong><a href="../../storage/">Product Storage</a></strong> — storage types, drivers, and write modes</li>
+<li><strong><a href="../../../reference/storage-drivers/">Storage Driver Compatibility</a></strong> — what each driver supports</li>
+<li><strong><a href="../../../quickstart/ingestion/">Run Ingestion</a></strong> — worked examples for local and S3</li>
+<li><strong><a href="../../../reference/api/">Public API Reference</a></strong> — <code>PluginContext</code>, <code>StorageContext</code></li>
+<li><strong><a href="../cli-and-config/">CLI And Config</a></strong> — all required CLI flags</li>
 </ul>
 
 
@@ -4200,10 +4006,10 @@ and its main data-conversion method is working.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

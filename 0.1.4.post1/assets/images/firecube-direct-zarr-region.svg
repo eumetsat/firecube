@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
-  <title id="title">DirectZarrIngestor write-intent flow</title>
-  <desc id="desc">A plugin converts a source batch into region, one-dimensional, timestamp, or static write intents that Firecube applies to a plugin-declared Zarr schema.</desc>
+  <title id="title">DirectZarrIngestor region write flow</title>
+  <desc id="desc">Source items map to fixed Zarr indexes and write exact regions in a preallocated store.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
@@ -18,20 +18,21 @@
     </style>
   </defs>
   <rect x="42" y="92" width="190" height="144" rx="10" class="box"/>
-  <text x="137" y="132" text-anchor="middle" class="label">Source batch</text>
-  <text x="137" y="162" text-anchor="middle" class="small">product values</text>
-  <text x="137" y="187" text-anchor="middle" class="small">product metadata</text>
+  <text x="137" y="132" text-anchor="middle" class="label">Source item</text>
+  <text x="137" y="162" text-anchor="middle" class="small">timestamp</text>
+  <text x="137" y="187" text-anchor="middle" class="small">tile or scanline</text>
+  <text x="137" y="212" text-anchor="middle" class="small">measurement array</text>
 
   <path class="line" d="M232 164 H312"/>
   <rect x="312" y="82" width="232" height="164" rx="10" class="intent"/>
-  <text x="428" y="122" text-anchor="middle" class="label">Write intents</text>
-  <text x="428" y="152" text-anchor="middle" class="small">region</text>
-  <text x="428" y="176" text-anchor="middle" class="small">1-D or timestamp</text>
-  <text x="428" y="200" text-anchor="middle" class="small">static</text>
+  <text x="428" y="122" text-anchor="middle" class="label">Write intent</text>
+  <text x="428" y="152" text-anchor="middle" class="small">group=data</text>
+  <text x="428" y="176" text-anchor="middle" class="small">time index=42</text>
+  <text x="428" y="200" text-anchor="middle" class="small">region y=200:400</text>
 
   <path class="line" d="M544 164 H616"/>
   <rect x="616" y="42" width="292" height="258" rx="10" class="zarr"/>
-  <text x="762" y="78" text-anchor="middle" class="label">Zarr arrays</text>
+  <text x="762" y="78" text-anchor="middle" class="label">Preallocated Zarr store</text>
   <g transform="translate(668 108)">
     <rect x="0" y="0" width="40" height="36" class="cell"/>
     <rect x="40" y="0" width="40" height="36" class="cell"/>
@@ -53,6 +54,6 @@
     <rect x="80" y="108" width="40" height="36" class="cell"/>
     <rect x="120" y="108" width="40" height="36" class="cell"/>
     <rect x="160" y="108" width="40" height="36" class="cell"/>
-    <text x="100" y="176" text-anchor="middle" class="hint">declared by zarr_schema()</text>
+    <text x="100" y="176" text-anchor="middle" class="hint">fixed region write</text>
   </g>
 </svg>
