@@ -134,14 +134,14 @@ available as optional runtime extras:
 | `h5py` | 3.16.0 | BSD-3-Clause |  | https://www.h5py.org/ | Direct dependency. |
 | `dask` | 2026.6.0 | BSD-3-Clause |  | https://github.com/dask/dask/ | Direct dependency. |
 | `prometheus-client` | 0.25.0 | Apache-2.0 |  | https://github.com/prometheus/client_python | Direct dependency. |
-| `opentelemetry-sdk` | 1.43.0 | Apache-2.0 |  | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-sdk | Direct dependency. |
-| `opentelemetry-exporter-otlp` | 1.43.0 | Apache-2.0 |  | https://github.com/open-telemetry/opentelemetry-python/tree/main/exporter/opentelemetry-exporter-otlp | Direct dependency. |
+| `opentelemetry-sdk` | 1.44.0 | Apache-2.0 |  | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-sdk | Direct dependency. |
+| `opentelemetry-exporter-otlp` | 1.44.0 | Apache-2.0 |  | https://github.com/open-telemetry/opentelemetry-python/tree/main/exporter/opentelemetry-exporter-otlp | Direct dependency. |
 | `obstore` | 0.11.0 | MIT |  | https://developmentseed.org/obstore | Direct optional `obstore` extra dependency. |
 | `tensogram` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
 | `tensogram-xarray` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
 | `tensogram-zarr` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
-| `healpix-geo` | 0.1.2 | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `healpix` extra dependency. |
-| `virtualizarr` | 2.7.0 | Apache-2.0 |  | https://github.com/zarr-developers/VirtualiZarr | Direct optional `virtualzarr` extra dependency. |
+| `healpix-geo` | 0.2.1 | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `healpix` extra dependency. |
+| `virtualizarr` | 2.7.1 | Apache-2.0 |  | https://github.com/zarr-developers/VirtualiZarr | Direct optional `virtualzarr` extra dependency. |
 
 ### Direct Build, Edit, And Test Dependencies
 
@@ -155,7 +155,7 @@ documentation, or testing:
 | `tensogram-xarray` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `tensogram-zarr` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `obstore` | 0.11.0 | Development tools | MIT |  | https://developmentseed.org/obstore | Direct optional `test` extra dependency. |
-| `healpix-geo` | 0.1.2 | Development tools | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `test` extra dependency. |
+| `healpix-geo` | 0.2.1 | Development tools | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `test` extra dependency. |
 | `moto` | 5.2.2 | Development tools | Apache-2.0 |  | https://github.com/getmoto/moto | Direct optional `test` extra dependency. |
 | `pytest` | 9.1.1 | Development tools | MIT |  | https://docs.pytest.org/en/latest/ | Direct `dev` dependency group entry. |
 | `ruff` | 0.15.20 | Development tools | MIT |  | https://docs.astral.sh/ruff | Direct `dev` dependency group entry. |
@@ -165,7 +165,7 @@ documentation, or testing:
 | `pytest-asyncio` | 1.4.0 | Development tools | Apache-2.0 |  | https://github.com/pytest-dev/pytest-asyncio | Direct `dev` dependency group entry. |
 | `pyright` | 1.1.411 | Development tools | MIT |  | https://github.com/RobertCraigie/pyright-python | Direct `dev` dependency group entry. |
 | `mkdocs` | 1.6.1 | Development tools | BSD-2-Clause |  | https://github.com/mkdocs/mkdocs | Direct `docs` dependency group entry. |
-| `mkdocs-material` | 9.7.6 | Development tools | MIT |  | https://github.com/squidfunk/mkdocs-material | Direct `docs` dependency group entry. |
+| `mkdocs-material` | 9.7.7 | Development tools | MIT |  | https://github.com/squidfunk/mkdocs-material | Direct `docs` dependency group entry. |
 | `mkdocstrings` | 1.0.4 | Development tools | ISC |  | https://mkdocstrings.github.io | Direct `docs` dependency group entry. |
 | `mkdocs-mermaid2-plugin` | 1.2.3 | Development tools | MIT |  | https://github.com/fralau/mkdocs-mermaid2-plugin | Direct `docs` dependency group entry. |
 | `mkdocs-click` | 0.9.0 | Development tools | Apache-2.0 |  | https://github.com/mkdocs/mkdocs-click | Direct `docs` dependency group entry. |
