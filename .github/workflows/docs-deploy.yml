@@ -34,8 +34,7 @@ jobs:
         if: github.event_name == 'release' && !github.event.release.prerelease
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          DOCS_VERSION="$(echo "$VERSION" | cut -d. -f1,2)"
-          uv run mike deploy --push --update-aliases "$DOCS_VERSION" latest
+          uv run mike deploy --push --update-aliases "$VERSION" latest
           uv run mike set-default --push latest
       - name: Deploy pre-release docs without latest alias
         if: github.event_name == 'release' && github.event.release.prerelease
