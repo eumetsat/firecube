@@ -26,7 +26,9 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import xarray as xr
 import zarr
+from zarr.abc.codec import BytesBytesCodec
 from zarr.codecs import BloscCodec
+from zarr.registry import get_codec_class
 
 if TYPE_CHECKING:
     from firecube.core.filesystem.store_factory import ZarrStoreHandle
@@ -47,6 +49,64 @@ def _consolidate_metadata_best_effort(
                 logger.warning("Failed to consolidate Zarr metadata: %s", exc)
 
 
+def resolve_compressor(
+    codec_entry: dict | None,
+    *,
+    use_default: bool,
+) -> BytesBytesCodec | None:
+    """Resolve a zarr_codecs entry to a BytesBytesCodec instance.
+
+    Args:
+        codec_entry: A validated codec entry dict (``{"name": ..., "configuration": ...}``),
+            or None if no explicit codec was specified.
+        use_default: If True and codec_entry is None, return the default preset
+            (Blosc/zstd, clevel=5). If False and codec_entry is None, return None
+            (no compression).
+
+    Returns:
+        A BytesBytesCodec instance, or None when no compression is desired.
+
+    Raises:
+        ValueError: When the codec name is not in zarr's registry, or when
+            the configuration fails codec-specific validation.
+        TypeError: When the resolved codec is not a BytesBytesCodec
+            (e.g. "bytes" resolves to an ArrayBytesCodec, not a compressor).
+    """
+    if codec_entry is None:
+        if use_default:
+            return BloscCodec(cname="zstd", clevel=5)
+        return None
+
+    name = cast(str, codec_entry["name"])
+    config = cast(dict[str, Any], codec_entry.get("configuration", {}) or {})
+    full_entry = {"name": name, "configuration": config}
+
+    try:
+        codec_class = get_codec_class(name)
+    except KeyError as orig:
+        raise ValueError(
+            f"zarr_codecs[0].name={name!r} is not a registered zarr codec. "
+            "Available codecs come from zarr's [zarr.codecs] entry points. "
+            "Install a codec package (e.g., 'imagecodecs' provides 'imagecodecs_openzl') "
+            f"or check the name spelling. Original error: {orig}"
+        ) from orig
+
+    try:
+        codec = codec_class.from_dict(full_entry)
+    except (ValueError, TypeError) as orig:
+        raise ValueError(
+            f"zarr_codecs[0].configuration failed codec-specific validation for {name!r}: {orig}"
+        ) from orig
+
+    if not isinstance(codec, BytesBytesCodec):
+        raise TypeError(
+            f"zarr_codecs[0].name={name!r} is a {type(codec).__name__}, not a BytesBytesCodec. "
+            "Phase 1 supports only compressor codecs; filters and serializers are Phase 2."
+        )
+
+    return codec
+
+
 def auto_inner_chunk_size(size: int) -> int:
     """Return the largest divisor of *size* that is ≤ size//4 (minimum 1)."""
     inner = max(1, size // 4)
@@ -58,24 +118,21 @@ def auto_inner_chunk_size(size: int) -> int:
 def _build_zarr_encoding(
     ds: xr.Dataset,
     *,
-    compression: bool | str,
+    compression: bool,
+    zarr_codecs: list[dict] | None = None,
     shard_shape: dict[str, int] | None = None,
     chunk_shape: dict[str, int] | None = None,
 ) -> dict[str, dict[str, object]]:
-    if compression is False and shard_shape is None:
-        return {str(var): {} for var in ds.data_vars}
-
-    compressors: list[Any] | None = None
-    if compression is not False:
-        cname = compression if isinstance(compression, str) else "zstd"
-        compressors = [BloscCodec(cname=cast(Any, cname), clevel=5)]
+    codec = resolve_compressor(
+        codec_entry=zarr_codecs[0] if zarr_codecs else None,
+        use_default=compression,
+    )
+    compressors: list[Any] = [codec] if codec is not None else []
 
     encoding: dict[str, dict[str, object]] = {}
     for var_name, data_array in ds.data_vars.items():
         var_name_str = str(var_name)
-        var_encoding: dict[str, object] = {}
-        if compressors is not None:
-            var_encoding["compressors"] = compressors
+        var_encoding: dict[str, object] = {"compressors": compressors}
         if shard_shape is not None:
             var_dims = tuple(str(dim) for dim in data_array.dims)
             var_encoding["shards"] = tuple(shard_shape.get(dim, ds.sizes[dim]) for dim in var_dims)
@@ -94,7 +151,8 @@ def write_dataset_to_zarr(
     chunk_shape: dict[str, int] | None = None,
     shard_shape: dict[str, int] | None = None,
     sharding: bool = False,
-    compression: bool | str = False,
+    compression: bool = False,
+    zarr_codecs: list[dict] | None = None,
     consolidate: bool = False,
     zarr_format: int = 3,
     logger: logging.Logger | None = None,
@@ -169,22 +227,18 @@ def write_dataset_to_zarr(
         append_dim_for_write = append_dim
     else:
         append_dim_for_write = None
-        if effective_shard_shape is not None or chunk_shape:
-            # Encoding is only supplied for initial writes; appends should reuse
-            # existing store metadata for safety.
-            encoding = _build_zarr_encoding(
-                ds,
-                compression=compression,
-                shard_shape=effective_shard_shape,
-                chunk_shape=effective_chunk_shape,
-            )
-        elif compression:
-            encoding = _build_zarr_encoding(
-                ds,
-                compression=compression,
-                shard_shape=effective_shard_shape,
-                chunk_shape=effective_chunk_shape,
-            )
+        # Encoding is only supplied for initial writes; appends should reuse
+        # existing store metadata for safety. Always build encoding so that
+        # ``compressors=[]`` is explicit and zarr does not inject a default
+        # compressor when the caller requested none (see
+        # tests/unit/test_zarr_codec_api_assumptions.py::test_disable_compression_encoding_shape).
+        encoding = _build_zarr_encoding(
+            ds,
+            compression=compression,
+            zarr_codecs=zarr_codecs,
+            shard_shape=effective_shard_shape,
+            chunk_shape=effective_chunk_shape,
+        )
 
     to_zarr_common: dict[str, Any] = {
         **zarr_kwargs,

@@ -500,3 +500,64 @@ bundled (they change a safety check's timing / touch a separate path):
 - **T4 residual** — `tests/unit/test_append_strategy.py` still patches the strategy's own internals; real-store coverage lives in `tests/integration/test_append_strategy_behavior.py`. Candidate for a behavior-based rewrite of the remaining wiring test.
 - **A7 watch-item** — the archive-create path (`src/firecube/core/tensogram/converter.py`, `_find_time_dim` call around line 112) does not thread a plugin-declared `time_dim_name`; only the ingest path does.
 - **C3 watch-item** — the hierarchy flatten grew `BaseIngestor` to ~815 lines (flatten-by-hoisting); the depth test pins templates only, not plugin-subclassing-plugin chains. Watch for god-base growth; consider extracting batch-lifecycle hooks into a composed collaborator if it keeps growing.
+
+---
+
+### §33 DirectZarr codec parity — extend ZarrArraySpec with codec fields
+
+**Goal:** Give `DirectZarrIngestor` plugins the same codec-configuration surface that the `zarr_codecs` field delivers for `GenericZarrIngestor`, and unify codec resolution across both write paths so custom compressors work identically in staged and direct modes.
+
+**Current state:** `RegionZarrWriter.ensure_group()` in `src/firecube/core/zarr/region_writer.py:309-424` passes zero codec kwargs to `zarr.create_array()`, so `DirectZarrIngestor` plugins write uncompressed arrays regardless of the `zarr_codecs` configuration. `ZarrArraySpec` in `src/firecube/ingestor/templates/direct_zarr.py:337-373` has no codec-related fields. The `zarr_codecs` list shape and `resolve_compressor()` helper in `src/firecube/ingestor/runtime/zarr/write.py` were introduced for the staged/append path in issue #25; direct-path parity was explicitly deferred to this follow-up.
+
+**Direction:**
+1. Extend `ZarrArraySpec` with optional per-array codec fields matching the Zarr v3 metadata triple: `filters`, `serializer`, and `compressors`, each accepting `list[dict] | None`. Per-array values override the template-level `zarr_codecs` default.
+2. Relax the Phase 1 single-compressor-only validation in `ZarrTemplateConfig` and the equivalent per-array validator to accept full Zarr v3 pipeline chains (zero or more filters, zero or one serializer, zero or more compressors, in the correct order).
+3. Extend `resolve_compressor()` or introduce a `resolve_codec_pipeline()` helper that supports the full three-element pipeline for use by both write paths.
+4. Wire the pipeline through `RegionZarrWriter.ensure_group()` to `zarr.create_array(filters=..., serializer=..., compressors=...)`.
+5. Update `docs/reference/config.md` to describe per-array codec declarations and multi-codec chains.
+
+**Acceptance criteria:**
+- A `DirectZarrIngestor` plugin can declare per-array codecs on `ZarrArraySpec` and see them reflected in the written `zarr.json`.
+- Multi-element `zarr_codecs` in `ZarrTemplateConfig` no longer triggers the "chains are not supported in this release" parse error.
+- Behavior tests cover: per-array codec overrides the template default; correctly-ordered pipeline is accepted; incorrectly-ordered pipeline is rejected with a specific error naming the ordering rule.
+- No regression in Phase 1 behavior for `GenericZarrIngestor` plugins that use only the template-level `zarr_codecs`.
+- `DirectZarrIngestor` plugins that do not declare codec fields continue to write uncompressed (the default change belongs to a follow-up).
+
+**Builds on:** Issue #25 — the `resolve_compressor()` helper and the `zarr_codecs: list[dict]` shape are the primitives this work extends.
+
+**Prerequisites before merging:**
+- Issue #25 shipped and included in the base branch.
+- Regression harness for `DirectZarrIngestor` plugins that exercises the write path end-to-end against a real Zarr store.
+
+**Effort:** Medium (2-4 days). Cross-cutting through `ZarrArraySpec`, `RegionZarrWriter`, both strategies, and the shared resolver.
+
+---
+
+### §34 DirectZarr default codec and resume-time codec-drift detection
+
+**Goal:** Give `DirectZarrIngestor` plugins compression by default (parity with `GenericZarrIngestor`) and detect codec drift on resume so a run that changes codec configuration does not silently produce a cube with mixed codec lineage.
+
+**Current state:** After §33 (`DirectZarr codec parity`), `DirectZarrIngestor` plugins can declare codecs on `ZarrArraySpec`, but the default when no codec is declared remains uncompressed. `RegionZarrWriter.ensure_group()` passes no codec kwargs to `zarr.create_array()` unless the spec provides them. The schema hash in `src/firecube/ingestor/templates/direct_zarr.py:84-122` does not include codec configuration, so a resume that changes codec config is silently accepted and no `SchemaDriftError` is raised even though the on-disk cube may have a different codec than the plugin now declares.
+
+**Direction:**
+1. Change the `DirectZarrIngestor` default in `RegionZarrWriter.ensure_group()` from no codec kwargs to the same default preset that issue #25 introduced for `GenericZarrIngestor` (Blosc/zstd, clevel=5). Cold migration: existing uncompressed cubes stay uncompressed on append; only fresh arrays get the new default.
+2. Include codec configuration in the schema-drift hash in `src/firecube/ingestor/templates/direct_zarr.py`. On resume, a mismatch raises `SchemaDriftError` with a message naming the offending codec fields.
+3. Document the migration path in `docs/reference/config.md`: how to keep an existing uncompressed cube uncompressed on append versus how to re-ingest under a new codec.
+
+**Acceptance criteria:**
+- A brand-new `DirectZarrIngestor` cube created after this change has Blosc/zstd/5 compression by default (verified by reading `zarr.json`).
+- An existing uncompressed `DirectZarrIngestor` cube can be re-opened for append with the same plugin config and continues to write uncompressed arrays. No silent codec upgrade.
+- A resume that changes codec config raises `SchemaDriftError` before any write, naming the changed codec fields.
+- Behavior test: create cube with codec A; attempt resume with codec B; assert `SchemaDriftError`.
+- Behavior test: create uncompressed cube; resume with the same no-codec config; assert append succeeds with uncompressed arrays.
+- `docs/reference/config.md` documents the default change and the resume-time drift behavior.
+
+**Builds on:** §33 (`DirectZarr codec parity`) — per-array codec fields on `ZarrArraySpec` must exist before the default change and drift detection can be built on top of them.
+
+**Prerequisites before merging:**
+- §33 shipped and included in the base branch.
+- Migration-scenario regression harness covering: uncompressed-cube append, codec-change drift error, brand-new-cube default codec.
+
+**Effort:** Medium (3-5 days). Touches `DirectZarrIngestor` schema-hash logic, default codec injection, drift-error surface, and documentation. The cold-migration boundary is subtle and requires explicit tests.
+
+---

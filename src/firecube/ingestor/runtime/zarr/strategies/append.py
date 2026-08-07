@@ -71,7 +71,8 @@ class AppendStrategy:
         chunk_shape: dict[str, int] | None = None,
         shard_shape: dict[str, int] | None = None,
         sharding: bool = False,
-        compression: bool | str = False,
+        compression: bool = False,
+        zarr_codecs: list[dict] | None = None,
         consolidate: bool = False,
         resume_existing: bool = False,
         append_dim: str = "timestamp",
@@ -96,6 +97,7 @@ class AppendStrategy:
         self._shard_shape = shard_shape
         self._sharding = sharding
         self._compression = compression
+        self._zarr_codecs = zarr_codecs
         self._consolidate = consolidate
         self._resume_existing = resume_existing
         self._append_dim = append_dim
@@ -160,6 +162,7 @@ class AppendStrategy:
             shard_shape=self._shard_shape,
             sharding=self._sharding,
             compression=self._compression,
+            zarr_codecs=self._zarr_codecs,
             consolidate=self._consolidate,
             resume_existing=self._resume_existing,
             batch_size=batch_size,

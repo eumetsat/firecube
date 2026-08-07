@@ -161,6 +161,7 @@ def build_append_strategy(
         shard_shape=zarr_config.get("shard_shape"),
         sharding=bool(zarr_config.get("sharding", False)),
         compression=zarr_config.get("compression") or False,
+        zarr_codecs=zarr_config.get("zarr_codecs"),
         consolidate=bool(zarr_config.get("consolidate")),
         resume_existing=bool(resume_existing and not force_reingest),
         append_dim=append_dim,

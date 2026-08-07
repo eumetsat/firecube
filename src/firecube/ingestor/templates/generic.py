@@ -197,6 +197,7 @@ class GenericZarrIngestor(BaseIngestor):
         return {
             "chunk_shape": cfg.zarr_chunk_shape,
             "compression": cfg.zarr_compression,
+            "zarr_codecs": cfg.zarr_codecs,
             "consolidate": cfg.zarr_consolidate,
             "time_encoding": cfg.zarr_time_encoding,
             "async_concurrency": cfg.zarr_async_concurrency,

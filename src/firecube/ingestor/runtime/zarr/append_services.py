@@ -502,11 +502,12 @@ class AppendWriteExecutor:
         chunk_shape: dict[str, int] | None,
         shard_shape: dict[str, int] | None,
         sharding: bool,
-        compression: bool | str,
+        compression: bool,
         append_dim: str,
         logger: logging.Logger,
         write_fn: Any = None,
         time_dim_name: str | None = None,
+        zarr_codecs: list[dict] | None = None,
     ) -> None:
         self._zarr_store = zarr_store
         self._chunk_shape = chunk_shape
@@ -516,6 +517,7 @@ class AppendWriteExecutor:
         self._append_dim = time_dim_name or append_dim
         self._logger = logger
         self._write_fn = write_fn
+        self._zarr_codecs = zarr_codecs
 
     def execute(
         self,
@@ -540,6 +542,7 @@ class AppendWriteExecutor:
             shard_shape=self._shard_shape,
             sharding=self._sharding,
             compression=self._compression,
+            zarr_codecs=self._zarr_codecs,
             consolidate=False,
             logger=self._logger,
         )

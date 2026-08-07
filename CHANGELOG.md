@@ -9,6 +9,10 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- `zarr_codecs` configuration field: a single-element list of codec entries in
+  Zarr v3 metadata format (`[{"name": "...", "configuration": {...}}]`). Select
+  any codec registered via zarr's extension mechanism by name. Mutually
+  exclusive with `zarr_compression = true`. Closes #25.
 - Versioned documentation with `mike`: each stable release publishes docs under
   its full version (for example `/0.1.5/`) with a `latest` alias as the site
   default; pre-releases publish under their own version only and never become
@@ -21,6 +25,9 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   `firecube` imports.
 
 ### Changed
+
+- `zarr_compression` now accepts only `bool` (was `bool | str`). Passing a
+  string value raises `ValueError` at parse time.
 
 - Dependency updates: `cryptography` 50.0.0, `aiohttp` 3.14.3,
   `virtualizarr` 2.7.1, `healpix-geo` 0.2.1,
