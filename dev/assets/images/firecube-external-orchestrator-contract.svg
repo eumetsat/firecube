@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" role="img" aria-labelledby="title desc">
+  <title id="title">External orchestrator contract</title>
+  <desc id="desc">The external orchestrator owns scheduling, resources, secrets, retries, fan-out, and log collection. Firecube owns discovery, batching, product writes, ChunkManager records, claims, resume checks, cleanup state, and observability emission.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#546a7b"/>
+    </marker>
+    <style>
+      .title { font: 700 21px Arial, sans-serif; fill: #1f2d36; }
+      .label { font: 700 16px Arial, sans-serif; fill: #1f2d36; }
+      .small { font: 14px Arial, sans-serif; fill: #415361; }
+      .orchestrator { fill: #f7fbff; stroke: #4c9aff; stroke-width: 2; rx: 8; }
+      .firecube { fill: #f2fbf5; stroke: #39b36e; stroke-width: 2; rx: 8; }
+      .item { fill: #ffffff; stroke: #c7d4df; stroke-width: 1.6; rx: 5; }
+      .cmd { fill: #fff8ee; stroke: #ff9f43; stroke-width: 2; rx: 6; }
+      .arrow { stroke: #546a7b; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="65" y="55" width="365" height="365" class="orchestrator"/>
+  <text x="247.5" y="84" text-anchor="middle" class="title">External orchestrator</text>
+  <text x="247.5" y="109" text-anchor="middle" class="title">owns</text>
+
+  <rect x="105" y="135" width="285" height="42" class="item"/>
+  <text x="247.5" y="161" text-anchor="middle" class="label">schedule and dependencies</text>
+  <rect x="105" y="193" width="285" height="42" class="item"/>
+  <text x="247.5" y="219" text-anchor="middle" class="label">resources and workspace</text>
+  <rect x="105" y="251" width="285" height="42" class="item"/>
+  <text x="247.5" y="277" text-anchor="middle" class="label">secrets and environment</text>
+  <rect x="105" y="309" width="285" height="42" class="item"/>
+  <text x="247.5" y="335" text-anchor="middle" class="label">retry policy and fan-out</text>
+  <rect x="105" y="367" width="285" height="42" class="item"/>
+  <text x="247.5" y="393" text-anchor="middle" class="label">log collection</text>
+
+  <rect x="545" y="55" width="390" height="365" class="firecube"/>
+  <text x="740" y="92" text-anchor="middle" class="title">Firecube owns</text>
+
+  <rect x="585" y="125" width="150" height="42" class="item"/>
+  <text x="660" y="151" text-anchor="middle" class="label">discovery</text>
+  <rect x="765" y="125" width="150" height="42" class="item"/>
+  <text x="840" y="151" text-anchor="middle" class="label">batching</text>
+
+  <rect x="585" y="183" width="150" height="42" class="item"/>
+  <text x="660" y="209" text-anchor="middle" class="label">product writes</text>
+  <rect x="765" y="183" width="150" height="42" class="item"/>
+  <text x="840" y="209" text-anchor="middle" class="label">ChunkManager</text>
+
+  <rect x="585" y="241" width="150" height="42" class="item"/>
+  <text x="660" y="267" text-anchor="middle" class="label">write claims</text>
+  <rect x="765" y="241" width="150" height="42" class="item"/>
+  <text x="840" y="267" text-anchor="middle" class="label">resume checks</text>
+
+  <rect x="585" y="299" width="150" height="42" class="item"/>
+  <text x="660" y="325" text-anchor="middle" class="label">cleanup state</text>
+  <rect x="765" y="299" width="150" height="42" class="item"/>
+  <text x="840" y="325" text-anchor="middle" class="label">observability</text>
+
+  <rect x="360" y="450" width="280" height="48" class="cmd"/>
+  <text x="500" y="480" text-anchor="middle" class="label">firecube ingest ...</text>
+
+  <path d="M 430 238 L 537 238" class="arrow"/>
+  <path d="M 247.5 420 L 247.5 474 L 352 474" class="arrow"/>
+  <path d="M 740 420 L 740 474 L 648 474" class="arrow"/>
+</svg>

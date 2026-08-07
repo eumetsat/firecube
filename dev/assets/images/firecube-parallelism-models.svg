@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 430" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube parallelism models</title>
+  <desc id="desc">Firecube supports pipeline workers, Parquet file writes, GenericZarr group fan-out, DirectZarr slot workers, and staged upload workers.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5a6673}
+      .panel{fill:#ffffff;stroke:#d6dde5;stroke-width:2}
+      .engine{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .blue{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .green{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .purple{fill:#f3f1ff;stroke:#6f62d2;stroke-width:2}
+      .yellow{fill:#fff8df;stroke:#d6a400;stroke-width:2}
+      .line{stroke:#3b4652;stroke-width:2.3;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="520" y="34" text-anchor="middle" class="label">Pick the parallel model from the write domain</text>
+
+  <rect x="28" y="62" width="190" height="294" rx="12" class="panel"/>
+  <text x="123" y="94" text-anchor="middle" class="label">Pipeline</text>
+  <text x="123" y="118" text-anchor="middle" class="small">inside one run</text>
+  <rect x="58" y="152" width="92" height="32" rx="5" class="blue"/>
+  <rect x="58" y="202" width="92" height="32" rx="5" class="blue"/>
+  <rect x="58" y="252" width="92" height="32" rx="5" class="blue"/>
+  <text x="104" y="173" text-anchor="middle" class="hint">worker</text>
+  <text x="104" y="223" text-anchor="middle" class="hint">worker</text>
+  <text x="104" y="273" text-anchor="middle" class="hint">worker</text>
+  <path class="line" d="M150 168 H184"/>
+  <path class="line" d="M150 218 H184"/>
+  <path class="line" d="M150 268 H184"/>
+  <text x="123" y="326" text-anchor="middle" class="hint">parse / decode / prepare</text>
+
+  <rect x="230" y="62" width="190" height="294" rx="12" class="panel"/>
+  <text x="325" y="94" text-anchor="middle" class="label">Parquet</text>
+  <text x="325" y="118" text-anchor="middle" class="small">independent files</text>
+  <rect x="264" y="156" width="118" height="36" rx="5" class="purple"/>
+  <rect x="264" y="212" width="118" height="36" rx="5" class="purple"/>
+  <rect x="264" y="268" width="118" height="36" rx="5" class="purple"/>
+  <text x="323" y="179" text-anchor="middle" class="hint">part-0001</text>
+  <text x="323" y="235" text-anchor="middle" class="hint">part-0002</text>
+  <text x="323" y="291" text-anchor="middle" class="hint">part-0003</text>
+  <text x="325" y="326" text-anchor="middle" class="hint">parallel prep + writes</text>
+
+  <rect x="432" y="62" width="190" height="294" rx="12" class="panel"/>
+  <text x="527" y="94" text-anchor="middle" class="label">Append Zarr</text>
+  <text x="527" y="118" text-anchor="middle" class="small">distinct groups</text>
+  <rect x="468" y="160" width="112" height="38" rx="5" class="green"/>
+  <rect x="468" y="242" width="112" height="38" rx="5" class="green"/>
+  <text x="524" y="184" text-anchor="middle" class="hint">group: day</text>
+  <text x="524" y="266" text-anchor="middle" class="hint">group: night</text>
+  <path d="M524 198 V236" stroke="#9aa7b3" stroke-width="2" stroke-dasharray="6 4" fill="none"/>
+  <text x="527" y="326" text-anchor="middle" class="hint">same group serializes</text>
+
+  <rect x="634" y="62" width="190" height="294" rx="12" class="panel"/>
+  <text x="729" y="94" text-anchor="middle" class="label">Direct Zarr</text>
+  <text x="729" y="118" text-anchor="middle" class="small">same group slots</text>
+  <rect x="668" y="168" width="50" height="64" rx="4" class="blue"/>
+  <rect x="718" y="168" width="50" height="64" rx="4" class="green"/>
+  <rect x="768" y="168" width="50" height="64" rx="4" class="engine"/>
+  <text x="693" y="252" text-anchor="middle" class="hint">0</text>
+  <text x="743" y="252" text-anchor="middle" class="hint">1</text>
+  <text x="793" y="252" text-anchor="middle" class="hint">2</text>
+  <text x="729" y="326" text-anchor="middle" class="hint">chunk-aligned ranges</text>
+
+  <rect x="836" y="62" width="190" height="294" rx="12" class="panel"/>
+  <text x="931" y="94" text-anchor="middle" class="label">Staged upload</text>
+  <text x="931" y="118" text-anchor="middle" class="small">after pipeline</text>
+  <rect x="872" y="160" width="108" height="38" rx="5" class="yellow"/>
+  <rect x="872" y="232" width="108" height="38" rx="5" class="blue"/>
+  <text x="926" y="184" text-anchor="middle" class="hint">workspace</text>
+  <text x="926" y="256" text-anchor="middle" class="hint">target</text>
+  <path class="line" d="M926 198 V226"/>
+  <text x="931" y="326" text-anchor="middle" class="hint">upload_workers</text>
+</svg>
