@@ -3331,7 +3331,7 @@ wheels = [
 
 [[package]]
 name = "virtualizarr"
-version = "2.7.0"
+version = "2.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numcodecs" },
@@ -3344,9 +3344,9 @@ dependencies = [
     { name = "xarray" },
     { name = "zarr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/ab/e8d23ca78d8dab6fb31c6766c6c1848ff4ee99dec13bfbe2c4ca5a1bc6ef/virtualizarr-2.7.0.tar.gz", hash = "sha256:d4c69fdcd3e9d84f7b4e9f6049f3f008cfed9f27edf3155237007e15439a51f9", size = 356600, upload-time = "2026-06-25T18:32:23.52Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/65/4639ba3915e2a8c8de96a74c9fcbe036cdca888d177366296fbf62f887b3/virtualizarr-2.7.1.tar.gz", hash = "sha256:327fd988a6dae5a63fd17f1454e6af045150081cd3d837b95aa4f1a5add1a460", size = 454344, upload-time = "2026-07-16T00:44:06.754Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/18/1218e666d2f0b60a98aa3a98336404dfe016578e65a66ba0d8510d663681/virtualizarr-2.7.0-py3-none-any.whl", hash = "sha256:2bffe84f2a3decb0644e253c46ab04020fdd110b5490aee26a901e61bb6f3a28", size = 305376, upload-time = "2026-06-25T18:32:21.862Z" },
+    { url = "https://files.pythonhosted.org/packages/be/8a/2f6a967f30cdcd938dce5873e67c33e01c1a0a80f951abdd25a86f547d80/virtualizarr-2.7.1-py3-none-any.whl", hash = "sha256:fafbab64db0752351e2d2e9edede831bbca82ed44cc87b5657d73fb9ac65f21c", size = 400989, upload-time = "2026-07-16T00:44:05.338Z" },
 ]
 
 [[package]]
