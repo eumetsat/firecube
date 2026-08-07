@@ -33,14 +33,14 @@ dependencies = [
 [project.optional-dependencies]
 obstore = ["obstore>=0.4.0"]
 tensogram = ["tensogram>=0.22.0,<0.23", "tensogram-xarray>=0.22.0,<0.23", "tensogram-zarr>=0.22.0,<0.23"]
-healpix = ["healpix-geo>=0.1.2"]
+healpix = ["healpix-geo>=0.2.1"]
 virtualzarr = ["virtualizarr>=2.7.0,<3"]
 test = [
     "tensogram>=0.22.0,<0.23",
     "tensogram-xarray>=0.22.0,<0.23",
     "tensogram-zarr>=0.22.0,<0.23",
     "obstore>=0.4.0",
-    "healpix-geo>=0.1.2",
+    "healpix-geo>=0.2.1",
     "moto[s3,server]>=5.0.0",
 ]
 
