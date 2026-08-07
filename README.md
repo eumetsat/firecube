@@ -170,6 +170,7 @@ documentation, or testing:
 | `mkdocs-mermaid2-plugin` | 1.2.3 | Development tools | MIT |  | https://github.com/fralau/mkdocs-mermaid2-plugin | Direct `docs` dependency group entry. |
 | `mkdocs-click` | 0.9.0 | Development tools | Apache-2.0 |  | https://github.com/mkdocs/mkdocs-click | Direct `docs` dependency group entry. |
 | `mkdocs-macros-plugin` | 1.5.0 | Development tools | MIT |  | https://github.com/fralau/mkdocs_macros_plugin | Direct `docs` dependency group entry. |
+| `mike` | 2.2.0 | Development tools | BSD-3-Clause |  | https://github.com/jimporter/mike | Direct `docs` dependency group entry. |
 
 
 ## Copyright and License

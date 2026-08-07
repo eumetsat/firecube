@@ -3,8 +3,13 @@ site_description: A plugin-based batch ingestion CLI for turning Earth Observati
 not_in_nav: |
   concepts/plugins/index.md
   tutorials/weather-csv.md
+site_url: https://eumetsat.github.io/firecube/
 repo_url: https://github.com/eumetsat/firecube
 repo_name: eumetsat/firecube
+extra:
+  version:
+    provider: mike
+    default: latest
 theme:
   name: material
   logo: assets/firecube-amblem-white.png
