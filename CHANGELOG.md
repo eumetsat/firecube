@@ -7,6 +7,36 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Versioned documentation with `mike`: each stable release publishes docs under
+  its full version (for example `/0.1.5/`) with a `latest` alias as the site
+  default; pre-releases publish under their own version only and never become
+  the default; `main` is tracked as `/dev/`. New `docs-deploy` workflow deploys
+  automatically on pushes to `main` and on published GitHub releases.
+- PR-time security scanning in CI: trivy (vulnerabilities, secrets, licenses)
+  on pushes and pull requests, plus GitHub dependency review with a
+  GPL/AGPL/SSPL license deny-list on pull requests.
+- `py.typed` marker (PEP 561) so plugin authors get IDE type support for
+  `firecube` imports.
+
+### Changed
+
+- Dependency updates: `cryptography` 50.0.0, `aiohttp` 3.14.3,
+  `virtualizarr` 2.7.1, `healpix-geo` 0.2.1,
+  `opentelemetry-exporter-otlp` 1.44.0, `mkdocs-material` 9.7.7,
+  `setuptools` 83.0.0, `actions/checkout` v7.
+- README SBOM dependency tables synced with `uv.lock`; added `mike` to the
+  docs dependency group and its SBOM table entry.
+- Reorganized plugin documentation and plugin author examples.
+
+## [0.1.4.post1] - 2026-07-24
+
+### Changed
+
+- Package metadata only: added PyPI project URLs. No code changes relative
+  to 0.1.4.
+
 ## [0.1.4.post0] - 2026-07-24
 
 ### Changed
