@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 520" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube observability signals</title>
+  <desc id="desc">Firecube ingest emits three observability signals. Metrics are buffered during the run and pushed to Pushgateway at the end. Logs go to stderr. Traces are exported through OpenTelemetry.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5d6b78}
+      .engine{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .signal{fill:#f7fbff;stroke:#9bb8d6;stroke-width:2}
+      .sink{fill:#ffffff;stroke:#c7d4df;stroke-width:1.7}
+      .metrics{fill:#ffffff;stroke:#4f8bd6;stroke-width:1.8}
+      .logs{fill:#ffffff;stroke:#2f9d65;stroke-width:1.8}
+      .traces{fill:#ffffff;stroke:#6f62d2;stroke-width:1.8}
+      .line{stroke:#3b4652;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+      .thin{stroke:#667381;stroke-width:1.9;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="72" y="202" width="230" height="116" rx="12" class="engine"/>
+  <text x="187" y="242" text-anchor="middle" class="label">firecube ingest</text>
+  <text x="187" y="271" text-anchor="middle" class="small">one batch command</text>
+  <text x="187" y="293" text-anchor="middle" class="hint">signals emitted during the run</text>
+
+  <path class="line" d="M302 260 H392"/>
+
+  <rect x="392" y="52" width="230" height="100" rx="12" class="signal"/>
+  <text x="507" y="87" text-anchor="middle" class="label">Metrics</text>
+  <text x="507" y="113" text-anchor="middle" class="small">buffer during run</text>
+  <text x="507" y="134" text-anchor="middle" class="hint">push at end when configured</text>
+
+  <rect x="392" y="210" width="230" height="100" rx="12" class="signal"/>
+  <text x="507" y="245" text-anchor="middle" class="label">Logs</text>
+  <text x="507" y="271" text-anchor="middle" class="small">stderr</text>
+  <text x="507" y="292" text-anchor="middle" class="hint">JSON by default</text>
+
+  <rect x="392" y="368" width="230" height="100" rx="12" class="signal"/>
+  <text x="507" y="403" text-anchor="middle" class="label">Traces</text>
+  <text x="507" y="429" text-anchor="middle" class="small">OpenTelemetry spans</text>
+  <text x="507" y="450" text-anchor="middle" class="hint">flush before exit</text>
+
+  <path class="thin" d="M302 260 H346 V102 H384"/>
+  <path class="thin" d="M302 260 H384"/>
+  <path class="thin" d="M302 260 H346 V418 H384"/>
+
+  <rect x="742" y="52" width="206" height="100" rx="12" class="metrics"/>
+  <text x="845" y="91" text-anchor="middle" class="label">Pushgateway</text>
+  <text x="845" y="119" text-anchor="middle" class="small">Prometheus-compatible</text>
+
+  <rect x="742" y="210" width="206" height="100" rx="12" class="logs"/>
+  <text x="845" y="246" text-anchor="middle" class="label">Log collector</text>
+  <text x="845" y="272" text-anchor="middle" class="small">or captured stderr</text>
+
+  <rect x="742" y="368" width="206" height="100" rx="12" class="traces"/>
+  <text x="845" y="404" text-anchor="middle" class="label">OTLP backend</text>
+  <text x="845" y="430" text-anchor="middle" class="small">or debug output</text>
+
+  <path class="line" d="M622 102 H734"/>
+  <path class="line" d="M622 260 H734"/>
+  <path class="line" d="M622 418 H734"/>
+</svg>
