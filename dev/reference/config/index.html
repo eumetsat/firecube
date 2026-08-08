@@ -4986,7 +4986,8 @@ construction time. Only bool values are accepted; other types raise
               <div class="doc-md-description">
                 <p>Optional single-element list of codec entries matching the
 Zarr v3 metadata shape <code>[{"name": str, "configuration": dict}]</code>.
-Mutually exclusive with <code>zarr_compression=True</code>. Structural
+Requires <code>zarr_compression=True</code>. When set, the codec REPLACES the
+default preset (Blosc/zstd/5). Structural
 validation happens here; codec-specific resolution happens later.</p>
               </div>
             </td>
