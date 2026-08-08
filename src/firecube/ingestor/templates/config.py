@@ -21,7 +21,7 @@ and are owned by the `Generic[Type]Ingestor` templates.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TypeVar, get_type_hints
+from typing import Any, TypeVar, cast, get_type_hints
 
 from firecube.ingestor.config.engine import config_keys
 
@@ -31,6 +31,40 @@ ZARR_MULTI_RES_REMOVED_MESSAGE = (
     "zarr_multi_res during ingest has been removed; "
     "run 'firecube zarr multires <target>' after ingestion instead."
 )
+
+
+def _validate_zarr_codecs(codecs: list[dict] | None) -> None:
+    if codecs is None:
+        return
+    if not isinstance(codecs, list):
+        raise ValueError("zarr_codecs must be a list of codec entries")
+    if len(codecs) == 0:
+        raise ValueError(
+            "zarr_codecs must contain exactly one compressor entry in this release "
+            "(use zarr_compression=false for no compression)"
+        )
+    if len(codecs) > 1:
+        raise ValueError(
+            f"codec chains are not supported in this release; only a single compressor "
+            f"entry is accepted (got {len(codecs)} entries)"
+        )
+    entry = codecs[0]
+    if not isinstance(entry, dict):
+        raise ValueError("zarr_codecs[0] must be an object with keys {'name', 'configuration'}")
+    allowed_keys = {"name", "configuration"}
+    extra = set(entry.keys()) - allowed_keys
+    if extra:
+        raise ValueError(
+            f"zarr_codecs[0] has unexpected keys: {extra!r}; allowed keys: {allowed_keys!r}"
+        )
+    if "name" not in entry:
+        raise ValueError("zarr_codecs[0].name is required")
+    if not isinstance(entry["name"], str):
+        raise ValueError(
+            f"zarr_codecs[0].name must be a string, got {type(entry['name']).__name__}"
+        )
+    if "configuration" in entry and not isinstance(entry["configuration"], dict):
+        raise ValueError("zarr_codecs[0].configuration must be an object when present")
 
 
 @dataclass
@@ -57,7 +91,7 @@ class TemplateConfig:
         for key, value in options.items():
             target_type = type_hints.get(key)
             init_kwargs[key] = coerce_cli_value(value, target_type, key)
-        return cls(**init_kwargs)
+        return cast(T, cls(**init_kwargs))
 
 
 @dataclass
@@ -68,8 +102,14 @@ class ZarrTemplateConfig(TemplateConfig):
         zarr_chunk_shape: Optional per-dimension inner chunk sizes.
         zarr_sharding: Enable Zarr v3 sharding.
         zarr_shard_shape: Optional per-dimension shard sizes.
-        zarr_compression: Compression setting. ``False`` disables compression,
-            ``True`` selects the default codec, and a string selects a codec name.
+        zarr_compression: ``False`` disables compression; ``True`` enables the
+            default preset (Blosc/zstd, clevel=5). String values are rejected at
+            construction time. Only bool values are accepted; other types raise
+            ``ValueError`` at construction time.
+        zarr_codecs: Optional single-element list of codec entries matching the
+            Zarr v3 metadata shape ``[{"name": str, "configuration": dict}]``.
+            Mutually exclusive with ``zarr_compression=True``. Structural
+            validation happens here; codec-specific resolution happens later.
         zarr_consolidate: Consolidate Zarr metadata after writes.
         zarr_time_encoding: Optional time encoding override.
         zarr_async_concurrency: Async write concurrency used by Zarr.
@@ -80,12 +120,30 @@ class ZarrTemplateConfig(TemplateConfig):
     zarr_chunk_shape: dict[str, int] | None = None
     zarr_sharding: bool = False
     zarr_shard_shape: dict[str, int] | None = None
-    zarr_compression: bool | str = False
+    zarr_compression: bool = False
+    zarr_codecs: list[dict] | None = None
     zarr_consolidate: bool = False
     zarr_time_encoding: str | None = None
     zarr_async_concurrency: int = 10
     dask_scheduler: str | None = None
     dask_write_threads: int = 0
+
+    def __post_init__(self) -> None:
+        if type(self.zarr_compression) is not bool:
+            raise ValueError(
+                "zarr_compression must be bool, got "
+                f"{type(self.zarr_compression).__name__}: {self.zarr_compression!r}"
+            )
+
+        if self.zarr_compression and self.zarr_codecs is not None:
+            raise ValueError(
+                f"zarr_compression=True conflicts with zarr_codecs={self.zarr_codecs!r}.\n"
+                "Set exactly one of:\n"
+                "  zarr_compression = true             # firecube's default preset (Blosc/zstd/5)\n"
+                '  zarr_codecs = [{"name": "...", "configuration": {...}}]  # explicit codec\n'
+            )
+
+        _validate_zarr_codecs(self.zarr_codecs)
 
 
 @dataclass
