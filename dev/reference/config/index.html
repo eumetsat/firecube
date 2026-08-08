@@ -4966,12 +4966,28 @@ defaults under <code>[plugins.&lt;name&gt;]</code>.</p>
           <tr class="doc-section-item">
             <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_compression">zarr_compression</span></code></td>
             <td>
-                  <code><span title="bool">bool</span> | <span title="str">str</span></code>
+                  <code><span title="bool">bool</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Compression setting. <code>False</code> disables compression,
-<code>True</code> selects the default codec, and a string selects a codec name.</p>
+                <p><code>False</code> disables compression; <code>True</code> enables the
+default preset (Blosc/zstd, clevel=5). String values are rejected at
+construction time. Only bool values are accepted; other types raise
+<code>ValueError</code> at construction time.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_codecs">zarr_codecs</span></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="dict">dict</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional single-element list of codec entries matching the
+Zarr v3 metadata shape <code>[{"name": str, "configuration": dict}]</code>.
+Mutually exclusive with <code>zarr_compression=True</code>. Structural
+validation happens here; codec-specific resolution happens later.</p>
               </div>
             </td>
           </tr>
