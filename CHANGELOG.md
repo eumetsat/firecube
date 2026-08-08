@@ -11,8 +11,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 - `zarr_codecs` configuration field: a single-element list of codec entries in
   Zarr v3 metadata format (`[{"name": "...", "configuration": {...}}]`). Select
-  any codec registered via zarr's extension mechanism by name. Mutually
-  exclusive with `zarr_compression = true`. Closes #25.
+  any codec registered via zarr's extension mechanism by name.
+  Requires `zarr_compression = true`. Closes #25.
 - Versioned documentation with `mike`: each stable release publishes docs under
   its full version (for example `/0.1.5/`) with a `latest` alias as the site
   default; pre-releases publish under their own version only and never become

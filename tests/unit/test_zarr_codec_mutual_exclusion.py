@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""zarr_compression=True and zarr_codecs=[...] are mutually exclusive."""
+"""zarr_codecs=[...] requires zarr_compression=True; False+codec is a contradiction."""
 
 from __future__ import annotations
 
@@ -23,17 +23,17 @@ from firecube.ingestor.templates.config import ZarrTemplateConfig
 pytestmark = pytest.mark.unit
 
 
-def test_both_set_raises() -> None:
-    with pytest.raises(ValueError, match="zarr_compression=True conflicts with zarr_codecs"):
+def test_false_and_codecs_raises() -> None:
+    with pytest.raises(ValueError, match="zarr_compression=False conflicts with zarr_codecs"):
         ZarrTemplateConfig(
-            zarr_compression=True, zarr_codecs=[{"name": "blosc", "configuration": {}}]
+            zarr_compression=False, zarr_codecs=[{"name": "blosc", "configuration": {}}]
         )
 
 
 def test_error_names_both_fields() -> None:
     with pytest.raises(ValueError) as exc_info:
         ZarrTemplateConfig(
-            zarr_compression=True, zarr_codecs=[{"name": "blosc", "configuration": {}}]
+            zarr_compression=False, zarr_codecs=[{"name": "blosc", "configuration": {}}]
         )
 
     msg = str(exc_info.value)
@@ -41,11 +41,11 @@ def test_error_names_both_fields() -> None:
     assert "zarr_codecs" in msg
 
 
-def test_false_and_codecs_accepted() -> None:
+def test_true_and_codecs_accepted() -> None:
     entry = {"name": "blosc", "configuration": {}}
-    cfg = ZarrTemplateConfig(zarr_compression=False, zarr_codecs=[entry])
+    cfg = ZarrTemplateConfig(zarr_compression=True, zarr_codecs=[entry])
     assert cfg.zarr_codecs == [entry]
-    assert cfg.zarr_compression is False
+    assert cfg.zarr_compression is True
 
 
 def test_true_and_none_accepted() -> None:
