@@ -82,10 +82,10 @@ def test_zarr_codecs_entry_validation(
 ) -> None:
     if expected_error_substring is None:
         codecs = cast(list[dict] | None, input_value)
-        cfg = ZarrTemplateConfig(zarr_codecs=codecs)
+        cfg = ZarrTemplateConfig(zarr_compression=True, zarr_codecs=codecs)
         assert cfg.zarr_codecs == codecs
         return
 
     with pytest.raises(ValueError) as excinfo:
-        ZarrTemplateConfig(zarr_codecs=cast(list[dict] | None, input_value))
+        ZarrTemplateConfig(zarr_compression=True, zarr_codecs=cast(list[dict] | None, input_value))
     assert expected_error_substring in str(excinfo.value)

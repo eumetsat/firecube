@@ -108,7 +108,8 @@ class ZarrTemplateConfig(TemplateConfig):
             ``ValueError`` at construction time.
         zarr_codecs: Optional single-element list of codec entries matching the
             Zarr v3 metadata shape ``[{"name": str, "configuration": dict}]``.
-            Mutually exclusive with ``zarr_compression=True``. Structural
+            Requires ``zarr_compression=True``. When set, the codec REPLACES the
+            default preset (Blosc/zstd/5). Structural
             validation happens here; codec-specific resolution happens later.
         zarr_consolidate: Consolidate Zarr metadata after writes.
         zarr_time_encoding: Optional time encoding override.
@@ -135,12 +136,14 @@ class ZarrTemplateConfig(TemplateConfig):
                 f"{type(self.zarr_compression).__name__}: {self.zarr_compression!r}"
             )
 
-        if self.zarr_compression and self.zarr_codecs is not None:
+        if not self.zarr_compression and self.zarr_codecs is not None:
             raise ValueError(
-                f"zarr_compression=True conflicts with zarr_codecs={self.zarr_codecs!r}.\n"
-                "Set exactly one of:\n"
-                "  zarr_compression = true             # firecube's default preset (Blosc/zstd/5)\n"
-                '  zarr_codecs = [{"name": "...", "configuration": {...}}]  # explicit codec\n'
+                f"zarr_compression=False conflicts with zarr_codecs={self.zarr_codecs!r}: "
+                "specifying a codec requires compression to be enabled.\n"
+                "Either enable compression and keep the codec:\n"
+                "  zarr_compression = true\n"
+                '  zarr_codecs = [{"name": "...", "configuration": {...}}]\n'
+                "Or remove zarr_codecs for uncompressed output."
             )
 
         _validate_zarr_codecs(self.zarr_codecs)
