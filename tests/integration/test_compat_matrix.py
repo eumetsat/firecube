@@ -14,9 +14,8 @@
 
 """Compatibility matrix integration tests for time_dim_name behavior.
 
-Each test corresponds to one row of the matrix defined in
-.sisyphus/plans/cf18-compliance.md > Contract Decisions > Existing-Cube
-Compatibility Matrix.
+Each test corresponds to one row of the Existing-Cube Compatibility Matrix
+defined in the CF-1.8 compliance contract decisions.
 
 | # | Existing cube dim                  | Plugin-declared dim | Expected action                                    |
 |---|------------------------------------|---------------------|----------------------------------------------------|

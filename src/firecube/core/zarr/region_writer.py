@@ -214,6 +214,9 @@ class RegionZarrWriterProtocol(Protocol):
         shards: tuple[int, ...] | None = None,
         attrs: Mapping[str, Any] | None = None,
         dimension_names: tuple[str, ...] | None = None,
+        filters: Sequence[Any] | None = None,
+        serializer: Any | None = None,
+        compressors: Sequence[Any] | None = None,
     ) -> Any: ...
 
     def ensure_timestamp_slot(self, group: str, ts_index: int) -> None: ...
@@ -317,6 +320,9 @@ class RegionZarrWriter:
         shards: tuple[int, ...] | None = None,
         attrs: Mapping[str, Any] | None = None,
         dimension_names: tuple[str, ...] | None = None,
+        filters: Sequence[Any] | None = None,
+        serializer: Any | None = None,
+        compressors: Sequence[Any] | None = None,
     ) -> Any:
         """Ensure a group or array path exists.
 
@@ -421,6 +427,12 @@ class RegionZarrWriter:
             kwargs["attributes"] = dict(attrs)
         if dimension_names is not None:
             kwargs["dimension_names"] = list(dimension_names)
+        if filters is not None:
+            kwargs["filters"] = list(filters)
+        if serializer is not None:
+            kwargs["serializer"] = serializer
+        if compressors is not None:
+            kwargs["compressors"] = list(compressors)
         return target_group.create_array(**kwargs)
 
     def set_group_attrs(self, group: str, attrs: Mapping[str, Any] | None) -> None:
@@ -546,6 +558,28 @@ class RegionZarrWriter:
                     tuple(existing_dimnames),
                     tuple(spec.dimension_names),
                     "Re-ingest from scratch; no in-place dimension rename is supported.",
+                )
+
+        spec_filters = getattr(spec, "filters", None)
+        spec_serializer = getattr(spec, "serializer", None)
+        spec_compressors = getattr(spec, "compressors", None)
+
+        if spec_filters is not None or spec_serializer is not None or spec_compressors is not None:
+            from firecube.core.zarr.codec_pipeline import CodecPipeline, compare_pipelines
+
+            declared = CodecPipeline(
+                filters=spec_filters,
+                serializer=spec_serializer,
+                compressors=spec_compressors,
+            )
+            on_disk_codecs = getattr(getattr(arr, "metadata", None), "codecs", ())
+            mismatches = compare_pipelines(declared, on_disk_codecs)
+            for field_name, declared_val, on_disk_val in mismatches:
+                _fail(
+                    field_name,
+                    on_disk_val,
+                    declared_val,
+                    "Re-ingest from scratch; no in-place codec migration is supported.",
                 )
 
     def ensure_timestamp_slot(self, group: str, ts_index: int) -> None:

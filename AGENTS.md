@@ -39,10 +39,10 @@ When editing public docs:
 - Identify the primary audience first: user, plugin author, operator, or contributor.
 - Prefer commands, examples, expected output, verification steps, and troubleshooting.
 - Explain user consequences before architecture.
-- Do not add phase history, audit findings, commit labels, reviewer notes, internal service names, private module paths, line numbers, `.sisyphus/`, or `plans/` references to public task pages.
+- Do not add phase history, audit findings, commit labels, reviewer notes, internal service names, private module paths, line numbers, or `plans/` references to public task pages.
 - Use public CLI flags and public SDK imports (`firecube.ingestor.api`, `firecube.core.api`) unless the page is explicitly internal.
 - Do not create or substantially rewrite a docs page without choosing the matching prompt from `.prompts/` (`write-user-doc`, `write-plugin-doc`, `write-operator-doc`, or `write-internal-doc`).
-- Put implementation history, design rationale, and maintenance evidence in `plans/`, `.sisyphus/`, or an explicitly internal page, not in the user-facing path.
+- Put implementation history, design rationale, and maintenance evidence in `plans/` or an explicitly internal page, not in the user-facing path.
 
 ## Workflow prompts
 

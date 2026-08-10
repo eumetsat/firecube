@@ -187,7 +187,7 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
   sanctioned preallocate workflow and must fall back to ingest-side
   over-allocation. Fixing both makes `preallocate` the single clean way to size
   a store before a parallel backfill/append campaign.
-- See: DONE.md "firecube zarr preallocate — typed-config and spec-attrs parity" (2026-06-25) and `.sisyphus/plans/preallocate-typed-config-and-attrs.md`.
+- See: DONE.md "firecube zarr preallocate — typed-config and spec-attrs parity" (2026-06-25).
 
 ### §F3 Lazy / file-backed payload for `WriteIntent`s
 
@@ -205,7 +205,7 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
   - (b) Someone wants `time_indexed=True` static arrays to participate in time-axis preallocation sizing (the workaround skips this, which is currently fine), OR
   - (c) A refactor simplifies `IndexedRegionStrategy._dispatch_static_intent` enough that handling the `time_indexed=True + kind="static"` combination becomes a small, standalone change.
 - **Architectural shape if pursued:** A small bookkeeping change in `IndexedRegionStrategy._dispatch_static_intent` (`src/firecube/ingestor/runtime/zarr/strategies/indexed_region.py`, lines 334-367) to handle `time_indexed=True + kind="static"` without assuming the array is non-time-indexed. `RegionZarrWriter.write_static` likely needs no change — the write-once marker logic is already array-content-agnostic.
-- **Cross-references:** DONE.md entry added by T4 of `.sisyphus/plans/preallocate-typed-config-and-attrs.md`; `handoff-firecube-core-dense-time.md §A` (repo root, uncommitted).
+- **Cross-references:** DONE.md entry for "firecube zarr preallocate — typed-config and spec-attrs parity" (2026-06-25).
 
 ### §16 — Wave 2: LSM active-run index + completed-slots bitmap for O(range) resume-guard
 

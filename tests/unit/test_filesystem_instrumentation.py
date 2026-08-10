@@ -14,12 +14,11 @@
 
 """Regression tests for create_filesystem() instrumentation wrapping (V2-fix).
 
-V2 audit (.sisyphus/evidence/audit-followups/v2-fs-instrumentation.md) found that
-`create_filesystem()` returned plain adapters without wrapping them with
-`InstrumentedFilesystem` when filesystem metrics were active. This bypassed all
-metrics collection on the canonical I/O path. The legacy `_open_fsspec_url()`
-helper had the wrap pattern at ops.py:213-214; `create_filesystem()` should
-mirror it.
+V2 audit found that `create_filesystem()` returned plain adapters without
+wrapping them with `InstrumentedFilesystem` when filesystem metrics were
+active. This bypassed all metrics collection on the canonical I/O path. The
+legacy `_open_fsspec_url()` helper had the wrap pattern at ops.py:213-214;
+`create_filesystem()` should mirror it.
 """
 
 from __future__ import annotations

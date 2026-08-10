@@ -20,6 +20,7 @@ and are owned by the `Generic[Type]Ingestor` templates.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, TypeVar, cast, get_type_hints
 
@@ -39,32 +40,87 @@ def _validate_zarr_codecs(codecs: list[dict] | None) -> None:
     if not isinstance(codecs, list):
         raise ValueError("zarr_codecs must be a list of codec entries")
     if len(codecs) == 0:
-        raise ValueError(
-            "zarr_codecs must contain exactly one compressor entry in this release "
-            "(use zarr_compression=false for no compression)"
-        )
-    if len(codecs) > 1:
-        raise ValueError(
-            f"codec chains are not supported in this release; only a single compressor "
-            f"entry is accepted (got {len(codecs)} entries)"
-        )
-    entry = codecs[0]
-    if not isinstance(entry, dict):
-        raise ValueError("zarr_codecs[0] must be an object with keys {'name', 'configuration'}")
+        raise ValueError("zarr_codecs must contain at least one codec entry")
+
     allowed_keys = {"name", "configuration"}
-    extra = set(entry.keys()) - allowed_keys
-    if extra:
+    for index, entry in enumerate(codecs):
+        if not isinstance(entry, dict):
+            raise ValueError(
+                f"zarr_codecs[{index}] must be an object with keys {{'name', 'configuration'}}"
+            )
+        extra = set(entry.keys()) - allowed_keys
+        if extra:
+            raise ValueError(
+                f"zarr_codecs[{index}] has unexpected keys: {extra!r}; allowed keys: {allowed_keys!r}"
+            )
+        if "name" not in entry:
+            raise ValueError(f"zarr_codecs[{index}].name is required")
+        if not isinstance(entry["name"], str):
+            raise ValueError(
+                f"zarr_codecs[{index}].name must be a string, got {type(entry['name']).__name__}"
+            )
+        if "configuration" in entry and not isinstance(entry["configuration"], dict):
+            raise ValueError(f"zarr_codecs[{index}].configuration must be an object when present")
+
+    from firecube.core.zarr.codec_pipeline import split_zarr_codecs
+
+    normalized_codecs = [
+        {**entry, "configuration": entry.get("configuration", {})} for entry in codecs
+    ]
+    split_zarr_codecs(normalized_codecs)
+
+    if len(codecs) == 1:
+        return
+
+    from zarr.core.codec_pipeline import codecs_from_list
+    from zarr.registry import get_codec_class
+
+    resolved_codecs = []
+    for entry in normalized_codecs:
+        codec_class = get_codec_class(cast(str, entry["name"]))
+        resolved_codecs.append(codec_class.from_dict(entry))
+
+    try:
+        codecs_from_list(resolved_codecs)
+    except Exception as exc:
         raise ValueError(
-            f"zarr_codecs[0] has unexpected keys: {extra!r}; allowed keys: {allowed_keys!r}"
-        )
-    if "name" not in entry:
-        raise ValueError("zarr_codecs[0].name is required")
-    if not isinstance(entry["name"], str):
-        raise ValueError(
-            f"zarr_codecs[0].name must be a string, got {type(entry['name']).__name__}"
-        )
-    if "configuration" in entry and not isinstance(entry["configuration"], dict):
-        raise ValueError("zarr_codecs[0].configuration must be an object when present")
+            "zarr_codecs entries must form a valid Zarr codec pipeline in order "
+            f"(serializer before compressors, filters before serializer): {exc}"
+        ) from exc
+
+
+def validate_zarr_specs_against_template(
+    specs: Sequence[Any],
+    template: ZarrTemplateConfig,
+) -> None:
+    """Validate per-array codec declarations against the template compression setting.
+
+    ``specs`` is typed ``Sequence[Any]`` (not ``Sequence[ZarrArraySpec]``) to
+    avoid a circular import with ``direct_zarr``; codec fields are read via
+    ``getattr`` with ``None`` defaults.
+
+    Raises
+    ------
+    ValueError
+        If any spec declares codec fields while ``template.zarr_compression`` is False.
+    """
+    if template.zarr_compression:
+        return
+    for spec in specs:
+        declared_fields = []
+        if getattr(spec, "filters", None) is not None:
+            declared_fields.append("filters")
+        if getattr(spec, "serializer", None) is not None:
+            declared_fields.append("serializer")
+        if getattr(spec, "compressors", None) is not None:
+            declared_fields.append("compressors")
+        if declared_fields:
+            raise ValueError(
+                f"ZarrArraySpec {spec.name!r} declares codec fields "
+                f"({', '.join(declared_fields)}) but ZarrTemplateConfig.zarr_compression=False. "
+                "Either set zarr_compression=True and declare per-array codecs, "
+                "or set zarr_compression=False and remove per-array codec fields."
+            )
 
 
 @dataclass
@@ -102,15 +158,16 @@ class ZarrTemplateConfig(TemplateConfig):
         zarr_chunk_shape: Optional per-dimension inner chunk sizes.
         zarr_sharding: Enable Zarr v3 sharding.
         zarr_shard_shape: Optional per-dimension shard sizes.
-        zarr_compression: ``False`` disables compression; ``True`` enables the
-            default preset (Blosc/zstd, clevel=5). String values are rejected at
-            construction time. Only bool values are accepted; other types raise
-            ``ValueError`` at construction time.
-        zarr_codecs: Optional single-element list of codec entries matching the
-            Zarr v3 metadata shape ``[{"name": str, "configuration": dict}]``.
-            Requires ``zarr_compression=True``. When set, the codec REPLACES the
-            default preset (Blosc/zstd/5). Structural
-            validation happens here; codec-specific resolution happens later.
+        zarr_compression: ``True`` (default) delegates to zarr's default codec
+            pipeline (``ZstdCodec(level=0)`` in zarr-python v3, matching the
+            upstream default and pre-PR-25 firecube effective behavior).
+            ``False`` explicitly disables compression. String values are
+            rejected at construction time; only bool values are accepted.
+        zarr_codecs: Optional flat list of codec entries in Zarr v3 metadata
+            format ``[{"name": str, "configuration": dict}]``. Requires
+            ``zarr_compression=True``. When set, the declared pipeline is used
+            instead of zarr's default. Structural validation happens here;
+            codec-specific resolution happens later.
         zarr_consolidate: Consolidate Zarr metadata after writes.
         zarr_time_encoding: Optional time encoding override.
         zarr_async_concurrency: Async write concurrency used by Zarr.
@@ -121,7 +178,7 @@ class ZarrTemplateConfig(TemplateConfig):
     zarr_chunk_shape: dict[str, int] | None = None
     zarr_sharding: bool = False
     zarr_shard_shape: dict[str, int] | None = None
-    zarr_compression: bool = False
+    zarr_compression: bool = True
     zarr_codecs: list[dict] | None = None
     zarr_consolidate: bool = False
     zarr_time_encoding: str | None = None

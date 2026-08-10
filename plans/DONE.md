@@ -1,5 +1,117 @@
 # Done
 
+## 2026-08-10 — #40 — DirectZarr codec CLI parity + default alignment + RF-11/RF-12 invariants
+
+Closes GitHub #40. Fixes three linked issues in the codec configuration surface: a silent PR #25 regression (default was uncompressed on-disk), the DirectZarr CLI routing gap for codec options, and divergent template defaults between GenericZarr and DirectZarr. Also promotes an internal codec-derivation helper to a public runtime API and closes an adjacent behavioral parity gap in `firecube zarr preallocate`.
+
+### What
+
+**Default flip**: `ZarrTemplateConfig.zarr_compression` now defaults to `True` (was `False`). Restores the pre-PR-25 effective on-disk behavior — where zarr's own default codec (`ZstdCodec(level=0)`) applied — and aligns firecube with zarr-python v3's upstream default. Explicit `zarr_compression = false` still disables compression.
+
+**DirectZarr CLI routing wired**: `DirectZarrIngestor.template_config_class = ZarrTemplateConfig`. Without this declaration, `TierConfigurator` computed `template_keys = set()` and rejected `--option zarr_compression=...` and `--option zarr_codecs='[...]'` as "Unknown configuration options" for every DirectZarr plugin. The internal codec plumbing was correct but unreachable from the CLI.
+
+**Preallocate codec routing parity**: `firecube zarr preallocate` was passing schema kwargs (shape, dtype, chunks, attrs) to `ensure_group()` but not the effective codec pipeline. `--option zarr_compression=false` and `--option zarr_codecs='[...]'` were silently ignored at the preallocate stage even after the TierConfigurator wiring. Fixed by calling `derive_effective_codecs_for_spec(arr_spec, ingestor.template_config)` and forwarding filters/serializer/compressors to `ensure_group()`.
+
+**Preallocate validation parity**: `firecube zarr preallocate` now calls `validate_zarr_specs_against_template` before mutating arrays, matching `DirectZarrIngestor._process_batch`. Previously the CLI could create broken zarr arrays before the validator would have caught the codec conflict; now the failure is fail-fast, no partial mutation.
+
+**`derive_effective_codecs_for_spec` promoted from private to public runtime helper**: the codec-priority derivation helper (per-array > template > default) moved from `templates/direct_zarr.py._derive_effective_codecs_for_spec` to `runtime/zarr/write.py:derive_effective_codecs_for_spec`. New home is next to its sibling public helper `resolve_codec_pipeline`. Shared between `DirectZarrIngestor` (per-batch schema setup and write dispatch) and the `firecube zarr preallocate` CLI command, both of which materialize Zarr arrays from a plugin-declared schema and must apply the same codec precedence rules. The old private name is removed with no alias (per STYLE.md "Option Aliases" rule).
+
+**`cli/zarr.py` imports `DirectZarrIngestor` via `firecube.ingestor.api`**: the CLI command previously did a deep import from `firecube.ingestor.templates.direct_zarr`. Now uses the public re-export. Small correctness fix aligning CLI with the "public surfaces" convention documented in STYLE.md.
+
+**RF-11 architecture invariant** (`tests/architecture/test_template_config_class_declared.py`): AST-based static invariant that enumerates concrete `BaseIngestor` subclasses referencing `self.template_config` and requires each to declare a non-None `template_config_class`. Would have caught the DirectZarr routing gap before implementation. Abstract classes (via `ABC`/`abstractmethod`) are exempt.
+
+**RF-12 CLI private-import invariant** (`tests/architecture/test_cli_no_private_cross_subsystem_imports.py`): AST-based static invariant scoped to `src/firecube/cli/**`, rejects any `ImportFrom` naming a single-underscore-prefixed symbol from a module outside `firecube.cli.*` (i.e., `firecube.ingestor.*` or `firecube.core.*`). Same-package private imports and dunders are allowed. Closes the enforcement gap: prior to RF-12, no static test rejected underscore-prefixed cross-subsystem imports from `src/firecube/cli/**`, so the initial `cli/zarr.py:_derive_effective_codecs_for_spec` leak was not caught before implementation.
+
+### Consequences
+
+- Default codec on-disk for both GenericZarr and DirectZarr default ingests is now `ZstdCodec(level=0)` (matching zarr-python v3). Pre-fix, GenericZarr default was uncompressed on-disk (PR #25 regression); DirectZarr default was already compressed via the fallback in the old `_derive_effective_codecs_for_spec`. The two templates now behave identically.
+- Existing cubes written with `zarr_compression=false` remain valid on resume as long as the ingest continues to pass the flag explicitly.
+- Codec drift detection at `verify_array_spec()` is spec-gated (line 567): only fires when the plugin's `ZarrArraySpec` declares codec fields. Default resumes (no per-array codec declaration) never trigger drift, so the default flip does not break existing stores.
+- `firecube plugins describe direct_zarr_capable_test_plugin` now shows `zarr_compression` and `zarr_codecs` under Template Options.
+- `firecube zarr preallocate` behavioral parity with `DirectZarrIngestor` for codec validation and routing.
+- Cross-subsystem private imports from `src/firecube/cli/**` are now statically forbidden by RF-12.
+
+### Test coverage
+
+- 7 new test files: CLI matrix for DirectZarr ingest / GenericZarr ingest / `firecube zarr preallocate` (3 × 3 codec cases + 1 malformed-JSON negative + 1 preallocate validation-parity); per-array override preservation (unit); resume-safety regression (integration); RF-11 architecture invariant (AST, mutation-verified); RF-12 CLI private-import invariant (AST, mutation-verified).
+- Full test suite (excluding the one pre-existing failure): 2430 passed, 0 new failures. One pre-existing failure (`test_phase3_3_plan_to_ingest_contract::test_plan_remainder_range_accepted_by_ingest`, JSONDecodeError, unrelated to codecs) confirmed present on HEAD before this work.
+
+### Verification
+
+Commit hash: TBD (same commit as this DONE.md entry).
+
+### Source
+
+GitHub #40 — https://github.com/eumetsat/firecube/issues/40
+
+## 2026-08-09 — §33+§34 — Per-array codec overrides and shared codec pipeline module
+
+Closes TODO.md §33 and §34. Firecube no longer injects an opinionated default codec; zarr's own default applies when no codec is declared. Per-array codec overrides are now first-class in the plugin contract.
+
+### What
+
+**`ZarrArraySpec` codec fields**: `filters`, `serializer`, and `compressors` optional fields added to `ZarrArraySpec`. Plugins can declare per-array codec pipelines without touching `ZarrTemplateConfig`.
+
+**`ZarrTemplateConfig.zarr_codecs` validator relaxed**: accepts full Zarr v3 pipelines (flat list, ordering validated: filters first, then serializer, then compressors). Previously only a single-element list was accepted.
+
+**`resolve_compressor()` replaced by `resolve_codec_pipeline()`**: the old helper injected a Blosc/zstd/clevel=5 default when no codec was declared. The new helper has no opinionated default — zarr's own default applies when the pipeline is empty.
+
+**`RegionZarrWriter.ensure_group()` accepts codec kwargs**: `filters`, `serializer`, and `compressors` are forwarded to zarr array creation.
+
+**`_derive_effective_codecs_for_spec()` helper**: resolves the effective codec pipeline for a `ZarrArraySpec` in DirectZarr mode, merging spec-level overrides with template-level defaults.
+
+**`verify_array_spec()` extended**: per-field codec drift checks added. Canonical comparison uses `arr.metadata.codecs` (not a string repr).
+
+**`_compute_schema_hash()` extended**: conditional codec fields included in the hash when present. Backward-compatible: schemas with no codec declarations hash identically to before.
+
+**`validate_zarr_specs_against_template()` cross-config validator**: catches codec conflicts between `ZarrArraySpec`-level overrides and `ZarrTemplateConfig`-level defaults at schema-setup time.
+
+**`src/firecube/core/zarr/codec_pipeline.py`**: new shared module for codec normalization, comparison, and pipeline splitting (filters / serializer / compressors). Used by both the DirectZarr and GenericZarr paths.
+
+### Consequences
+
+- Firecube no longer injects Blosc/zstd/clevel=5 as a default. Existing stores with that codec are unaffected (the codec is stored in `zarr.json`); new stores without a declared codec get zarr's default.
+- `GenericZarrIngestor` no longer sets a default compressor. Plugins that relied on the implicit default must now declare it explicitly via `zarr_codecs` or per-array `compressors`.
+- `ZarrArraySpec.filters`, `.serializer`, `.compressors` are all optional and default to `None` (no override). Existing plugin code requires no changes.
+- Schema hash is backward-compatible: the new codec fields are conditional, so schemas without codec declarations produce the same hash as before.
+
+### Verification
+
+Commit hash: TBD (same commit as this DONE.md entry).
+
+Source: closes TODO.md §33 and §34.
+
+---
+
+## 2026-08-07 — #25 — `zarr_codecs` config field and codec pipeline wiring (recorded retroactively 2026-08-09)
+
+Closes GitHub #25. Shipped the first iteration of user-configurable Zarr codecs for `GenericZarrIngestor` and the staged/append write path.
+
+### What
+
+**`zarr_codecs: list[dict] | None` on `ZarrTemplateConfig`**: new optional config field accepting a single-element list of codec entries in Zarr v3 metadata format (`[{"name": "...", "configuration": {...}}]`). Requires `zarr_compression = true`. Selects any codec registered via zarr's extension mechanism by name.
+
+**`resolve_compressor()` helper**: resolved the active compressor from `zarr_codecs` (when set) or fell back to the Blosc/zstd/clevel=5 default for `GenericZarrIngestor`. (This helper was superseded by `resolve_codec_pipeline()` in §33.)
+
+**Blosc/zstd/clevel=5 default for `GenericZarrIngestor`**: applied when `zarr_compression=true` and no `zarr_codecs` entry was declared. (Removed in §33 — firecube no longer injects an opinionated default.)
+
+**Staged/append write path wiring**: `resolve_compressor()` threaded through the staged metadata seeding path and the append write executor so codec selection was consistent across write modes.
+
+### Test coverage
+
+542 lines across 5 files.
+
+### Commits
+
+- `fa41f78` — main implementation
+- `174534b` — follow-up fix
+
+### Source
+
+GitHub #25 — https://github.com/eumetsat/firecube/issues/25
+
+---
+
 Date: 2026-08-05 Task: #27
 
 Decision: Accept GitHub #27 — automate slot allocation for `DirectZarrIngestor` via an opt-in cadence mixin. Promotes IDEAS.md §21 Idea 2 to TODO.md §33 (decision-only entry; implementation follows on a feature branch, milestone v0.2.0).
@@ -57,7 +169,7 @@ OPERA-SEVIRI-NORDLIS ingest failed under the pinned `numpy>=2.3.3` runtime with 
 ### Evidence
 
 - Commit: `3da6468797291b85edec15786fc4d81fff27fc7e` fix(zarr): write_1d writes exactly one slot, numpy>=2-safe idiom
-- Source: `.sisyphus/plans/fix-write-1d-numpy-2x-slice-index.md`
+- Source: internal plan `fix-write-1d-numpy-2x-slice-index`.
 
 **Confidence:** HIGH
 
@@ -188,7 +300,7 @@ Eliminated the `ResumeConflictError "Non-range run ... is active"` failure that 
 
 Atomic `run.json` overwrites. The existing `AtomicWriter.write_atomic` protocol is create-only (by design, raises `FileExistsError` on existing targets). Replacing the overwrite-heavy `_write_run_meta` calls requires a new `overwrite_atomic`/`replace_atomic` primitive with per-driver implementations (local POSIX `rename`, S3 conditional `PutObject`, obstore `PutMode.Overwrite`). The T2/T3 recovery primitives in this plan render the torn-read window harmless without it; eliminating the underlying race window is a separate, follow-up plan.
 
-Reference: `.sisyphus/plans/opera-parallel-resume-conflict-fix.md`
+Reference: internal plan `opera-parallel-resume-conflict-fix`.
 
 ---
 
@@ -212,7 +324,7 @@ Fixed a latent `TypeError` in `_dispatch_static_intent`'s replay path: `np.array
 - `uv run ruff check src/firecube/core/zarr/region_writer.py src/firecube/ingestor/runtime/zarr/strategies/indexed_region.py` — clean.
 - `uv run pyright src/firecube/core/zarr/region_writer.py src/firecube/ingestor/runtime/zarr/strategies/indexed_region.py` — 0 errors.
 
-Reference: `.sisyphus/plans/static-replay-dtype-safe.md`
+Reference: internal plan `static-replay-dtype-safe`.
 
 ---
 
@@ -237,7 +349,7 @@ Closed two gaps that prevented cadence-based plugins from using `firecube zarr p
 - `uv run pytest tests/integration/test_preallocate_typed_config.py` — T1 plugin_config reaches hooks.
 - `uv run pytest tests/integration/test_preallocate_spec_attrs.py` — T2 no SchemaDriftError on subsequent ingest.
 
-Reference: `.sisyphus/plans/preallocate-typed-config-and-attrs.md` and `handoff-firecube-core-dense-time.md`.
+Reference: internal plans `preallocate-typed-config-and-attrs` and `handoff-firecube-core-dense-time`.
 
 ---
 
@@ -273,7 +385,7 @@ Closed 4 bugs and one dead-code removal surfaced during OPERA SEVIRI/NORDLIS plu
 - `uv run pytest tests/unit/test_scratch_module_deleted.py` — T4 deletion guard.
 - `uv run pytest --strict-deps` passes on `feat/directzarr-plugin-parity-core-fixes`.
 
-Reference: `.sisyphus/plans/directzarr-plugin-parity-core-fixes.md`
+Reference: internal plan `directzarr-plugin-parity-core-fixes`.
 
 ---
 
@@ -476,7 +588,7 @@ Cross-validates `--target` URI scheme against `--storage-type` during CLI parsin
 
 Final verification pending.
 
-See `.sisyphus/plans/storage-type-uri-cross-validation.md` for full task breakdown.
+Full task breakdown captured in internal plan `storage-type-uri-cross-validation`.
 
 ## §7-Phase 3.8 — Parallel Ingestion External-Review Fixes #6 (2026-05-31)
 
@@ -488,9 +600,9 @@ Closes 2 verified external-review follow-up issues that surfaced after Phase 3.7
 - `firecube plan` blocked-range error message uses runnable `delete-span` form (LOW): the Phase 3.7 message at `plan.py:241-248` recommended `firecube chunks delete-span --run-id <id>` — but the CLI requires `-p, --product` (hard-fail) and the blocked-range scenario also requires `--force` (since the trigger IS non-alignment). The recommendation was non-runnable 100% of the time. Updated message now shows the canonical preview/commit pattern: `firecube chunks delete-span --product <product> --run-id <id> --force --dry-run` to preview, then swap `--dry-run` for `--yes-i-really-mean-it` to commit. Docs pointer uses mkdocs anchor (`#fail-closed-planning-behavior`) instead of bare file path. Regression test at `test_phase3_5_blocked_ranges.py::test_plan_error_message_format` strengthened with 4 new substring assertions locking the full runnable shape (`--product`, `--dry-run`, `--force`, `--yes-i-really-mean-it`) — previously only the verb `firecube chunks delete-span` was asserted, so the test passed even when `--product` was missing (commit C1)
 - `docs/concepts/parallel-ingestion.md` `delete-span` remediation includes `--product`, `--force`, full safety flow (LOW): the Phase 3.7 fail-closed subsection at lines 266-274 and troubleshooting row at line 413 also showed the non-runnable `--run-id <id>` form. Fail-closed subsection expanded into a 4-step numbered procedure (list → preview → commit → re-ingest) with an explicit explanation of WHY `--force` is required (non-alignment IS the trigger condition). Troubleshooting row updated to be independently paste-runnable with the full command shape, plus a cross-link to the fail-closed subsection. Phase 3.7's `firecube chunks delete --range` clarification preserved (commit C2)
 
-**All 4 Final Verification reviewers (F1-F4) APPROVED.**
+**Final verification approved across all four review phases.**
 
-See `.sisyphus/plans/zarr-phase3.8-followup-fixes.md` for full task breakdown.
+Full task breakdown captured in internal plan `zarr-phase3.8-followup-fixes`.
 
 ---
 
@@ -504,9 +616,9 @@ Closes 2 verified external-review follow-up issues that surfaced after Phase 3.6
 - `firecube plan` blocked-range error message lists real remediation primitives (LOW): the Phase 3.5 fail-closed message at `plan.py:237-248` previously suggested "extend `global_expected_time_count()` to absorb the gap" as a blanket fix. This works for terminal-stub blocked ranges (e.g. `[950, 1000)` with `total=1000`) but is WRONG for prefix-misalignment cases (e.g. `[73, 100)` with `slot_size=100`) — extending the total cannot fix a misaligned prefix. Updated message now points operators at the actual span-level cleanup command (`firecube chunks delete-span --run-id <id>`) and the re-ingest path (`firecube ingest ... --option force_reingest=true`). `global_expected_time_count()` extension is preserved as a QUALIFIED option for terminal-stub cases only. Note: `firecube chunks delete --range` parses DATE strings, not slot indices — use `delete-span` for slot cleanup. Integration test `test_plan_error_message_format` strengthened with substring assertions for `firecube chunks delete-span` and `force_reingest=true` (commit C1)
 - `docs/concepts/parallel-ingestion.md` refreshed for Phase 3.5 + 3.6 plan JSON contract (LOW): JSON example in the operator guide showed group objects WITHOUT `blocked_ranges` (Phase 3.5 added the field) and resume-semantics + troubleshooting sections did not mention Phase 3.5 blocked-partial-ranges fail-closed or Phase 3.6 coverage-lookup fail-closed behavior. Updated JSON example to show `blocked_ranges: []` on every group, added a `Fail-closed planning behavior` subsection documenting both modes with `--no-resume` and `firecube chunks delete-span` remediation cross-refs (plus an explicit note that `chunks delete --range` accepts dates only), and added 2 new troubleshooting table rows. Schema version unchanged; this is doc drift catch-up, not a schema change (commit C2)
 
-**All 4 Final Verification reviewers (F1-F4) APPROVED.**
+**Final verification approved across all four review phases.**
 
-See `.sisyphus/plans/zarr-phase3.7-followup-fixes.md` for full task breakdown.
+Full task breakdown captured in internal plan `zarr-phase3.7-followup-fixes`.
 
 ---
 
@@ -519,9 +631,9 @@ Closes 1 verified external-review follow-up issue that surfaced after Phase 3.5 
 **Deliverables shipped**:
 - `firecube plan` fail-closed on coverage lookup failure (MEDIUM): `_query_coverage` previously swallowed ALL exceptions and returned empty coverage, causing `firecube plan` to silently downgrade resume-aware planning to full planning on auth errors, corrupt control-plane state, driver bugs, or transient S3 errors. Orchestrators would then dispatch a full product worth of pods unnecessarily. First-run no-control-plane case is correctly handled WITHOUT exceptions (via `_load_current_state` returning empty dict), so the broad except was only masking real failures. Fix: removed `try: ... except Exception:` block from `_query_coverage`; caller now wraps the call with `click.ClickException` mapping that names the underlying failure and suggests `--no-resume` as the explicit bypass (commit C1)
 
-**All 4 Final Verification reviewers (F1-F4) APPROVED.**
+**Final verification approved across all four review phases.**
 
-See `.sisyphus/plans/zarr-phase3.6-followup-fixes.md` for full task breakdown.
+Full task breakdown captured in internal plan `zarr-phase3.6-followup-fixes`.
 
 ---
 
@@ -535,9 +647,9 @@ Closes 2 verified external-review follow-up issues that surfaced after Phase 3.4
 - `firecube plan` fail-closed on blocked partial-chunk ranges (HIGH): `_chunk_aligned_remaining` previously dropped misaligned ranges silently (e.g. `[(950, 1000)] slot=100` → `[]`), so orchestrators ran nothing for the dropped slots. Function now returns `(aligned, blocked)` tuple. `firecube plan` raises `click.ClickException` BEFORE JSON emission when any group has non-empty `blocked_ranges`. Each group's JSON output gains a `blocked_ranges` diagnostic field. Misleading existing tests rewritten to assert the new fail-closed semantics (commit C1)
 - `firecube plan` calls `zarr_schema()` exactly once (LOW): Phase 3.4 T1 added a phantom-validation call at `plan.py:156`, but `_resolve_per_group_slot_sizes` was still calling `zarr_schema()` separately. `_resolve_per_group_slot_sizes` signature changes to `(schema, explicit)` — accepts the already-loaded schema. Caller threads the line-156 schema through. Spy test asserts `call_count == 1` (commit C2)
 
-**All 4 Final Verification reviewers (F1-F4) APPROVED.**
+**Final verification approved across all four review phases.**
 
-See `.sisyphus/plans/zarr-phase3.5-followup-fixes.md` for full task breakdown.
+Full task breakdown captured in internal plan `zarr-phase3.5-followup-fixes`.
 
 ---
 
@@ -552,9 +664,9 @@ Closes 3 verified external-review follow-up issues that surfaced after Phase 3.3
 - `warn_if_misaligned` respects terminal partial chunks (MEDIUM): closes noisy false-positive warning where `validate_chunk_alignment` accepted `[900, 950)` with `global_expected=950` but the adjacent `warn_if_misaligned` call still logged "misaligned, suggested [900, 1000)". `warn_if_misaligned` now accepts optional `global_expected` parameter mirroring the validator's terminal-partial exception. `parallel_gate.py:129` passes `global_expected=global_schema` (commit C2)
 - Sharding test no longer tautological (LOW): `test_write_dataset_skips_rechunk_when_chunks_already_match` previously compared the caller's Dask graph before/after `write_dataset_to_zarr()`, but the writer rebinds `ds = ds.chunk(...)` internally — Python rebinding doesn't mutate the caller's reference, so the assertion was always true. Now uses `monkeypatch.setattr(xr.Dataset, "chunk", spy)` with call-through to count actual chunk calls. Asserts `spy.call_count == 0` when shapes match. Test-only fix; production code unchanged (commit C3)
 
-**All 4 Final Verification reviewers (F1-F4) APPROVED.**
+**Final verification approved across all four review phases.**
 
-See `.sisyphus/plans/zarr-phase3.4-followup-fixes.md` for full task breakdown.
+Full task breakdown captured in internal plan `zarr-phase3.4-followup-fixes`.
 
 ---
 
@@ -572,9 +684,9 @@ Closes 6 verified external-review issues that surfaced after Phase 3.2 shipped.
 - Operator docs refresh (MEDIUM): `docs/concepts/parallel-ingestion.md` plan-output example now shows per-group `slot_size` and per-range `--slot-group` (Phase 3.1/3.2 features); run_id example shows both single-group and multi-group formats with opacity warning. `docs/concepts/best-practices.md` no longer says "until the Phase 3 engine planner lands" (it landed 2026-05-28) (commit C5)
 - Sharding test assertions strengthened (LOW): `test_append_to_sharded_store_preserves_shards` now asserts shard/chunk metadata (not just timestamp count); `test_write_dataset_skips_rechunk_when_chunks_already_match` now compares `_tasks_after == _tasks_before` (the actual Flaw 10 invariant) (commit C6)
 
-**All 4 Final Verification reviewers (F1-F4) APPROVED.**
+**Final verification approved across all four review phases.**
 
-See `.sisyphus/plans/zarr-phase3.3-review-fixes.md` for full task breakdown.
+Full task breakdown captured in internal plan `zarr-phase3.3-review-fixes`.
 
 ---
 
@@ -592,9 +704,9 @@ Closes 6 verified review issues from the Phase 3.1 implementation.
 - Pod-startup schema verification + ChunkManager audit record (MEDIUM): `_setup_global_zarr_schema` moved out of `_process_batch` hot path; in-memory `schema_verified[group]` flag prevents re-verify within pod; NEW additive method `ChunkManager.record_schema_verification` writes per-pod audit records (each carrying its own `verified_at` — NOT content-idempotent; WAL `events-*.jsonl` per-writer files make this S3-safe); audit observational only — NEVER consulted for skip (commit C5)
 - Docs cleanup (LOW): `cli/zarr.py` module docstring no longer claims standalone "read-only"; migration guide accurately describes WriteIntent-only group coverage and capability-gate error class (commit C6)
 
-**All 4 Final Verification reviewers (F1-F4) APPROVED.**
+**Final verification approved across all four review phases.**
 
-See `.sisyphus/plans/zarr-phase3.2-correctness.md` for full task breakdown.
+Full task breakdown captured in internal plan `zarr-phase3.2-correctness`.
 
 ---
 
@@ -618,9 +730,9 @@ Closes 5 verified safety gaps in Phase 3 parallel ingestion surfaced by external
 - Migration guide docs cleanup: removed misleading "discards items" wording, added "Required vs Optional" table, updated docstring (commit C4)
 - Phase 3 single-group regression integration test (commit C4)
 
-**All 4 Final Verification reviewers (F1-F4) APPROVED.**
+**Final verification approved across all four review phases.**
 
-See `.sisyphus/plans/zarr-phase3.1-hardening.md` for full task breakdown.
+Full task breakdown captured in internal plan `zarr-phase3.1-hardening`.
 
 ---
 
@@ -677,12 +789,8 @@ Files changed:
 
 Verification: `grep -rn 'build_dataset.*PipelineBatch' docs/` returns exactly 1 match (the deprecation paragraph itself). MkDocs `--strict` build passes.
 
-Evidence:
-- `.sisyphus/evidence/task-5-no-stale.txt`
-- `.sisyphus/evidence/task-5-new-sig.txt`
-- `.sisyphus/evidence/task-5-deprecation-para.txt`
-- `.sisyphus/evidence/task-5-mkdocs.txt`
-- `.sisyphus/evidence/task-5-commit.txt`
+Evidence: task-5 workspace notes (no-stale grep, new-signature grep, deprecation-paragraph grep, MkDocs `--strict` build, commit hash).
+
 - Source: TODO.md §27
 
 ---
@@ -1410,6 +1518,6 @@ commit ef771cc). This entry closes the §19 remainder.
   `preserve_cf_time_attrs: bool = False` opt-in for verbatim retention.
   Rationale: silent deletion was neither ecosystem-conventional (xarray
   moves, not deletes) nor advisory-friendly (violated the CF-is-advisory
-  principle). Ref: plan `.sisyphus/plans/normalize-string-vars-cf-attrs-refinement.md`.
+  principle). Ref: internal plan `normalize-string-vars-cf-attrs-refinement`.
 
 **Confidence:** HIGH

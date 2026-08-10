@@ -17,14 +17,17 @@
 Verifies that :func:`write_dataset_to_zarr` correctly threads the
 ``zarr_codecs`` kwarg through :func:`_build_zarr_encoding` and
 :func:`resolve_compressor` and writes the resolved codec pipeline into the
-Zarr store. The five cases cover the full decision matrix locked by
+Zarr store. The cases cover the full decision matrix locked by
 ``tests/unit/test_zarr_codec_api_assumptions.py``:
 
-* Case 1: default preset (regression against pre-issue-#25 behavior).
+* Case 1: ``compression=True`` + ``zarr_codecs=None`` delegates to zarr's
+  default compressor (``ZstdCodec``, not Blosc).
 * Case 2: explicit no compression (``compressors=[]`` shape).
 * Case 3: explicit Blosc with custom clevel and typesize.
 * Case 4: explicit native Zstd codec (non-Blosc path).
 * Case 5: unknown codec surfaces the resolver error.
+* Case 6: a flat ``zarr_codecs`` pipeline is split so the compressor
+  portion reaches the store.
 """
 
 from __future__ import annotations
@@ -79,7 +82,7 @@ def _codec_names(codecs: list[Any]) -> list[str]:
     return names
 
 
-def test_case_1_default_preset_writes_blosc(tmp_path) -> None:
+def test_case_1_true_none_uses_zarr_default_zstd(tmp_path) -> None:
     store = str(tmp_path / "test.zarr")
     write_dataset_to_zarr(
         _make_dataset(),
@@ -90,9 +93,11 @@ def test_case_1_default_preset_writes_blosc(tmp_path) -> None:
     )
     codecs = _codecs_of(store, "G/var1")
     has_bytes_bytes = any(isinstance(codec, BytesBytesCodec) for codec in codecs)
-    assert has_bytes_bytes, f"expected a compressor codec, got {_codec_names(codecs)!r}"
-    assert "blosc" in _codec_names(codecs), (
-        f"expected 'blosc' in codec pipeline, got {_codec_names(codecs)!r}"
+    assert has_bytes_bytes, (
+        f"expected a compressor codec (zarr default), got {_codec_names(codecs)!r}"
+    )
+    assert "blosc" not in _codec_names(codecs), (
+        f"expected zarr default (zstd), not blosc, got {_codec_names(codecs)!r}"
     )
 
 
@@ -157,7 +162,7 @@ def test_case_4_explicit_native_zstd(tmp_path) -> None:
 
 def test_case_5_unknown_codec_raises_resolver_error(tmp_path) -> None:
     store = str(tmp_path / "test.zarr")
-    with pytest.raises(ValueError, match="not a registered zarr codec"):
+    with pytest.raises(ValueError, match="is not registered in zarr's codec registry"):
         write_dataset_to_zarr(
             _make_dataset(),
             zarr_store=_local_handle(store),
@@ -165,3 +170,18 @@ def test_case_5_unknown_codec_raises_resolver_error(tmp_path) -> None:
             compression=False,
             zarr_codecs=[{"name": "__no_such__", "configuration": {}}],
         )
+
+
+def test_case_6_flat_pipeline_split_correctly(tmp_path) -> None:
+    store = str(tmp_path / "test.zarr")
+    write_dataset_to_zarr(
+        _make_dataset(),
+        zarr_store=_local_handle(store),
+        group="G",
+        compression=True,
+        zarr_codecs=[{"name": "zstd", "configuration": {"level": 3}}],
+    )
+    codecs = _codecs_of(store, "G/var1")
+    codec_names = _codec_names(codecs)
+    assert "zstd" in codec_names, f"expected zstd, got {codec_names!r}"
+    assert "blosc" not in codec_names, f"unexpected blosc, got {codec_names!r}"

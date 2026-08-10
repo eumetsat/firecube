@@ -736,6 +736,20 @@ def preallocate(
             )
 
         schema = ingestor.zarr_schema(plugin_ctx)
+        all_specs = [array for group in schema for array in group.arrays]
+        from firecube.ingestor.runtime.zarr.write import derive_effective_codecs_for_spec
+        from firecube.ingestor.templates.config import (
+            ZarrTemplateConfig,
+            validate_zarr_specs_against_template,
+        )
+
+        template_config = ingestor.template_config
+        if not isinstance(template_config, ZarrTemplateConfig):
+            raise click.ClickException(
+                f"Plugin '{plugin}' did not resolve a Zarr template configuration."
+            )
+        validate_zarr_specs_against_template(all_specs, template_config)
+
         from firecube.ingestor.runtime.parallel_gate import (
             validate_global_expected_subset_of_schema,
         )
@@ -811,6 +825,10 @@ def preallocate(
                         click.echo(f"array {array_path}: existing arrays match the plan; no-op")
                         continue
 
+                    filters, serializer, compressors = derive_effective_codecs_for_spec(
+                        arr_spec, template_config
+                    )
+
                     writer.ensure_group(
                         array_path,
                         shape=effective_shape,
@@ -820,6 +838,9 @@ def preallocate(
                         attrs=arr_spec.attrs,
                         shards=arr_spec.shards,
                         dimension_names=arr_spec.dimension_names,
+                        filters=filters,
+                        serializer=serializer,
+                        compressors=compressors,
                     )
                     click.echo(f"array {array_path}: created")
 

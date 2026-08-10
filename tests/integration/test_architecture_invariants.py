@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Behavioral tests (BT1-BT7) gating the storage-abstraction-unification migration.
-
-See .sisyphus/plans/storage-abstraction-unification.md for full BT IDs.
-"""
+"""Behavioral tests (BT1-BT7) gating the storage-abstraction-unification migration."""
 
 from __future__ import annotations
 

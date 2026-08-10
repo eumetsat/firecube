@@ -26,7 +26,7 @@ import contextlib
 import dataclasses
 import logging
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
@@ -115,6 +115,7 @@ class IndexedRegionStrategy:
         claim_for_slot: Callable[[str, int], Any] | None = None,
         slot_range: tuple[int, int] | None = None,
         slot_group: str | None = None,
+        codec_pipelines_by_array: Mapping[tuple[str, str], tuple[Any, Any, Any]] | None = None,
     ) -> dict[str, Any]:
         """Execute write intents grouped by Zarr group and return metrics.
 
@@ -265,6 +266,14 @@ class IndexedRegionStrategy:
                         else:
                             effective_shape = arr_spec.shape
                         allow_grow = bool(intents_with_ts)
+                        filters, serializer, compressors = (
+                            codec_pipelines_by_array.get(
+                                (group_name, arr_spec.name),
+                                (None, None, None),
+                            )
+                            if codec_pipelines_by_array is not None
+                            else (None, None, None)
+                        )
                         writer.ensure_group(
                             f"{group_name}/{arr_spec.name}",
                             shape=effective_shape,
@@ -278,6 +287,9 @@ class IndexedRegionStrategy:
                                 arr_spec,
                                 self._time_coord_name,
                             ),
+                            filters=filters,
+                            serializer=serializer,
+                            compressors=compressors,
                         )
                     writer.set_group_attrs(group_name, getattr(group_spec, "attrs", None))
 

@@ -32,7 +32,7 @@ The test runs both templates with the same scenario (Run A writes T1 at
 slot 0; Run B writes T2 with ``resume_existing=True``) and asserts the
 physical slot placement on the final Zarr store after both runs.
 Generic PASSES today. DirectZarr FAILS — that is the RED state required
-by T1 of ``.sisyphus/plans/staged-mode-template-agnostic-seeding.md``.
+by the staged-mode template-agnostic seeding plan (T1).
 """
 
 from __future__ import annotations

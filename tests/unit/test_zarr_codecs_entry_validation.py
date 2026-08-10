@@ -41,7 +41,7 @@ pytestmark = pytest.mark.unit
         ),
         pytest.param(
             [],
-            "zarr_codecs must contain exactly one",
+            "zarr_codecs must contain at least one",
             id="empty-list",
         ),
         pytest.param(
@@ -58,11 +58,6 @@ pytestmark = pytest.mark.unit
             [{"name": "blosc", "configuration": None}],
             "zarr_codecs[0].configuration must be an object",
             id="configuration-none",
-        ),
-        pytest.param(
-            [{"name": "blosc"}, {"name": "zstd"}],
-            "codec chains are not supported",
-            id="multi-entry-chain",
         ),
         pytest.param(
             [{"name": "blosc", "configuration": {}, "extra_key": "x"}],
@@ -89,3 +84,32 @@ def test_zarr_codecs_entry_validation(
     with pytest.raises(ValueError) as excinfo:
         ZarrTemplateConfig(zarr_compression=True, zarr_codecs=cast(list[dict] | None, input_value))
     assert expected_error_substring in str(excinfo.value)
+
+
+def test_multi_element_pipeline_accepted() -> None:
+    codecs = [
+        {"name": "bytes", "configuration": {}},
+        {"name": "zstd", "configuration": {}},
+    ]
+
+    cfg = ZarrTemplateConfig(zarr_compression=True, zarr_codecs=codecs)
+
+    assert cfg.zarr_codecs == codecs
+
+
+def test_out_of_order_pipeline_rejected() -> None:
+    codecs = [
+        {"name": "zstd", "configuration": {}},
+        {"name": "bytes", "configuration": {}},
+    ]
+
+    with pytest.raises(ValueError, match=r"[Cc]odec|order|pipeline"):
+        ZarrTemplateConfig(zarr_compression=True, zarr_codecs=codecs)
+
+
+def test_single_compressor_still_accepted() -> None:
+    codecs = [{"name": "blosc", "configuration": {"cname": "zstd"}}]
+
+    cfg = ZarrTemplateConfig(zarr_compression=True, zarr_codecs=codecs)
+
+    assert cfg.zarr_codecs == codecs

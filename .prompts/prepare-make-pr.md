@@ -74,7 +74,7 @@ Apply `.prompts/docs-policy.md` to public docs before opening review.
 If all required checks pass:
 
 1. Review files to include.
-2. Do not stage build artifacts, `.venv/`, `site/`, local data outputs, credentials, logs, `.sisyphus/evidence/*`, or generated products.
+2. Do not stage build artifacts, `.venv/`, `site/`, local data outputs, credentials, logs, session-local workspace directories, or generated products.
 3. Stage only source, tests, docs, config, and prompt files related to the change.
 4. Use a clear conventional-commit-style message if committing.
 5. Do not push or open a remote review request without explicit user approval.
