@@ -4970,10 +4970,11 @@ defaults under <code>[plugins.&lt;name&gt;]</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p><code>False</code> disables compression; <code>True</code> enables the
-default preset (Blosc/zstd, clevel=5). String values are rejected at
-construction time. Only bool values are accepted; other types raise
-<code>ValueError</code> at construction time.</p>
+                <p><code>True</code> (default) delegates to zarr's default codec
+pipeline (<code>ZstdCodec(level=0)</code> in zarr-python v3, matching the
+upstream default and pre-PR-25 firecube effective behavior).
+<code>False</code> explicitly disables compression. String values are
+rejected at construction time; only bool values are accepted.</p>
               </div>
             </td>
           </tr>
@@ -4984,11 +4985,11 @@ construction time. Only bool values are accepted; other types raise
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional single-element list of codec entries matching the
-Zarr v3 metadata shape <code>[{"name": str, "configuration": dict}]</code>.
-Requires <code>zarr_compression=True</code>. When set, the codec REPLACES the
-default preset (Blosc/zstd/5). Structural
-validation happens here; codec-specific resolution happens later.</p>
+                <p>Optional flat list of codec entries in Zarr v3 metadata
+format <code>[{"name": str, "configuration": dict}]</code>. Requires
+<code>zarr_compression=True</code>. When set, the declared pipeline is used
+instead of zarr's default. Structural validation happens here;
+codec-specific resolution happens later.</p>
               </div>
             </td>
           </tr>

@@ -4323,6 +4323,62 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="ZarrArraySpec">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec.compressors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compressors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec.filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec.serializer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        serializer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -5268,6 +5324,62 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="ZarrArraySpec">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec.compressors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compressors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec.filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec.serializer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        serializer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -6108,10 +6220,11 @@ defaults to <code>"timestamp"</code>. It is a class declaration, not a <code>--o
             </td>
             <td>
               <div class="doc-md-description">
-                <p><code>False</code> disables compression; <code>True</code> enables the
-default preset (Blosc/zstd, clevel=5). String values are rejected at
-construction time. Only bool values are accepted; other types raise
-<code>ValueError</code> at construction time.</p>
+                <p><code>True</code> (default) delegates to zarr's default codec
+pipeline (<code>ZstdCodec(level=0)</code> in zarr-python v3, matching the
+upstream default and pre-PR-25 firecube effective behavior).
+<code>False</code> explicitly disables compression. String values are
+rejected at construction time; only bool values are accepted.</p>
               </div>
             </td>
           </tr>
@@ -6122,11 +6235,11 @@ construction time. Only bool values are accepted; other types raise
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional single-element list of codec entries matching the
-Zarr v3 metadata shape <code>[{"name": str, "configuration": dict}]</code>.
-Requires <code>zarr_compression=True</code>. When set, the codec REPLACES the
-default preset (Blosc/zstd/5). Structural
-validation happens here; codec-specific resolution happens later.</p>
+                <p>Optional flat list of codec entries in Zarr v3 metadata
+format <code>[{"name": str, "configuration": dict}]</code>. Requires
+<code>zarr_compression=True</code>. When set, the declared pipeline is used
+instead of zarr's default. Structural validation happens here;
+codec-specific resolution happens later.</p>
               </div>
             </td>
           </tr>
@@ -6645,7 +6758,80 @@ names are rejected at write time.</p>
 
 
 
+<h3 id="firecube.ingestor.api.ZarrArraySpec-attributes">Attributes</h3>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.ZarrArraySpec.compressors" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">compressors</span> <span class="o">=</span> <span class="kc">None</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Per-array Zarr v3 compressor codecs (BytesBytesCodec). Each entry: <code>{"name": ..., "configuration": {...}}</code>.
+Empty tuple <code>()</code> = explicitly uncompressed for this array ("compress-except-X" pattern).
+None means inherit from template default. Requires template <code>zarr_compression=True</code>.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.ZarrArraySpec.filters" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">filters</span> <span class="o">=</span> <span class="kc">None</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Per-array Zarr v3 filter codecs (ArrayArrayCodec). Each entry: <code>{"name": ..., "configuration": {...}}</code>.
+None means inherit from template default. Requires template <code>zarr_compression=True</code>.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.ZarrArraySpec.serializer" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">serializer</span> <span class="o">=</span> <span class="kc">None</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Per-array Zarr v3 serializer codec (ArrayBytesCodec). E.g. <code>{"name": "bytes"}</code>.
+None means inherit from template default. Requires template <code>zarr_compression=True</code>.</p>
+
+    </div>
+
+</div>
 
 
 
