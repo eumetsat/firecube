@@ -37,6 +37,39 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 ---
 
+### §35 Repo-wide cross-package private-import hardening
+
+**Status**: OPEN
+**Scope**: architecture invariant, static test
+**Priority**: medium
+
+### Motivation
+
+Post-implementation review during PR #40 preparation found that `test_import_boundaries.py` protects the templates/plugins boundary but not the CLI, and that no test enforces "no cross-package underscore imports" anywhere in the tree. RF-12 (`test_cli_no_private_cross_subsystem_imports.py`, added by PR #40) closes the CLI-specific gap, but the underlying repo-wide invariant is still missing. AST scan of `src/` at PR #40 review time found several cross-subsystem private imports that should be triaged individually:
+
+- `src/firecube/ingestor/runtime/telemetry.py:22` — `from firecube.core.observability.metrics import _to_number, normalize_run_summary`
+- `src/firecube/ingestor/runtime/tensogram/strategy.py:28` — `from firecube.core.tensogram.converter import _find_time_dim`
+- `src/firecube/core/zarr/validation.py:34` — `from firecube.core.filesystem.ops import _open_fsspec_url  # type: ignore` (already an accepted deviation per DESIGN.md fsspec allowlist)
+- `src/firecube/core/tensogram/converter.py:31` — `from firecube.core.filesystem.ops import _open_fsspec_url` (same — accepted deviation)
+- Possibly others surfacing when the invariant is added
+
+### Proposed approach
+
+1. AST-scan `src/firecube/**/*.py` for `ImportFrom` nodes with `name` starting with a single underscore and `module` in a different first-level subpackage than the importing file (e.g., `firecube.ingestor.X` importing from `firecube.core.Y` is cross-subsystem; `firecube.core.zarr.X` importing from `firecube.core.zarr._Y` is same-subsystem).
+2. Build a `_PERMANENT_ALLOWLIST` seeded from the AST scan, with an explicit rationale per allowed entry (mirror the `test_no_raw_fsspec_usage.py` pattern).
+3. For each currently-allowlisted entry, decide: **promote** (rename to public), **accept** (document in DESIGN.md §"Accepted Deviations"), or **defer** (leave in allowlist with a TODO reference).
+4. Reject any NEW cross-subsystem private import that is not in the allowlist.
+
+### Not this branch
+
+PR #40 closes the CLI-specific gap only. The repo-wide invariant, allowlist seeding, and individual triage are follow-up work.
+
+### References
+
+- `tests/architecture/test_cli_no_private_cross_subsystem_imports.py` — RF-12, the CLI-scoped precursor
+- `tests/architecture/test_import_boundaries.py` — the existing templates/plugins invariant to model after
+- `tests/unit/test_no_raw_fsspec_usage.py` — the canonical `_PERMANENT_ALLOWLIST` pattern
+
 ### §29 Test suite overhaul
 
 **Goal:** Reduce noisy static/docs failures and raise behavioral bug-detection
@@ -431,7 +464,7 @@ See DONE.md §27 for details.
 
 **Surfaced by:** OPERA plugin fix declaring `lat`/`lon`/`ny`/`nx` in `coord_names` (plugin commit `bb9cf7a`).
 
-See: DONE.md "DirectZarr plugin parity — core fixes" (2026-06-25) and `.sisyphus/plans/directzarr-plugin-parity-core-fixes.md`
+See: DONE.md "DirectZarr plugin parity — core fixes" (2026-06-25).
 
 ---
 

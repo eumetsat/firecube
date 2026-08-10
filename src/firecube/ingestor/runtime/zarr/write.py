@@ -26,8 +26,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import xarray as xr
 import zarr
-from zarr.abc.codec import BytesBytesCodec
-from zarr.codecs import BloscCodec
+from zarr.abc.codec import ArrayArrayCodec, ArrayBytesCodec, BytesBytesCodec
 from zarr.registry import get_codec_class
 
 if TYPE_CHECKING:
@@ -49,43 +48,80 @@ def _consolidate_metadata_best_effort(
                 logger.warning("Failed to consolidate Zarr metadata: %s", exc)
 
 
-def resolve_compressor(
-    codec_entry: dict | None,
-    *,
-    use_default: bool,
-) -> BytesBytesCodec | None:
-    """Resolve a zarr_codecs entry to a BytesBytesCodec instance.
+def resolve_codec_pipeline(
+    filters: list[dict] | None = None,
+    serializer: dict | None = None,
+    compressors: list[dict] | None = None,
+) -> tuple[list[ArrayArrayCodec] | None, ArrayBytesCodec | None, list[BytesBytesCodec] | None]:
+    """Resolve declared codec dicts into typed codec instances.
+
+    Splits and validates the Zarr codec pipeline into filters
+    (``ArrayArrayCodec``), a single serializer (``ArrayBytesCodec``), and
+    compressors (``BytesBytesCodec``). Each input is optional; when nothing is
+    declared the function returns ``(None, None, None)``.
 
     Args:
-        codec_entry: A validated codec entry dict (``{"name": ..., "configuration": ...}``),
-            or None if no explicit codec was specified.
-        use_default: If True and codec_entry is None, return the default preset
-            (Blosc/zstd, clevel=5). If False and codec_entry is None, return None
-            (no compression).
+        filters: Codec dictionaries expected to resolve to ``ArrayArrayCodec``
+            instances (array→array pipeline stages, e.g. delta/scale).
+        serializer: A single codec dictionary expected to resolve to an
+            ``ArrayBytesCodec`` (array→bytes, e.g. ``bytes``).
+        compressors: Codec dictionaries expected to resolve to
+            ``BytesBytesCodec`` instances (bytes→bytes, e.g. ``blosc``/``zstd``).
 
     Returns:
-        A BytesBytesCodec instance, or None when no compression is desired.
+        A tuple ``(filters, serializer, compressors)`` where each element is a
+        resolved list/single instance of the appropriate codec type, or
+        ``None`` when the caller declared nothing in that position.
 
     Raises:
-        ValueError: When the codec name is not in zarr's registry, or when
-            the configuration fails codec-specific validation.
-        TypeError: When the resolved codec is not a BytesBytesCodec
-            (e.g. "bytes" resolves to an ArrayBytesCodec, not a compressor).
+        ValueError: When a codec name is not in zarr's codec registry, or when
+            a codec's configuration fails codec-specific validation.
+        TypeError: When a resolved codec does not match the ABC required by
+            the position it was declared in (e.g. a ``bytes`` codec passed
+            under ``filters``).
     """
-    if codec_entry is None:
-        if use_default:
-            return BloscCodec(cname="zstd", clevel=5)
-        return None
+    if filters is None and serializer is None and compressors is None:
+        return None, None, None
 
-    name = cast(str, codec_entry["name"])
-    config = cast(dict[str, Any], codec_entry.get("configuration", {}) or {})
-    full_entry = {"name": name, "configuration": config}
+    resolved_filters: list[ArrayArrayCodec] | None = (
+        [
+            cast(ArrayArrayCodec, _resolve_codec_entry(entry, ArrayArrayCodec, "filters"))
+            for entry in filters
+        ]
+        if filters
+        else None
+    )
+    resolved_serializer: ArrayBytesCodec | None = (
+        cast(ArrayBytesCodec, _resolve_codec_entry(serializer, ArrayBytesCodec, "serializer"))
+        if serializer is not None
+        else None
+    )
+    resolved_compressors: list[BytesBytesCodec] | None = (
+        [
+            cast(BytesBytesCodec, _resolve_codec_entry(entry, BytesBytesCodec, "compressors"))
+            for entry in compressors
+        ]
+        if compressors
+        else None
+    )
+
+    return resolved_filters, resolved_serializer, resolved_compressors
+
+
+def _resolve_codec_entry(
+    entry: dict,
+    expected: type[ArrayArrayCodec] | type[ArrayBytesCodec] | type[BytesBytesCodec],
+    position: str,
+) -> ArrayArrayCodec | ArrayBytesCodec | BytesBytesCodec:
+    name = cast(str, entry["name"])
+    configuration = cast(dict[str, Any], entry.get("configuration", {}) or {})
+    full_entry = {"name": name, "configuration": configuration}
 
     try:
         codec_class = get_codec_class(name)
     except KeyError as orig:
         raise ValueError(
-            f"zarr_codecs[0].name={name!r} is not a registered zarr codec. "
+            f"zarr_codecs entry name={name!r} is not a registered zarr codec. "
             "Available codecs come from zarr's [zarr.codecs] entry points. "
             "Install a codec package (e.g., 'imagecodecs' provides 'imagecodecs_openzl') "
             f"or check the name spelling. Original error: {orig}"
@@ -95,16 +131,80 @@ def resolve_compressor(
         codec = codec_class.from_dict(full_entry)
     except (ValueError, TypeError) as orig:
         raise ValueError(
-            f"zarr_codecs[0].configuration failed codec-specific validation for {name!r}: {orig}"
+            f"zarr_codecs entry {name!r} failed codec-specific validation: {orig}"
         ) from orig
 
-    if not isinstance(codec, BytesBytesCodec):
+    if not isinstance(codec, expected):
         raise TypeError(
-            f"zarr_codecs[0].name={name!r} is a {type(codec).__name__}, not a BytesBytesCodec. "
-            "Phase 1 supports only compressor codecs; filters and serializers are Phase 2."
+            f"zarr_codecs entry name={name!r} resolved to {type(codec).__name__}, "
+            f"but position {position!r} requires a {expected.__name__}."
         )
 
     return codec
+
+
+def derive_effective_codecs_for_spec(
+    arr_spec: Any,
+    template_config: Any,
+) -> tuple[list[Any] | None, Any | None, list[Any] | None]:
+    """Derive the effective codec pipeline for a single array spec.
+
+    Shared helper for ``DirectZarrIngestor`` and the ``firecube zarr preallocate``
+    CLI command: both materialize Zarr arrays from a ``ZarrArraySpec`` under a
+    ``ZarrTemplateConfig`` and must resolve codecs with identical precedence so
+    that a store created by one command remains resume-safe when the other
+    command reopens it.
+
+    Priority: per-array spec fields > template ``zarr_codecs`` > ``None`` (zarr
+    default codec pipeline).
+
+    Returns resolved codec instances (filters, serializer, compressors) ready
+    to pass to ``RegionZarrWriter.ensure_group``.
+    """
+    from firecube.core.zarr.codec_pipeline import split_zarr_codecs
+
+    per_array_filters = getattr(arr_spec, "filters", None)
+    per_array_serializer = getattr(arr_spec, "serializer", None)
+    per_array_compressors = getattr(arr_spec, "compressors", None)
+
+    has_per_array = (
+        per_array_filters is not None
+        or per_array_serializer is not None
+        or per_array_compressors is not None
+    )
+
+    if has_per_array:
+        filters_dicts = list(per_array_filters) if per_array_filters else None
+        serializer_dict = per_array_serializer
+        compressors_dicts = (
+            list(per_array_compressors) if per_array_compressors is not None else None
+        )
+        filters, serializer, compressors = resolve_codec_pipeline(
+            filters=filters_dicts,
+            serializer=serializer_dict,
+            compressors=compressors_dicts,
+        )
+        if per_array_compressors is not None and len(per_array_compressors) == 0:
+            compressors = []
+        return filters, serializer, compressors
+
+    zarr_compression = (
+        getattr(template_config, "zarr_compression", True) if template_config else True
+    )
+    zarr_codecs = getattr(template_config, "zarr_codecs", None) if template_config else None
+
+    if not zarr_compression:
+        return None, None, []
+
+    if zarr_codecs is not None:
+        filters_dicts, serializer_dict, compressors_dicts = split_zarr_codecs(zarr_codecs)
+        return resolve_codec_pipeline(
+            filters=filters_dicts,
+            serializer=serializer_dict,
+            compressors=compressors_dicts,
+        )
+
+    return None, None, None
 
 
 def auto_inner_chunk_size(size: int) -> int:
@@ -123,16 +223,25 @@ def _build_zarr_encoding(
     shard_shape: dict[str, int] | None = None,
     chunk_shape: dict[str, int] | None = None,
 ) -> dict[str, dict[str, object]]:
-    codec = resolve_compressor(
-        codec_entry=zarr_codecs[0] if zarr_codecs else None,
-        use_default=compression,
-    )
-    compressors: list[Any] = [codec] if codec is not None else []
+    from firecube.core.zarr.codec_pipeline import split_zarr_codecs
+
+    _, _, compressor_dicts = split_zarr_codecs(zarr_codecs)
+    _, _, compressor_instances = resolve_codec_pipeline(compressors=compressor_dicts)
+
+    compressors: list[Any] | None
+    if not compression and zarr_codecs is None:
+        compressors = []
+    elif compression and zarr_codecs is None:
+        compressors = None
+    else:
+        compressors = list(compressor_instances) if compressor_instances else []
 
     encoding: dict[str, dict[str, object]] = {}
     for var_name, data_array in ds.data_vars.items():
         var_name_str = str(var_name)
-        var_encoding: dict[str, object] = {"compressors": compressors}
+        var_encoding: dict[str, object] = {}
+        if compressors is not None:
+            var_encoding["compressors"] = compressors
         if shard_shape is not None:
             var_dims = tuple(str(dim) for dim in data_array.dims)
             var_encoding["shards"] = tuple(shard_shape.get(dim, ds.sizes[dim]) for dim in var_dims)

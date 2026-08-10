@@ -16,7 +16,7 @@
 
 These tests lock the external API contracts that Phase 1 (issue #25) depends on.
 If a zarr-python upgrade breaks any of these, it signals that
-resolve_compressor() or _build_zarr_encoding() need review.
+resolve_codec_pipeline() or _build_zarr_encoding() need review.
 """
 
 from __future__ import annotations
@@ -43,22 +43,22 @@ def _write_dataset_and_get_array(encoding: dict[str, object]) -> zarr.Array:
 
 
 def test_get_codec_class_returns_class_for_known_codecs() -> None:
-    """resolve_compressor() uses get_codec_class() for registry lookup; these
-    names must work."""
+    """resolve_codec_pipeline() uses get_codec_class() for registry lookup;
+    these names must work."""
     for name in ("blosc", "zstd", "gzip"):
         codec_class = get_codec_class(name)
         assert isinstance(codec_class, type)
 
 
 def test_get_codec_class_raises_for_unknown_codec() -> None:
-    """resolve_compressor() catches this exception and wraps it with config-path
-    context."""
+    """resolve_codec_pipeline() catches this exception and wraps it with
+    config-path context."""
     with pytest.raises(KeyError, match="__no_such_codec_xyz__"):
         get_codec_class("__no_such_codec_xyz__")
 
 
 def test_blosc_zstd_gzip_are_bytes_bytes_codecs() -> None:
-    """resolve_compressor() type-gates output via isinstance(codec,
+    """resolve_codec_pipeline() type-gates output via isinstance(codec,
     BytesBytesCodec)."""
     for name in ("blosc", "zstd", "gzip"):
         codec = get_codec_class(name).from_dict({"name": name, "configuration": {}})
@@ -66,8 +66,8 @@ def test_blosc_zstd_gzip_are_bytes_bytes_codecs() -> None:
 
 
 def test_bytes_codec_is_not_a_bytes_bytes_codec() -> None:
-    """resolve_compressor() must reject 'bytes' codec with TypeError because
-    it's an ArrayBytesCodec (serializer), not a compressor."""
+    """resolve_codec_pipeline() must reject 'bytes' codec at the compressors
+    position with TypeError because it's an ArrayBytesCodec (serializer)."""
     assert not isinstance(BytesCodec(), BytesBytesCodec)
 
 

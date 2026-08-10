@@ -47,7 +47,7 @@ def test_encoding_without_sharding_unchanged():
     ds = make_dataset()
     enc = _build_zarr_encoding(ds, compression=True)
     assert "var1" in enc
-    assert "compressors" in enc["var1"]
+    assert "compressors" not in enc["var1"]
     assert "shards" not in enc["var1"]
     assert "chunks" not in enc["var1"]
 
@@ -63,7 +63,7 @@ def test_encoding_with_sharding_includes_shards_and_chunks():
         chunk_shape=chunk_shape,
     )
     assert "var1" in enc
-    assert "compressors" in enc["var1"]
+    assert "compressors" not in enc["var1"]
     assert "shards" in enc["var1"]
     assert "chunks" in enc["var1"]
     assert enc["var1"]["shards"] == (2, 20, 20)
@@ -164,6 +164,7 @@ def test_xarray_reads_sharded_store_transparently(tmp_path):
 
 def test_config_default_shard_shape_is_none():
     cfg = ZarrTemplateConfig()
+    assert cfg.zarr_compression is True
     assert cfg.zarr_sharding is False
     assert cfg.zarr_shard_shape is None
 

@@ -55,9 +55,11 @@ from firecube.ingestor.api import (
     SchemaDriftError,
     SchemaSizeMismatchError,
     WriteDomain,
+    ZarrTemplateConfig,
     merge_batch_metrics,
 )
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import RegionZarrWriter
+from firecube.ingestor.runtime.zarr.write import derive_effective_codecs_for_spec
 from firecube.ingestor.types import write_mode_policy
 
 log = logging.getLogger(__name__)
@@ -82,14 +84,26 @@ def _normalized_fill_value(fill_value: Any) -> Any:
 
 
 def _compute_schema_hash(schema: Sequence[Any], global_expected: dict[str, int]) -> str:
-    """Return a deterministic short hash for the declared Zarr schema shape contract."""
+    """Return a deterministic short hash for the declared Zarr schema shape contract.
+
+    Audit-only fingerprint: emitted into run metadata for post-hoc diffing across
+    runs. Never consulted for drift enforcement or write gating — codec drift is
+    detected at write time by ``compare_pipelines`` against on-disk codecs.
+
+    Codec fields (``filters``/``serializer``/``compressors``) are folded into the
+    per-array record ONLY when at least one is declared, so schemas that omit
+    them hash identically to pre-codec-parity baselines (backward-compatible,
+    same pattern as group-level ``attrs`` below).
+    """
+    from firecube.core.zarr.codec_pipeline import normalize_codec_dict
+
     records: list[dict[str, Any]] = []
     expected_groups = set(global_expected)
     for group_spec in sorted(schema, key=lambda spec: str(spec.group)):
         if expected_groups and group_spec.group not in expected_groups:
             continue
-        records.extend(
-            {
+        for arr_spec in sorted(group_spec.arrays, key=lambda arr: str(arr.name)):
+            record: dict[str, Any] = {
                 "group": group_spec.group,
                 "array": arr_spec.name,
                 "dtype": str(np.dtype(arr_spec.dtype)),
@@ -106,8 +120,31 @@ def _compute_schema_hash(schema: Sequence[Any], global_expected: dict[str, int])
                 else None,
                 "time_indexed": bool(arr_spec.time_indexed),
             }
-            for arr_spec in sorted(group_spec.arrays, key=lambda arr: str(arr.name))
-        )
+            # Codec fields — only included when at least one is declared.
+            # Omitting when all are None preserves byte-identical hashes for
+            # legacy schemas (same pattern as group-level attrs below).
+            spec_filters = getattr(arr_spec, "filters", None)
+            spec_serializer = getattr(arr_spec, "serializer", None)
+            spec_compressors = getattr(arr_spec, "compressors", None)
+            if (
+                spec_filters is not None
+                or spec_serializer is not None
+                or spec_compressors is not None
+            ):
+                record["filters"] = (
+                    [normalize_codec_dict(f) for f in spec_filters]
+                    if spec_filters is not None
+                    else None
+                )
+                record["serializer"] = (
+                    normalize_codec_dict(spec_serializer) if spec_serializer is not None else None
+                )
+                record["compressors"] = (
+                    [normalize_codec_dict(c) for c in spec_compressors]
+                    if spec_compressors is not None
+                    else None
+                )
+            records.append(record)
         # Fold group-level attrs into the identity ONLY when present, so schemas
         # that declare none hash identically to before (backward-compatible).
         group_attrs = getattr(group_spec, "attrs", None)
@@ -141,8 +178,23 @@ def _setup_global_zarr_schema(
     run_id: str,
     chunk_manager: Any,
     time_coord_name: str = "timestamp",
+    template_config: Any = None,
 ) -> None:
-    """Ensure direct-Zarr arrays are sized for the full parallel run."""
+    """Ensure direct-Zarr arrays are sized for the full parallel run.
+
+    When ``template_config`` is provided, per-array codec declarations are
+    validated against the template compression setting BEFORE any array is
+    created. Invalid combinations raise ``ValueError``, leaving the target
+    store untouched.
+    """
+    # Validate per-array codec declarations against template BEFORE creating any arrays.
+    # Lazy import avoids a circular import between direct_zarr and templates.config.
+    if template_config is not None:
+        from firecube.ingestor.templates.config import validate_zarr_specs_against_template
+
+        all_specs = [arr for group_spec in schema for arr in group_spec.arrays]
+        validate_zarr_specs_against_template(all_specs, template_config)
+
     from firecube.core.uris import storage_uri_from_target
     from firecube.core.zarr.region_writer import group_schema_satisfied
     from firecube.ingestor.runtime.zarr.strategies.indexed_region import (
@@ -275,6 +327,9 @@ def _setup_global_zarr_schema(
                             current = current[part]
                         arr_name = path_parts[-1]
                         array_exists = current is not None and arr_name in current
+                        _eff_filters, _eff_serializer, _eff_compressors = (
+                            derive_effective_codecs_for_spec(arr_spec, template_config)
+                        )
                         arr = writer.ensure_group(
                             group_path,
                             shape=effective_shape,
@@ -284,6 +339,9 @@ def _setup_global_zarr_schema(
                             shards=arr_spec.shards,
                             attrs=arr_spec.attrs,
                             dimension_names=_schema_dimension_names(arr_spec, time_coord_name),
+                            filters=_eff_filters,
+                            serializer=_eff_serializer,
+                            compressors=_eff_compressors,
                         )
                         if not array_exists:
                             newly_created = True
@@ -348,6 +406,19 @@ class ZarrArraySpec:
     attrs: Mapping[str, Any] | None = None
     dimension_names: tuple[str, ...] | None = None
     time_indexed: bool = True
+    filters: tuple[dict, ...] | None = None
+    """Per-array Zarr v3 filter codecs (ArrayArrayCodec). Each entry: ``{"name": ..., "configuration": {...}}``.
+    None means inherit from template default. Requires template ``zarr_compression=True``.
+    """
+    serializer: dict | None = None
+    """Per-array Zarr v3 serializer codec (ArrayBytesCodec). E.g. ``{"name": "bytes"}``.
+    None means inherit from template default. Requires template ``zarr_compression=True``.
+    """
+    compressors: tuple[dict, ...] | None = None
+    """Per-array Zarr v3 compressor codecs (BytesBytesCodec). Each entry: ``{"name": ..., "configuration": {...}}``.
+    Empty tuple ``()`` = explicitly uncompressed for this array ("compress-except-X" pattern).
+    None means inherit from template default. Requires template ``zarr_compression=True``.
+    """
 
     def __post_init__(self) -> None:
         if self.expected_time_count is not None and self.expected_time_count < 0:
@@ -370,6 +441,34 @@ class ZarrArraySpec:
             )
         if self.attrs is not None and not isinstance(self.attrs, Mapping):
             raise ValueError(f"attrs must be a Mapping, got {type(self.attrs).__name__}")
+        if self.filters is not None:
+            if not isinstance(self.filters, tuple):
+                raise ValueError(
+                    f"ZarrArraySpec.filters must be a tuple of dicts, got {type(self.filters).__name__}"
+                )
+            for i, f in enumerate(self.filters):
+                if not isinstance(f, dict):
+                    raise ValueError(
+                        f"ZarrArraySpec.filters[{i}] must be a dict, got {type(f).__name__}"
+                    )
+        if self.serializer is not None:
+            if not isinstance(self.serializer, dict):
+                raise ValueError(
+                    f"ZarrArraySpec.serializer must be a dict, got {type(self.serializer).__name__}"
+                )
+            if "name" not in self.serializer:
+                raise ValueError("ZarrArraySpec.serializer must have a 'name' key")
+        if self.compressors is not None:
+            if not isinstance(self.compressors, tuple):
+                raise ValueError(
+                    "ZarrArraySpec.compressors must be a tuple of dicts (or empty tuple for uncompressed), "
+                    f"got {type(self.compressors).__name__}"
+                )
+            for i, c in enumerate(self.compressors):
+                if not isinstance(c, dict):
+                    raise ValueError(
+                        f"ZarrArraySpec.compressors[{i}] must be a dict, got {type(c).__name__}"
+                    )
 
 
 @dataclass(frozen=True)
@@ -440,6 +539,8 @@ class DirectZarrIngestor(BaseIngestor):
     The template orchestrates store setup, write execution via a region write
     strategy, coverage tracking, and metrics aggregation.
     """
+
+    template_config_class = ZarrTemplateConfig
 
     SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = False
     """Explicit opt-in for within-group parallel ingestion.
@@ -610,6 +711,7 @@ class DirectZarrIngestor(BaseIngestor):
                 run_id=run_id,
                 chunk_manager=self._chunk_manager,
                 time_coord_name=self._resolve_time_dim_name(),
+                template_config=getattr(self, "template_config", None),
             )
             self._parallel_execution_state.schema_verified[group_name] = True
             schema_hash = _compute_schema_hash(
@@ -655,6 +757,18 @@ class DirectZarrIngestor(BaseIngestor):
             run_id = str(ctx.run_id or ctx.option("run_id", "unknown"))
 
             schema = self._cached_zarr_schema(ctx)
+
+            # Validate per-array codec declarations against template before any write.
+            # Lazy import avoids a circular import between direct_zarr and templates.config.
+            template_cfg = getattr(self, "template_config", None)
+            if template_cfg is not None:
+                from firecube.ingestor.templates.config import (
+                    validate_zarr_specs_against_template,
+                )
+
+                all_specs = [arr for group_spec in schema for arr in group_spec.arrays]
+                validate_zarr_specs_against_template(all_specs, template_cfg)
+
             coord_names_by_group = {spec.group: spec.coord_names for spec in schema}
 
             intents = self.build_write_intents(batch, ctx)
@@ -673,6 +787,14 @@ class DirectZarrIngestor(BaseIngestor):
                 time_coord_name=self._resolve_time_dim_name(),
                 storage_config=self._chunk_manager.storage_config,
             )
+            codec_pipelines_by_array = {
+                (group_spec.group, arr_spec.name): derive_effective_codecs_for_spec(
+                    arr_spec,
+                    getattr(self, "template_config", None),
+                )
+                for group_spec in schema
+                for arr_spec in group_spec.arrays
+            }
 
             group_to_intents: dict[str, list[WriteIntent]] = {}
             for intent in intents:
@@ -757,6 +879,7 @@ class DirectZarrIngestor(BaseIngestor):
                 claim_for_slot=claim_for_slot,
                 slot_range=slot_range,
                 slot_group=self.engine_config.slot_group,
+                codec_pipelines_by_array=codec_pipelines_by_array,
             )
 
             final_metrics = {

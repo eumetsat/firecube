@@ -25,6 +25,7 @@ ALLOWED_TEMPLATES_FIRECUBE_PREFIXES = (
     "firecube.core.filesystem",
     "firecube.core.slot_index",  # direct import avoids circular-load via firecube.core.api
     "firecube.core.uris",
+    "firecube.core.zarr.codec_pipeline",
     "firecube.core.zarr.region_writer",
     "firecube.ingestor.api",
     "firecube.ingestor.config",

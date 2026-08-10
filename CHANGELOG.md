@@ -9,10 +9,27 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
-- `zarr_codecs` configuration field: a single-element list of codec entries in
-  Zarr v3 metadata format (`[{"name": "...", "configuration": {...}}]`). Select
-  any codec registered via zarr's extension mechanism by name.
-  Requires `zarr_compression = true`. Closes #25.
+- `zarr_codecs` configuration option (introduced by #25 for `GenericZarrIngestor`)
+  is now also available to `DirectZarrIngestor` plugins via `--option zarr_codecs='[...]'`.
+  Previously the option was declared but unreachable for `DirectZarrIngestor` plugins
+  because the template config class was not wired. Closes #25, #40.
+- Per-array codec overrides on `ZarrArraySpec` (for `DirectZarrIngestor` plugins):
+  optional `filters`, `serializer`, and `compressors` fields accept Zarr v3 codec
+  dicts in the same format as `zarr_codecs`. Per-array values take priority over
+  the template-level default. `compressors = ()` (empty tuple) explicitly disables
+  compression for that array while other arrays use the template default
+  ("compress-except-X" pattern). Requires `zarr_compression = true` at the
+  template level. Closes #40.
+- `zarr_codecs` now accepts full Zarr v3 codec pipelines (filters → serializer →
+  compressors in order). Previously only a single compressor entry was accepted;
+  multi-element lists were rejected with "chains are not supported". Pipeline
+  ordering is validated against zarr's `codecs_from_list`. Closes #40.
+- Codec drift detection: `DirectZarrIngestor` schema verification now checks
+  declared codec configuration against the on-disk array metadata on resume. A
+  mismatch raises `SchemaDriftError` naming the offending field (`filters`,
+  `serializer`, or `compressors`). Applies to all arrays including static
+  (`time_indexed = false`) arrays. Re-ingest from scratch is the only migration
+  path, consistent with existing shape/dtype/chunks drift policy. Closes #40.
 - Versioned documentation with `mike`: each stable release publishes docs under
   its full version (for example `/0.1.5/`) with a `latest` alias as the site
   default; pre-releases publish under their own version only and never become
@@ -26,8 +43,10 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Changed
 
-- `zarr_compression` now accepts only `bool` (was `bool | str`). Passing a
-  string value raises `ValueError` at parse time.
+- `ZarrTemplateConfig.zarr_compression` now defaults to `True` (was `False`), aligning
+  firecube with zarr-python v3's default codec pipeline (`ZstdCodec(level=0)`). Explicit
+  `zarr_compression = false` still disables compression. Because PR #25 never shipped
+  a release, no user-visible behavior changes vs. the last tagged version (v0.1.4.post1).
 
 - Dependency updates: `cryptography` 50.0.0, `aiohttp` 3.14.3,
   `virtualizarr` 2.7.1, `healpix-geo` 0.2.1,
