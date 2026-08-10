@@ -57,7 +57,7 @@ Do not put these in public task pages unless they are required for a user action
 - internal service names such as `SpanRecorder`, `PipelineExecutor`, `ManifestRepository`, or private facades (`RuntimeIngestContext` is exported from `firecube.ingestor.api` and documented in the API reference, so it is not on this list)
 - internal design invariants, implementation rationale, decision history,
   tradeoff matrices, or implementation debates
-- `.sisyphus/`, `plans/`, or other project-management references
+- `plans/` or other project-management references
 
 Use these homes instead:
 
@@ -67,8 +67,7 @@ Use these homes instead:
 - `docs/reference/`: complete factual surfaces such as CLI, config, and API
 - `docs/concepts/`: user-facing context, reasons, implications, tradeoffs, and
   mental models
-- `plans/` and `.sisyphus/`: implementation history, audits, internal design
-  rationale, and evidence
+- `plans/`: implementation history, audits, internal design rationale, and evidence
 
 ## 4. Page Types
 

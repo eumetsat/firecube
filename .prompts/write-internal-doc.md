@@ -18,7 +18,7 @@ contributor-only material.
 - Mark the page as internal.
 - Keep implementation rationale here, not in user task pages.
 - Include verification commands or source evidence when making technical claims.
-- Prefer `plans/` or `.sisyphus/` for historical evidence and project-management notes.
+- Prefer `plans/` for historical evidence and project-management notes.
 
 ## Template
 

@@ -267,15 +267,3 @@ def bt2_allowlisted_filesystem_call(protocol: str = "file") -> Any:
     """
 
     return fsspec.filesystem(protocol)
-
-
-def capture_evidence(name: str, content: str | bytes) -> Path:
-    """Write content to .sisyphus/evidence/<name> and return the path."""
-
-    path = Path(".sisyphus/evidence") / name
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if isinstance(content, bytes):
-        path.write_bytes(content)
-    else:
-        path.write_text(content, encoding="utf-8")
-    return path
