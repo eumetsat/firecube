@@ -373,7 +373,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/api/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   
@@ -1171,6 +1171,34 @@
     
   
     Read Source Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../source-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customize Source Discovery
   
 
     
@@ -3834,14 +3862,96 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Plugin Template API
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
   
 
     
@@ -3862,14 +3972,162 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/advanced-plugin-api/" class="md-nav__link">
+      <a href="../../../reference/hooks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Plugin API
+    Hooks & Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context & Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot-Range Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/core-utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Utilities
   
 
     
@@ -3918,14 +4176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/observability/" class="md-nav__link">
+      <a href="../../../reference/config/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Observability
+    Configuration
   
 
     
@@ -3946,14 +4204,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/config/" class="md-nav__link">
+      <a href="../../../reference/observability/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configuration
+    Observability
   
 
     
@@ -4236,7 +4494,7 @@ indexed axis.</p>
 <p>In serial ingestion, an indexed array may start at length zero. Firecube grows
 it when a later intent requires more capacity. A fixed global extent is required
 only for slot-range parallelism.</p>
-<p>See the <a href="../../../reference/api/#directzarringestor">Plugin Template API</a> for all
+<p>See the <a href="../../../reference/templates/#directzarringestor">Plugin Templates</a> for all
 schema and intent fields.</p>
 <h2 id="parallel-writes">Parallel Writes</h2>
 <p>Serial ingestion needs only <code>zarr_schema</code> and <code>build_write_intents</code>. To let
@@ -4278,7 +4536,7 @@ omitting any of them while parallel support is enabled raises <code>TypeError</c
 the assigned range still fails with <code>WriteIntentRangeError</code>.</p>
 <p>Use the <a href="../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor tutorial</a>
 for a complete implementation and worker run. The
-<a href="../../../reference/api/#optional-slot-range-parallelism">Plugin Template API</a>
+<a href="../../../reference/parallelism/">Slot-Range Parallelism</a>
 contains the exact signatures and slot-index types.</p>
 <h2 id="verify">Verify</h2>
 <p>First check registration and configuration:</p>
@@ -4332,7 +4590,7 @@ follow the product's replay policy.</p>
 <li><strong><a href="../../../concepts/output-formats/zarr/direct-region/">DirectZarrIngestor (Region)</a></strong> — understand schema-driven array placement</li>
 <li><strong><a href="../../../concepts/output-formats/zarr/parallel-writes/">Parallel Zarr Writes</a></strong> — understand the optional slot safety model</li>
 <li><strong><a href="../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor</a></strong> — build a complete slot-capable plugin</li>
-<li><strong><a href="../../../reference/api/">Plugin Template API</a></strong> — look up schema and write-intent fields</li>
+<li><strong><a href="../../../reference/templates/">Plugin Templates</a></strong> — look up schema and write-intent fields</li>
 </ul>
 
 

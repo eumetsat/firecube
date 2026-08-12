@@ -373,7 +373,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/api/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   
@@ -1047,6 +1047,34 @@
     
   
     Read Source Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../source-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customize Source Discovery
   
 
     
@@ -3834,14 +3862,96 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Plugin Template API
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
   
 
     
@@ -3862,14 +3972,162 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/advanced-plugin-api/" class="md-nav__link">
+      <a href="../../../reference/hooks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Plugin API
+    Hooks & Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context & Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot-Range Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/core-utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Utilities
   
 
     
@@ -3918,14 +4176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/observability/" class="md-nav__link">
+      <a href="../../../reference/config/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Observability
+    Configuration
   
 
     
@@ -3946,14 +4204,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/config/" class="md-nav__link">
+      <a href="../../../reference/observability/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configuration
+    Observability
   
 
     
@@ -4181,7 +4439,7 @@ add the Zarr or Parquet templates' write claims around <code>_process_batch</cod
 <code>output_path=</code> constructor argument is not accepted. Use only the declared
 fields of <code>ResultMetrics</code> when the plugin reports batch metrics.</p>
 <p>See the
-<a href="../../../reference/advanced-plugin-api/">Advanced Custom Pipeline API</a> for the
+<a href="../../../reference/hooks/">Hooks &amp; Lifecycle</a> for the
 exact result types and base-class members.</p>
 <h2 id="use-lifecycle-mixins-deliberately">Use Lifecycle Mixins Deliberately</h2>
 <p>A custom <code>_process_batch()</code> owns its resource boundary. A lifecycle mixin such
@@ -4237,7 +4495,7 @@ conflict handling, partial-write cleanup, and recovery before deployment.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../extensions/">Plugin Extensions</a></strong> — add DuckDB or gridding capabilities</li>
-<li><strong><a href="../../../reference/advanced-plugin-api/">Advanced Custom Pipeline API</a></strong> — look up the batch and result contract</li>
+<li><strong><a href="../../../reference/hooks/">Hooks &amp; Lifecycle</a></strong> — look up the batch and result contract</li>
 <li><strong><a href="../contract/">Package and Register a Plugin</a></strong> — verify the distribution entry point</li>
 <li><strong><a href="../install-a-plugin/">Install Your Plugin</a></strong> — verify discovery in the Firecube environment</li>
 </ul>

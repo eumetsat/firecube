@@ -373,7 +373,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/api/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   
@@ -1047,6 +1047,34 @@
     
   
     Read Source Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../source-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customize Source Discovery
   
 
     
@@ -3812,14 +3840,96 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Plugin Template API
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
   
 
     
@@ -3840,14 +3950,162 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/advanced-plugin-api/" class="md-nav__link">
+      <a href="../../../reference/hooks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Plugin API
+    Hooks & Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context & Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot-Range Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/core-utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Utilities
   
 
     
@@ -3896,14 +4154,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/observability/" class="md-nav__link">
+      <a href="../../../reference/config/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Observability
+    Configuration
   
 
     
@@ -3924,14 +4182,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/config/" class="md-nav__link">
+      <a href="../../../reference/observability/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configuration
+    Observability
   
 
     
@@ -4091,7 +4349,7 @@ attribute. Import SDK types from <code>firecube.ingestor.api</code> and helpers 
 <code>firecube.core.api</code>.</p>
 <p>Every concrete plugin class must declare a non-empty
 <code>PRODUCT_NAME: ClassVar[str]</code>. Use <code>PluginConfig</code> only when the product needs
-typed options. See the <a href="../../../reference/api/">Plugin Template API</a> for these
+typed options. See the <a href="../../../reference/config/">Configuration Reference</a> for these
 public types.</p>
 <h2 id="register-the-package-entry-point">Register The Package Entry Point</h2>
 <p>Declare the package entry point in <code>pyproject.toml</code>:</p>

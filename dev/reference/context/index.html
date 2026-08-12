@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/reference/advanced-plugin-api/">
+        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/reference/context/">
       
       
-        <link rel="prev" href="../api/">
+        <link rel="prev" href="../hooks/">
       
       
-        <link rel="next" href="../cli/">
+        <link rel="next" href="../exceptions/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Advanced Plugin API - Firecube</title>
+        <title>Context & Results - Firecube</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#advanced-custom-pipeline-api-reference" class="md-skip">
+        <a href="#context-results" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Advanced Plugin API
+              Context & Results
             
           </span>
         </div>
@@ -373,7 +373,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../api/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -1038,6 +1038,34 @@
     
   
     Read Source Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/source-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customize Source Discovery
   
 
     
@@ -3698,14 +3726,127 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Plugin Template API
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks & Lifecycle
   
 
     
@@ -3742,7 +3883,7 @@
   <span class="md-ellipsis">
     
   
-    Advanced Plugin API
+    Context & Results
   
 
     
@@ -3760,7 +3901,7 @@
   <span class="md-ellipsis">
     
   
-    Advanced Plugin API
+    Context & Results
   
 
     
@@ -3786,10 +3927,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#base-class" class="md-nav__link">
+  <a href="#plugincontext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Base Class
+        PluginContext
       
     </span>
   </a>
@@ -3797,97 +3938,19 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        BaseIngestor
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PluginContext
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="BaseIngestor">
+    <nav class="md-nav" aria-label=" PluginContext">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor._process_batch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        _process_batch
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor.discover_source_files" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        discover_source_files
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor.resolve_output_uri" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        resolve_output_uri
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#runtime-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Runtime Context
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RuntimeIngestContext
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="RuntimeIngestContext">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext-attributes" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
         Attributes
@@ -3899,10 +3962,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.dry_run" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.source" class="md-nav__link">
     <span class="md-ellipsis">
       
-        dry_run
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;source
       
     </span>
   </a>
@@ -3910,10 +3973,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.force_reingest" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.target" class="md-nav__link">
     <span class="md-ellipsis">
       
-        force_reingest
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;target
       
     </span>
   </a>
@@ -3921,10 +3984,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.incremental" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.in_memory" class="md-nav__link">
     <span class="md-ellipsis">
       
-        incremental
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;in_memory
       
     </span>
   </a>
@@ -3932,10 +3995,98 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.temp_root" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.output_format" class="md-nav__link">
     <span class="md-ellipsis">
       
-        temp_root
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;output_format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.temp_root" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;temp_root
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.force_reingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;force_reingest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.incremental" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;incremental
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.dry_run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;dry_run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.telemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;telemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.run_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;run_id
       
     </span>
   </a>
@@ -3948,7 +4099,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext-functions" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
         Methods:
@@ -3960,10 +4111,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.from_ingest_context" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.option" class="md-nav__link">
     <span class="md-ellipsis">
       
-        from_ingest_context
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;option
       
     </span>
   </a>
@@ -3971,10 +4122,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.materialize" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.materialize" class="md-nav__link">
     <span class="md-ellipsis">
       
-        materialize
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;materialize
       
     </span>
   </a>
@@ -3992,10 +4143,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#batch-result" class="md-nav__link">
+  <a href="#storagecontext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Batch Result
+        StorageContext
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.StorageContext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StorageContext
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batch-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Input
       
     </span>
   </a>
@@ -4006,7 +4179,7 @@
   <a href="#firecube.ingestor.api.PipelineBatch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PipelineBatch
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PipelineBatch
       
     </span>
   </a>
@@ -4014,15 +4187,121 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PipelineResult" class="md-nav__link">
+  <a href="#run-state" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PipelineResult
+        Run State
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="PipelineResult">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineRunState" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PipelineRunState
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IngestResult
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" IngestResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult.output_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;output_path
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult.all_outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;all_outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PipelineResult
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" PipelineResult">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -4041,7 +4320,7 @@
   <a href="#firecube.ingestor.api.PipelineResult.output_path" class="md-nav__link">
     <span class="md-ellipsis">
       
-        output_path
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;output_path
       
     </span>
   </a>
@@ -4062,12 +4341,12 @@
   <a href="#firecube.ingestor.api.OutputPaths" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OutputPaths
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;OutputPaths
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="OutputPaths">
+    <nav class="md-nav" aria-label=" OutputPaths">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -4086,18 +4365,7 @@
   <a href="#firecube.ingestor.api.OutputPaths.get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        get
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.OutputPaths.items" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        items
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get
       
     </span>
   </a>
@@ -4108,7 +4376,18 @@
   <a href="#firecube.ingestor.api.OutputPaths.keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        keys
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.OutputPaths.items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;items
       
     </span>
   </a>
@@ -4126,15 +4405,26 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics" class="md-nav__link">
+  <a href="#metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ResultMetrics
+        Metrics
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ResultMetrics">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ResultMetrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" ResultMetrics">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -4150,98 +4440,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.__getitem__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __getitem__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.__iter__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __iter__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.__len__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __len__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#firecube.ingestor.api.ResultMetrics.__post_init__" class="md-nav__link">
     <span class="md-ellipsis">
       
-        __post_init__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.__setitem__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __setitem__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.get" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        get
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.items" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        items
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.setdefault" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        setdefault
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__post_init__
       
     </span>
   </a>
@@ -4252,7 +4454,7 @@
   <a href="#firecube.ingestor.api.ResultMetrics.to_dict" class="md-nav__link">
     <span class="md-ellipsis">
       
-        to_dict
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_dict
       
     </span>
   </a>
@@ -4260,10 +4462,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.update" class="md-nav__link">
+  <a href="#firecube.ingestor.api.ResultMetrics.get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        update
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.__getitem__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__getitem__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.__setitem__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__setitem__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;items
       
     </span>
   </a>
@@ -4274,7 +4509,152 @@
   <a href="#firecube.ingestor.api.ResultMetrics.values" class="md-nav__link">
     <span class="md-ellipsis">
       
-        values
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;update
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.setdefault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;setdefault
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.__iter__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__iter__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.__len__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__len__
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineMetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PipelineMetrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" PipelineMetrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineMetrics-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineMetrics.to_dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.StorageMetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StorageMetrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" StorageMetrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.StorageMetrics-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.StorageMetrics.to_dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_dict
       
     </span>
   </a>
@@ -4318,6 +4698,126 @@
   
   
     <li class="md-nav__item">
+      <a href="../exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot-Range Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core-utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../cli/" class="md-nav__link">
         
   
@@ -4346,14 +4846,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../observability/" class="md-nav__link">
+      <a href="../config/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Observability
+    Configuration
   
 
     
@@ -4374,14 +4874,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../config/" class="md-nav__link">
+      <a href="../observability/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configuration
+    Observability
   
 
     
@@ -4457,10 +4957,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#base-class" class="md-nav__link">
+  <a href="#plugincontext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Base Class
+        PluginContext
       
     </span>
   </a>
@@ -4468,97 +4968,19 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        BaseIngestor
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PluginContext
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="BaseIngestor">
+    <nav class="md-nav" aria-label=" PluginContext">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor._process_batch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        _process_batch
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor.discover_source_files" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        discover_source_files
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.BaseIngestor.resolve_output_uri" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        resolve_output_uri
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#runtime-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Runtime Context
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RuntimeIngestContext
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="RuntimeIngestContext">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext-attributes" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
         Attributes
@@ -4570,10 +4992,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.dry_run" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.source" class="md-nav__link">
     <span class="md-ellipsis">
       
-        dry_run
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;source
       
     </span>
   </a>
@@ -4581,10 +5003,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.force_reingest" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.target" class="md-nav__link">
     <span class="md-ellipsis">
       
-        force_reingest
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;target
       
     </span>
   </a>
@@ -4592,10 +5014,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.incremental" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.in_memory" class="md-nav__link">
     <span class="md-ellipsis">
       
-        incremental
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;in_memory
       
     </span>
   </a>
@@ -4603,10 +5025,98 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.temp_root" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.output_format" class="md-nav__link">
     <span class="md-ellipsis">
       
-        temp_root
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;output_format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.temp_root" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;temp_root
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.force_reingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;force_reingest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.incremental" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;incremental
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.dry_run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;dry_run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.telemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;telemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PluginContext.run_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;run_id
       
     </span>
   </a>
@@ -4619,7 +5129,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext-functions" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
         Methods:
@@ -4631,10 +5141,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.from_ingest_context" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.option" class="md-nav__link">
     <span class="md-ellipsis">
       
-        from_ingest_context
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;option
       
     </span>
   </a>
@@ -4642,10 +5152,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RuntimeIngestContext.materialize" class="md-nav__link">
+  <a href="#firecube.ingestor.api.PluginContext.materialize" class="md-nav__link">
     <span class="md-ellipsis">
       
-        materialize
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;materialize
       
     </span>
   </a>
@@ -4663,10 +5173,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#batch-result" class="md-nav__link">
+  <a href="#storagecontext" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Batch Result
+        StorageContext
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.StorageContext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StorageContext
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#batch-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Input
       
     </span>
   </a>
@@ -4677,7 +5209,7 @@
   <a href="#firecube.ingestor.api.PipelineBatch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PipelineBatch
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PipelineBatch
       
     </span>
   </a>
@@ -4685,15 +5217,121 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PipelineResult" class="md-nav__link">
+  <a href="#run-state" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PipelineResult
+        Run State
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="PipelineResult">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineRunState" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PipelineRunState
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IngestResult
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" IngestResult">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult.output_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;output_path
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IngestResult.all_outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;all_outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PipelineResult
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" PipelineResult">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -4712,7 +5350,7 @@
   <a href="#firecube.ingestor.api.PipelineResult.output_path" class="md-nav__link">
     <span class="md-ellipsis">
       
-        output_path
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;output_path
       
     </span>
   </a>
@@ -4733,12 +5371,12 @@
   <a href="#firecube.ingestor.api.OutputPaths" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OutputPaths
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;OutputPaths
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="OutputPaths">
+    <nav class="md-nav" aria-label=" OutputPaths">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -4757,18 +5395,7 @@
   <a href="#firecube.ingestor.api.OutputPaths.get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        get
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.OutputPaths.items" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        items
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get
       
     </span>
   </a>
@@ -4779,7 +5406,18 @@
   <a href="#firecube.ingestor.api.OutputPaths.keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        keys
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.OutputPaths.items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;items
       
     </span>
   </a>
@@ -4797,15 +5435,26 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics" class="md-nav__link">
+  <a href="#metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ResultMetrics
+        Metrics
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ResultMetrics">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ResultMetrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" ResultMetrics">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -4821,98 +5470,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.__getitem__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __getitem__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.__iter__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __iter__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.__len__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __len__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#firecube.ingestor.api.ResultMetrics.__post_init__" class="md-nav__link">
     <span class="md-ellipsis">
       
-        __post_init__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.__setitem__" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        __setitem__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.get" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        get
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.items" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        items
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.setdefault" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        setdefault
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__post_init__
       
     </span>
   </a>
@@ -4923,7 +5484,7 @@
   <a href="#firecube.ingestor.api.ResultMetrics.to_dict" class="md-nav__link">
     <span class="md-ellipsis">
       
-        to_dict
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_dict
       
     </span>
   </a>
@@ -4931,10 +5492,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ResultMetrics.update" class="md-nav__link">
+  <a href="#firecube.ingestor.api.ResultMetrics.get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        update
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.__getitem__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__getitem__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.__setitem__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__setitem__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;items
       
     </span>
   </a>
@@ -4945,7 +5539,152 @@
   <a href="#firecube.ingestor.api.ResultMetrics.values" class="md-nav__link">
     <span class="md-ellipsis">
       
-        values
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;update
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.setdefault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;setdefault
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.__iter__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__iter__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResultMetrics.__len__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__len__
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineMetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PipelineMetrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" PipelineMetrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineMetrics-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PipelineMetrics.to_dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.StorageMetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StorageMetrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" StorageMetrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.StorageMetrics-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.StorageMetrics.to_dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_dict
       
     </span>
   </a>
@@ -4993,84 +5732,131 @@
   
 
 
-<h1 id="advanced-custom-pipeline-api-reference">Advanced Custom Pipeline API Reference</h1>
-<p>This reference is only for plugins that subclass <code>BaseIngestor</code> directly. Use a
-Zarr or Parquet template unless the plugin must own batch output writes and
-coordination.</p>
-<p>Firecube does not yet expose a public storage-writer protocol for custom output
-code. A new external custom pipeline cannot be implemented using only stable,
-typed public storage APIs. Do not import the concrete storage session from an
-internal module as a workaround.</p>
-<h2 id="base-class">Base Class</h2>
+<h1 id="context-results">Context &amp; Results</h1>
+<p>This reference covers the context object passed to plugin hooks, the storage
+sessions it exposes, batch inputs, and the result and metrics types. Import
+all symbols from <code>firecube.ingestor.api</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.PluginContext" href="#firecube.ingestor.api.PluginContext"><code>PluginContext</code></a></td>
+<td>Read-only per-run context handed to every plugin-facing hook.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.StorageContext
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.StorageContext"><code>StorageContext</code></a></td>
+<td>Storage sessions for an ingestion run, keyed by role.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.PipelineBatch
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.PipelineBatch"><code>PipelineBatch</code></a></td>
+<td>A batch of data ready for processing in the pipeline.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.PipelineRunState
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.PipelineRunState"><code>PipelineRunState</code></a></td>
+<td>Immutable snapshot of a pipeline run passed to lifecycle hooks.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.IngestResult
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.IngestResult"><code>IngestResult</code></a></td>
+<td>Final result of one ingestion run.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.PipelineResult
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.PipelineResult"><code>PipelineResult</code></a></td>
+<td>Result from a pipeline batch processing.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.OutputPaths
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.OutputPaths"><code>OutputPaths</code></a></td>
+<td>Shared outputs shape used by both batch- and run-level results.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.ResultMetrics
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.ResultMetrics"><code>ResultMetrics</code></a></td>
+<td>Shared metrics shape used by both batch- and run-level results.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.PipelineMetrics
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.PipelineMetrics"><code>PipelineMetrics</code></a></td>
+<td>Typed pipeline processing metrics reported in results.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.StorageMetrics
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.StorageMetrics"><code>StorageMetrics</code></a></td>
+<td>Typed summary of storage output produced by a run or batch.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="plugincontext">PluginContext</h2>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="firecube.ingestor.api.BaseIngestor" class="doc doc-heading">
-            <code>firecube.ingestor.api.BaseIngestor</code>
+<h2 id="firecube.ingestor.api.PluginContext" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.PluginContext</span>
 
 
 </h2>
 
 
     <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="firecube.ingestor.runtime.base_hooks.BaseIngestorHookMixin">BaseIngestorHookMixin</span></code>, <code><span title="firecube.ingestor.contracts.interfaces.Ingestor">Ingestor</span></code>, <code><span title="abc.ABC">ABC</span></code></p>
 
 
 
-        <p>Orchestrating base class for all Firecube ingestors.</p>
-<p><code>BaseIngestor</code> is a composition facade.  It wires together the runtime
-services (batching, telemetry, recording, workspace, resume-guard) and
-exposes a hook surface so that plugin authors only need to implement their
-domain logic.</p>
-<p><code>run()</code> delegates to:
-- <code>BatchPlanner</code>      — creates <code>PipelineBatch</code> objects from items.
-- <code>TierConfigurator</code>  — splits flat options into EngineConfig /
-                          TemplateConfig / PluginConfig options tiers
-                          (not storage layers; storage I/O wiring is
-                          handled by StorageBinding / StorageSession).
-- <code>WorkspaceManager</code>  — manages per-run temp directories.
-- <code>ResumeGuard</code>       — enforces resume / overwrite safety.
-- <code>TelemetryService</code>  — wraps the telemetry sink with metric limits.
-- <code>SpanRecorder</code>      — writes manifest entries to ChunkManager.
-- <code>PipelineExecutor</code>  — parallel or sequential batch dispatch.</p>
-<p>Hooks fall into three categories.  The class-variable <code>name</code> is also
-required.</p>
-<p>MUST override (abstract):
-    <code>_process_batch(batch, ctx) -&gt; PipelineResult</code>
-        Core per-batch logic.  Called in worker threads for parallel mode.
-        Templates (<code>GenericZarrIngestor</code>, <code>GenericParquetIngestor</code>)
-        implement this; plain plugins may override it directly.</p>
-<p>SHOULD override (return empty defaults; rarely correct without change):
-    <code>discover_source_files(ctx) -&gt; Iterable</code>
-        Discovers source files to be batched (paths/URIs/objects) using
-        configured include patterns.</p>
-<p>CAN override (optional lifecycle / metadata hooks):
-    <code>filter_item(item, ctx) -&gt; bool</code>
-        Per-item filter applied before batching.  Default: keep all.
-    <code>item_size_bytes(item) -&gt; int | None</code>
-        Used for batch size estimation.  Default: <code>None</code>.
-    <code>get_batch_groups(items, ctx) -&gt; list[str]</code>
-        Derives logical output groups for a batch.  Default: <code>['default']</code>.
-    <code>slice_meta_keys() -&gt; list[str]</code>
-        Option keys that identify a logical "slice" (used for resume
-        conflict detection).  Default: empty list.
-    <code>validation_group(ctx) -&gt; str | None</code>
-        Zarr group path used by the resume-guard's <code>validate_zarr</code> check.
-    <code>on_pipeline_start(ctx, state)</code>
-        Called once before any batch runs.  Useful for shared resource
-        setup (e.g. persistent DuckDB schema).
-    <code>on_batch_success(ctx, state, batch, result)</code>
-        Called on the main thread after each successful batch.
-    <code>on_batch_failure(ctx, state, batch, result)</code>
-        Called on the main thread after each failed batch.
-DO NOT override (framework internals):
-    <code>run(ctx)</code>          — top-level orchestration entry point.
-    <code>_create_batches</code>   — delegates to <code>BatchPlanner</code>.
-    <code>finalize_pipeline</code> — delegates to <code>PipelineExecutor</code>.</p>
+        <p>Read-only per-run context handed to every plugin-facing hook.</p>
+<p>The engine builds one instance per run from the caller's
+:class:<code>IngestContext</code> plus its own runtime state, and passes it to
+plugin hooks such as <code>discover_source_files</code>, <code>get_batch_groups</code>,
+and <code>build_dataset</code>. Plugin authors never construct it themselves.</p>
+<p>All members are read-only. In particular, :attr:<code>options</code> is a detached
+immutable copy taken when the context is created, and attribute access
+outside the documented surface raises <code>AttributeError</code>.</p>
 
 
 
@@ -5088,30 +5874,415 @@ DO NOT override (framework internals):
 
 
 
+<h3 id="firecube.ingestor.api.PluginContext-attributes">Attributes</h3>
+
+<div class="doc doc-object doc-attribute">
 
 
 
-<h3 id="firecube.ingestor.api.BaseIngestor-functions">Methods:</h3>
+<h4 id="firecube.ingestor.api.PluginContext.source" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">source</span>
 
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.BaseIngestor._process_batch" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">_process_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-abstractmethod"><code>abstractmethod</code></small>
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">source</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Process a single batch. Called in worker threads for parallel execution.</p>
-<p>Subclasses must implement this.  Templates (<code>GenericZarrIngestor</code>,
-<code>GenericParquetIngestor</code>) provide a default implementation via their
-own <code>build_dataset</code> abstract hook.</p>
+        <p>Input data location for this run, as provided by the caller.</p>
+<p>A local path or remote URI (e.g. the <code>--input-data</code> CLI option).
+The default <code>discover_source_files</code> implementation scans it for
+input files; plugins with custom discovery may interpret it freely.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.target" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">target</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">target</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Output target URI for this run, or <code>None</code> when not provided.</p>
+<p>Taken from the caller's :attr:<code>IngestContext.target</code>. The engine
+resolves the actual store location from it together with the
+configured write mode, so plugins should treat it as declarative
+rather than writing to it directly.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.in_memory" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">in_memory</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">in_memory</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether intermediate processing should stay in memory.</p>
+<p>Set by the caller (e.g. the <code>--in-memory</code> CLI flag). When true,
+plugins that stage data (such as DuckDB-backed plugins) should use
+in-memory state instead of files under :attr:<code>temp_root</code>.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.output_format" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">output_format</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">output_format</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Requested output format for this run, or <code>None</code> when unset.</p>
+<p>One of <code>"zarr"</code>, <code>"parquet"</code>, or <code>"tensogram"</code> for the
+built-in templates; the CLI defaults it to <code>"zarr"</code>.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.storage" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">storage</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">storage</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Storage sessions bound to this run, keyed by role, or <code>None</code>.</p>
+<p>When output storage is bound, <code>storage.output</code> is the session for
+the run's output target. See :class:<code>StorageContext</code>.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.temp_root" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">temp_root</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">temp_root</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Per-run workspace directory, or <code>None</code> when no workspace exists.</p>
+<p>Created by the engine at run start. Materialized source files and
+other temporary artifacts live under this root; it may be deleted
+when the run finishes, so nothing durable should be stored here.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.force_reingest" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">force_reingest</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">force_reingest</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether this run is allowed to overwrite existing slice data.</p>
+<p>Engine-owned flag (e.g. <code>--option force_reingest=true</code>); read-only
+for plugins.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.incremental" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">incremental</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">incremental</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether plugin logic should prefer incremental update behavior.</p>
+<p>Engine-owned flag; read-only for plugins. When true, plugins that
+support it should update existing output instead of reprocessing
+from scratch.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.dry_run" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">dry_run</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">dry_run</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether side-effecting writes should be suppressed when supported.</p>
+<p>Engine-owned flag; read-only for plugins. Plugins that honor it
+should skip persistent writes while still exercising the rest of
+their processing.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.telemetry" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">telemetry</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">telemetry</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Telemetry sink for this run, or <code>None</code> when not configured.</p>
+<p>Plugins should record metrics and tracing spans only through this
+object (<code>emit()</code>, <code>span()</code>) instead of importing a telemetry
+backend directly.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.options" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">options</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">options</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Plugin options for this run as an immutable mapping.</p>
+<p>A detached copy of the caller's options (including <code>--option</code>
+CLI overrides) wrapped in :class:<code>types.MappingProxyType</code> when the
+context is created: it cannot be mutated, and later changes to
+engine state are not reflected in it.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.PluginContext.run_id" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">run_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">run_id</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Stable run identifier assigned by the engine for this execution.</p>
+
+    </div>
+
+</div>
+
+
+<h3 id="firecube.ingestor.api.PluginContext-functions">Methods:</h3>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.PluginContext.option" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">option</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">option</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return a single option value with a fallback.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>key</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Option name as passed by the caller (e.g. via <code>--option</code>).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>default</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Value returned when the option is not set.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The value from :attr:<code>options</code>, or <code>default</code> when missing.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -5121,33 +6292,106 @@ own <code>build_dataset</code> abstract hook.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.ingestor.api.BaseIngestor.discover_source_files" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">discover_source_files</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span></code>
+<h4 id="firecube.ingestor.api.PluginContext.materialize" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">materialize</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">materialize</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Discover source files matching include patterns.</p>
+        <p>Ensure a source file is available locally and return its path.</p>
+<p>Remote sources (e.g. S3 URIs) are downloaded into the per-run cache
+under :attr:<code>temp_root</code>; already-local paths are returned directly.</p>
 
 
-    </div>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A local path, URI string, or source-file object.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-</div>
 
-<div class="doc doc-object doc-function">
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Local filesystem path to the materialized file.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<h4 id="firecube.ingestor.api.BaseIngestor.resolve_output_uri" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">resolve_output_uri</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">write_mode</span><span class="o">=</span><span class="s1">&#39;staged&#39;</span><span class="p">)</span></code>
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError">RuntimeError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If no materializer is configured for the run and
+the source cannot be resolved to an existing local file.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-</h4>
 
-
-    <div class="doc doc-contents ">
-
-        <p>Resolve the canonical output URI (Dataset Directory) for this run.</p>
+<p><span class="doc-section-title">Examples:</span></p>
+    <p>Resolve discovered items before handing them to a reader that
+only accepts local paths:</p>
+<div class="highlight"><pre><span></span><code>def build_dataset(self, group, items, ctx):
+    paths = [ctx.materialize(item) for item in items]
+    return xr.open_mfdataset(paths, combine=&quot;by_coords&quot;)
+</code></pre></div>
 
 
     </div>
@@ -5160,20 +6404,15 @@ own <code>build_dataset</code> abstract hook.</p>
 
     </div>
 
-</div><p>Custom plugin hooks receive <code>PluginContext</code>, the read-only plugin-facing
-context documented in the <a href="../api/#plugin-context">template API reference</a>.</p>
-<h2 id="runtime-context">Runtime Context</h2>
-<p><code>RuntimeIngestContext</code> is the engine-owned context used to run the pipeline. It
-is not the context type passed to plugin hooks and must not be reused across
-runs.</p>
+</div><h2 id="storagecontext">StorageContext</h2>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="firecube.ingestor.api.RuntimeIngestContext" class="doc doc-heading">
-            <code>firecube.ingestor.api.RuntimeIngestContext</code>
+<h2 id="firecube.ingestor.api.StorageContext" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.StorageContext</span>
 
 
   <span class="doc doc-labels">
@@ -5184,13 +6423,45 @@ runs.</p>
 
 
     <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="firecube.ingestor.types.context.IngestContext">IngestContext</span></code></p>
 
 
 
-        <p>Engine-owned runtime context copied from <code>IngestContext</code>.</p>
-<p>This carries internal execution-only state and must never be reused across runs.</p>
+        <p>Storage sessions for an ingestion run, keyed by role.</p>
+<p>Each field binds one storage role to a session that the engine creates
+from the resolved target and selected storage driver. Plugins reach it
+through :attr:<code>PluginContext.storage</code> and should treat the bound
+sessions as engine-owned handles: use them to inspect the product
+identity and perform storage operations, but do not replace or close
+them.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.StorageContext.output">output</span></code></td>
+            <td>
+                  <code><span title="firecube.core.storage.session.StorageSession">StorageSession</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Session bound to the run's output target, or <code>None</code> when
+the engine has not bound output storage. The session exposes the
+product identity (<code>output.product</code>) and filesystem-level
+operations (<code>exists</code>, <code>open</code>, ...) routed through the
+selected storage driver.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -5208,144 +6479,10 @@ runs.</p>
 
 
 
-<h3 id="firecube.ingestor.api.RuntimeIngestContext-attributes">Attributes</h3>
 
-<div class="doc doc-object doc-attribute">
 
 
 
-<h4 id="firecube.ingestor.api.RuntimeIngestContext.dry_run" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dry_run</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-      <small class="doc doc-label doc-label-writable"><code>writable</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Whether side-effecting writes should be suppressed when supported.</p>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.RuntimeIngestContext.force_reingest" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">force_reingest</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-      <small class="doc doc-label doc-label-writable"><code>writable</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Whether this run is allowed to overwrite existing slice data.</p>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.RuntimeIngestContext.incremental" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">incremental</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-      <small class="doc doc-label doc-label-writable"><code>writable</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Whether plugin logic should prefer incremental update behavior.</p>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.RuntimeIngestContext.temp_root" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">temp_root</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-      <small class="doc doc-label doc-label-writable"><code>writable</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Per-run workspace root used for materialization and temporary files.</p>
-
-    </div>
-
-</div>
-
-
-<h3 id="firecube.ingestor.api.RuntimeIngestContext-functions">Methods:</h3>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.RuntimeIngestContext.from_ingest_context" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">from_ingest_context</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">temp_root</span><span class="p">,</span> <span class="n">materializer</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Build an isolated runtime copy without mutating the caller context.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.RuntimeIngestContext.materialize" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">materialize</span><span class="p">(</span><span class="n">source</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Ensure the source file is available locally and return its path.</p>
-<p>If the file is remote (e.g. S3), it will be downloaded to the per-run cache.
-If it's already local, the path is returned directly.</p>
-
-
-    </div>
-
-</div>
 
 
 
@@ -5353,7 +6490,9 @@ If it's already local, the path is returned directly.</p>
 
     </div>
 
-</div><h2 id="batch-result">Batch Result</h2>
+</div><h2 id="batch-input">Batch Input</h2>
+<p><code>GenericParquetIngestor</code> and <code>DirectZarrIngestor</code> receive a <code>PipelineBatch</code>.
+<code>GenericZarrIngestor</code> receives the batch's source items directly.</p>
 
 
 <div class="doc doc-object doc-class">
@@ -5361,7 +6500,7 @@ If it's already local, the path is returned directly.</p>
 
 
 <h2 id="firecube.ingestor.api.PipelineBatch" class="doc doc-heading">
-            <code>firecube.ingestor.api.PipelineBatch</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.PipelineBatch</span>
 
 
   <span class="doc doc-labels">
@@ -5404,6 +6543,162 @@ If it's already local, the path is returned directly.</p>
 
     </div>
 
+</div><h2 id="run-state">Run State</h2>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="firecube.ingestor.api.PipelineRunState" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.PipelineRunState</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Immutable snapshot of a pipeline run passed to lifecycle hooks.</p>
+<p>Captures the planned batches, worker/batch-size configuration, timing
+counters, and (once available) per-batch results and aggregated totals.
+Instances are frozen: hooks such as <code>on_pipeline_start</code> observe the
+state but cannot mutate it.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h2 id="results">Results</h2>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="firecube.ingestor.api.IngestResult" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.IngestResult</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Final result of one ingestion run.</p>
+<p>Aggregates the run's output locations (<code>outputs</code>) and merged metrics
+(<code>metrics</code>) after all batches have completed. When output storage is
+bound, the engine additionally records the storage completion outcome
+(<code>storage_result</code>), the effective write mode (<code>write_mode_applied</code>),
+and a manifest summary (<code>manifest</code>) before returning the result to
+the caller.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+<h3 id="firecube.ingestor.api.IngestResult-attributes">Attributes</h3>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.IngestResult.output_path" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">output_path</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">output_path</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Compatibility view of the primary output path.</p>
+
+    </div>
+
+</div>
+
+
+<h3 id="firecube.ingestor.api.IngestResult-functions">Methods:</h3>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.IngestResult.all_outputs" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">all_outputs</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">all_outputs</span><span class="p">()</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the typed outputs container for compatibility callers.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
 </div>
 
 <div class="doc doc-object doc-class">
@@ -5411,7 +6706,7 @@ If it's already local, the path is returned directly.</p>
 
 
 <h2 id="firecube.ingestor.api.PipelineResult" class="doc doc-heading">
-            <code>firecube.ingestor.api.PipelineResult</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.PipelineResult</span>
 
 
   <span class="doc doc-labels">
@@ -5450,14 +6745,16 @@ If it's already local, the path is returned directly.</p>
 
 
 <h4 id="firecube.ingestor.api.PipelineResult.output_path" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">output_path</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">output_path</span>
+
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">output_path</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
@@ -5483,7 +6780,7 @@ If it's already local, the path is returned directly.</p>
 
 
 <h2 id="firecube.ingestor.api.OutputPaths" class="doc doc-heading">
-            <code>firecube.ingestor.api.OutputPaths</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.OutputPaths</span>
 
 
   <span class="doc doc-labels">
@@ -5524,10 +6821,12 @@ If it's already local, the path is returned directly.</p>
 
 
 <h4 id="firecube.ingestor.api.OutputPaths.get" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
@@ -5541,15 +6840,17 @@ If it's already local, the path is returned directly.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.ingestor.api.OutputPaths.items" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">items</span><span class="p">()</span></code>
+<h4 id="firecube.ingestor.api.OutputPaths.keys" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">keys</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">keys</span><span class="p">()</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Return compatibility key/value pairs.</p>
+        <p>Return the populated output keys in insertion order.</p>
 
 
     </div>
@@ -5559,15 +6860,17 @@ If it's already local, the path is returned directly.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.ingestor.api.OutputPaths.keys" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">keys</span><span class="p">()</span></code>
+<h4 id="firecube.ingestor.api.OutputPaths.items" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">items</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">items</span><span class="p">()</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Return the populated output keys in insertion order.</p>
+        <p>Return compatibility key/value pairs.</p>
 
 
     </div>
@@ -5580,14 +6883,15 @@ If it's already local, the path is returned directly.</p>
 
     </div>
 
-</div>
+</div><h2 id="metrics">Metrics</h2>
+
 
 <div class="doc doc-object doc-class">
 
 
 
 <h2 id="firecube.ingestor.api.ResultMetrics" class="doc doc-heading">
-            <code>firecube.ingestor.api.ResultMetrics</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.ResultMetrics</span>
 
 
   <span class="doc doc-labels">
@@ -5627,11 +6931,73 @@ If it's already local, the path is returned directly.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.ingestor.api.ResultMetrics.__getitem__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></code>
+<h4 id="firecube.ingestor.api.ResultMetrics.__post_init__" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">__post_init__</span>
+
 
 </h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">__post_init__</span><span class="p">()</span>
+</code></pre></div>
 
+    <div class="doc doc-contents ">
+
+        <p>Seed compatibility mapping state from typed fields when needed.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.to_dict" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">to_dict</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">to_dict</span><span class="p">()</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Render typed fields as a public dict (no private <code>_compat</code> leak).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.get" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return a compatibility-mapped metric value by key.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.__getitem__" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">__getitem__</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">__getitem__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
@@ -5645,11 +7011,133 @@ If it's already local, the path is returned directly.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.ingestor.api.ResultMetrics.__iter__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__iter__</span><span class="p">()</span></code>
+<h4 id="firecube.ingestor.api.ResultMetrics.__setitem__" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">__setitem__</span>
+
 
 </h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">__setitem__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</code></pre></div>
 
+    <div class="doc doc-contents ">
+
+        <p>Update a compatibility metric entry and keep typed fields in sync.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.items" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">items</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">items</span><span class="p">()</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return compatibility key/value pairs.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.values" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">values</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">values</span><span class="p">()</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return compatibility values.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.update" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">update</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">update</span><span class="p">(</span><span class="n">other</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Update compatibility metrics from another mapping or keyword args.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.setdefault" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">setdefault</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Set a compatibility metric only when missing.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.keys" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">keys</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">keys</span><span class="p">()</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the current compatibility keys in insertion order.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResultMetrics.__iter__" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">__iter__</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">__iter__</span><span class="p">()</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
@@ -5664,10 +7152,12 @@ If it's already local, the path is returned directly.</p>
 
 
 <h4 id="firecube.ingestor.api.ResultMetrics.__len__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__len__</span><span class="p">()</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">__len__</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">__len__</span><span class="p">()</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
@@ -5678,162 +7168,279 @@ If it's already local, the path is returned directly.</p>
 
 </div>
 
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="firecube.ingestor.api.PipelineMetrics" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.PipelineMetrics</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Typed pipeline processing metrics reported in results.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.PipelineMetrics.duration_pipeline_s">duration_pipeline_s</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Time spent in batch processing, in seconds.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.PipelineMetrics.rows_processed">rows_processed</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Rows read or processed, when known.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.PipelineMetrics.rows_ingested">rows_ingested</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Rows actually written to the output, when known.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.PipelineMetrics.coverage">coverage</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<span title="firecube.core.controlplane.SpanCoverage">SpanCoverage</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Span coverage entries describing which groups, arrays,
+and time ranges the run wrote.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.PipelineMetrics.duration_upload_s">duration_upload_s</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Time spent uploading staged output, in seconds.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.PipelineMetrics.duration_total_s">duration_total_s</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Total wall-clock duration, in seconds.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+<h3 id="firecube.ingestor.api.PipelineMetrics-functions">Methods:</h3>
+
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.ingestor.api.ResultMetrics.__post_init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">__post_init__</span><span class="p">()</span></code>
+<h4 id="firecube.ingestor.api.PipelineMetrics.to_dict" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">to_dict</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">to_dict</span><span class="p">()</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Seed compatibility mapping state from typed fields when needed.</p>
+        <p>Render pipeline metrics as a compatibility dictionary.</p>
 
 
     </div>
 
 </div>
 
-<div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.ingestor.api.ResultMetrics.__setitem__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__setitem__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Update a compatibility metric entry and keep typed fields in sync.</p>
-
+  </div>
 
     </div>
 
 </div>
 
-<div class="doc doc-object doc-function">
+<div class="doc doc-object doc-class">
 
 
-<h4 id="firecube.ingestor.api.ResultMetrics.get" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Return a compatibility-mapped metric value by key.</p>
+<h2 id="firecube.ingestor.api.StorageMetrics" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.StorageMetrics</span>
 
 
-    </div>
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
 
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.ResultMetrics.items" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">items</span><span class="p">()</span></code>
-
-</h4>
+</h2>
 
 
-    <div class="doc doc-contents ">
-
-        <p>Return compatibility key/value pairs.</p>
+    <div class="doc doc-contents first">
 
 
-    </div>
 
-</div>
-
-<div class="doc doc-object doc-function">
+        <p>Typed summary of storage output produced by a run or batch.</p>
 
 
-<h4 id="firecube.ingestor.api.ResultMetrics.keys" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">keys</span><span class="p">()</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Return the current compatibility keys in insertion order.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.ResultMetrics.setdefault" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Set a compatibility metric only when missing.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.ResultMetrics.to_dict" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">to_dict</span><span class="p">()</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Render typed fields as a public dict (no private <code>_compat</code> leak).</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.ResultMetrics.update" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">other</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
-
-</h4>
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.StorageMetrics.path">path</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Output path or URI the data was written to, when known.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.StorageMetrics.bytes">bytes</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Total bytes written.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.StorageMetrics.files">files</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of files written.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.StorageMetrics.duration_s">duration_s</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Time spent writing to storage, in seconds.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-    <div class="doc doc-contents ">
-
-        <p>Update compatibility metrics from another mapping or keyword args.</p>
 
 
-    </div>
 
-</div>
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+<h3 id="firecube.ingestor.api.StorageMetrics-functions">Methods:</h3>
 
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.ingestor.api.ResultMetrics.values" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">values</span><span class="p">()</span></code>
+<h4 id="firecube.ingestor.api.StorageMetrics.to_dict" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">to_dict</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">to_dict</span><span class="p">()</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Return compatibility values.</p>
+        <p>Render storage metrics as a compatibility dictionary.</p>
 
 
     </div>
@@ -5848,9 +7455,9 @@ If it's already local, the path is returned directly.</p>
 
 </div><h2 id="see-also">See Also</h2>
 <ul>
-<li><a href="../../guides/plugins/extensions/">Plugin extensions</a></li>
-<li><a href="../../guides/plugins/base-ingestor/">Custom pipeline plugins</a></li>
-<li><a href="../../guides/plugins/contract/">Package and Register a Plugin</a></li>
+<li><a href="../../guides/plugins/storage-access/">Read Plugin Source Data</a></li>
+<li><a href="../templates/">Templates</a></li>
+<li><a href="../hooks/">Hooks &amp; Lifecycle</a></li>
 </ul>
 
 

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/reference/api/">
+        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/reference/parallelism/">
       
       
-        <link rel="prev" href="../../contributing/firecube-contributors/">
+        <link rel="prev" href="../exceptions/">
       
       
-        <link rel="next" href="../advanced-plugin-api/">
+        <link rel="next" href="../extensions/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Plugin Template API - Firecube</title>
+        <title>Slot-Range Parallelism - Firecube</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#plugin-template-api-reference" class="md-skip">
+        <a href="#slot-range-parallelism" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Plugin Template API
+              Slot-Range Parallelism
             
           </span>
         </div>
@@ -373,7 +373,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -1038,6 +1038,34 @@
     
   
     Read Source Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/source-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customize Source Discovery
   
 
     
@@ -3695,6 +3723,203 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks & Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context & Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -3714,7 +3939,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin Template API
+    Slot-Range Parallelism
   
 
     
@@ -3732,7 +3957,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin Template API
+    Slot-Range Parallelism
   
 
     
@@ -3758,682 +3983,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#shared-template-surface" class="md-nav__link">
+  <a href="#required-methods" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Shared Template Surface
+        Required Methods
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Shared Template Surface">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#registration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Registration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.register_ingestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        register_ingestor
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="register_ingestor">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#plugin-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Plugin Context
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PluginContext
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PluginContext">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Attributes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Attributes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.source" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        source
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.target" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        target
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.temp_root" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        temp_root
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.run_id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run_id
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        options
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.telemetry" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        telemetry
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.option" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        option
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.materialize" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        materialize
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#plugin-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Plugin Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginConfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PluginConfig
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PluginConfig">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginConfig-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginConfig.from_options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        from_options
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#batch-input" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Batch Input
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PipelineBatch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PipelineBatch
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PipelineBatch">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#source-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Source Discovery
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#genericzarringestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GenericZarrIngestor
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericZarrIngestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GenericZarrIngestor
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="GenericZarrIngestor">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericZarrIngestor-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericZarrIngestor.build_dataset" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        build_dataset
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrTemplateConfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ZarrTemplateConfig
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#genericparquetingestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GenericParquetIngestor
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GenericParquetIngestor
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="GenericParquetIngestor">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor.build_dataset" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        build_dataset
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor.get_batch_groups" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        get_batch_groups
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor.output_relpath" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        output_relpath
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor.write_parquet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        write_parquet
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parquet-template-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parquet Template Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ParquetTemplateConfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ParquetTemplateConfig
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#directzarringestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DirectZarrIngestor
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.DirectZarrIngestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DirectZarrIngestor
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="DirectZarrIngestor">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.DirectZarrIngestor-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.DirectZarrIngestor.zarr_schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        zarr_schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.DirectZarrIngestor.build_write_intents" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        build_write_intents
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#schema-and-write-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Schema And Write Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrGroupSpec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ZarrGroupSpec
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ZarrArraySpec
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ZarrArraySpec">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Attributes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Attributes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec.compressors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        compressors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec.filters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        filters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec.serializer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        serializer
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.WriteIntent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        WriteIntent
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="WriteIntent">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.WriteIntent-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Attributes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Attributes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.WriteIntent.timestamp_val" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        timestamp_val
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#optional-slot-range-parallelism" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Optional Slot-Range Parallelism
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -4441,7 +3997,7 @@
   <a href="#firecube.ingestor.api.DirectZarrIngestor.timestamp_to_ts_index" class="md-nav__link">
     <span class="md-ellipsis">
       
-        timestamp_to_ts_index
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;timestamp_to_ts_index
       
     </span>
   </a>
@@ -4452,7 +4008,7 @@
   <a href="#firecube.ingestor.api.DirectZarrIngestor.global_expected_time_count" class="md-nav__link">
     <span class="md-ellipsis">
       
-        global_expected_time_count
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;global_expected_time_count
       
     </span>
   </a>
@@ -4463,7 +4019,18 @@
   <a href="#firecube.ingestor.api.DirectZarrIngestor.slot_index_model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        slot_index_model
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;slot_index_model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional Filtering
       
     </span>
   </a>
@@ -4474,7 +4041,117 @@
   <a href="#firecube.ingestor.api.DirectZarrIngestor.filter_items_to_slot_range" class="md-nav__link">
     <span class="md-ellipsis">
       
-        filter_items_to_slot_range
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;filter_items_to_slot_range
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#range-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Range Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.SlotRange" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;SlotRange
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PlannedRange" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PlannedRange
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#range-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Range Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.validate_slot_range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;validate_slot_range
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.chunk_align_ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;chunk_align_ranges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.compute_covered_ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compute_covered_ranges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.validate_chunk_alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;validate_chunk_alignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.warn_if_misaligned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;warn_if_misaligned
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slot-index-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slot-Index Model
       
     </span>
   </a>
@@ -4485,12 +4162,12 @@
   <a href="#firecube.core.api.SlotIndexModel" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SlotIndexModel
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SlotIndexModel
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="SlotIndexModel">
+    <nav class="md-nav" aria-label=" SlotIndexModel">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -4509,7 +4186,7 @@
   <a href="#firecube.core.api.SlotIndexModel.identity_hash" class="md-nav__link">
     <span class="md-ellipsis">
       
-        identity_hash
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;identity_hash
       
     </span>
   </a>
@@ -4537,7 +4214,7 @@
   <a href="#firecube.core.api.SlotIndexModel.canonical_bytes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        canonical_bytes
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;canonical_bytes
       
     </span>
   </a>
@@ -4558,7 +4235,7 @@
   <a href="#firecube.core.api.SlotAxis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SlotAxis
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SlotAxis
       
     </span>
   </a>
@@ -4592,14 +4269,50 @@
   
   
     <li class="md-nav__item">
-      <a href="../advanced-plugin-api/" class="md-nav__link">
+      <a href="../extensions/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Plugin API
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core-utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Utilities
   
 
     
@@ -4648,14 +4361,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../observability/" class="md-nav__link">
+      <a href="../config/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Observability
+    Configuration
   
 
     
@@ -4676,14 +4389,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../config/" class="md-nav__link">
+      <a href="../observability/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configuration
+    Observability
   
 
     
@@ -4759,682 +4472,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#shared-template-surface" class="md-nav__link">
+  <a href="#required-methods" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Shared Template Surface
+        Required Methods
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Shared Template Surface">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#registration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Registration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.register_ingestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        register_ingestor
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="register_ingestor">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#plugin-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Plugin Context
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PluginContext
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PluginContext">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Attributes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Attributes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.source" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        source
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.target" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        target
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.temp_root" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        temp_root
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.run_id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run_id
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        options
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.telemetry" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        telemetry
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.option" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        option
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginContext.materialize" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        materialize
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#plugin-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Plugin Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginConfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PluginConfig
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PluginConfig">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginConfig-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PluginConfig.from_options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        from_options
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#batch-input" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Batch Input
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.PipelineBatch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PipelineBatch
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PipelineBatch">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#source-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Source Discovery
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#genericzarringestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GenericZarrIngestor
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericZarrIngestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GenericZarrIngestor
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="GenericZarrIngestor">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericZarrIngestor-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericZarrIngestor.build_dataset" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        build_dataset
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrTemplateConfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ZarrTemplateConfig
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#genericparquetingestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GenericParquetIngestor
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GenericParquetIngestor
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="GenericParquetIngestor">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor.build_dataset" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        build_dataset
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor.get_batch_groups" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        get_batch_groups
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor.output_relpath" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        output_relpath
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.GenericParquetIngestor.write_parquet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        write_parquet
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parquet-template-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parquet Template Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ParquetTemplateConfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ParquetTemplateConfig
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#directzarringestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DirectZarrIngestor
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.DirectZarrIngestor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DirectZarrIngestor
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="DirectZarrIngestor">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.DirectZarrIngestor-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Methods:
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Methods:">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.DirectZarrIngestor.zarr_schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        zarr_schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.DirectZarrIngestor.build_write_intents" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        build_write_intents
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#schema-and-write-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Schema And Write Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrGroupSpec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ZarrGroupSpec
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ZarrArraySpec
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ZarrArraySpec">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Attributes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Attributes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec.compressors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        compressors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec.filters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        filters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.ZarrArraySpec.serializer" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        serializer
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.WriteIntent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        WriteIntent
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="WriteIntent">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.WriteIntent-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Attributes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Attributes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.WriteIntent.timestamp_val" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        timestamp_val
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#optional-slot-range-parallelism" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Optional Slot-Range Parallelism
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -5442,7 +4486,7 @@
   <a href="#firecube.ingestor.api.DirectZarrIngestor.timestamp_to_ts_index" class="md-nav__link">
     <span class="md-ellipsis">
       
-        timestamp_to_ts_index
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;timestamp_to_ts_index
       
     </span>
   </a>
@@ -5453,7 +4497,7 @@
   <a href="#firecube.ingestor.api.DirectZarrIngestor.global_expected_time_count" class="md-nav__link">
     <span class="md-ellipsis">
       
-        global_expected_time_count
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;global_expected_time_count
       
     </span>
   </a>
@@ -5464,7 +4508,18 @@
   <a href="#firecube.ingestor.api.DirectZarrIngestor.slot_index_model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        slot_index_model
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;slot_index_model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional Filtering
       
     </span>
   </a>
@@ -5475,7 +4530,117 @@
   <a href="#firecube.ingestor.api.DirectZarrIngestor.filter_items_to_slot_range" class="md-nav__link">
     <span class="md-ellipsis">
       
-        filter_items_to_slot_range
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;filter_items_to_slot_range
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#range-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Range Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.SlotRange" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;SlotRange
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.PlannedRange" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PlannedRange
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#range-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Range Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.validate_slot_range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;validate_slot_range
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.chunk_align_ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;chunk_align_ranges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.compute_covered_ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compute_covered_ranges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.validate_chunk_alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;validate_chunk_alignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.warn_if_misaligned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;warn_if_misaligned
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slot-index-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slot-Index Model
       
     </span>
   </a>
@@ -5486,12 +4651,12 @@
   <a href="#firecube.core.api.SlotIndexModel" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SlotIndexModel
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SlotIndexModel
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="SlotIndexModel">
+    <nav class="md-nav" aria-label=" SlotIndexModel">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -5510,7 +4675,7 @@
   <a href="#firecube.core.api.SlotIndexModel.identity_hash" class="md-nav__link">
     <span class="md-ellipsis">
       
-        identity_hash
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;identity_hash
       
     </span>
   </a>
@@ -5538,7 +4703,7 @@
   <a href="#firecube.core.api.SlotIndexModel.canonical_bytes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        canonical_bytes
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;canonical_bytes
       
     </span>
   </a>
@@ -5559,7 +4724,7 @@
   <a href="#firecube.core.api.SlotAxis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SlotAxis
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SlotAxis
       
     </span>
   </a>
@@ -5597,1352 +4762,93 @@
   
 
 
-<h1 id="plugin-template-api-reference">Plugin Template API Reference</h1>
-<p>This reference covers the public authoring members of
-<code>GenericZarrIngestor</code>, <code>GenericParquetIngestor</code>, and <code>DirectZarrIngestor</code>.
-Import the symbols from <code>firecube.ingestor.api</code> unless a section names
-<code>firecube.core.api</code> explicitly.</p>
-<p>Plugins that own the complete batch pipeline use a separate, advanced
-contract. See the
-<a href="../advanced-plugin-api/">Advanced Custom Pipeline API</a> for that surface.</p>
-<h2 id="shared-template-surface">Shared Template Surface</h2>
-<h3 id="registration">Registration</h3>
-
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="firecube.ingestor.api.register_ingestor" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">firecube</span><span class="o">.</span><span class="n">ingestor</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">register_ingestor</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></code>
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-        <p>Decorator to register a plugin under a given name.</p>
-
-
-    </div>
-
-</div><p>Every concrete plugin class must also declare a non-empty
-<code>PRODUCT_NAME: ClassVar[str]</code>. Firecube checks this when the class is defined.</p>
-<h3 id="plugin-context">Plugin Context</h3>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.PluginContext" class="doc doc-heading">
-            <code>firecube.ingestor.api.PluginContext</code>
-
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Read-only proxy for IngestContext for all plugin-facing hooks.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-<h3 id="firecube.ingestor.api.PluginContext-attributes">Attributes</h3>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.PluginContext.source" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">source</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.PluginContext.target" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">target</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.PluginContext.temp_root" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">temp_root</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.PluginContext.run_id" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">run_id</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Stable run identifier assigned by the engine for this execution.</p>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.PluginContext.options" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">options</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.PluginContext.telemetry" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">telemetry</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-    </div>
-
-</div>
-
-
-<h3 id="firecube.ingestor.api.PluginContext-functions">Methods:</h3>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.PluginContext.option" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">option</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.PluginContext.materialize" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">materialize</span><span class="p">(</span><span class="n">source</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-
-    </div>
-
-</div>
-
-
-
-  </div>
-
-    </div>
-
-</div><h3 id="plugin-configuration">Plugin Configuration</h3>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.PluginConfig" class="doc doc-heading">
-            <code>firecube.ingestor.api.PluginConfig</code>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Base configuration for all Firecube ingestors.</p>
-<p>Subclasses should define fields as dataclass fields.
-Use <code>from_options</code> to parse and validate a raw dictionary.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.PluginConfig._allow_unknown">_allow_unknown</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Class-level escape hatch for plugins that intentionally
-accept unknown option keys. Keep this <code>False</code> for strict validation.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-<h3 id="firecube.ingestor.api.PluginConfig-functions">Methods:</h3>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.PluginConfig.from_options" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">from_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Create a config instance from a dictionary, with strict validation.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>options</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Dictionary of options (e.g. from CLI or config file).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="firecube.ingestor.types.config.T">T</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>An instance of the config class.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ValueError">ValueError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If unknown keys are present (and _allow_unknown is False)
-        or if type conversion fails.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    </div>
-
-</div>
-
-
-
-  </div>
-
-    </div>
-
-</div><h3 id="batch-input">Batch Input</h3>
-<p><code>GenericParquetIngestor</code> and <code>DirectZarrIngestor</code> receive a <code>PipelineBatch</code>.
-<code>GenericZarrIngestor</code> receives the batch's source items directly.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.PipelineBatch" class="doc doc-heading">
-            <code>firecube.ingestor.api.PipelineBatch</code>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>A batch of data ready for processing in the pipeline.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div><h3 id="source-discovery">Source Discovery</h3>
-<p>All three templates inherit
-<code>discover_source_files(self, ctx: PluginContext) -&gt; Iterable[Any]</code>. By default,
-it recursively discovers <code>.zip</code>, <code>.h5</code>, and <code>.nc</code> files below <code>ctx.source</code>.
-When <code>include_patterns</code> is set, those patterns select the source names instead.
-Override the method only when source layout rules cannot be expressed as
-patterns.</p>
-<h2 id="genericzarringestor">GenericZarrIngestor</h2>
-<p>Subclass <code>GenericZarrIngestor</code> and implement <code>build_dataset</code>.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.GenericZarrIngestor" class="doc doc-heading">
-            <code>firecube.ingestor.api.GenericZarrIngestor</code>
-
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Thin facade over :class:<code>AppendStrategy</code> for Zarr-based batch ingestion.</p>
-<p>Resolves URIs/storage, acquires write claims, then delegates all append
-logic to <code>AppendStrategy.write_groups()</code>.</p>
-<p>Subclasses implement <code>build_dataset(group, items, ctx) -&gt; xr.Dataset | None</code>.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-<h3 id="firecube.ingestor.api.GenericZarrIngestor-functions">Methods:</h3>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.GenericZarrIngestor.build_dataset" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">build_dataset</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">items</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-abstractmethod"><code>abstractmethod</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Convert a sub-batch of items into an Xarray Dataset for the given group.</p>
-<p><code>items</code> is the time-grouped slice for this batch iteration.
-Returns None to skip writing for this group/batch.</p>
-
-
-    </div>
-
-</div>
-
-
-
-  </div>
-
-    </div>
-
-</div><p>The inherited <code>time_dim_name: ClassVar[str]</code> selects the append dimension and
-defaults to <code>"timestamp"</code>. It is a class declaration, not a <code>--option</code> field.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.ZarrTemplateConfig" class="doc doc-heading">
-            <code>firecube.ingestor.api.ZarrTemplateConfig</code>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="firecube.ingestor.templates.config.TemplateConfig">TemplateConfig</span></code></p>
-
-
-
-        <p>Configuration for GenericZarrIngestor.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_chunk_shape">zarr_chunk_shape</span></code></td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="int">int</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional per-dimension inner chunk sizes.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_sharding">zarr_sharding</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Enable Zarr v3 sharding.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_shard_shape">zarr_shard_shape</span></code></td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="int">int</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional per-dimension shard sizes.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_compression">zarr_compression</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p><code>True</code> (default) delegates to zarr's default codec
-pipeline (<code>ZstdCodec(level=0)</code> in zarr-python v3, matching the
-upstream default and pre-PR-25 firecube effective behavior).
-<code>False</code> explicitly disables compression. String values are
-rejected at construction time; only bool values are accepted.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_codecs">zarr_codecs</span></code></td>
-            <td>
-                  <code><span title="list">list</span>[<span title="dict">dict</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional flat list of codec entries in Zarr v3 metadata
-format <code>[{"name": str, "configuration": dict}]</code>. Requires
-<code>zarr_compression=True</code>. When set, the declared pipeline is used
-instead of zarr's default. Structural validation happens here;
-codec-specific resolution happens later.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_consolidate">zarr_consolidate</span></code></td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Consolidate Zarr metadata after writes.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_time_encoding">zarr_time_encoding</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional time encoding override.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_async_concurrency">zarr_async_concurrency</span></code></td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Async write concurrency used by Zarr.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.dask_scheduler">dask_scheduler</span></code></td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional Dask scheduler override.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.dask_write_threads">dask_write_threads</span></code></td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional write-thread count for Dask-backed writes.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div><h2 id="genericparquetingestor">GenericParquetIngestor</h2>
-<p>Subclass <code>GenericParquetIngestor</code> and implement <code>build_dataset</code>. The remaining
-methods are optional customizations.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.GenericParquetIngestor" class="doc doc-heading">
-            <code>firecube.ingestor.api.GenericParquetIngestor</code>
-
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Generic Pipelined Ingestor for Parquet outputs.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-<h3 id="firecube.ingestor.api.GenericParquetIngestor-functions">Methods:</h3>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.GenericParquetIngestor.build_dataset" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">build_dataset</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-abstractmethod"><code>abstractmethod</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Convert a batch of items into an in-memory tabular dataset for the given group.</p>
-
-
-<details class="supported-return-types-for-the-default-parquet-writer" open>
-  <summary>Supported return types for the default Parquet writer</summary>
-  <ul>
-<li><code>pyarrow.Table</code></li>
-<li><code>pandas.DataFrame</code> (if pandas is installed)</li>
-</ul>
-</details>        <p>Returns None to skip writing for this group/batch.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.GenericParquetIngestor.get_batch_groups" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">get_batch_groups</span><span class="p">(</span><span class="n">items</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Return list of groups to process. Default: <code>['default']</code>.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.GenericParquetIngestor.output_relpath" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">output_relpath</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Return a relative output path (within the dataset root) for a group/batch.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.GenericParquetIngestor.write_parquet" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">write_parquet</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">output_path</span><span class="p">,</span> <span class="n">storage_options</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Write a supported dataset to Parquet and return number of rows written.</p>
-
-
-    </div>
-
-</div>
-
-
-
-  </div>
-
-    </div>
-
-</div><h3 id="parquet-template-configuration">Parquet Template Configuration</h3>
-<p><code>ParquetTemplateConfig</code> currently declares <code>parquet_partition_by</code> and
-<code>parquet_row_group_size</code>, but the default writer does not apply either field.
-Do not configure them until writer support is implemented.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.ParquetTemplateConfig" class="doc doc-heading">
-            <code>firecube.ingestor.api.ParquetTemplateConfig</code>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="firecube.ingestor.templates.config.TemplateConfig">TemplateConfig</span></code></p>
-
-
-
-        <p>Configuration for GenericParquetIngestor.</p>
-
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ParquetTemplateConfig.parquet_partition_by">parquet_partition_by</span></code></td>
-            <td>
-                  <code><span title="list">list</span>[<span title="str">str</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional Hive-style partition columns.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.ParquetTemplateConfig.parquet_row_group_size">parquet_row_group_size</span></code></td>
-            <td>
-                  <code><span title="int">int</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional rows per Parquet row group.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div><h2 id="directzarringestor">DirectZarrIngestor</h2>
-<p>Subclass <code>DirectZarrIngestor</code> and implement <code>zarr_schema</code> and
-<code>build_write_intents</code>.</p>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.DirectZarrIngestor" class="doc doc-heading">
-            <code>firecube.ingestor.api.DirectZarrIngestor</code>
-
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Abstract template for direct-Zarr region-based ingestors.</p>
-<p>Plugins that write directly to Zarr (bypassing xarray) should subclass
-this template and implement:</p>
-<ul>
-<li>:meth:<code>zarr_schema</code> — declare groups and arrays.</li>
-<li>:meth:<code>build_write_intents</code> — convert a batch into write operations.</li>
-</ul>
-<p>The template orchestrates store setup, write execution via a region write
-strategy, coverage tracking, and metrics aggregation.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-<h3 id="firecube.ingestor.api.DirectZarrIngestor-functions">Methods:</h3>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.DirectZarrIngestor.zarr_schema" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">zarr_schema</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-abstractmethod"><code>abstractmethod</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Declare the Zarr store layout for this ingestor.</p>
-<p>Returns a list of group specifications describing every group and
-array that the ingestor may write to.  Called once per batch to
-ensure groups and arrays exist before writes begin.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="firecube.ingestor.api.DirectZarrIngestor.build_write_intents" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">build_write_intents</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-abstractmethod"><code>abstractmethod</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Convert a batch into a list of write operations.</p>
-<p>Each <code>WriteIntent</code> describes a single region write, 1-D write,
-or timestamp write.  The template will execute them in order via
-the configured region write strategy.</p>
-<p>Return an empty list to skip the batch.</p>
-
-
-    </div>
-
-</div>
-
-
-
-  </div>
-
-    </div>
-
-</div><h3 id="schema-and-write-types">Schema And Write Types</h3>
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.ZarrGroupSpec" class="doc doc-heading">
-            <code>firecube.ingestor.api.ZarrGroupSpec</code>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Specification for a Zarr group and its arrays.</p>
-<p>Returned by <code>DirectZarrIngestor.zarr_schema()</code> to describe the full layout.</p>
-<p><code>attrs</code> is optional, convention-agnostic group-level metadata stamped onto
-the group's <code>zarr.json</code> at schema setup — e.g. dataset-level attributes a
-plugin chooses to publish. Firecube writes the mapping verbatim and does not
-interpret it (no convention is assumed); reserved firecube-internal attribute
-names are rejected at write time.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.ZarrArraySpec" class="doc doc-heading">
-            <code>firecube.ingestor.api.ZarrArraySpec</code>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>Specification for a single Zarr array within a group.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-<h3 id="firecube.ingestor.api.ZarrArraySpec-attributes">Attributes</h3>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.ZarrArraySpec.compressors" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">compressors</span> <span class="o">=</span> <span class="kc">None</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
-      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Per-array Zarr v3 compressor codecs (BytesBytesCodec). Each entry: <code>{"name": ..., "configuration": {...}}</code>.
-Empty tuple <code>()</code> = explicitly uncompressed for this array ("compress-except-X" pattern).
-None means inherit from template default. Requires template <code>zarr_compression=True</code>.</p>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.ZarrArraySpec.filters" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">filters</span> <span class="o">=</span> <span class="kc">None</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
-      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Per-array Zarr v3 filter codecs (ArrayArrayCodec). Each entry: <code>{"name": ..., "configuration": {...}}</code>.
-None means inherit from template default. Requires template <code>zarr_compression=True</code>.</p>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.ZarrArraySpec.serializer" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">serializer</span> <span class="o">=</span> <span class="kc">None</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
-      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Per-array Zarr v3 serializer codec (ArrayBytesCodec). E.g. <code>{"name": "bytes"}</code>.
-None means inherit from template default. Requires template <code>zarr_compression=True</code>.</p>
-
-    </div>
-
-</div>
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="firecube.ingestor.api.WriteIntent" class="doc doc-heading">
-            <code>firecube.ingestor.api.WriteIntent</code>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
-  </span>
-
-</h2>
-
-
-    <div class="doc doc-contents first">
-
-
-
-        <p>A single write operation to execute against the Zarr store.</p>
-<p>Produced by <code>DirectZarrIngestor.build_write_intents()</code> to describe
-what data should be written, where, and at which timestamp index.</p>
-<p>The <code>kind</code> field selects the write method on <code>RegionZarrWriter</code>.
-Here, "timestamp" means the conceptual time/index axis, not the on-disk
-dimension name; the latter is configured separately via
-<code>IndexedRegionStrategy.time_coord_name</code>.</p>
-<ul>
-<li><code>"region"</code> → <code>write_region(group, array, ts_index, y_slice, data, channel_index=...)</code></li>
-<li><code>"1d"</code> → <code>write_1d(group, array, ts_index, data)</code></li>
-<li><code>"timestamp"</code> → <code>write_timestamp(group, ts_index, timestamp_val)</code></li>
-<li><code>"static"</code> → <code>write_static(group, array_name, data)</code> (non-time-indexed; <code>ts_index</code> is ignored)</li>
-</ul>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-<h3 id="firecube.ingestor.api.WriteIntent-attributes">Attributes</h3>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h4 id="firecube.ingestor.api.WriteIntent.timestamp_val" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">timestamp_val</span> <span class="o">=</span> <span class="kc">None</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
-      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
-  </span>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Conceptual time/index axis value for <code>kind="timestamp"</code> writes.</p>
-<p>"timestamp" is a stable plugin-contract token, not the on-disk dim name;
-the actual dim/coord name comes from <code>IndexedRegionStrategy.time_coord_name</code>.</p>
-
-    </div>
-
-</div>
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div><h3 id="optional-slot-range-parallelism">Optional Slot-Range Parallelism</h3>
+<h1 id="slot-range-parallelism">Slot-Range Parallelism</h1>
+<p>This reference covers the types and methods for parallel <code>DirectZarrIngestor</code>
+writes, where independent workers write disjoint half-open slot ranges of the
+same store. Methods live on <code>DirectZarrIngestor</code>; range and model types are
+imported from <code>firecube.ingestor.api</code> and <code>firecube.core.api</code> as indicated.</p>
 <p>Set <code>SUPPORTS_SLOT_RANGE_PARALLELISM = True</code> only when the plugin implements
-all three required methods below. Firecube checks the overrides when the class
-is defined.</p>
+all three required methods below. Firecube checks the overrides when the
+class is defined. An intent whose index falls outside the worker's assigned
+range fails the run with
+<a href="../exceptions/#firecube.ingestor.api.WriteIntentRangeError"><code>WriteIntentRangeError</code></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.DirectZarrIngestor.timestamp_to_ts_index" href="#firecube.ingestor.api.DirectZarrIngestor.timestamp_to_ts_index"><code>DirectZarrIngestor.timestamp_to_ts_index</code></a></td>
+<td>Globally deterministic mapping from the conceptual time axis to ts_index.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.DirectZarrIngestor.global_expected_time_count" href="#firecube.ingestor.api.DirectZarrIngestor.global_expected_time_count"><code>DirectZarrIngestor.global_expected_time_count</code></a></td>
+<td>Return max ts_index + 1 per group across the planned run.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.DirectZarrIngestor.slot_index_model" href="#firecube.ingestor.api.DirectZarrIngestor.slot_index_model"><code>DirectZarrIngestor.slot_index_model</code></a></td>
+<td>Return the slot-index model governing this product's time axes.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.DirectZarrIngestor.filter_items_to_slot_range" href="#firecube.ingestor.api.DirectZarrIngestor.filter_items_to_slot_range"><code>DirectZarrIngestor.filter_items_to_slot_range</code></a></td>
+<td>Filter source items to those whose ts_index falls in [slot_start, slot_end).</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.SlotRange
+
+
+  
+      module-attribute
+  " href="#firecube.ingestor.api.SlotRange"><code>SlotRange</code></a></td>
+<td>A half-open slot range as <code>(slot_start, slot_end)</code>.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.PlannedRange
+
+
+  
+      dataclass
+  " href="#firecube.ingestor.api.PlannedRange"><code>PlannedRange</code></a></td>
+<td>A half-open slot range [slot_start, slot_end) for one Zarr group.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.validate_slot_range" href="#firecube.ingestor.api.validate_slot_range"><code>validate_slot_range</code></a></td>
+<td>Validate that <code>[slot_start, slot_end)</code> is well-formed and non-negative.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.chunk_align_ranges" href="#firecube.ingestor.api.chunk_align_ranges"><code>chunk_align_ranges</code></a></td>
+<td>Expand ranges to chunk boundaries, then deduplicate and sort them.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.compute_covered_ranges" href="#firecube.ingestor.api.compute_covered_ranges"><code>compute_covered_ranges</code></a></td>
+<td>Convert inclusive coverage ranges into half-open <code>PlannedRange</code> values.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.validate_chunk_alignment" href="#firecube.ingestor.api.validate_chunk_alignment"><code>validate_chunk_alignment</code></a></td>
+<td>Raise <code>ConfigurationError</code> when any group's slot range is misaligned.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.warn_if_misaligned" href="#firecube.ingestor.api.warn_if_misaligned"><code>warn_if_misaligned</code></a></td>
+<td>Log a warning for each group whose slot range is not chunk-aligned.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="required-methods">Required Methods</h2>
 
 
 <div class="doc doc-object doc-function">
 
 
 <h2 id="firecube.ingestor.api.DirectZarrIngestor.timestamp_to_ts_index" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">firecube</span><span class="o">.</span><span class="n">ingestor</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">DirectZarrIngestor</span><span class="o">.</span><span class="n">timestamp_to_ts_index</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">timestamp_val</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.DirectZarrIngestor.timestamp_to_ts_index</span>
+
 
 </h2>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">timestamp_to_ts_index</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">timestamp_val</span><span class="p">)</span>
+</code></pre></div>
 
     <div class="doc doc-contents first">
 
@@ -6958,10 +4864,12 @@ is defined.</p>
 
 
 <h2 id="firecube.ingestor.api.DirectZarrIngestor.global_expected_time_count" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">firecube</span><span class="o">.</span><span class="n">ingestor</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">DirectZarrIngestor</span><span class="o">.</span><span class="n">global_expected_time_count</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.DirectZarrIngestor.global_expected_time_count</span>
+
 
 </h2>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">global_expected_time_count</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+</code></pre></div>
 
     <div class="doc doc-contents first">
 
@@ -6976,10 +4884,12 @@ is defined.</p>
 
 
 <h2 id="firecube.ingestor.api.DirectZarrIngestor.slot_index_model" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">firecube</span><span class="o">.</span><span class="n">ingestor</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">DirectZarrIngestor</span><span class="o">.</span><span class="n">slot_index_model</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.DirectZarrIngestor.slot_index_model</span>
+
 
 </h2>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">slot_index_model</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+</code></pre></div>
 
     <div class="doc doc-contents first">
 
@@ -6995,19 +4905,24 @@ rather than silent incorrect behaviour.</p>
 
     </div>
 
-</div><p><code>filter_items_to_slot_range</code> is optional but recommended. Its default returns
-all items unchanged. Firecube still rejects any resulting intent whose index is
-outside the worker's assigned half-open range.</p>
+</div><h2 id="optional-filtering">Optional Filtering</h2>
+<p><code>filter_items_to_slot_range</code> is optional but recommended. Its default returns
+all items unchanged. Firecube still rejects any resulting intent whose index
+is outside the worker's assigned half-open range.</p>
 
 
 <div class="doc doc-object doc-function">
 
 
 <h2 id="firecube.ingestor.api.DirectZarrIngestor.filter_items_to_slot_range" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">firecube</span><span class="o">.</span><span class="n">ingestor</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">DirectZarrIngestor</span><span class="o">.</span><span class="n">filter_items_to_slot_range</span><span class="p">(</span><span class="n">items</span><span class="p">,</span> <span class="n">slot_start</span><span class="p">,</span> <span class="n">slot_end</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.DirectZarrIngestor.filter_items_to_slot_range</span>
+
 
 </h2>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">filter_items_to_slot_range</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">items</span><span class="p">,</span> <span class="n">slot_start</span><span class="p">,</span> <span class="n">slot_end</span><span class="p">,</span> <span class="n">ctx</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
+</code></pre></div>
 
     <div class="doc doc-contents first">
 
@@ -7021,7 +4936,207 @@ batch (it does NOT silently discard out-of-range intents).</p>
 
     </div>
 
-</div><p>The slot-index model types are imported from <code>firecube.core.api</code>:</p>
+</div><h2 id="range-types">Range Types</h2>
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="firecube.ingestor.api.SlotRange" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.ingestor.api.SlotRange</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">SlotRange</span> <span class="o">=</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>A half-open slot range as <code>(slot_start, slot_end)</code>.</p>
+<p><code>slot_start</code> is inclusive and <code>slot_end</code> is exclusive, matching Python
+slicing and engine array indexing. Used for the <code>--slot-start</code> /
+<code>--slot-end</code> worker assignment; see :class:<code>PlannedRange</code> for the
+per-group form.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="firecube.ingestor.api.PlannedRange" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.PlannedRange</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>A half-open slot range [slot_start, slot_end) for one Zarr group.</p>
+<p>Uses HALF-OPEN semantics: slot_start is inclusive, slot_end is exclusive.
+This matches Python slicing convention and engine array indexing.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div><h2 id="range-validation">Range Validation</h2>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="firecube.ingestor.api.validate_slot_range" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.validate_slot_range</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">validate_slot_range</span><span class="p">(</span><span class="n">slot_start</span><span class="p">,</span> <span class="n">slot_end</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Validate that <code>[slot_start, slot_end)</code> is well-formed and non-negative.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="firecube.ingestor.api.chunk_align_ranges" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.chunk_align_ranges</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">chunk_align_ranges</span><span class="p">(</span><span class="n">ranges</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Expand ranges to chunk boundaries, then deduplicate and sort them.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="firecube.ingestor.api.compute_covered_ranges" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.compute_covered_ranges</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">compute_covered_ranges</span><span class="p">(</span><span class="n">coverage</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Convert inclusive coverage ranges into half-open <code>PlannedRange</code> values.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="firecube.ingestor.api.validate_chunk_alignment" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.validate_chunk_alignment</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">validate_chunk_alignment</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">slot_start</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">slot_end</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">chunk_shapes_per_group</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">global_expected</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Raise <code>ConfigurationError</code> when any group's slot range is misaligned.</p>
+<p>Terminal partial chunks are allowed when <code>slot_end</code> matches the group's
+global expected total.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="firecube.ingestor.api.warn_if_misaligned" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.warn_if_misaligned</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">warn_if_misaligned</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">slot_start</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">slot_end</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">chunk_shapes_per_group</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">logger</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">global_expected</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Log a warning for each group whose slot range is not chunk-aligned.</p>
+<p>Terminal partial chunks are allowed when <code>slot_end</code> matches the group's
+global expected total.</p>
+
+
+    </div>
+
+</div><h2 id="slot-index-model">Slot-Index Model</h2>
+<p>The slot-index model types are imported from <code>firecube.core.api</code>. The related
+epoch/ISO time helpers are documented in
+<a href="../core-utilities/#time-conversion">Core Utilities</a>.</p>
 
 
 <div class="doc doc-object doc-class">
@@ -7029,7 +5144,7 @@ batch (it does NOT silently discard out-of-range intents).</p>
 
 
 <h2 id="firecube.core.api.SlotIndexModel" class="doc doc-heading">
-            <code>firecube.core.api.SlotIndexModel</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.SlotIndexModel</span>
 
 
   <span class="doc doc-labels">
@@ -7059,7 +5174,7 @@ batch (it does NOT silently discard out-of-range intents).</p>
           <tr class="doc-section-item">
             <td><code><span title="firecube.core.api.SlotIndexModel.name">name</span></code></td>
             <td>
-                  <code><span title="str">str</span></code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7070,7 +5185,7 @@ batch (it does NOT silently discard out-of-range intents).</p>
           <tr class="doc-section-item">
             <td><code><span title="firecube.core.api.SlotIndexModel.epoch">epoch</span></code></td>
             <td>
-                  <code><span title="str">str</span></code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7082,7 +5197,7 @@ the origin from which slot indices are counted.</p>
           <tr class="doc-section-item">
             <td><code><span title="firecube.core.api.SlotIndexModel.groups">groups</span></code></td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <a class="autorefs autorefs-internal" title="firecube.core.api.SlotAxis
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="            firecube.core.api.SlotAxis
 
 
   
@@ -7098,7 +5213,7 @@ the origin from which slot indices are counted.</p>
           <tr class="doc-section-item">
             <td><code><span title="firecube.core.api.SlotIndexModel.time_unit">time_unit</span></code></td>
             <td>
-                  <code><span title="str">str</span> | None</code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7134,14 +5249,16 @@ and is serialised as JSON <code>null</code>.</p>
 
 
 <h4 id="firecube.core.api.SlotIndexModel.identity_hash" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">identity_hash</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">identity_hash</span>
+
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">identity_hash</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
@@ -7160,10 +5277,12 @@ partitioning schemes iff their <code>identity_hash</code> values match.</p>
 
 
 <h4 id="firecube.core.api.SlotIndexModel.canonical_bytes" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">canonical_bytes</span><span class="p">()</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">canonical_bytes</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">canonical_bytes</span><span class="p">()</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
@@ -7196,7 +5315,7 @@ partitioning schemes iff their <code>identity_hash</code> values match.</p>
 
 
 <h2 id="firecube.core.api.SlotAxis" class="doc doc-heading">
-            <code>firecube.core.api.SlotAxis</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.SlotAxis</span>
 
 
   <span class="doc doc-labels">
@@ -7226,7 +5345,7 @@ partitioning schemes iff their <code>identity_hash</code> values match.</p>
           <tr class="doc-section-item">
             <td><code><span title="firecube.core.api.SlotAxis.cadence_s">cadence_s</span></code></td>
             <td>
-                  <code><span title="int">int</span></code>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7237,7 +5356,7 @@ partitioning schemes iff their <code>identity_hash</code> values match.</p>
           <tr class="doc-section-item">
             <td><code><span title="firecube.core.api.SlotAxis.mode">mode</span></code></td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;exact&#39;, &#39;floor&#39;]</code>
+                  <code><a class="autorefs autorefs-external" title="typing.Literal" href="https://docs.python.org/3/library/typing.html#typing.Literal">Literal</a>[&#39;exact&#39;, &#39;floor&#39;]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7279,11 +5398,10 @@ preceding boundary.</p>
 
 </div><h2 id="see-also">See Also</h2>
 <ul>
-<li><a href="../../guides/plugins/">Plugin Development Overview</a></li>
-<li><a href="../../guides/plugins/generic-zarr/">Implement <code>GenericZarrIngestor</code></a></li>
-<li><a href="../../guides/plugins/generic-parquet/">Implement <code>GenericParquetIngestor</code></a></li>
 <li><a href="../../guides/plugins/direct-zarr/">Implement <code>DirectZarrIngestor</code></a></li>
-<li><a href="../advanced-plugin-api/">Advanced Custom Pipeline API</a></li>
+<li><a href="../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor tutorial</a></li>
+<li><a href="../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></li>
+<li><a href="../exceptions/">Exceptions</a></li>
 </ul>
 
 

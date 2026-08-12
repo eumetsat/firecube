@@ -16,7 +16,7 @@
         <link rel="prev" href="../direct-zarr/">
       
       
-        <link rel="next" href="../cli-and-config/">
+        <link rel="next" href="../source-discovery/">
       
       
         
@@ -373,7 +373,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/api/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   
@@ -1168,6 +1168,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../source-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customize Source Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3823,14 +3851,96 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Plugin Template API
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugin API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
   
 
     
@@ -3851,14 +3961,162 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/advanced-plugin-api/" class="md-nav__link">
+      <a href="../../../reference/hooks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Plugin API
+    Hooks & Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context & Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/parallelism/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot-Range Parallelism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/core-utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Utilities
   
 
     
@@ -3907,14 +4165,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/observability/" class="md-nav__link">
+      <a href="../../../reference/config/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Observability
+    Configuration
   
 
     
@@ -3935,14 +4193,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/config/" class="md-nav__link">
+      <a href="../../../reference/observability/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configuration
+    Observability
   
 
     
@@ -4122,7 +4380,7 @@ after the run. <code>ctx.source</code> is the original value passed through
 source root itself.</p>
 <p>Template hooks return datasets, tables, or write intents. They do not open the
 output store directly; the selected template performs output I/O.</p>
-<p>See the <a href="../../../reference/api/#plugin-context">Plugin Template API</a> for the
+<p>See the <a href="../../../reference/context/#plugincontext">Context &amp; Results</a> for the
 complete public context surface.</p>
 <h2 id="set-the-source">Set The Source</h2>
 <p><code>--input-data</code> accepts a local path or an <code>s3://</code> prefix. The plugin interprets
@@ -4162,7 +4420,7 @@ not only whether materialization completed.</p>
 <ul>
 <li><strong><a href="../../../concepts/storage/">Product Storage</a></strong> — understand source and target storage roles</li>
 <li><strong><a href="../../../reference/storage-drivers/">Storage Drivers</a></strong> — inspect driver values and capabilities</li>
-<li><strong><a href="../../../reference/api/">Plugin Template API</a></strong> — look up <code>PluginContext</code></li>
+<li><strong><a href="../../../reference/context/">Context &amp; Results</a></strong> — look up <code>PluginContext</code></li>
 </ul>
 
 
