@@ -287,6 +287,19 @@ These items identify areas where the system used greedy logic to guess user inte
 - **Regex guessing — FIXED in-repo:** no filename-regex horizon extraction or `F*` folder discovery remains in core or templates. The msg_frm occurrences live in the external plugin repository.
 - **Hardcoded defaults — DONE (2026-06-11):** lat/lon soft limits gone; multires `(1.0, 0.5)` single-sourced as `DEFAULT_MULTIRES_RESOLUTIONS` (no silent fallback); `group="FWI"` fallback removed from `core/zarr/layers.py`; `"fire_risk.duckdb"` default removed from `extensions/duck.py`. Evidence: `tests/unit/test_domain_defaults_removed.py`.
 - **Typed-vs-free-form drift — DONE (2026-06-11):** strict unknown-key rejection enforced on all declared typed configs; `x_*` experimental namespace implemented — keys matching `x_*` pass through without rejection. Evidence: `tests/unit/test_experimental_options.py`.
+- **Discovery knobs unreachable from config — OPEN:**
+  `discover_input_files` in `src/firecube/core/formats/discovery.py` accepts
+  `exclude`, `include_suffixes`, `recursive`, and `sniff_hdf5`, but
+  `EngineConfig` in `src/firecube/ingestor/config/engine.py` exposes only
+  `include_patterns` (additive `preferred_globs`). The default
+  `discover_source_files` hook in `src/firecube/ingestor/runtime/base.py`
+  therefore offers no way to exclude files or narrow the accepted suffix set
+  without overriding the hook. Decide whether exclusion belongs in
+  `EngineConfig` as a typed option (e.g. `exclude_patterns`) and expose it
+  through CLI discovery and coercion alongside `include_patterns`.
+  Acceptance: excluding a file that the default suffix set would otherwise
+  pick up requires no plugin code; `--show-options` lists the key; public
+  discovery documentation describes the same surface.
 
 ---
 

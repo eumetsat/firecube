@@ -99,10 +99,9 @@ def validate_zarr_specs_against_template(
     avoid a circular import with ``direct_zarr``; codec fields are read via
     ``getattr`` with ``None`` defaults.
 
-    Raises
-    ------
-    ValueError
-        If any spec declares codec fields while ``template.zarr_compression`` is False.
+    Raises:
+        ValueError: If any spec declares codec fields while
+            ``template.zarr_compression`` is False.
     """
     if template.zarr_compression:
         return
@@ -125,10 +124,30 @@ def validate_zarr_specs_against_template(
 
 @dataclass
 class TemplateConfig:
-    """Base for template configurations."""
+    """Base class for the template-owned configuration tier.
+
+    Each ingestor template declares a ``template_config_class`` (e.g.
+    ``ZarrTemplateConfig`` for ``GenericZarrIngestor``); the dataclass
+    fields of that class become the validated, typed options accepted for
+    the template. Instances are built from raw caller options via
+    :meth:`from_options`, which rejects unknown keys and coerces values to
+    the annotated field types.
+    """
 
     @classmethod
     def from_options(cls: type[T], options: dict[str, Any]) -> T:
+        """Build a validated config instance from raw option values.
+
+        Args:
+            options: Raw option mapping (e.g. parsed ``--option`` values).
+
+        Returns:
+            An instance of ``cls`` with coerced, validated field values.
+
+        Raises:
+            ValueError: If ``options`` contains keys not declared as fields
+                of ``cls``, or a value cannot be coerced to its field type.
+        """
         from firecube.ingestor.config.coercion import coerce_cli_value
 
         if cls is ZarrTemplateConfig and "zarr_multi_res" in options:

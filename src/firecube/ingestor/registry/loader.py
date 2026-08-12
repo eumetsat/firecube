@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
+from collections.abc import Callable
 from importlib.metadata import entry_points
 from types import ModuleType
 from typing import TypeVar
@@ -39,8 +40,34 @@ _LOADED: bool = False
 _IngestorT = TypeVar("_IngestorT", bound=Ingestor)
 
 
-def register_ingestor(name: str):
-    """Decorator to register a plugin under a given name."""
+def register_ingestor(name: str) -> Callable[[type[_IngestorT]], type[_IngestorT]]:
+    """Register an ingestor class under a public plugin name.
+
+    Applied as a class decorator. The decorated class is added to the
+    registry consulted by ``discover_ingestors()`` and ``get_ingestor()``,
+    and its ``name`` attribute is set to ``name``.
+
+    Args:
+        name: Public name the plugin is looked up by, e.g. the value passed
+            to ``firecube ingest <name>``.
+
+    Returns:
+        A class decorator that registers the class and returns it unchanged.
+
+    Raises:
+        TypeError: If the decorated class does not satisfy the ``Ingestor``
+            protocol. Raised when the decorator is applied, not at call time.
+
+    Examples:
+        Register a plugin under the name used by ``firecube ingest``:
+
+            @register_ingestor("my_product")
+            class MyProductIngestor(GenericZarrIngestor):
+                PRODUCT_NAME = "my_product"
+
+                def build_dataset(self, group, items, ctx):
+                    ...
+    """
 
     def decorator(cls: type[_IngestorT]) -> type[_IngestorT]:
         # Using runtime protocol check

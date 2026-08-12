@@ -123,7 +123,7 @@ In serial ingestion, an indexed array may start at length zero. Firecube grows
 it when a later intent requires more capacity. A fixed global extent is required
 only for slot-range parallelism.
 
-See the [Plugin Template API](../../reference/api.md#directzarringestor) for all
+See the [Plugin Templates](../../reference/templates.md#directzarringestor) for all
 schema and intent fields.
 
 ## Parallel Writes
@@ -147,7 +147,7 @@ the assigned range still fails with `WriteIntentRangeError`.
 
 Use the [Parallel DirectZarrIngestor tutorial](../../tutorials/direct-zarr-parallel.md)
 for a complete implementation and worker run. The
-[Plugin Template API](../../reference/api.md#optional-slot-range-parallelism)
+[Slot-Range Parallelism](../../reference/parallelism.md)
 contains the exact signatures and slot-index types.
 
 ## Verify
@@ -192,4 +192,4 @@ follow the product's replay policy.
 - **[DirectZarrIngestor (Region)](../../concepts/output-formats/zarr/direct-region.md)** — understand schema-driven array placement
 - **[Parallel Zarr Writes](../../concepts/output-formats/zarr/parallel-writes.md)** — understand the optional slot safety model
 - **[Parallel DirectZarrIngestor](../../tutorials/direct-zarr-parallel.md)** — build a complete slot-capable plugin
-- **[Plugin Template API](../../reference/api.md)** — look up schema and write-intent fields
+- **[Plugin Templates](../../reference/templates.md)** — look up schema and write-intent fields

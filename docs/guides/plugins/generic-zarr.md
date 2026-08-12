@@ -72,7 +72,7 @@ batches. Return `None` when the batch has no data to write.
 Firecube calls the hook once for each output group. Most plugins use the
 `"default"` group and do not branch on `group`.
 
-See the [Plugin Template API](../../reference/api.md#genericzarringestor) for
+See the [Plugin Templates](../../reference/templates.md#genericzarringestor) for
 the exact hook signature and template configuration.
 
 ## Verify
@@ -120,4 +120,4 @@ If built-in discovery does not include the product's source names, pass
 - **[GenericZarrIngestor (Append)](../../concepts/output-formats/zarr/generic-append.md)** — understand ordering and serialized group writes
 - **[NetCDF To Zarr](../../tutorials/weather-netcdf.md)** — follow a complete plugin tutorial
 - **[Read Plugin Source Data](storage-access.md)** — use source items with local-path readers
-- **[Plugin Template API](../../reference/api.md)** — look up the public template types
+- **[Plugin Templates](../../reference/templates.md)** — look up the public template types

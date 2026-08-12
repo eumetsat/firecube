@@ -124,13 +124,36 @@ def discover_input_files(
     """Discover input files from a local path or remote URI.
 
     Selection is intentionally conservative and format-agnostic:
-      - Accept files matching `include_suffixes`
-      - Optionally accept extensionless files that look like HDF5
-      - Optionally add files matched by `preferred_globs` (glob patterns)
 
-    Returns URI/path strings (for example ``/tmp/data/file.nc`` or
-    ``s3://bucket/prefix/file.nc``). ``Path`` inputs are accepted for backward
-    compatibility and are converted to strings internally.
+    - Accept files matching ``include_suffixes``.
+    - Optionally accept extensionless files that look like HDF5.
+    - Optionally add files matched by ``preferred_globs``. Patterns add to
+      the suffix selection; they do not replace it.
+    - Drop anything matching ``exclude`` before selection runs, so an
+      excluded path is never considered by suffix, sniffing, or patterns.
+
+    Glob patterns in ``preferred_globs`` and ``exclude`` are matched against
+    the file's base name, its path relative to ``source``, and its full
+    path or URI, so both ``"*.nc4"`` and ``"subdir/*.nc4"`` are usable.
+
+    Args:
+        source: Discovery root: a local path or a remote URI such as
+            ``s3://bucket/prefix``.
+        storage_config: Storage settings used to reach a remote ``source``.
+        include_suffixes: File suffixes accepted by default.
+        preferred_globs: Extra glob patterns whose matches are added.
+        recursive: Search below ``source``; when ``False``, only entries
+            directly in ``source`` are returned.
+        sniff_hdf5: Accept extensionless files whose content looks like
+            HDF5. Applies to local sources only.
+        exclude: Glob patterns whose matches are dropped.
+
+    Returns:
+        URI/path strings (for example ``/tmp/data/file.nc`` or
+        ``s3://bucket/prefix/file.nc``), sorted for deterministic batching.
+
+    Raises:
+        ValueError: If ``source`` cannot be opened or listed.
     """
     from firecube.core.filesystem.ops import _open_fsspec_url
     from firecube.core.uris import is_remote_target, parse_uri

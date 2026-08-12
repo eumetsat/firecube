@@ -185,6 +185,26 @@ class GenericZarrIngestor(BaseIngestor):
 
         ``items`` is the time-grouped slice for this batch iteration.
         Returns None to skip writing for this group/batch.
+
+        The returned dataset must carry the ingestor's ``time_dim_name``
+        dimension; it is appended along that dimension.
+
+        Examples:
+            Build one dataset per batch from the discovered items:
+
+                def build_dataset(self, group, items, ctx):
+                    paths = [ctx.materialize(item) for item in items]
+                    ds = xr.open_mfdataset(paths, combine="by_coords")
+                    return ds[["temperature"]].sortby(self.time_dim_name)
+
+            Route variables per group when ``get_batch_groups`` declares
+            more than one; every group receives the same ``items``:
+
+                def build_dataset(self, group, items, ctx):
+                    ds = self._open(items, ctx)
+                    if group == "quality":
+                        return ds[["quality_level"]]
+                    return ds[["temperature"]]
         """
 
     def get_zarr_config(self, ctx: PluginContext) -> dict[str, Any]:
@@ -294,10 +314,30 @@ class GenericParquetIngestor(BaseIngestor):
           - ``pandas.DataFrame`` (if pandas is installed)
 
         Returns None to skip writing for this group/batch.
+
+        Unlike the Zarr template, this hook receives the ``PipelineBatch``
+        itself rather than a list of items.
+
+        Examples:
+            Return one table per batch:
+
+                def build_dataset(self, group, batch, ctx):
+                    rows = []
+                    for item in batch.items:
+                        rows.extend(read_detections(ctx.materialize(item)))
+                    if not rows:
+                        return None
+                    return pyarrow.Table.from_pylist(rows)
         """
 
     def get_batch_groups(self, items: Sequence[Any], ctx: PluginContext) -> list[str]:
-        """Return list of groups to process. Default: ``['default']``."""
+        """Return the logical write groups for a batch (Hook).
+
+        Each group produces one ``build_dataset`` call (receiving the full
+        batch) and one Parquet file; non-default group names become
+        subdirectories of the dataset root via ``output_relpath``. Must be
+        deterministic and stable-sorted. Default: ``["default"]``.
+        """
         _ = items
         _ = ctx
         return ["default"]

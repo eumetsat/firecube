@@ -100,6 +100,20 @@ defaults under `[plugins.<name>]`.
         docstring_section_style: table
         members: []
 
+### TemplateConfig
+
+Public import: `from firecube.ingestor.api import TemplateConfig`
+
+Base class of the template config tier. Each template declares its config
+dataclass through `template_config_class`; the dataclass fields become
+validated `--option key=value` settings.
+
+::: firecube.ingestor.api.TemplateConfig
+    options:
+        show_root_heading: false
+        docstring_section_style: table
+        members: []
+
 ### ZarrTemplateConfig
 
 Public import: `from firecube.ingestor.api import ZarrTemplateConfig`

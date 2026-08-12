@@ -448,8 +448,6 @@ def _catalog_entry_driver(spec: CatalogSourceSpec) -> str:
 def _default_storage_options(store_uri: str) -> dict[str, Any]:
     """Build a generic storage_options block for Intake.
 
-    Notes
-    -----
     To keep the catalog portable and avoid embedding secrets, this helper
     uses environment placeholders. Users are expected to export the matching
     FIRECUBE_* variables in their environment when opening the catalog.
@@ -486,20 +484,14 @@ def build_intake_catalog(
 ) -> dict[str, Any]:
     """Construct an Intake catalog dictionary for the given product store.
 
-    Parameters
-    ----------
-    catalog_name:
-        Logical name for the catalog (e.g. plugin id or product name).
-    catalog_description:
-        High-level description of the catalog.
-    store_uri:
-        Root URI of the store, such as ``s3://bucket/product.zarr`` or
-        ``s3://bucket/product.parquet``.
-    sources:
-        List of CatalogSourceSpec entries describing which groups to expose.
-    include_storage_options:
-        When True, attach a generic ``storage_options`` block for S3 stores
-        based on FIRECUBE_* environment placeholders.
+    Args:
+        catalog_name: Logical name for the catalog (e.g. plugin id or product name).
+        catalog_description: High-level description of the catalog.
+        store_uri: Root URI of the store, such as ``s3://bucket/product.zarr``
+            or ``s3://bucket/product.parquet``.
+        sources: List of CatalogSourceSpec entries describing which groups to expose.
+        include_storage_options: When True, attach a generic ``storage_options``
+            block for S3 stores based on FIRECUBE_* environment placeholders.
     """
     catalog: dict[str, Any] = {
         "metadata": {

@@ -45,23 +45,19 @@ def build_multires_layers(
 ) -> list[str]:
     """Build coarsened multi-resolution layers inside an existing Zarr store.
 
-    Parameters
-    ----------
-    zarr_store:
-        Store path or mapping. When a group is provided, zarr_store is assumed
-        to point at the *root* of the product and `group` selects the dataset.
-    group:
-        Optional group path (e.g. "F048/FWI"). When omitted, the function
-        attempts to open the root dataset directly. Pass ``group`` explicitly
-        if the store uses a grouped layout.
-    strict:
-        When True, failures to open the base dataset are raised instead of
-        being converted into an empty result. This is useful for CLI/API
-        operations where a failure should abort the request.
-    ds_input:
-        Optional xarray Dataset to coarsen. When provided, the function coarsens
-        only this data and appends it to multiresolution layers (instead of
-        rebuilding everything from the store).
+    Args:
+        zarr_store: Store path or mapping. When a group is provided, zarr_store
+            is assumed to point at the *root* of the product and `group`
+            selects the dataset.
+        group: Optional group path (e.g. "F048/FWI"). When omitted, the
+            function attempts to open the root dataset directly. Pass
+            ``group`` explicitly if the store uses a grouped layout.
+        strict: When True, failures to open the base dataset are raised instead
+            of being converted into an empty result. This is useful for
+            CLI/API operations where a failure should abort the request.
+        ds_input: Optional xarray Dataset to coarsen. When provided, the
+            function coarsens only this data and appends it to multiresolution
+            layers (instead of rebuilding everything from the store).
     """
 
     groups_written: list[str] = []

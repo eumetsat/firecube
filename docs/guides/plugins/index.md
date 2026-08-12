@@ -66,5 +66,5 @@ and its main data-conversion method is working.
   interactive command
 - **[Zarr Write Models](../../concepts/output-formats/zarr/index.md)** — compare
   sequential appends, direct writes, and optional parallel writes
-- **[Plugin Template API](../../reference/api.md)** — look up the public types
+- **[API Reference](../../reference/index.md)** — look up the public types
   used by template plugins

@@ -153,7 +153,7 @@ the matching unit and integration tests rather than only the changed file.
 
 ## Next Steps
 
-- **[Plugin Template API](../reference/api.md)** — standard plugin authoring surface
-- **[Advanced Plugin API](../reference/advanced-plugin-api.md)** — custom pipeline types
+- **[Plugin Templates](../reference/templates.md)** — standard plugin authoring surface
+- **[Hooks & Lifecycle](../reference/hooks.md)** — custom pipeline types
 - **[ChunkManager Records](../concepts/chunk-management.md)** — product state, runs, spans, claims, and snapshots
 - **[Plugin Development](../guides/plugins/index.md)** — external plugin guides

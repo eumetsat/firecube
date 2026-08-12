@@ -52,14 +52,22 @@ def verify_dim_compatibility(
     group_paths: Sequence[str],
     storage_config: Any,
 ) -> None:
-    """Verify each group in `group_paths` has a time dim matching `declared_dim`.
+    """Verify each group in ``group_paths`` has a time dim matching ``declared_dim``.
 
-    Raises ConfigurationError with the exact migration-guidance text if any
-    existing group uses a different time dim, or if any group somehow contains
-    BOTH `time` AND `timestamp` dims on the same data array (ambiguous state).
+    No-op for groups that do not yet exist on disk (they will be created on
+    first write) and for a ``target_uri`` that does not exist at all (new cube).
 
-    No-op for groups that do not yet exist on disk (will be created on first write)
-    or for a target_uri that does not exist at all (new cube).
+    Args:
+        target_uri: URI of the (possibly existing) Zarr store to inspect.
+        declared_dim: Time dimension name the plugin declares for its arrays.
+        group_paths: Group paths to check within the store.
+        storage_config: Storage configuration or binding used to open the store.
+
+    Raises:
+        ConfigurationError: If any existing group uses a different time
+            dimension than ``declared_dim`` (with migration guidance), if a
+            data array carries both ``time`` and ``timestamp`` dimensions,
+            or if arrays within one group disagree on the time dimension.
     """
     if not target_uri:
         return

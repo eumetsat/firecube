@@ -66,7 +66,7 @@ The Parquet hook receives a `PipelineBatch`, so its source items are in
 `batch.items`. Firecube calls the hook once for each output group. Most plugins
 use the `"default"` group.
 
-See the [Plugin Template API](../../reference/api.md#genericparquetingestor) for
+See the [Plugin Templates](../../reference/templates.md#genericparquetingestor) for
 the exact hook signature and optional group, path, and writer customizations.
 
 ## Verify
@@ -113,4 +113,4 @@ If built-in discovery does not include the product's source names, pass
 - **[Parquet](../../concepts/output-formats/parquet.md)** — understand the persisted dataset layout
 - **[Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md)** — download and ingest a real EUMETSAT product
 - **[Read Plugin Source Data](storage-access.md)** — use source items with local-path readers
-- **[Plugin Template API](../../reference/api.md)** — look up the public template types
+- **[Plugin Templates](../../reference/templates.md)** — look up the public template types

@@ -150,13 +150,14 @@ documentation, or testing:
 
 | dependency | version | sw type | license | copyright | home_url | comments |
 | --- | --- | --- | --- | --- | --- | --- |
-| `hatchling` | 1.30.1 | Development tools | MIT |  | https://hatch.pypa.io/latest/ | Build backend dependency. |
+| `hatchling` | 1.32.0 | Development tools | MIT |  | https://hatch.pypa.io/latest/ | Build backend dependency. |
 | `tensogram` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `tensogram-xarray` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `tensogram-zarr` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `obstore` | 0.11.0 | Development tools | MIT |  | https://developmentseed.org/obstore | Direct optional `test` extra dependency. |
 | `healpix-geo` | 0.2.1 | Development tools | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `test` extra dependency. |
 | `moto` | 5.2.2 | Development tools | Apache-2.0 |  | https://github.com/getmoto/moto | Direct optional `test` extra dependency. |
+| `griffelib` | 2.1.0 | Development tools | ISC |  | https://pypi.org/project/griffelib/ | Direct optional `test` extra dependency; static docstring inspection for the API docs coverage test. |
 | `pytest` | 9.1.1 | Development tools | MIT |  | https://docs.pytest.org/en/latest/ | Direct `dev` dependency group entry. |
 | `ruff` | 0.15.20 | Development tools | MIT |  | https://docs.astral.sh/ruff | Direct `dev` dependency group entry. |
 | `pytest-cov` | 7.1.0 | Development tools | MIT |  | https://pytest-cov.readthedocs.io/en/latest/changelog.html | Direct `dev` dependency group entry. |
@@ -167,6 +168,7 @@ documentation, or testing:
 | `mkdocs` | 1.6.1 | Development tools | BSD-2-Clause |  | https://github.com/mkdocs/mkdocs | Direct `docs` dependency group entry. |
 | `mkdocs-material` | 9.7.7 | Development tools | MIT |  | https://github.com/squidfunk/mkdocs-material | Direct `docs` dependency group entry. |
 | `mkdocstrings` | 1.0.4 | Development tools | ISC |  | https://mkdocstrings.github.io | Direct `docs` dependency group entry. |
+| `mkdocstrings-python` | 2.0.5 | Development tools | ISC |  | https://mkdocstrings.github.io/python | Direct `docs` dependency group entry. |
 | `mkdocs-mermaid2-plugin` | 1.2.3 | Development tools | MIT |  | https://github.com/fralau/mkdocs-mermaid2-plugin | Direct `docs` dependency group entry. |
 | `mkdocs-click` | 0.9.0 | Development tools | Apache-2.0 |  | https://github.com/mkdocs/mkdocs-click | Direct `docs` dependency group entry. |
 | `mkdocs-macros-plugin` | 1.5.0 | Development tools | MIT |  | https://github.com/fralau/mkdocs_macros_plugin | Direct `docs` dependency group entry. |

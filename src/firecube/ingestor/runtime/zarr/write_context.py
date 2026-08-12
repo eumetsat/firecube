@@ -51,20 +51,17 @@ class ZarrWriteContext:
     async-concurrency, activates the appropriate ``dask.config`` scope,
     and acquires the caller-supplied write lock.
 
-    Parameters
-    ----------
-    write_lock:
-        A ``threading.Lock`` (or compatible) used to serialize Zarr writes.
-    configured_scheduler:
-        Explicit Dask scheduler name (e.g. ``"synchronous"``, ``"threads"``),
-        or *None* to keep the ambient default.
-    write_threads:
-        Number of Dask worker threads for chunk-level parallelism.
-        ``0`` means "use the configured scheduler as-is".
-    async_concurrency:
-        Zarr async pipeline concurrency.  ``10`` is the default sentinel
-        value; setting both *write_threads > 0* **and** a non-default
-        concurrency raises ``ConfigurationError``.
+    Args:
+        write_lock: A ``threading.Lock`` (or compatible) used to serialize
+            Zarr writes.
+        configured_scheduler: Explicit Dask scheduler name (e.g.
+            ``"synchronous"``, ``"threads"``), or *None* to keep the ambient
+            default.
+        write_threads: Number of Dask worker threads for chunk-level
+            parallelism.  ``0`` means "use the configured scheduler as-is".
+        async_concurrency: Zarr async pipeline concurrency.  ``10`` is the
+            default sentinel value; setting both *write_threads > 0* **and** a
+            non-default concurrency raises ``ConfigurationError``.
     """
 
     def __init__(

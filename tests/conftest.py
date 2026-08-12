@@ -55,6 +55,7 @@ def pytest_configure(config):
         "obstore": "obstore",
         "moto": "moto",
         "healpix_geo": "healpix-geo",
+        "griffe": "griffelib",
     }
     for module_name, package_name in required.items():
         try:

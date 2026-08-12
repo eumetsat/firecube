@@ -38,6 +38,19 @@ These apply to all new code in `src/` and to plugin implementations.
 - **Clear names, straightforward control flow**: Prefer descriptive names and linear logic over metaprogramming or implicit dispatch. A reader should understand what a function does without tracing its ancestors.
 - **No side effects at import time**: Especially in `firecube.ingestor`. Keep optional deps lazy. Don't trigger I/O, registration, or network calls on import.
 - **Fail fast on bad config**: Validate config at construction time, not at first use. A `ValueError` at startup is better than a silent wrong result halfway through a multi-hour ingest.
+- **Google-style docstrings**: `mkdocs.yml` pins `docstring_style: google`. Numpy-style sections (`Parameters` / `Returns` underlined with `---`) render as flat text and no build check catches it. Use `Args:`, `Returns:`, `Raises:`, `Examples:`.
+
+## Docstrings On Public Surfaces
+
+Anything exported from `firecube.ingestor.api`, `firecube.core.api`, or `firecube.ingestor.extensions` is rendered verbatim into the public API reference. The docstring is the reference text, so it carries the same bar as a docs page.
+
+- **Write the docstring with the code**: every public function, class, method, dataclass, and exported type alias ships with a docstring in the same change that introduces it. Adding a name to a facade `__all__` without one is an incomplete change — `tests/sdk/test_api_docs_coverage.py` fails until the symbol has both a reference entry and docstring text. Type aliases need an attribute docstring (a string literal on the line below); a `#` comment is invisible to the reference.
+- **Non-public code**: write a docstring whenever intent is not obvious from the name and signature — anything with non-trivial control flow, a side effect, a failure mode, or a non-obvious return. Do not pad trivial helpers with restatements of their own signature.
+- **Document the contract, not a summary**: state what the symbol does, what each argument means, what is returned, and what is raised and when. A one-line docstring on a hook a plugin author must implement is an incomplete public surface.
+- **Section body is Markdown, not RST**: the reference renders docstring sections as Markdown. An RST literal-block marker (`::`) leaks into the page as visible text. Use a plain colon and an indented code block.
+- **`Examples:` must be plural**: griffe parses `Examples:` as an examples section rendered as highlighted code. The singular `Example:` parses as an admonition and renders collapsed.
+- **Examples show shape, not workflow**: a docstring example demonstrates what a hook receives and must return. Command sequences, expected output, and verification steps belong in a guide under `docs/guides/`. See `.prompts/docs-policy.md` for the split.
+- **Public docstrings follow the public-docs boundary**: no internal service names, private module paths, `plans/` references, or design history. They are published documentation.
 
 ## Design Patterns (GoF-inspired, Python-friendly)
 

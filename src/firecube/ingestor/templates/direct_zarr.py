@@ -624,6 +624,35 @@ class DirectZarrIngestor(BaseIngestor):
         Returns a list of group specifications describing every group and
         array that the ingestor may write to.  Called once per batch to
         ensure groups and arrays exist before writes begin.
+
+        The declared groups are also the ingestor's write groups, so the
+        schema must cover every group any ``WriteIntent`` targets.
+
+        Examples:
+            Declare one group with a time-indexed array and its time axis:
+
+                def zarr_schema(self, ctx):
+                    n_times = self.global_expected_time_count(ctx)
+                    return [
+                        ZarrGroupSpec(
+                            group="FWI",
+                            arrays=[
+                                ZarrArraySpec(
+                                    name="fire_risk",
+                                    shape=(n_times, 550, 475),
+                                    dtype="float32",
+                                    chunks=(1, 550, 475),
+                                    dimension_names=("timestamp", "y", "x"),
+                                ),
+                                ZarrArraySpec(
+                                    name="timestamp",
+                                    shape=(n_times,),
+                                    dtype="int64",
+                                    dimension_names=("timestamp",),
+                                ),
+                            ],
+                        )
+                    ]
         """
 
     def _cached_zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
@@ -636,7 +665,13 @@ class DirectZarrIngestor(BaseIngestor):
         return cache[key]
 
     def get_batch_groups(self, items: Sequence[Any], ctx: PluginContext) -> list[str]:
-        """Return groups declared in zarr_schema(ctx) — DirectZarr writes via WriteIntent.group."""
+        """Return the sorted set of groups declared by ``zarr_schema(ctx)``.
+
+        On this template the group set is schema-declared, not item-derived:
+        writes are routed by ``WriteIntent.group``. Plugins should NOT
+        override this method — a hand-rolled group list can disagree with
+        the declared schema and break group/schema agreement.
+        """
         _ = items  # group set is schema-declared, not item-derived
         specs = self._cached_zarr_schema(ctx)
         return sorted({spec.group for spec in specs})
@@ -650,6 +685,38 @@ class DirectZarrIngestor(BaseIngestor):
         the configured region write strategy.
 
         Return an empty list to skip the batch.
+
+        Every intent's ``group`` must exist in ``zarr_schema(ctx)``, and
+        ``ts_index`` must fall inside the worker's slot range when
+        slot-range parallelism is enabled.
+
+        Examples:
+            Emit the data write and its timestamp for each item:
+
+                def build_write_intents(self, batch, ctx):
+                    intents = []
+                    for item in batch.items:
+                        array, stamp = read_product(ctx.materialize(item))
+                        ts_index = self.timestamp_to_ts_index(stamp, ctx)
+                        intents.append(
+                            WriteIntent(
+                                group="FWI",
+                                array="fire_risk",
+                                ts_index=ts_index,
+                                data=array,
+                            )
+                        )
+                        intents.append(
+                            WriteIntent(
+                                group="FWI",
+                                array="timestamp",
+                                ts_index=ts_index,
+                                data=None,
+                                kind="timestamp",
+                                timestamp_val=stamp,
+                            )
+                        )
+                    return intents
         """
 
     def _ensure_slot_index_model_at_startup(self, ctx: PluginContext) -> None:

@@ -139,5 +139,5 @@ Frozen({'timestamp': 5, 'latitude': 2, 'longitude': 3})
 
 - **[NetCDF To Zarr: Observability](observability.md)** — add one custom metric to the same plugin
 - **[Read Plugin Source Data](../guides/plugins/storage-access.md)** — materialize discovered items for a product reader
-- **[Plugin Template API](../reference/api.md)** — look up the public plugin context and template hooks
+- **[API Reference](../reference/index.md)** — look up the public plugin context and template hooks
 - **[Sentinel-3 FRP To Parquet](sentinel3-frp.md)** — download and ingest a real EUMETSAT product

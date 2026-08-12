@@ -328,7 +328,23 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         return f"{self.name}_"
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
-        """Discover source files matching include patterns."""
+        """Discover the source items to ingest (Hook).
+
+        The default implementation requires ``--input-data`` (``ctx.source``)
+        and raises ``ConfigurationError`` without it. It searches recursively
+        below ``ctx.source`` — a local path or a remote URI reached through
+        the run's storage configuration — and collects ``.zip``, ``.h5``, and
+        ``.nc`` files plus extensionless files that look like HDF5. Patterns
+        from the ``include_patterns`` engine option add matching files to
+        that set; they do not replace it.
+
+        Override this hook when source layout rules cannot be expressed as
+        patterns, or when sources are not file trees at all (catalogs,
+        APIs); overriding removes the ``--input-data`` requirement. Returned
+        items flow through ``filter_item`` and batching into the build
+        hooks; return path or URI strings unless the plugin's own hooks
+        handle richer item objects end to end.
+        """
         if not ctx.source:
             raise ConfigurationError(
                 "--input-data is required when using default source discovery. "
@@ -365,7 +381,38 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             return None
 
     def get_batch_groups(self, items: Sequence[Any], ctx: PluginContext) -> list[str]:
-        """Return logical write groups for a batch of items (Hook). Default: ['default']."""
+        """Return the logical write groups covered by a batch of items (Hook).
+
+        A group names a logical write destination: for Zarr templates it
+        becomes the group path inside the store, for Parquet it becomes the
+        output partition (subdirectory). Called once per planned batch;
+        ``build_dataset`` is then invoked once per group with the full batch
+        item list, and the plugin routes items to the group it is building.
+
+        Implementations MUST be deterministic and return a stable, sorted
+        list so grouping stays consistent across runs.
+
+        Args:
+            items: Items assigned to this batch.
+            ctx: Read-only plugin context.
+
+        Returns:
+            Group names for the batch. Default: ``["default"]``.
+
+        Examples:
+            Write two Zarr groups from the same source items. Each group
+            name becomes the group path in the store, and ``build_dataset``
+            selects what belongs in the group it is called for:
+
+                def get_batch_groups(self, items, ctx):
+                    return ["quality", "sst"]
+
+                def build_dataset(self, group, items, ctx):
+                    ds = self._open(items, ctx)
+                    if group == "sst":
+                        return ds[["sea_surface_temperature"]]
+                    return ds[["quality_level"]]
+        """
         return ["default"]
 
     def batch_setup(self, ctx: PluginContext) -> None:

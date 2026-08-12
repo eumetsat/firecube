@@ -42,6 +42,9 @@ test = [
     "obstore>=0.4.0",
     "healpix-geo>=0.2.1",
     "moto[s3,server]>=5.0.0",
+    # Static docstring inspection for the public-API docs coverage contract
+    # (tests/sdk/test_api_docs_coverage.py). Also ships with the docs group.
+    "griffelib>=2.0",
 ]
 
 [project.urls]
@@ -72,7 +75,8 @@ dev = [
 docs = [
     "mkdocs>=1.5.3,<2.0",
     "mkdocs-material>=9.7.7",
-    "mkdocstrings[python]>=0.24.0",
+    "mkdocstrings[python]>=1.0",
+    "mkdocstrings-python>=2.0",
     "mkdocs-mermaid2-plugin>=0.6.0",
     "mkdocs-click>=0.9.0",
     "mkdocs-macros-plugin>=1.0,<2.0",

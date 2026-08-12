@@ -82,14 +82,12 @@ def _read_array_meta_from_store(
 def _coerce_append_value(value: Any, attrs: Mapping[str, Any] | None = None) -> Any:
     """Normalize append-dimension values for safe comparison/logging.
 
-    Parameters
-    ----------
-    value:
-        A single time-coordinate scalar.
-    attrs:
-        Coordinate attributes from the DataArray. When *value* is numeric and *attrs*
-        contains a ``units`` key with ``'since'`` (CF-style time encoding), the value
-        is decoded to a ``pd.Timestamp``. Otherwise the raw value is returned.
+    Args:
+        value: A single time-coordinate scalar.
+        attrs: Coordinate attributes from the DataArray. When *value* is
+            numeric and *attrs* contains a ``units`` key with ``'since'``
+            (CF-style time encoding), the value is decoded to a
+            ``pd.Timestamp``. Otherwise the raw value is returned.
     """
     import numpy as np
 

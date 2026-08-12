@@ -23,5 +23,5 @@ observability boundary.
 
 - **[Plugin Development](../guides/plugins/index.md)** — choose what the plugin produces
 - **[Firecube Contributors](firecube-contributors.md)** — internal contribution boundaries
-- **[Plugin Template API](../reference/api.md)** — standard plugin template surface
-- **[Advanced Plugin API](../reference/advanced-plugin-api.md)** — custom pipeline surface
+- **[Plugin Templates](../reference/templates.md)** — standard plugin template surface
+- **[Hooks & Lifecycle](../reference/hooks.md)** — custom pipeline surface

@@ -140,25 +140,22 @@ def build_healpix_binner(
 ) -> HealpixBinner:
     """Precompute the mapping from an input lat/lon grid to HEALPix cells.
 
-    Parameters
-    ----------
-    lat, lon:
-        Latitude/longitude of the input samples, in degrees. Either 1-D
-        coordinate vectors (treated as a rectilinear grid) or matching N-D
-        arrays of point coordinates.
-    depth:
-        HEALPix order/level [0, 29]. Determines the cell size
-        (``12 * 4**depth`` cells on the sphere).
-    indexing_scheme:
-        HEALPix scheme. Only ``"nested"`` is supported.
-    ellipsoid:
-        Reference ellipsoid for the lat/lon -> cell mapping (e.g. ``"WGS84"``,
-        ``"sphere"``). Two grids share cell ids only when ``depth`` and
-        ``ellipsoid`` match.
-    target_cells:
-        Optional fixed cell axis (sorted unique cell ids). When given, the axis
-        is exactly these cells and input points outside them are dropped; when
-        ``None``, the axis is derived as the unique cells the input touches.
+    Args:
+        lat: Latitude of the input samples, in degrees. Either a 1-D
+            coordinate vector (treated as a rectilinear grid) or an N-D array
+            of point coordinates matching ``lon``.
+        lon: Longitude of the input samples, in degrees. Same shape rules as
+            ``lat``.
+        depth: HEALPix order/level [0, 29]. Determines the cell size
+            (``12 * 4**depth`` cells on the sphere).
+        indexing_scheme: HEALPix scheme. Only ``"nested"`` is supported.
+        ellipsoid: Reference ellipsoid for the lat/lon -> cell mapping (e.g.
+            ``"WGS84"``, ``"sphere"``). Two grids share cell ids only when
+            ``depth`` and ``ellipsoid`` match.
+        target_cells: Optional fixed cell axis (sorted unique cell ids). When
+            given, the axis is exactly these cells and input points outside
+            them are dropped; when ``None``, the axis is derived as the unique
+            cells the input touches.
     """
     _require_healpix_geo()
     from healpix_geo.nested import lonlat_to_healpix

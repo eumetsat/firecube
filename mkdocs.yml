@@ -69,11 +69,23 @@ plugins:
       handlers:
         python:
           paths: [src]
+         # Objects inventories for the third-party types that appear in public                                                                                                                                                                                                                                                                                                                                
+         # signatures, so annotations link to their own documentation.                                                                                                                                                                                                                                                                                                                                        
+         # Fetched at build time; see docs job in .github/workflows/ci.yml. 
+          inventories:
+            - https://docs.python.org/3/objects.inv
+            - https://numpy.org/doc/stable/objects.inv
+            - https://docs.xarray.dev/en/stable/objects.inv
           options:
-            show_source: true
+            docstring_style: google
+            show_source: false
             show_category_heading: true
             show_root_heading: true
-            members_order: alphabetical
+            members_order: source
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            separate_signature: true
+            signature_crossrefs: true
   - macros:
       module_name: docs/_macros
 
@@ -96,6 +108,7 @@ nav:
       - DirectZarrIngestor (Region): guides/plugins/direct-zarr.md
     - Develop Further:
       - Read Source Data: guides/plugins/storage-access.md
+      - Customize Source Discovery: guides/plugins/source-discovery.md
       - Configure a Plugin: guides/plugins/cli-and-config.md
       - Add Telemetry: guides/plugins/observability.md
     - Advanced Customization:
@@ -167,9 +180,16 @@ nav:
     - Overview: contributing/index.md
     - Firecube Contributors: contributing/firecube-contributors.md
   - Reference:
-    - Plugin Template API: reference/api.md
-    - Advanced Plugin API: reference/advanced-plugin-api.md
+    - Overview: reference/index.md
+    - Plugin API:
+      - Templates: reference/templates.md
+      - Hooks & Lifecycle: reference/hooks.md
+      - Context & Results: reference/context.md
+      - Exceptions: reference/exceptions.md
+      - Slot-Range Parallelism: reference/parallelism.md
+      - Extensions: reference/extensions.md
+    - Core Utilities: reference/core-utilities.md
     - CLI Reference: reference/cli.md
-    - Observability: reference/observability.md
     - Configuration: reference/config.md
+    - Observability: reference/observability.md
     - Storage Drivers: reference/storage-drivers.md

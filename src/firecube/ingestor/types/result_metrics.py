@@ -25,7 +25,14 @@ from firecube.core.controlplane import SpanCoverage
 
 @dataclass(slots=True)
 class StorageMetrics:
-    """Typed storage summary from plugin results."""
+    """Typed summary of storage output produced by a run or batch.
+
+    Attributes:
+        path: Output path or URI the data was written to, when known.
+        bytes: Total bytes written.
+        files: Number of files written.
+        duration_s: Time spent writing to storage, in seconds.
+    """
 
     path: str | None = None
     bytes: int = 0
@@ -44,7 +51,17 @@ class StorageMetrics:
 
 @dataclass(slots=True)
 class PipelineMetrics:
-    """Typed pipeline metrics from plugin results."""
+    """Typed pipeline processing metrics reported in results.
+
+    Attributes:
+        duration_pipeline_s: Time spent in batch processing, in seconds.
+        rows_processed: Rows read or processed, when known.
+        rows_ingested: Rows actually written to the output, when known.
+        coverage: Span coverage entries describing which groups, arrays,
+            and time ranges the run wrote.
+        duration_upload_s: Time spent uploading staged output, in seconds.
+        duration_total_s: Total wall-clock duration, in seconds.
+    """
 
     duration_pipeline_s: float = 0.0
     rows_processed: int | None = None
