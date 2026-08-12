@@ -37,8 +37,9 @@ Before editing documentation, read [.prompts/docs-policy.md](.prompts/docs-polic
 When editing public docs:
 
 - Identify the primary audience first: user, plugin author, operator, or contributor.
-- Prefer commands, examples, expected output, verification steps, and troubleshooting.
+- In tutorials and how-to guides, prefer commands, examples, expected output, verification steps, and troubleshooting. Do not add them to reference or explanation pages merely to make a page look practical.
 - Explain user consequences before architecture.
+- Public docstrings are published API reference text. Follow the docstring rules in [plans/STYLE.md](plans/STYLE.md) and the reference rules in `.prompts/docs-policy.md`; when a rendered entry looks thin, enrich the docstring rather than moving it to another page.
 - Do not add phase history, audit findings, commit labels, reviewer notes, internal service names, private module paths, line numbers, or `plans/` references to public task pages.
 - Use public CLI flags and public SDK imports (`firecube.ingestor.api`, `firecube.core.api`) unless the page is explicitly internal.
 - Do not create or substantially rewrite a docs page without choosing the matching prompt from `.prompts/` (`write-user-doc`, `write-plugin-doc`, `write-operator-doc`, or `write-internal-doc`).

@@ -43,15 +43,11 @@ class CodecPipeline:
 def normalize_codec_dict(entry: dict) -> dict:
     """Return a canonical copy of a Zarr codec dictionary.
 
-    Parameters
-    ----------
-    entry:
-        Codec dictionary with at least a ``name`` key and optionally a
-        ``configuration`` mapping.
+    Args:
+        entry: Codec dictionary with at least a ``name`` key and optionally a
+            ``configuration`` mapping.
 
-    Returns
-    -------
-    dict
+    Returns:
         A non-mutating copy with top-level keys sorted, a present
         ``configuration`` key, and sorted configuration keys.
     """
@@ -86,16 +82,11 @@ def compare_pipelines(
 ) -> list[tuple[str, dict | None, dict | None]]:
     """Compare a declared codec pipeline with raw on-disk Zarr codecs.
 
-    Parameters
-    ----------
-    declared:
-        Split codec declaration from the plugin/schema layer.
-    on_disk_codecs:
-        Raw tuple of codec instances from ``arr.metadata.codecs``.
+    Args:
+        declared: Split codec declaration from the plugin/schema layer.
+        on_disk_codecs: Raw tuple of codec instances from ``arr.metadata.codecs``.
 
-    Returns
-    -------
-    list[tuple[str, dict | None, dict | None]]
+    Returns:
         Field-level mismatches as ``(field, declared_value, on_disk_value)``.
         A fully undeclared pipeline never reports drift.
     """
@@ -141,20 +132,15 @@ def split_zarr_codecs(
 ) -> tuple[list[dict] | None, dict | None, list[dict] | None]:
     """Split a flat Zarr codec list into filters, serializer, and compressors.
 
-    Parameters
-    ----------
-    codecs:
-        Flat codec dictionaries as accepted by zarr-python.
+    Args:
+        codecs: Flat codec dictionaries as accepted by zarr-python.
 
-    Returns
-    -------
-    tuple[list[dict] | None, dict | None, list[dict] | None]
+    Returns:
         Original dictionaries grouped by codec ABC classification.
 
-    Raises
-    ------
-    ValueError
-        If a codec name is unknown or more than one serializer is present.
+    Raises:
+        ValueError: If a codec name is unknown or more than one serializer is
+            present.
     """
     if codecs is None:
         return None, None, None

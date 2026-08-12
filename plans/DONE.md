@@ -1,5 +1,54 @@
 # Done
 
+## 2026-08-12 — Plugin API reference restructure + docs-coverage contract
+
+Rebuilt the public API reference around a discovery layer and made its coverage machine-checked. Motivated by a plugin-author question that the docs could not answer: multi-group Zarr writes via `get_batch_groups` were reachable in code, documented for the Parquet template only, and absent from the Zarr template's page and every guide.
+
+### Why this shape
+
+Modeled on two projects whose reference docs plugin authors navigate well:
+
+- **earthkit-data** keeps a small hand-written landing page — tables of top-level names with one-line descriptions — in front of a generated tree. The friendliness is the curated front door, not the generation.
+- **xarray** fans a landing page out to per-topic subpages, each listing hand-picked names under task headings as autosummary tables. Its plugin-author treatment is the model copied here: a narrative how-to kept deliberately separate from a reference page that documents the stable extension surface.
+
+Both are Sphinx; this repo is MkDocs + mkdocstrings, so the transferable parts were the patterns (summary tables, task grouping, per-topic pages, drift guards), not the tooling. Two adaptations went further than the source projects:
+
+- **Summary tables are generated, not hand-written.** `docs/_macros.py` already imported firecube at build time, so `render_api_summary(module, names)` emits *name → first docstring line* by static griffe inspection. The curated-list drift both reference projects fight with CI scripts is impossible by construction here.
+- **Examples live in docstrings, not in the Markdown.** They then reach editors and `help()` as well as the rendered page, and render wherever the symbol renders.
+
+A full auto-generated module dump was rejected: the SDK boundary is deliberately two facades, and dumping `firecube.core.*` would advertise modules plugins are forbidden — and test-enforced — not to import.
+
+### What
+
+**Reference split** into `docs/reference/index.md` (grid-card landing) plus `templates`, `hooks`, `context`, `exceptions`, `parallelism`, `extensions`, `core-utilities`. `api.md` and `advanced-plugin-api.md` deleted; 19 inbound links across guides, tutorials, and contributing pages repointed. One canonical `:::` directive per symbol — a duplicate render is a hard `--strict` failure (ambiguous autorefs anchor), so second pages carry prose and links instead. This also resolved pre-existing duplicate renders of `PipelineBatch`, `ZarrTemplateConfig`, `ParquetTemplateConfig`, and `PluginConfig`.
+
+**Coverage closed** for the surface plugin authors actually reach: all `BaseIngestor` hooks (three were rendered before), the exception hierarchy, `PluginContext` including `storage` — the one property with a real docstring, excluded from the old `members:` allowlist and absent from all of `docs/` — plus `StorageContext`, slot-range types and validators, `firecube.core.api` helpers, and the extensions surface.
+
+**`firecube.ingestor.extensions` given an explicit facade**: `__init__.py` with `__all__` and lazy `__getattr__`, mirroring the `api.py` idiom so optional dependencies stay lazy. It was a public import surface per `tests/sdk/test_plugin_contract.py` with no declared boundary. `DuckDbMixin` is documented hooks-only; its resource-config route is the open item in TODO §12.3.
+
+**Docs-coverage contract** (`tests/sdk/test_api_docs_coverage.py`, `docs_static`): every facade export is rendered *and* has docstring text, or is allowlisted with a reason; directives are restricted to facade paths. The docstring half exists because a directive alone proves nothing — `SlotRange` was rendering as a bare signature, its only documentation a `#` comment invisible to griffe. Static griffe inspection is required rather than `inspect.getdoc`: a runtime lookup on an exported type alias returns the underlying type's docstring (`SlotRange` would report `tuple`'s) and would pass silently.
+
+**Docstring conventions recorded** in `plans/STYLE.md` (write the docstring with the code; Google style; `Examples:` plural — the singular parses as a collapsed admonition; section bodies are Markdown, so RST `::` leaks as visible text) and reference architecture in `.prompts/docs-policy.md` §6, led by the rule the work itself needed: enrich the docstring, do not relocate the entry.
+
+### Consequences
+
+- Adding a name to a facade `__all__` now fails CI until it is documented and has a docstring, or is allowlisted with a reason. The previously implicit "authoring surface" scoping is an explicit, reviewable list.
+- The docs build depends on three external hosts (python, numpy, xarray inventories) for annotation cross-links. An unreachable host fails `mkdocs build --strict` and therefore blocks the docs deploy — verified by pointing an inventory at an invalid host. zarr, pyarrow, and pandas inventories were measured to resolve zero links (their types appear only in docstring prose, which mkdocstrings does not auto-link) and were excluded rather than carried as failure surface.
+- CI lanes now match `plans/TESTING_STANDARDS.md`: `test` excludes `docs_static`/`snapshot`, `docs` runs them. The `docs` job needed the fixture-plugin install step, because a conftest guard fails collection for any pytest run without them.
+- `griffelib` added to the `test` extra and the `--strict-deps` guard rather than guarded by `importorskip`, which would have silently skipped the coverage check in the PR-gating job. SBOM and README dependency tables regenerated; `hatchling` version drift (1.30.1 → 1.32.0) corrected while there.
+
+### Verification
+
+- `uv run mkdocs build --strict` — passes, no warnings.
+- `uv run pytest --strict-deps -m "docs_static or snapshot"` — 29 passed.
+- `uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot"` — 2410 passed, 1 pre-existing unrelated failure (`test_resolve_file_localhost`, macOS `/tmp` symlink assertion; reproduced on a clean tree with these changes stashed).
+- `uv run ruff check`, `ruff format --check`, `uv run pyright` — clean.
+- Coverage measured before/after: `firecube.ingestor.api` 19 → 43 of 63 exports documented, `firecube.core.api` 3 → 21 of 30, `firecube.ingestor.extensions` 0 → 11 of 11; reference pages 6 → 12; unique documented symbols 26 → 97; 38 numpy-style docstring sections converted across 14 modules, 0 remaining.
+
+### Follow-ups
+
+- TODO §12.4 records that `discover_input_files` exposes `exclude`, `include_suffixes`, `recursive`, and `sniff_hdf5` while `EngineConfig` surfaces only `include_patterns`, so excluding a file requires plugin code.
+
 ## 2026-08-10 — #40 — DirectZarr codec CLI parity + default alignment + RF-11/RF-12 invariants
 
 Closes GitHub #40. Fixes three linked issues in the codec configuration surface: a silent PR #25 regression (default was uncompressed on-disk), the DirectZarr CLI routing gap for codec options, and divergent template defaults between GenericZarr and DirectZarr. Also promotes an internal codec-derivation helper to a public runtime API and closes an adjacent behavioral parity gap in `firecube zarr preallocate`.

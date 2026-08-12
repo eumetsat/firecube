@@ -74,19 +74,13 @@ def export_storage_config_to_env(
 ) -> None:
     """Publish storage configuration to environment variables for child processes.
 
-    Parameters
-    ----------
-    config:
-        Non-location storage config (storage_type, endpoint_url, credentials,
-        region, path_style, storage_driver).
-    identity:
-        Optional product identity providing location fields (bucket /
-        target_path / target_uri). When ``None``, location vars are omitted.
-    env:
-        Optional mutable mapping to write into; defaults to ``os.environ``.
+    Args:
+        config: Non-location storage config (storage_type, endpoint_url,
+            credentials, region, path_style, storage_driver).
+        identity: Optional product identity providing location fields (bucket /
+            target_path / target_uri). When ``None``, location vars are omitted.
+        env: Optional mutable mapping to write into; defaults to ``os.environ``.
 
-    Notes
-    -----
     We intentionally export both FIRECUBE_* and AWS_* style variables:
       - FIRECUBE_* is used by Firecube internals and helpers.
       - AWS_* allows libraries such as fsspec/xarray/zarr to discover
@@ -169,8 +163,6 @@ def resolve_storage_config(
     This is a convenience wrapper used by CLI entrypoints to keep the
     load/build/validate/export wiring consistent across commands.
 
-    Notes
-    -----
     - Precedence is implemented in `build_storage_config(...)`.
     - This helper does not depend on click (so it can be used by non-CLI code).
     """

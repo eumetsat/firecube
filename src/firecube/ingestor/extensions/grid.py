@@ -69,20 +69,19 @@ def build_latlon_binner(
 ) -> LatLonBinner:
     """Precompute the mapping from an input lat/lon grid to regular bins.
 
-    Parameters
-    ----------
-    lat, lon:
-        Input geolocation, 1-D coordinate vectors or matching N-D arrays.
-    grid_spacing:
-        Target cell size in degrees (> 0).
-    bounds:
-        Optional ``(lat_min, lat_max, lon_min, lon_max)`` fixing the output
-        grid extent. When given, the axis is exactly these bounds and input
-        points outside them are dropped -- pin one set of bounds to reuse the
-        same grid across granules. When ``None``, the extent is derived from
-        the data (``floor(min)``/``ceil(max)``).
-    fill_value:
-        Accepted for signature parity; data masking is applied by callers.
+    Args:
+        lat: Input geolocation latitude, a 1-D coordinate vector or an N-D
+            array matching ``lon``.
+        lon: Input geolocation longitude, a 1-D coordinate vector or an N-D
+            array matching ``lat``.
+        grid_spacing: Target cell size in degrees (> 0).
+        bounds: Optional ``(lat_min, lat_max, lon_min, lon_max)`` fixing the
+            output grid extent. When given, the axis is exactly these bounds
+            and input points outside them are dropped -- pin one set of bounds
+            to reuse the same grid across granules. When ``None``, the extent
+            is derived from the data (``floor(min)``/``ceil(max)``).
+        fill_value: Accepted for signature parity; data masking is applied by
+            callers.
     """
     if grid_spacing <= 0:
         raise ValueError("grid_spacing must be > 0")
@@ -166,14 +165,11 @@ def regrid_with_binner(
 ) -> np.ndarray:
     """Regrid a 2D field onto the binner's regular grid.
 
-    Parameters
-    ----------
-    binner:
-        Precomputed LatLonBinner mapping for the input geolocation grid.
-    data:
-        2D array matching the binner's input grid shape.
-    aggregation:
-        Aggregation method for multiple source pixels per target cell.
+    Args:
+        binner: Precomputed LatLonBinner mapping for the input geolocation grid.
+        data: 2D array matching the binner's input grid shape.
+        aggregation: Aggregation method for multiple source pixels per target
+            cell.
     """
     values_flat = np.asarray(data).ravel()
     return _aggregate_to_grid(values_flat=values_flat, binner=binner, aggregation=aggregation)

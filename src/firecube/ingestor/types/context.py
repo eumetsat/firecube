@@ -42,7 +42,22 @@ BATCH_META_TIMESTAMPS = "timestamps"
 
 @dataclass(slots=True)
 class StorageContext:
-    """Named storage role bindings for an ingestion run."""
+    """Storage sessions for an ingestion run, keyed by role.
+
+    Each field binds one storage role to a session that the engine creates
+    from the resolved target and selected storage driver. Plugins reach it
+    through :attr:`PluginContext.storage` and should treat the bound
+    sessions as engine-owned handles: use them to inspect the product
+    identity and perform storage operations, but do not replace or close
+    them.
+
+    Attributes:
+        output: Session bound to the run's output target, or ``None`` when
+            the engine has not bound output storage. The session exposes the
+            product identity (``output.product``) and filesystem-level
+            operations (``exists``, ``open``, ...) routed through the
+            selected storage driver.
+    """
 
     output: StorageSession | None = None
 
@@ -206,7 +221,17 @@ class RuntimeIngestContext(IngestContext):
 
 
 class PluginContext:
-    """Read-only proxy for IngestContext for all plugin-facing hooks."""
+    """Read-only per-run context handed to every plugin-facing hook.
+
+    The engine builds one instance per run from the caller's
+    :class:`IngestContext` plus its own runtime state, and passes it to
+    plugin hooks such as ``discover_source_files``, ``get_batch_groups``,
+    and ``build_dataset``. Plugin authors never construct it themselves.
+
+    All members are read-only. In particular, :attr:`options` is a detached
+    immutable copy taken when the context is created, and attribute access
+    outside the documented surface raises ``AttributeError``.
+    """
 
     def __init__(self, ctx: RuntimeIngestContext):
         self._ctx = ctx
@@ -220,47 +245,111 @@ class PluginContext:
 
     @property
     def source(self) -> str:
+        """Input data location for this run, as provided by the caller.
+
+        A local path or remote URI (e.g. the ``--input-data`` CLI option).
+        The default ``discover_source_files`` implementation scans it for
+        input files; plugins with custom discovery may interpret it freely.
+        """
         return self._ctx.source
 
     @property
     def target(self) -> str | None:
+        """Output target URI for this run, or ``None`` when not provided.
+
+        Taken from the caller's :attr:`IngestContext.target`. The engine
+        resolves the actual store location from it together with the
+        configured write mode, so plugins should treat it as declarative
+        rather than writing to it directly.
+        """
         return self._ctx.target
 
     @property
     def in_memory(self) -> bool:
+        """Whether intermediate processing should stay in memory.
+
+        Set by the caller (e.g. the ``--in-memory`` CLI flag). When true,
+        plugins that stage data (such as DuckDB-backed plugins) should use
+        in-memory state instead of files under :attr:`temp_root`.
+        """
         return self._ctx.in_memory
 
     @property
     def output_format(self) -> str | None:
+        """Requested output format for this run, or ``None`` when unset.
+
+        One of ``"zarr"``, ``"parquet"``, or ``"tensogram"`` for the
+        built-in templates; the CLI defaults it to ``"zarr"``.
+        """
         return self._ctx.output_format
 
     @property
     def storage(self) -> StorageContext | None:
-        """Storage sessions bound to this plugin run, keyed by role."""
+        """Storage sessions bound to this run, keyed by role, or ``None``.
+
+        When output storage is bound, ``storage.output`` is the session for
+        the run's output target. See :class:`StorageContext`.
+        """
         return self._ctx.storage
 
     @property
     def temp_root(self) -> Path | None:
+        """Per-run workspace directory, or ``None`` when no workspace exists.
+
+        Created by the engine at run start. Materialized source files and
+        other temporary artifacts live under this root; it may be deleted
+        when the run finishes, so nothing durable should be stored here.
+        """
         return self._ctx.temp_root
 
     @property
     def force_reingest(self) -> bool:
+        """Whether this run is allowed to overwrite existing slice data.
+
+        Engine-owned flag (e.g. ``--option force_reingest=true``); read-only
+        for plugins.
+        """
         return self._ctx.force_reingest
 
     @property
     def incremental(self) -> bool:
+        """Whether plugin logic should prefer incremental update behavior.
+
+        Engine-owned flag; read-only for plugins. When true, plugins that
+        support it should update existing output instead of reprocessing
+        from scratch.
+        """
         return self._ctx.incremental
 
     @property
     def dry_run(self) -> bool:
+        """Whether side-effecting writes should be suppressed when supported.
+
+        Engine-owned flag; read-only for plugins. Plugins that honor it
+        should skip persistent writes while still exercising the rest of
+        their processing.
+        """
         return self._ctx.dry_run
 
     @property
     def telemetry(self) -> IngestionTelemetry | None:
+        """Telemetry sink for this run, or ``None`` when not configured.
+
+        Plugins should record metrics and tracing spans only through this
+        object (``emit()``, ``span()``) instead of importing a telemetry
+        backend directly.
+        """
         return self._ctx.telemetry
 
     @property
     def options(self) -> dict[str, Any]:
+        """Plugin options for this run as an immutable mapping.
+
+        A detached copy of the caller's options (including ``--option``
+        CLI overrides) wrapped in :class:`types.MappingProxyType` when the
+        context is created: it cannot be mutated, and later changes to
+        engine state are not reflected in it.
+        """
         return self._options  # type: ignore[return-value]
 
     @property
@@ -269,9 +358,41 @@ class PluginContext:
         return self._ctx.run_id
 
     def option(self, key: str, default: Any = None) -> Any:
+        """Return a single option value with a fallback.
+
+        Args:
+            key: Option name as passed by the caller (e.g. via ``--option``).
+            default: Value returned when the option is not set.
+
+        Returns:
+            The value from :attr:`options`, or ``default`` when missing.
+        """
         return self._options.get(key, default)
 
     def materialize(self, source: Any) -> Path:
+        """Ensure a source file is available locally and return its path.
+
+        Remote sources (e.g. S3 URIs) are downloaded into the per-run cache
+        under :attr:`temp_root`; already-local paths are returned directly.
+
+        Args:
+            source: A local path, URI string, or source-file object.
+
+        Returns:
+            Local filesystem path to the materialized file.
+
+        Raises:
+            RuntimeError: If no materializer is configured for the run and
+                the source cannot be resolved to an existing local file.
+
+        Examples:
+            Resolve discovered items before handing them to a reader that
+            only accepts local paths:
+
+                def build_dataset(self, group, items, ctx):
+                    paths = [ctx.materialize(item) for item in items]
+                    return xr.open_mfdataset(paths, combine="by_coords")
+        """
         return self._ctx.materialize(source)
 
     def __getattr__(self, name: str) -> Any:
@@ -284,7 +405,15 @@ class PluginContext:
 
 @dataclass(slots=True, init=False)
 class IngestResult:
-    """Structured dataset returned by plugins."""
+    """Final result of one ingestion run.
+
+    Aggregates the run's output locations (``outputs``) and merged metrics
+    (``metrics``) after all batches have completed. When output storage is
+    bound, the engine additionally records the storage completion outcome
+    (``storage_result``), the effective write mode (``write_mode_applied``),
+    and a manifest summary (``manifest``) before returning the result to
+    the caller.
+    """
 
     output_format: str
     outputs: OutputPaths = field(default_factory=OutputPaths)
@@ -386,7 +515,13 @@ class PipelineResult:
 
 @dataclass(slots=True, frozen=True)
 class PipelineRunState:
-    """Immutable run snapshot for pipeline orchestration and hooks."""
+    """Immutable snapshot of a pipeline run passed to lifecycle hooks.
+
+    Captures the planned batches, worker/batch-size configuration, timing
+    counters, and (once available) per-batch results and aggregated totals.
+    Instances are frozen: hooks such as ``on_pipeline_start`` observe the
+    state but cannot mutate it.
+    """
 
     product: str
     pipeline_workers: int

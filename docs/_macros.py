@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import os
+import re
 import sys
 import tomllib
 
@@ -31,6 +32,33 @@ if _src not in sys.path:
     sys.path.insert(0, _src)
 
 from firecube.core.observability.metrics import RUN_SUMMARY_SCHEMA  # noqa: E402
+
+# Sphinx-style roles occasionally appear in first docstring lines; render the
+# target as inline code in summary tables.
+_RST_ROLE = re.compile(r":(?:class|func|meth|mod|attr|obj|exc|data):`(~?[^`]+)`")
+
+_GRIFFE_MODEL = None
+
+
+def _strip_rst_roles(text: str) -> str:
+    def _replace(match: re.Match[str]) -> str:
+        target = match.group(1)
+        if target.startswith("~"):
+            target = target[1:].rsplit(".", 1)[-1]
+        return f"`{target}`"
+
+    return _RST_ROLE.sub(_replace, text)
+
+
+def _load_firecube_model():
+    """Load the firecube package as a static griffe model (no code is imported)."""
+    global _GRIFFE_MODEL
+    if _GRIFFE_MODEL is None:
+        import griffe
+
+        _GRIFFE_MODEL = griffe.load("firecube", search_paths=[_src], submodules=True)
+    return _GRIFFE_MODEL
+
 
 # Human-readable descriptions for each summary key.
 # Kept here so docs/_macros.py is the single source for doc prose;
@@ -179,35 +207,24 @@ def define_env(env):
         return "\n".join(rows)
 
     @env.macro
-    def render_event_types() -> str:
-        """Render a Markdown table of control-plane event types from EVENT_* constants."""
-        from firecube.core.controlplane import types
+    def render_api_summary(module: str, names: list[str]) -> str:
+        """Render a summary table of public API names with one-line descriptions.
 
-        _descriptions: dict[str, str] = {
-            "run_started": "A new ingestion run started",
-            "run_completed": "Run finished successfully",
-            "run_failed": "Run terminated with error",
-            "run_abandoned": "Run explicitly abandoned (stale or interrupted)",
-            "span_committed": "A batch span was successfully committed to the WAL",
-            "span_failed": "A batch span failed during write",
-            "span_noop": "A batch span was a no-op (already covered)",
-            "record_replaced": "An existing WAL record was replaced",
-            "record_upsert": "A new WAL record was created or updated",
-            "schema_verification": "Schema verification check recorded",
-            "run_started_with_replacement": "Run started, replacing a prior abandoned run",
-            "replacement_committed": "Replacement run commit finalized",
-            "maintenance_started": "Maintenance operation started (delete, scrub, or archive restore)",
-            "maintenance_completed": "Maintenance operation completed successfully",
-            "maintenance_failed": "Maintenance operation failed",
-        }
-
-        header = "| Constant | Event Type String | Description |"
-        separator = "|---|---|---|"
-        rows = [header, separator]
-        for name in sorted(n for n in dir(types) if n.startswith("EVENT_")):
-            value = getattr(types, name)
-            description = _descriptions.get(value, "")
-            rows.append(f"| `{name}` | `{value}` | {description} |")
+        ``module`` is a public facade path such as ``firecube.ingestor.api``;
+        ``names`` are exported names (dotted member paths are allowed). Each row
+        links to the full reference entry through mkdocstrings-autorefs, and the
+        description is the first docstring line read statically with griffe, so
+        the table cannot drift from the source. Unknown names raise at build
+        time and fail ``mkdocs build --strict``.
+        """
+        model = _load_firecube_model()
+        rows = ["| Name | Description |", "|---|---|"]
+        for name in names:
+            obj = model[f"{module.removeprefix('firecube.')}.{name}"]
+            target = obj.final_target if obj.is_alias else obj
+            doc = target.docstring.value if target.docstring else ""
+            first = _strip_rst_roles(doc.strip().split("\n", 1)[0]).replace("|", "\\|")
+            rows.append(f"| [`{name}`][{module}.{name}] | {first} |")
         return "\n".join(rows)
 
     @env.macro

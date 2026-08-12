@@ -42,7 +42,7 @@ Use `self.plugin_config` for declared product fields. Do not treat
 Use `ctx.option(key, default)` only for effective engine settings or
 experimental `x_*` values. `ctx.options` exposes the same effective values as a
 read-only mapping. See the
-[Plugin Template API](../../reference/api.md#plugin-configuration) for the
+[Configuration Reference](../../reference/config.md#pluginconfig) for the
 public configuration types.
 
 ## Set Configuration Values

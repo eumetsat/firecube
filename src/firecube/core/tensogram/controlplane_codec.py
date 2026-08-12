@@ -46,9 +46,7 @@ def serialize_controlplane(
     Claims (write locks) are always included in full — they have no group field.
     Run records are included only for runs referenced by the result set.
 
-    Returns
-    -------
-    tuple[dict, np.ndarray]
+    Returns:
         ``(descriptor_dict, uint8_array)`` suitable for ``TensogramFile.append()``.
     """
     list_kwargs: dict[str, Any] = {"product": product, "chunk_type": "span"}
@@ -146,16 +144,14 @@ def restore_controlplane(
     This is best-effort: individual run failures are logged as warnings
     and do not prevent other runs from being restored.
 
-    Parameters
-    ----------
-    state:
-        Deserialized control-plane state dict from ``deserialize_controlplane()``.
-    target_path:
-        Root path of the zarr store to restore ``.firecube/`` into.
-    storage_config:
-        Optional ``StorageConfig`` used to wire the underlying filesystem with
-        the configured endpoint and credentials. When ``None``, ambient defaults
-        apply — required for remote ``target_path`` values such as ``s3://...``.
+    Args:
+        state: Deserialized control-plane state dict from
+            ``deserialize_controlplane()``.
+        target_path: Root path of the zarr store to restore ``.firecube/`` into.
+        storage_config: Optional ``StorageConfig`` used to wire the underlying
+            filesystem with the configured endpoint and credentials. When
+            ``None``, ambient defaults apply — required for remote
+            ``target_path`` values such as ``s3://...``.
     """
     from firecube.core.controlplane.events import RunEventWriter
     from firecube.core.filesystem import StorageFilesystemFull, create_filesystem

@@ -27,7 +27,12 @@ class IngestorError(FirecubeError):
 
 
 class ConfigurationError(IngestorError):
-    """Configuration validation failed."""
+    """Invalid or conflicting configuration was supplied for a run.
+
+    Raised during option validation and pre-write checks, e.g. unknown or
+    malformed options, missing required inputs, or an existing store whose
+    layout conflicts with the plugin's declaration.
+    """
 
 
 class SchemaSizeMismatchError(IngestorError):
@@ -38,7 +43,12 @@ class SchemaSizeMismatchError(IngestorError):
 
 
 class ResumeConflictError(IngestorError):
-    """Resume/overwrite conflict detected."""
+    """Existing data conflicts with this run's resume/overwrite settings.
+
+    Raised when previously ingested entries for the product are detected but
+    the run was started without ``resume_existing`` or ``force_reingest``,
+    or lacks the slice options needed to match existing entries safely.
+    """
 
 
 class RangeOverlapError(ResumeConflictError):

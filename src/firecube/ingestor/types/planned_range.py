@@ -27,8 +27,14 @@ if TYPE_CHECKING:
     from firecube.core.controlplane.types import SpanCoverage
 
 
-# Half-open range type alias: (slot_start, slot_end) where slot_start is inclusive, slot_end exclusive.
 SlotRange = tuple[int, int]
+"""A half-open slot range as ``(slot_start, slot_end)``.
+
+``slot_start`` is inclusive and ``slot_end`` is exclusive, matching Python
+slicing and engine array indexing. Used for the ``--slot-start`` /
+``--slot-end`` worker assignment; see :class:`PlannedRange` for the
+per-group form.
+"""
 
 
 @dataclass(frozen=True)

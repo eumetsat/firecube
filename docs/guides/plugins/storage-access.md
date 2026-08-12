@@ -27,7 +27,7 @@ source root itself.
 Template hooks return datasets, tables, or write intents. They do not open the
 output store directly; the selected template performs output I/O.
 
-See the [Plugin Template API](../../reference/api.md#plugin-context) for the
+See the [Context & Results](../../reference/context.md#plugincontext) for the
 complete public context surface.
 
 ## Set The Source
@@ -54,4 +54,4 @@ not only whether materialization completed.
 
 - **[Product Storage](../../concepts/storage.md)** — understand source and target storage roles
 - **[Storage Drivers](../../reference/storage-drivers.md)** — inspect driver values and capabilities
-- **[Plugin Template API](../../reference/api.md)** — look up `PluginContext`
+- **[Context & Results](../../reference/context.md)** — look up `PluginContext`

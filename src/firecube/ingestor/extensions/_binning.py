@@ -72,19 +72,17 @@ def aggregate_by_position(
 ) -> np.ndarray:
     """Scatter flattened values onto a 1-D target axis of length ``n_targets``.
 
-    Parameters
-    ----------
-    values_flat:
-        Flattened input values (same flattening as the binner was built from).
-    valid_point_index:
-        Indices into ``values_flat`` for the points the binner kept.
-    position:
-        For each kept point, the target-axis index in ``[0, n_targets)``.
-    n_targets:
-        Length of the output axis.
-    aggregation:
-        One of :data:`AGGREGATIONS`. ``any`` returns a ``uint8`` presence mask;
-        all others return ``float32`` with ``NaN`` in empty cells.
+    Args:
+        values_flat: Flattened input values (same flattening as the binner was
+            built from).
+        valid_point_index: Indices into ``values_flat`` for the points the
+            binner kept.
+        position: For each kept point, the target-axis index in
+            ``[0, n_targets)``.
+        n_targets: Length of the output axis.
+        aggregation: One of :data:`AGGREGATIONS`. ``any`` returns a ``uint8``
+            presence mask; all others return ``float32`` with ``NaN`` in empty
+            cells.
     """
     aggregation = str(aggregation).lower()
     if aggregation not in AGGREGATIONS:

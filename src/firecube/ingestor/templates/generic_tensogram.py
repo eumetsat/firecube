@@ -154,16 +154,39 @@ def bind_tensogram_strategy(ingestor: Any) -> None:
 
 
 class GenericTensogramIngestor(BaseIngestor):
-    """Template for plugins that write directly to Tensogram .tgm format."""
+    """Template for plugins that write directly to Tensogram ``.tgm`` archives.
+
+    Subclasses implement ``build_dataset(group, items, ctx)`` returning an
+    :class:`xarray.Dataset` (or ``None`` to skip); the template writes each
+    group's dataset to the local ``.tgm`` target using the options declared
+    in :class:`TensogramTemplateConfig`. Remote targets are not supported.
+    """
 
     template_config_class = TensogramTemplateConfig
 
     @abstractmethod
     def build_dataset(self, group: str, items: list[Any], ctx: PluginContext) -> xr.Dataset | None:
-        """Convert a sub-batch of items into an xarray Dataset."""
+        """Convert a sub-batch of items into an xarray Dataset.
+
+        Returns None to skip writing for this group/batch.
+
+        Examples:
+            Build the dataset the archive writer receives:
+
+                def build_dataset(self, group, items, ctx):
+                    paths = [ctx.materialize(item) for item in items]
+                    if not paths:
+                        return None
+                    return xr.open_mfdataset(paths, combine="by_coords")
+        """
 
     def get_batch_groups(self, items: Sequence[Any], ctx: PluginContext) -> list[str]:
-        """Return list of Tensogram groups/messages to process."""
+        """Return the logical write groups for a batch (Hook).
+
+        Each group produces one ``build_dataset`` call receiving the full
+        batch item list. Must be deterministic and stable-sorted.
+        Default: ``["default"]``.
+        """
         return ["default"]
 
     def _process_batch(self, batch: PipelineBatch, ctx: PluginContext) -> PipelineResult:

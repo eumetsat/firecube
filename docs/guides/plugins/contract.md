@@ -12,7 +12,7 @@ attribute. Import SDK types from `firecube.ingestor.api` and helpers from
 
 Every concrete plugin class must declare a non-empty
 `PRODUCT_NAME: ClassVar[str]`. Use `PluginConfig` only when the product needs
-typed options. See the [Plugin Template API](../../reference/api.md) for these
+typed options. See the [Configuration Reference](../../reference/config.md) for these
 public types.
 
 ## Register The Package Entry Point

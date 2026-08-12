@@ -105,7 +105,34 @@ Move interrupting sections to their canonical owner and link them.
 - For explanation, connect and contextualize ideas without adding a procedure
   or exhaustive contract table.
 
-## 6. Template Selection
+## 6. API Reference And Docstrings
+
+The API reference under `docs/reference/` renders public docstrings through
+mkdocstrings. The docstring is the reference text, so reference quality is a
+source-code concern. Docstring conventions live in `plans/STYLE.md`.
+
+- **Enrich the docstring; do not relocate the entry.** When a rendered entry
+  reads as empty, the fix is the docstring, not a different page. Moving a
+  thin entry hides it from the surface it belongs to and leaves the gap.
+- **One canonical `:::` directive per symbol.** Two directives for the same
+  symbol fail `mkdocs build --strict` with an ambiguous-anchor error. A second
+  page covers the symbol with prose and a link, never a second render.
+- **Directives target public facades only** (`firecube.ingestor.api`,
+  `firecube.core.api`, `firecube.ingestor.extensions`). Internal module paths
+  must not appear in the reference.
+- **Every facade export is documented or allowlisted.** Exports with no
+  directive need an entry in the docs-coverage test allowlist stating why.
+  Both rules are enforced by `tests/sdk/test_api_docs_coverage.py`.
+- **Example placement follows the page type.** A short snippet showing what a
+  hook receives or must return is a lookup fact: put it in the docstring as an
+  `Examples:` section, where it also reaches editors and `help()`. A
+  multi-step workflow with commands, expected output, or verification is a
+  how-to: put it in a guide and link to it.
+- Keep reference pages complete for their declared surface. A hook that every
+  ingestor inherits belongs on the hook reference even when a guide covers the
+  same ground in more depth.
+
+## 7. Template Selection
 
 Use the prompt templates under `.prompts/` when creating or rewriting pages:
 

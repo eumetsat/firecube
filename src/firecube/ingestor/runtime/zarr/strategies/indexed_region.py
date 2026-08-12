@@ -119,33 +119,28 @@ class IndexedRegionStrategy:
     ) -> dict[str, Any]:
         """Execute write intents grouped by Zarr group and return metrics.
 
-        Parameters
-        ----------
-        group_to_intents:
-            Mapping of group name to list of ``WriteIntent`` objects.
-        schema:
-            Group specifications for array creation.  Falls back to the
-            constructor-provided schema if ``None``.
-        claim_for_group:
-            Optional callback returning a context manager for group/schema
-            coordination.  When ``claim_for_slot`` is provided, this protects
-            schema setup only.
-        claim_for_slot:
-            Optional callback returning a context manager for per-``ts_index``
-            intent dispatch.  Falls back to ``claim_for_group`` and then a null
-            context when omitted.
-        slot_range:
-            Optional half-open ``[start, end)`` slot range.  When provided, all
-            intents are validated before any schema setup or writes occur.
-        slot_group:
-            Optional group name that this pod owns.  When set together with
-            ``slot_range``, the post-intent assertion only validates intents
-            for ``slot_group``; intents for other groups are skipped with a
-            warning (not silently dropped) and no writes happen for them.
+        Args:
+            group_to_intents: Mapping of group name to list of ``WriteIntent``
+                objects.
+            schema: Group specifications for array creation.  Falls back to
+                the constructor-provided schema if ``None``.
+            claim_for_group: Optional callback returning a context manager for
+                group/schema coordination.  When ``claim_for_slot`` is
+                provided, this protects schema setup only.
+            claim_for_slot: Optional callback returning a context manager for
+                per-``ts_index`` intent dispatch.  Falls back to
+                ``claim_for_group`` and then a null context when omitted.
+            slot_range: Optional half-open ``[start, end)`` slot range.  When
+                provided, all intents are validated before any schema setup or
+                writes occur.
+            slot_group: Optional group name that this pod owns.  When set
+                together with ``slot_range``, the post-intent assertion only
+                validates intents for ``slot_group``; intents for other groups
+                are skipped with a warning (not silently dropped) and no
+                writes happen for them.
 
-        Returns
-        -------
-        dict with ``"coverage"`` list and ``"duration_s"`` float.
+        Returns:
+            dict with ``"coverage"`` list and ``"duration_s"`` float.
         """
         effective_schema = schema if schema is not None else self._schema
         t0 = time.monotonic()

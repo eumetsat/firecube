@@ -260,14 +260,12 @@ class RegionZarrWriterProtocol(Protocol):
 class RegionZarrWriter:
     """Write arrays directly to a Zarr store with lazy open semantics.
 
-    Parameters
-    ----------
-    store_uri:
-        Target store URI/path (local path, ``file://`` URI, or ``s3://`` URI).
-    coord_names:
-        Array names treated as coordinate axes.  These are skipped by
-        :meth:`ensure_timestamp_slot` when resizing timestamped arrays.
-        Defaults to ``{"y", "x", "channel"}``.
+    Args:
+        store_uri: Target store URI/path (local path, ``file://`` URI, or
+            ``s3://`` URI).
+        coord_names: Array names treated as coordinate axes.  These are
+            skipped by :meth:`ensure_timestamp_slot` when resizing timestamped
+            arrays.  Defaults to ``{"y", "x", "channel"}``.
     """
 
     def __init__(
@@ -326,48 +324,35 @@ class RegionZarrWriter:
     ) -> Any:
         """Ensure a group or array path exists.
 
-        Parameters
-        ----------
-        group:
-            Group path or array path (e.g. ``data_1km/counts``).
-        shape:
-            Array shape when creating array paths.
-        dtype:
-            Array dtype when creating array paths.
-        fill_value:
-            Fill value for newly created arrays.
-        chunks:
-            Chunk shape for newly created arrays.
-        allow_grow:
-            If ``True``, grow existing arrays to at least *shape*.
-            Defaults to ``False`` so schema verification callers can inspect
-            undersized arrays and raise their own drift errors.
-        shards:
-            Optional Zarr v3 shard shape for newly created arrays.
-        attrs:
-            Optional user attributes to write at array creation. Reserved keys
-            (see :data:`firecube.core.zarr._reserved_attrs.RESERVED_ARRAY_ATTRS`)
-            are rejected. ``ensure_group`` is creation-only — drift detection
-            for the attrs of existing arrays is handled by
-            :meth:`verify_array_spec`.
-        dimension_names:
-            Optional Zarr v3 ``dimension_names`` for newly created arrays. On
-            resume, a mismatch against an existing array raises
-            :class:`SchemaDriftError`; firecube does not perform in-place
-            dimension renames.
+        Args:
+            group: Group path or array path (e.g. ``data_1km/counts``).
+            shape: Array shape when creating array paths.
+            dtype: Array dtype when creating array paths.
+            fill_value: Fill value for newly created arrays.
+            chunks: Chunk shape for newly created arrays.
+            allow_grow: If ``True``, grow existing arrays to at least *shape*.
+                Defaults to ``False`` so schema verification callers can
+                inspect undersized arrays and raise their own drift errors.
+            shards: Optional Zarr v3 shard shape for newly created arrays.
+            attrs: Optional user attributes to write at array creation.
+                Reserved keys (see
+                :data:`firecube.core.zarr._reserved_attrs.RESERVED_ARRAY_ATTRS`)
+                are rejected. ``ensure_group`` is creation-only — drift
+                detection for the attrs of existing arrays is handled by
+                :meth:`verify_array_spec`.
+            dimension_names: Optional Zarr v3 ``dimension_names`` for newly
+                created arrays. On resume, a mismatch against an existing
+                array raises :class:`SchemaDriftError`; firecube does not
+                perform in-place dimension renames.
 
-        Returns
-        -------
-        Existing or newly created group/array.
+        Returns:
+            Existing or newly created group/array.
 
-        Raises
-        ------
-        ValueError
-            If array creation is requested without *shape*/*dtype*, or if
-            *attrs* contains reserved keys.
-        SchemaDriftError
-            If *dimension_names* differs from the existing array's
-            ``dimension_names`` on resume.
+        Raises:
+            ValueError: If array creation is requested without *shape*/*dtype*,
+                or if *attrs* contains reserved keys.
+            SchemaDriftError: If *dimension_names* differs from the existing
+                array's ``dimension_names`` on resume.
         """
         if attrs is not None:
             assert_attrs_safe(attrs)
@@ -588,12 +573,9 @@ class RegionZarrWriter:
         Arrays whose names appear in ``coord_names`` (constructor param) or
         that are scalar are skipped.
 
-        Parameters
-        ----------
-        group:
-            Data group path (e.g. ``data_1km``).
-        ts_index:
-            Zero-based timestamp index that must exist.
+        Args:
+            group: Data group path (e.g. ``data_1km``).
+            ts_index: Zero-based timestamp index that must exist.
         """
         grp = self._open_root()[group]
         for name in list(grp.array_keys()):
@@ -618,25 +600,16 @@ class RegionZarrWriter:
     ) -> None:
         """Write one spatial region for one timestamp.
 
-        Parameters
-        ----------
-        group:
-            Data group path.
-        array_name:
-            Target array name inside *group*.
-        ts_index:
-            Timestamp slot index.
-        y_slice:
-            Spatial y-range to write.
-        data:
-            Input data with matching shape.
-        channel_index:
-            Optional channel index for 4-D arrays.
+        Args:
+            group: Data group path.
+            array_name: Target array name inside *group*.
+            ts_index: Timestamp slot index.
+            y_slice: Spatial y-range to write.
+            data: Input data with matching shape.
+            channel_index: Optional channel index for 4-D arrays.
 
-        Raises
-        ------
-        ValueError
-            If target array rank is unsupported.
+        Raises:
+            ValueError: If target array rank is unsupported.
         """
         arr = self._open_root()[f"{group}/{array_name}"]
         if arr.ndim == 4:
@@ -673,24 +646,17 @@ class RegionZarrWriter:
         at ``(group, ts_index)`` granularity only (see DESIGN.md §"Risks To
         Avoid"), so multi-slot payloads would create silent data-integrity gaps.
 
-        Parameters
-        ----------
-        group:
-            Data group path.
-        array_name:
-            Target array name.
-        ts_index:
-            Timestamp slot index.
-        data:
-            One value to write at the slot. Shape/rank constraints depend on
-            the target array's rank (see contract above).
+        Args:
+            group: Data group path.
+            array_name: Target array name.
+            ts_index: Timestamp slot index.
+            data: One value to write at the slot. Shape/rank constraints
+                depend on the target array's rank (see contract above).
 
-        Raises
-        ------
-        ValueError
-            If a 1-D target receives a payload with ``size != 1``, or if a
-            higher-rank target receives a payload whose shape does not match
-            ``arr.shape[1:]``.
+        Raises:
+            ValueError: If a 1-D target receives a payload with ``size != 1``,
+                or if a higher-rank target receives a payload whose shape does
+                not match ``arr.shape[1:]``.
         """
         arr = self._open_root()[f"{group}/{array_name}"]
         payload = np.asarray(data)
@@ -782,21 +748,16 @@ class RegionZarrWriter:
         This method performs a full overwrite: ``arr[...] = data``.
         It does NOT call ``ensure_timestamp_slot`` — static arrays have no time axis.
 
-        Parameters
-        ----------
-        group:
-            Data group path.
-        array_name:
-            Target array name.
-        data:
-            Data to assign. Must have the same ndim and shape as the preallocated array.
+        Args:
+            group: Data group path.
+            array_name: Target array name.
+            data: Data to assign. Must have the same ndim and shape as the
+                preallocated array.
 
-        Raises
-        ------
-        KeyError:
-            If the array does not exist in the store.
-        ValueError:
-            If ``data.ndim`` or ``data.shape`` does not match the stored array.
+        Raises:
+            KeyError: If the array does not exist in the store.
+            ValueError: If ``data.ndim`` or ``data.shape`` does not match the
+                stored array.
         """
         root = self._open_root()
         arr_path = f"{group}/{array_name}"

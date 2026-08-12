@@ -808,6 +808,7 @@ tensogram = [
     { name = "tensogram-zarr" },
 ]
 test = [
+    { name = "griffelib" },
     { name = "healpix-geo" },
     { name = "moto", extra = ["s3", "server"] },
     { name = "obstore" },
@@ -837,6 +838,7 @@ docs = [
     { name = "mkdocs-material" },
     { name = "mkdocs-mermaid2-plugin" },
     { name = "mkdocstrings", extra = ["python"] },
+    { name = "mkdocstrings-python" },
 ]
 
 [package.metadata]
@@ -845,6 +847,7 @@ requires-dist = [
     { name = "dask", extras = ["array"], specifier = ">=2025.1.0" },
     { name = "duckdb", specifier = ">=1.4.1" },
     { name = "fsspec", specifier = ">=2025.9.0" },
+    { name = "griffelib", marker = "extra == 'test'", specifier = ">=2.0" },
     { name = "h5netcdf", specifier = ">=1.4.2" },
     { name = "h5py", specifier = ">=3.11.0" },
     { name = "healpix-geo", marker = "extra == 'healpix'", specifier = ">=0.2.1" },
@@ -890,7 +893,8 @@ docs = [
     { name = "mkdocs-macros-plugin", specifier = ">=1.0,<2.0" },
     { name = "mkdocs-material", specifier = ">=9.7.7" },
     { name = "mkdocs-mermaid2-plugin", specifier = ">=0.6.0" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.24.0" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0" },
+    { name = "mkdocstrings-python", specifier = ">=2.0" },
 ]
 
 [[package]]

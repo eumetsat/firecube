@@ -68,7 +68,7 @@ Construct successful result paths with
 fields of `ResultMetrics` when the plugin reports batch metrics.
 
 See the
-[Advanced Custom Pipeline API](../../reference/advanced-plugin-api.md) for the
+[Hooks & Lifecycle](../../reference/hooks.md) for the
 exact result types and base-class members.
 
 ## Use Lifecycle Mixins Deliberately
@@ -115,6 +115,6 @@ conflict handling, partial-write cleanup, and recovery before deployment.
 ## Next Steps
 
 - **[Plugin Extensions](extensions.md)** — add DuckDB or gridding capabilities
-- **[Advanced Custom Pipeline API](../../reference/advanced-plugin-api.md)** — look up the batch and result contract
+- **[Hooks & Lifecycle](../../reference/hooks.md)** — look up the batch and result contract
 - **[Package and Register a Plugin](contract.md)** — verify the distribution entry point
 - **[Install Your Plugin](install-a-plugin.md)** — verify discovery in the Firecube environment

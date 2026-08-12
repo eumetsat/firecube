@@ -269,11 +269,11 @@ def read_chunk_grid_with_shards(
 ) -> tuple[list[str], list[int], list[int], list[int] | None]:
     """Read dimension names, shape, outer chunk shape, and inner chunk shape (if sharded).
 
-    Returns
-    -------
-    (dim_names, shape, outer_chunk_shape, inner_chunk_shape)
-        outer_chunk_shape: the shard shape for sharded arrays, or regular chunk shape
-        inner_chunk_shape: inner chunk shape for sharded arrays, or None for non-sharded
+    Returns:
+        ``(dim_names, shape, outer_chunk_shape, inner_chunk_shape)``, where
+        ``outer_chunk_shape`` is the shard shape for sharded arrays, or the
+        regular chunk shape, and ``inner_chunk_shape`` is the inner chunk
+        shape for sharded arrays, or None for non-sharded.
     """
     if storage_config is not None:
         from firecube.core.filesystem.store_factory import create_zarr_store
@@ -409,12 +409,11 @@ def validate_group_with_fs(
 ) -> ZarrValidationReport:
     """Validate a Zarr array group and return a structural report.
 
-    Parameters
-    ----------
-    store_uri:
-        Base store URI, e.g. ``StorageUri.parse("s3://bucket/product.zarr")``.
-    group:
-        Array group path inside the store, e.g. ``F024/FWI`` or ``F048/timestamp``.
+    Args:
+        store_uri: Base store URI, e.g.
+            ``StorageUri.parse("s3://bucket/product.zarr")``.
+        group: Array group path inside the store, e.g. ``F024/FWI`` or
+            ``F048/timestamp``.
     """
     product = store_uri.path.rstrip("/").split("/")[-1] if store_uri.path != "/" else ""
     group_uri = store_uri.join(group)
@@ -553,9 +552,8 @@ def discover_groups(
 ) -> list[str]:
     """Discover Zarr V3 groups within a store by searching for zarr.json.
 
-    Returns
-    -------
-    List of relative group paths (e.g. ["F120", "default"]).
+    Returns:
+        List of relative group paths (e.g. ["F120", "default"]).
     """
     if storage_config is not None:
         from firecube.core.filesystem.ops import create_filesystem_for_uri  # type: ignore

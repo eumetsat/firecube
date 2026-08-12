@@ -9,6 +9,14 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- Per-topic API reference pages (templates, hooks, context, exceptions,
+  slot-range parallelism, extensions, core utilities) behind a Reference
+  overview, each opening with a summary table. Coverage now includes the full
+  `BaseIngestor` hook surface, exception types, `PluginContext`, multi-group
+  writes via `get_batch_groups`, and the `firecube.core.api` helpers, with
+  usage examples on the hooks plugins implement.
+- Plugin guide for customizing source discovery.
+- `firecube.ingestor.extensions` declares an explicit `__all__`.
 - `zarr_codecs` configuration option (introduced by #25 for `GenericZarrIngestor`)
   is now also available to `DirectZarrIngestor` plugins via `--option zarr_codecs='[...]'`.
   Previously the option was declared but unreachable for `DirectZarrIngestor` plugins
@@ -43,11 +51,14 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Changed
 
+- `docstring_style` pinned to `google` in `mkdocs.yml`; numpy-style docstrings
+  converted to match.
+- CI test lanes follow `plans/TESTING_STANDARDS.md`: the `test` job excludes
+  `docs_static` and `snapshot`; the `docs` job runs them.
 - `ZarrTemplateConfig.zarr_compression` now defaults to `True` (was `False`), aligning
   firecube with zarr-python v3's default codec pipeline (`ZstdCodec(level=0)`). Explicit
   `zarr_compression = false` still disables compression. Because PR #25 never shipped
   a release, no user-visible behavior changes vs. the last tagged version (v0.1.4.post1).
-
 - Dependency updates: `cryptography` 50.0.0, `aiohttp` 3.14.3,
   `virtualizarr` 2.7.1, `healpix-geo` 0.2.1,
   `opentelemetry-exporter-otlp` 1.44.0, `mkdocs-material` 9.7.7,
@@ -55,6 +66,16 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - README SBOM dependency tables synced with `uv.lock`; added `mike` to the
   docs dependency group and its SBOM table entry.
 - Reorganized plugin documentation and plugin author examples.
+
+### Fixed
+
+- `include_patterns` is documented as additive to the built-in `.zip`/`.h5`/
+  `.nc` selection; the reference previously stated that it replaced them.
+
+### Removed
+
+- `docs/reference/api.md` and `docs/reference/advanced-plugin-api.md`, replaced
+  by the per-topic pages; deep links to their headings no longer resolve.
 
 ## [0.1.4.post1] - 2026-07-24
 
