@@ -43,7 +43,9 @@ Zarr write strategy (xarray, zarr-python) [xarray]:
 
 The command creates `firecube-my-plugin/`. Its generated `ingestor.py` contains
 the required method stubs for the selected template. Those methods raise
-`NotImplementedError` until product behavior is added.
+`NotImplementedError` until product behavior is added. The generated README
+owns the implementation, test, installation, inspection, and first-run steps
+for that scaffold.
 
 ## Create A Plugin Non-Interactively
 
@@ -76,7 +78,8 @@ The project should contain `pyproject.toml`, `README.md`, and the
 `src/firecube_my_plugin/` package.
 
 Open `src/firecube_my_plugin/ingestor.py` and confirm that the class declares
-`PRODUCT_NAME` and uses the template selected in the wizard.
+`PRODUCT_NAME` and uses the selected template. Then follow the generated
+README from implementation through the first local ingestion.
 
 ## Troubleshooting
 
@@ -88,7 +91,7 @@ Open `src/firecube_my_plugin/ingestor.py` and confirm that the class declares
 
 ## Next Steps
 
-- **[Install Your Plugin](install-a-plugin.md)** — install the created package
+- **[Install Your Plugin](install-a-plugin.md)**: install the created package
   so Firecube can discover it
-- **[Plugin Development Overview](index.md)** — reconsider the authoring class
+- **[Plugin Development Overview](index.md)**: reconsider the authoring class
   before implementing product behavior

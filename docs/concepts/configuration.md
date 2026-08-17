@@ -159,6 +159,6 @@ firecube plugins explain <plugin_name>.engine.pipeline_workers
 
 ## Next Steps
 
-- **[Configure S3 Access](../quickstart/configuration.md)** — set credentials and connection settings
-- **[Configuration Reference](../reference/config.md)** — complete generated schema
-- **[Run Ingestion](../quickstart/ingestion.md)** — local and S3 ingest examples
+- **[Configure S3 Access](../operations/s3-access.md)**: set credentials and connection settings.
+- **[Configuration Reference](../reference/config.md)**: inspect the complete generated schema.
+- **[Run Ingestion](../quickstart/ingestion.md)**: run one local ingestion.

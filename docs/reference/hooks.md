@@ -55,10 +55,6 @@ from an internal module as a workaround.
     options:
         inherited_members: true
 
-For worked overrides — excluding files, discovering without an input path,
-and how returned items reach the build hooks — see
-[Customize Source Discovery](../guides/plugins/source-discovery.md).
-
 ::: firecube.ingestor.api.BaseIngestor._process_batch
     options:
         inherited_members: true

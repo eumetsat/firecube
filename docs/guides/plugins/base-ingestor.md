@@ -11,6 +11,10 @@ This is an advanced extension point, not a more flexible default. Recheck the
 
 ## Before You Start
 
+This guide covers a prerequisite check that the Generic template guides do
+not, because a direct `BaseIngestor` subclass owns output writing itself
+instead of delegating it to a runtime-managed writer.
+
 Use this path only when the plugin already has a supported writer abstraction
 for its output. Firecube does not currently expose a general, typed
 storage-writer protocol for custom pipelines. A new custom pipeline therefore
@@ -72,6 +76,10 @@ See the
 exact result types and base-class members.
 
 ## Use Lifecycle Mixins Deliberately
+
+This guide also states lifecycle-mixin ordering explicitly, unlike the
+Generic template guides, because a custom `_process_batch()` owns its own
+batch boundary and no template wraps mixin hooks around it automatically.
 
 A custom `_process_batch()` owns its resource boundary. A lifecycle mixin such
 as `DuckDbMixin` is not wrapped around that method automatically; call its

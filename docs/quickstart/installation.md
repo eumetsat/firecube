@@ -11,10 +11,11 @@ Create a working directory and a Python 3.12 environment:
 mkdir firecube-quickstart
 cd firecube-quickstart
 uv venv --python 3.12
+source .venv/bin/activate
 ```
 
-Keep the remaining quickstart commands in this directory so `uv run` uses the
-same environment.
+Keep this shell open for the rest of the quickstart. If you open a new shell,
+return to `firecube-quickstart/` and run `source .venv/bin/activate` again.
 
 ## Install Firecube
 
@@ -24,13 +25,13 @@ Install Firecube from PyPI:
 uv pip install firecube
 ```
 
-The next step installs plugins into this environment so the Firecube CLI can
-discover them.
+The next step creates and installs a local plugin in this environment so the
+Firecube CLI can discover it.
 
 ## Verify The Installation
 
 ```bash
-uv run firecube --version
+firecube --version
 ```
 
 Expected output:
@@ -44,5 +45,7 @@ To change Firecube itself, use the source setup in
 
 ## Next Steps
 
-- **[Install a Plugin](plugins.md)** — install an existing product plugin
-- **[Build a Plugin](../guides/plugins/index.md)** — create a plugin for a new product
+Continue to **[Create and Install the Example Plugin](plugins.md)**. Firecube
+provides the ingestion engine, but it does not know how to read every dataset
+by itself. The next page creates the dataset-specific Python package used by
+the rest of this quickstart.

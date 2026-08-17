@@ -7,9 +7,7 @@ Implement a plugin that converts each batch into a complete
 group along the plugin's append dimension.
 
 Use this class when complete, ordered dataset batches are the product's natural
-write unit. Firecube determines the next position from the current group length;
-the `build_dataset` call and append run inside one serialized Zarr write section.
-Pipeline workers do not make appends to the same group concurrent.
+write unit.
 
 The source file format does not determine the class. Read
 [GenericZarrIngestor (Append)](../../concepts/output-formats/zarr/generic-append.md)
@@ -25,20 +23,16 @@ product name, and replace the `build_dataset` stub.
 
 ## Implement `build_dataset`
 
-The source reader is product-specific. The example below shows the template
-boundary without prescribing a source format:
+This example reads a batch of NetCDF files with `xarray` and appends them
+along `time_dim_name`; replace the file format and variable selection with
+what the product's data actually needs:
 
 ```python
-from pathlib import Path
 from typing import Any, ClassVar
 
 import xarray as xr
 
 from firecube.ingestor.api import GenericZarrIngestor, PluginContext, register_ingestor
-
-
-def read_product_items(paths: list[Path]) -> xr.Dataset:
-    ...
 
 
 @register_ingestor("my_plugin")
@@ -48,7 +42,7 @@ class MyPlugin(GenericZarrIngestor):
 
     def build_dataset(
         self,
-        group: str,
+        group: str,  # Called once per output group; most plugins ignore this and use "default".
         items: list[Any],
         ctx: PluginContext,
     ) -> xr.Dataset | None:
@@ -56,24 +50,15 @@ class MyPlugin(GenericZarrIngestor):
             return None
 
         paths = [ctx.materialize(item) for item in items]
-        dataset = read_product_items(paths)
+        dataset = xr.open_mfdataset(paths, combine="by_coords")
         return dataset.sortby(self.time_dim_name)
 ```
 
-`read_product_items` represents the reader and normalization code for the
-product. Return a loaded dataset whose file handles do not depend on an already
-closed source context.
-
-The returned dataset must contain `time_dim_name`, be ordered on that
-dimension, and use values that do not overlap another batch. Its variables,
-dimensions, coordinates, and data types must remain compatible between
-batches. Return `None` when the batch has no data to write.
-
-Firecube calls the hook once for each output group. Most plugins use the
-`"default"` group and do not branch on `group`.
-
-See the [Plugin Templates](../../reference/templates.md#genericzarringestor) for
-the exact hook signature and template configuration.
+See the [Plugin Templates](../../reference/templates.md#genericzarringestor)
+for the exact hook signature and optional group, path, and writer
+customizations, or the quickstart's
+[example implementation](../../quickstart/plugins.md#implement-the-plugin) for
+a complete, runnable version of this example.
 
 ## Verify
 
@@ -114,10 +99,13 @@ If built-in discovery does not include the product's source names, pass
 | Returning incompatible batch schemas | Normalize dimensions, coordinates, variables, and data types in the product reader. |
 | Passing a remote URI to a local-only reader | Resolve each item with `ctx.materialize(item)`. |
 | Starting another append writer for the same group | Keep appends to one group serialized. |
+| Setting `time_dim_name` to a name absent from the returned dataset | Match the dataset's dimension name exactly, or the write raises a `ValueError`. |
 
 ## Next Steps
 
 - **[GenericZarrIngestor (Append)](../../concepts/output-formats/zarr/generic-append.md)** — understand ordering and serialized group writes
-- **[NetCDF To Zarr](../../tutorials/weather-netcdf.md)** — follow a complete plugin tutorial
-- **[Read Plugin Source Data](storage-access.md)** — use source items with local-path readers
+- **[Quickstart](../../quickstart/index.md)** — create and run a complete local plugin with this template
+- **[NetCDF To Zarr](../../tutorials/weather-netcdf.md)** — inspect the example plugin and verify its stored values
+- **[Route Writes To Multiple Groups](multi-group-writes.md)** — write more than the single default group
+- **[Configure a Plugin](cli-and-config.md)** — declare typed options the plugin validates before ingestion
 - **[Plugin Templates](../../reference/templates.md)** — look up the public template types

@@ -2,6 +2,8 @@ site_name: Firecube
 site_description: A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.
 not_in_nav: |
   concepts/plugins/index.md
+  quickstart/catalogs.md
+  quickstart/configuration.md
   tutorials/weather-csv.md
 site_url: https://eumetsat.github.io/firecube/
 repo_url: https://github.com/eumetsat/firecube
@@ -94,21 +96,22 @@ nav:
   - Quickstart:
     - Overview: quickstart/index.md
     - Installation: quickstart/installation.md
-    - Install a Plugin: quickstart/plugins.md
+    - Create and Install the Example Plugin: quickstart/plugins.md
+    - Prepare Source Data: quickstart/source-data.md
     - Run Ingestion: quickstart/ingestion.md
-    - Create an Intake Catalog: quickstart/catalogs.md
-    - Configure S3 Access: quickstart/configuration.md
   - Plugin Development:
     - Overview: guides/plugins/index.md
     - Create a Plugin: guides/plugins/create-a-plugin.md
     - Install Your Plugin: guides/plugins/install-a-plugin.md
+    - Prepare Your Source Data:
+      - Discover Source Data: guides/plugins/source-discovery.md
+      - Customize Source Discovery: guides/plugins/customize-source-discovery.md
+      - Route Writes To Multiple Groups: guides/plugins/multi-group-writes.md
     - Implement Your Plugin:
       - GenericZarrIngestor (Append): guides/plugins/generic-zarr.md
       - GenericParquetIngestor (Tabular): guides/plugins/generic-parquet.md
       - DirectZarrIngestor (Region): guides/plugins/direct-zarr.md
     - Develop Further:
-      - Read Source Data: guides/plugins/storage-access.md
-      - Customize Source Discovery: guides/plugins/source-discovery.md
       - Configure a Plugin: guides/plugins/cli-and-config.md
       - Add Telemetry: guides/plugins/observability.md
     - Advanced Customization:
@@ -152,6 +155,9 @@ nav:
       - Benchmarks: concepts/benchmarks.md
   - Operations:
     - Overview: operations/index.md
+    - Storage And Data Access:
+      - Configure S3 Access: operations/s3-access.md
+      - Create an Intake Catalog: operations/intake-catalog.md
     - Zarr:
       - Run Parallel Zarr Writes: operations/parallel-zarr-writes.md
     - ChunkManager:

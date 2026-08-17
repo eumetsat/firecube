@@ -40,6 +40,8 @@ For S3 products, configure the S3 storage settings and credentials described in
 
 | Task | Start here |
 |---|---|
+| Configure an S3-backed ingestion | [Configure S3 Access](s3-access.md) |
+| Create an Intake catalog for a product | [Create an Intake Catalog](intake-catalog.md) |
 | Run several workers against one Zarr group | [Run Parallel Zarr Writes](parallel-zarr-writes.md) |
 | Inspect product state | [Inspect ChunkManager State](chunk-manager/inspect.md) |
 | Recover from a crashed run | [Recover Runs And Claims](chunk-manager/recover.md) |
@@ -61,7 +63,11 @@ For S3 products, configure the S3 storage settings and credentials described in
 
 ## Next Steps
 
-- **[Run Parallel Zarr Writes](parallel-zarr-writes.md)** — preallocate, plan, and run slot workers
-- **[ChunkManager Operations](chunk-manager/index.md)** — operate the product-local `.firecube/` control plane
-- **[Archive Operations](archive/index.md)** — create, inspect, validate, or restore `.tgm` archives
-- **[ChunkManager Records](../concepts/chunk-management.md)** — understand the model before running commands
+- **[Configure S3 Access](s3-access.md)**: configure and verify an S3-backed
+  ingestion.
+- **[Create an Intake Catalog](intake-catalog.md)**: expose an existing product
+  through Intake.
+- **[Run Parallel Zarr Writes](parallel-zarr-writes.md)**: preallocate, plan, and run slot workers.
+- **[ChunkManager Operations](chunk-manager/index.md)**: operate the product-local `.firecube/` control plane.
+- **[Archive Operations](archive/index.md)**: create, inspect, validate, or restore `.tgm` archives.
+- **[ChunkManager Records](../concepts/chunk-management.md)**: understand the model before running commands.

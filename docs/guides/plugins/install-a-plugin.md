@@ -53,7 +53,15 @@ configuration without an import error.
 
 ## Next Steps
 
-Implement the template selected during creation:
+Before implementing the template hooks, know what the plugin will actually
+receive:
+
+- **[Discover Source Data](source-discovery.md)** — know what discovery finds
+  and how items reach the plugin
+- **[Customize Source Discovery](customize-source-discovery.md)** — control
+  which items discovery finds and how they're grouped
+
+Then implement the template selected during creation:
 
 - **[`GenericZarrIngestor` (Append)](generic-zarr.md)** — implement the ordered
   `xarray.Dataset` contract

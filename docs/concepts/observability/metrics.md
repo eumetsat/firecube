@@ -107,6 +107,6 @@ metric schema. The same table is also available in the
 ## Next Steps
 
 - **[Observability Reference](../../reference/observability.md)** — complete metric, label, grouping, and environment-variable reference
-- **[Weather CSV: Observability](../../tutorials/observability.md)** — add one custom metric to a plugin
+- **[NetCDF To Zarr: Observability](../../tutorials/observability.md)** — add one custom metric to a plugin
 - **[Logs](logs.md)** — structured logs and stdout/stderr behavior
 - **[Traces](traces.md)** — OTLP setup and span correlation

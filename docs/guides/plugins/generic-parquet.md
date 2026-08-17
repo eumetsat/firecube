@@ -7,7 +7,9 @@ Implement a plugin that converts each batch into a `pyarrow.Table` or
 the product URI.
 
 Use this class when rows are the product's natural write unit. The source file
-format does not determine the class.
+format does not determine the class. Read
+[Parquet](../../concepts/output-formats/parquet.md) for the persisted dataset
+layout and write model.
 
 ## Edit The Plugin Class
 
@@ -19,14 +21,15 @@ product name, and replace the `build_dataset` stub.
 
 ## Implement `build_dataset`
 
-The source reader is product-specific. The example below shows where it meets
-the template contract:
+This example reads a batch of CSV files with `pyarrow` and concatenates
+them into one table; replace the file format and parsing with what the
+product's data actually needs:
 
 ```python
-from pathlib import Path
 from typing import ClassVar
 
 import pyarrow as pa
+import pyarrow.csv
 
 from firecube.ingestor.api import (
     GenericParquetIngestor,
@@ -36,38 +39,28 @@ from firecube.ingestor.api import (
 )
 
 
-def read_product_rows(paths: list[Path]) -> pa.Table:
-    ...
-
-
 @register_ingestor("my_plugin")
 class MyPlugin(GenericParquetIngestor):
     PRODUCT_NAME: ClassVar[str] = "my_product"
 
     def build_dataset(
         self,
-        group: str,
+        group: str,  # Called once per output group; most plugins ignore this and use "default".
         batch: PipelineBatch,
         ctx: PluginContext,
-    ) -> pa.Table | None:
+    ) -> pa.Table | None:  # May also return a pandas.DataFrame if installed; None to skip.
         if not batch.items:
             return None
 
         paths = [ctx.materialize(item) for item in batch.items]
-        return read_product_rows(paths)
+        tables = [pyarrow.csv.read_csv(path) for path in paths]
+        return pa.concat_tables(tables)
 ```
 
-`read_product_rows` represents the reader and normalization code for the
-product. It may return a `pyarrow.Table`; the hook may instead return a
-`pandas.DataFrame` when pandas is installed. Return `None` when the batch has no
-rows to write.
-
-The Parquet hook receives a `PipelineBatch`, so its source items are in
-`batch.items`. Firecube calls the hook once for each output group. Most plugins
-use the `"default"` group.
-
-See the [Plugin Templates](../../reference/templates.md#genericparquetingestor) for
-the exact hook signature and optional group, path, and writer customizations.
+See the [Plugin Templates](../../reference/templates.md#genericparquetingestor)
+for the exact hook signature and optional group, path, and writer
+customizations, or [Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md#3-read-the-mwir-detections)
+for a complete, runnable version of this example.
 
 ## Verify
 
@@ -111,6 +104,6 @@ If built-in discovery does not include the product's source names, pass
 ## Next Steps
 
 - **[Parquet](../../concepts/output-formats/parquet.md)** — understand the persisted dataset layout
-- **[Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md)** — download and ingest a real EUMETSAT product
-- **[Read Plugin Source Data](storage-access.md)** — use source items with local-path readers
+- **[Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md)** — download and ingest a real EUMETSAT product end to end, once `build_dataset` is in place
+- **[Configure a Plugin](cli-and-config.md)** — declare typed plugin options for the reader you just implemented
 - **[Plugin Templates](../../reference/templates.md)** — look up the public template types

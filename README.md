@@ -74,9 +74,11 @@ For the full first-run path, use the
 ## Documentation
 
 - [Installation](docs/quickstart/installation.md)
-- [Install a plugin](docs/quickstart/plugins.md)
+- [Create the example plugin](docs/quickstart/plugins.md)
+- [Prepare source data](docs/quickstart/source-data.md)
 - [Run ingestion](docs/quickstart/ingestion.md)
-- [Configure S3 access](docs/quickstart/configuration.md)
+- [Configure S3 access](docs/operations/s3-access.md)
+- [Create an Intake catalog](docs/operations/intake-catalog.md)
 - [CLI reference](docs/reference/cli.md)
 
 Build or serve the docs locally:

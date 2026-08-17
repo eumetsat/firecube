@@ -68,7 +68,9 @@ replace the append cursor with absolute indexes supplied by the plugin.
   implement and verify the dataset hook
 - **[DirectZarrIngestor (Region)](direct-region.md)** — compare explicit array placement
   with dataset appends
-- **[Weather CSV Plugin](../../../tutorials/weather-csv.md)** — follow a complete
+- **[Quickstart](../../../quickstart/index.md)** — create and run a complete
   `GenericZarrIngestor` example
+- **[NetCDF To Zarr Plugin](../../../tutorials/weather-netcdf.md)** — inspect
+  the example plugin and verify its stored values
 - **[Parallelism](../../parallelism.md)** — compare write domains across output
   formats
