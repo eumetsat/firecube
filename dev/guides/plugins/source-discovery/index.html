@@ -13,10 +13,10 @@
         <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/guides/plugins/source-discovery/">
       
       
-        <link rel="prev" href="../storage-access/">
+        <link rel="prev" href="../install-a-plugin/">
       
       
-        <link rel="next" href="../cli-and-config/">
+        <link rel="next" href="../customize-source-discovery/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Customize Source Discovery - Firecube</title>
+        <title>Discover Source Data - Firecube</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#customize-source-discovery" class="md-skip">
+        <a href="#discover-source-data" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Customize Source Discovery
+              Discover Source Data
             
           </span>
         </div>
@@ -580,7 +580,35 @@
   <span class="md-ellipsis">
     
   
-    Install a Plugin
+    Create and Install the Example Plugin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../quickstart/source-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prepare Source Data
   
 
     
@@ -609,62 +637,6 @@
     
   
     Run Ingestion
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../quickstart/catalogs/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Create an Intake Catalog
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../quickstart/configuration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configure S3 Access
   
 
     
@@ -830,6 +802,268 @@
                 
   
   
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prepare Your Source Data
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Prepare Your Source Data
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Discover Source Data
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Discover Source Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use-built-in-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Built-In Discovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-the-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set The Source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-mistakes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Mistakes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../customize-source-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customize Source Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multi-group-writes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Route Writes To Multiple Groups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
   
   
     
@@ -851,10 +1085,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
         
           
-          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
             
   
   
@@ -872,8 +1106,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -979,8 +1213,6 @@
                 
   
   
-    
-  
   
   
     
@@ -996,14 +1228,16 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
         
           
-          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
             
   
   
@@ -1021,8 +1255,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1031,197 +1265,6 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../storage-access/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Read Source Data
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Customize Source Discovery
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Customize Source Discovery
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Goal
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#use-built-in-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Use Built-In Discovery
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#add-filename-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Add Filename Patterns
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#exclude-files" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Exclude Files
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#discover-without-an-input-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Discover Without An Input Path
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#common-mistakes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Mistakes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
             
               
                 
@@ -1312,10 +1355,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
         
           
-          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
             
   
   
@@ -1333,8 +1376,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1433,10 +1476,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
         
           
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
             
   
   
@@ -1454,8 +1497,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2811,7 +2854,7 @@
   <span class="md-ellipsis">
     
   
-    Zarr
+    Storage And Data Access
   
 
     
@@ -2824,6 +2867,124 @@
         
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Storage And Data Access
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../operations/s3-access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configure S3 Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../operations/intake-catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Create an Intake Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Zarr
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2891,10 +3052,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
         
           
-          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
             
   
   
@@ -2912,8 +3073,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3121,10 +3282,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
         
           
-          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
             
   
   
@@ -3142,8 +3303,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -4320,32 +4481,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#add-filename-patterns" class="md-nav__link">
+  <a href="#set-the-source" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Add Filename Patterns
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#exclude-files" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Exclude Files
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#discover-without-an-input-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Discover Without An Input Path
+        Set The Source
       
     </span>
   </a>
@@ -4405,13 +4544,10 @@
   
 
 
-<h1 id="customize-source-discovery">Customize Source Discovery</h1>
+<h1 id="discover-source-data">Discover Source Data</h1>
 <h2 id="goal">Goal</h2>
-<p>Control which source items a plugin ingests: widen the built-in file
-selection with patterns, exclude files the defaults would pick up, or replace
-file discovery entirely for sources that are not file trees.</p>
-<p>Every ingestor inherits discovery from <code>BaseIngestor</code>, so the behavior and
-options here apply to all templates and to custom pipeline plugins.</p>
+<p>Know which files Firecube finds under <code>--input-data</code> before writing any
+plugin code, and how each one reaches the plugin.</p>
 <h2 id="use-built-in-discovery">Use Built-In Discovery</h2>
 <p>By default a plugin discovers files below <code>--input-data</code> (<code>ctx.source</code>),
 which may be a local path or a remote URI reached through the run's storage
@@ -4424,68 +4560,23 @@ configuration. The default selection is:</p>
 The run logs the count it found:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>&quot;message&quot;:&quot;Found 4 files&quot;
 </code></pre></div>
-<h2 id="add-filename-patterns">Add Filename Patterns</h2>
-<p><code>include_patterns</code> is an engine option, so it needs no plugin code. Patterns
-<strong>add</strong> to the built-in selection — they do not replace it:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--option<span class="w"> </span><span class="s1">&#39;include_patterns=[&quot;*.nc4&quot;]&#39;</span>
-</code></pre></div>
-<p>Set it per plugin in <code>~/.config/firecube/config.toml</code> instead:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[plugins.my_plugin]</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">include_patterns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;*.nc4&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;level2/*.grib&quot;</span><span class="p">]</span>
-</code></pre></div>
-<p>Patterns match the file's base name, its path relative to <code>--input-data</code>, and
-its full path or URI, so both <code>"*.nc4"</code> and <code>"level2/*.nc4"</code> work.</p>
-<h2 id="exclude-files">Exclude Files</h2>
-<p>There is no exclusion option; excluding requires overriding the hook and
-calling the discovery helper with <code>exclude</code>. Patterns passed to <code>exclude</code> are
-applied before selection runs, so an excluded path is never picked up by the
-default suffixes or by <code>include_patterns</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.core.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_input_files</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">GenericZarrIngestor</span><span class="p">,</span> <span class="n">register_ingestor</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_plugin&quot;</span><span class="p">)</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPluginIngestor</span><span class="p">(</span><span class="n">GenericZarrIngestor</span><span class="p">):</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">PRODUCT_NAME</span> <span class="o">=</span> <span class="s2">&quot;my_product&quot;</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">discover_source_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="k">return</span> <span class="n">discover_input_files</span><span class="p">(</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>            <span class="n">ctx</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>            <span class="n">exclude</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;*_quicklook.nc&quot;</span><span class="p">,</span> <span class="s2">&quot;incoming/*&quot;</span><span class="p">],</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>        <span class="p">)</span>
-</code></pre></div>
-<p>The same call accepts <code>include_suffixes</code> to change the accepted extensions,
-<code>recursive=False</code> to read only the top directory, and <code>preferred_globs</code> for
-pattern additions in code.</p>
-<p>For an <code>s3://</code> source that needs explicit endpoint or credential settings,
-pass a <a href="../../../reference/config/#storageconfig"><code>StorageConfig</code></a> as
-<code>storage_config</code>; local sources ignore the argument.</p>
-<h2 id="discover-without-an-input-path">Discover Without An Input Path</h2>
-<p>Overriding the hook removes the <code>--input-data</code> requirement, which is how a
-plugin ingests from a catalog, an API, or a fixed set of URIs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">discover_source_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">return</span> <span class="p">[</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="sa">f</span><span class="s2">&quot;s3://archive/</span><span class="si">{</span><span class="n">product</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">day</span><span class="si">}</span><span class="s2">.nc&quot;</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="k">for</span> <span class="n">day</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugin_config</span><span class="o">.</span><span class="n">days</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="p">]</span>
-</code></pre></div>
-<p>Return path or URI strings unless the plugin's own hooks handle richer item
-objects end to end. Discovered items pass through <code>filter_item</code> and batching,
-then reach <code>build_dataset</code> (or <code>build_write_intents</code>), where
-<code>ctx.materialize(item)</code> resolves each one to a local path — see
-<a href="../storage-access/">Read Plugin Source Data</a>.</p>
+<p>Every template and custom pipeline plugin gets this from <code>BaseIngestor</code>. To
+widen, narrow, or replace it, see
+<a href="../customize-source-discovery/">Customize Source Discovery</a>.</p>
+<h2 id="set-the-source">Set The Source</h2>
+<p><code>--input-data</code> accepts a local path, <code>file://</code>, or an <code>s3://</code> prefix. The
+plugin interprets its contents. The output target remains a strict product
+URI.</p>
 <h2 id="verify">Verify</h2>
-<p>Run the plugin and compare the discovered count against the files you expect:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;Found&quot;</span>
+<p>Run the plugin and check the log line discovery emits, before anything else
+in the pipeline runs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;Found&quot;</span>
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>&quot;message&quot;:&quot;Found 4 files&quot;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>&quot;message&quot;:&quot;Found 4 files&quot;
 </code></pre></div>
-<p>A count of zero logs a warning and processes nothing; that is a discovery
-problem, not an ingestion failure.</p>
+<p>A count of zero means nothing under <code>--input-data</code> matched the default
+selection — see <a href="../customize-source-discovery/">Customize Source Discovery</a>.</p>
 <h2 id="common-mistakes">Common Mistakes</h2>
 <table>
 <thead>
@@ -4496,29 +4587,21 @@ problem, not an ingestion failure.</p>
 </thead>
 <tbody>
 <tr>
-<td>Expecting <code>include_patterns</code> to restrict discovery to those patterns</td>
-<td>Patterns only add files. Override the hook and pass <code>exclude</code> or <code>include_suffixes</code> to narrow the set.</td>
-</tr>
-<tr>
 <td>Omitting <code>--input-data</code> with default discovery</td>
-<td>Pass the flag, or override <code>discover_source_files</code> if the plugin has no input path.</td>
+<td>Pass the flag, or <a href="../customize-source-discovery/">customize discovery</a> if the plugin has no input path.</td>
 </tr>
 <tr>
-<td>Returning item objects a reader cannot resolve</td>
-<td>Return path or URI strings, or handle the item type in every hook that consumes it.</td>
-</tr>
-<tr>
-<td>Building an <code>fsspec</code> or S3 client to list remote sources</td>
-<td>Pass the run's storage configuration to <code>discover_input_files</code>.</td>
+<td>Expecting an unsupported file type to be found</td>
+<td>Add a pattern, don't rename files — see <a href="../customize-source-discovery/">Customize Source Discovery</a>.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../storage-access/">Read Plugin Source Data</a></strong> — materialize discovered items in a hook</li>
-<li><strong><a href="../../../tutorials/source-discovery/">NetCDF To Zarr: Source Discovery</a></strong> — a runnable end-to-end example</li>
-<li><strong><a href="../../../reference/hooks/#firecube.ingestor.api.BaseIngestor.discover_source_files">Hooks &amp; Lifecycle</a></strong> — the hook contract</li>
-<li><strong><a href="../../../reference/core-utilities/#firecube.core.api.discover_input_files">Core Utilities</a></strong> — all <code>discover_input_files</code> parameters</li>
+<li><strong><a href="../customize-source-discovery/">Customize Source Discovery</a></strong> — control which items reach the plugin and how they're grouped</li>
+<li><strong><a href="../../../concepts/storage/">Product Storage</a></strong> — understand source and target storage roles</li>
+<li><strong><a href="../../../reference/storage-drivers/">Storage Drivers</a></strong> — inspect driver values and capabilities</li>
+<li><strong><a href="../../../reference/context/">Context &amp; Results</a></strong> — look up <code>PluginContext</code></li>
 </ul>
 
 
