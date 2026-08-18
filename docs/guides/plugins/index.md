@@ -5,6 +5,15 @@ data into a product. Most plugins contain the product-specific reading and data
 shaping, while a Firecube template provides source discovery, batching,
 standard storage writes, run tracking, and recovery around that code.
 
+This guide assumes Firecube is already installed. See
+[Installation](../../quickstart/installation.md) if you still need to set up
+an environment.
+
+Want a complete worked example instead? The
+[Quickstart](../../quickstart/index.md) creates and runs a local NetCDF-to-Zarr
+plugin. The [NetCDF To Zarr](../../tutorials/weather-netcdf.md) tutorial then
+explains its conversion contract and verifies the stored values.
+
 ## How Template Plugins Work
 
 <figure markdown="span">
@@ -21,10 +30,10 @@ product.
 
 | Product contract | Start with | Your plugin supplies |
 |---|---|---|
-| Complete, ordered multidimensional datasets | [`GenericZarrIngestor` (Append)](generic-zarr.md) | One `xarray.Dataset` for each group and batch; Firecube serializes appends to a group |
-| Tables or data frames | [`GenericParquetIngestor` (Tabular)](generic-parquet.md) | One table or data frame for each group and batch |
-| Zarr data with known indexed positions, especially when several workers must write one group | [`DirectZarrIngestor` (Region)](direct-zarr.md) | The array schema and write locations; for parallel workers, a fixed extent and deterministic index model |
-| A product no template represents | [Custom Pipeline Plugins](base-ingestor.md), advanced | Processing, writing, results, and coordination |
+| Complete, ordered multidimensional datasets | [`GenericZarrIngestor` (Append)](generic-zarr.md) ([concept](../../concepts/output-formats/zarr/generic-append.md)) | One `xarray.Dataset` for each group and batch; Firecube serializes appends to a group |
+| Tables or data frames | [`GenericParquetIngestor` (Tabular)](generic-parquet.md) ([concept](../../concepts/output-formats/parquet.md)) | One table or data frame for each group and batch |
+| Zarr data with known indexed positions, especially when several workers must write one group | [`DirectZarrIngestor` (Region)](direct-zarr.md) ([concept](../../concepts/output-formats/zarr/direct-region.md)) | The array schema and write locations; for parallel workers, a fixed extent and deterministic index model |
+| A product no template represents | [Custom Pipeline Plugins](base-ingestor.md) — the advanced, manual contract; use it when the templates above don't fit | Processing, writing, results, and coordination |
 
 The source file format does not determine the class. Choose the contract that
 matches the data your plugin can supply.
@@ -50,15 +59,24 @@ before implementing the plugin.
    a Python package for the selected class.
 3. **[Install the plugin](install-a-plugin.md).** Install it in development mode
    so Firecube can discover it while you edit the code.
-4. **Implement the template hooks.** Follow the class guide linked from the
+4. **[Discover the source data](source-discovery.md).** Know how discovery
+   selects and groups items before writing anything, and
+   [customize it](customize-source-discovery.md) if the defaults don't fit.
+5. **Implement the template hooks.** Follow the class guide linked from the
    table.
-5. **Verify plugin discovery.** Inspect the registered plugin and its available
+6. **Verify plugin discovery.** Inspect the registered plugin and its available
    configuration.
-6. **Run ingestion.** Give the plugin source data and a product target, then
+7. **Run ingestion.** Give the plugin source data and a product target, then
    verify the persisted output.
+8. **[Package and register the plugin](contract.md).** Declare the package
+   entry point so Firecube can discover the plugin from installed metadata
+   before you publish it.
 
-Add source access, configuration, and telemetry after the plugin is installed
-and its main data-conversion method is working.
+Add configuration and telemetry after the plugin's main data-conversion
+method is working; source access and discovery come first, since real
+source data almost always needs custom discovery or grouping rather than
+the template defaults.
+
 
 ## Next Steps
 
@@ -66,5 +84,9 @@ and its main data-conversion method is working.
   interactive command
 - **[Zarr Write Models](../../concepts/output-formats/zarr/index.md)** — compare
   sequential appends, direct writes, and optional parallel writes
+- **[Quickstart](../../quickstart/index.md)** — create and run a complete local
+  plugin from source files to a verified Zarr product
+- **[NetCDF To Zarr](../../tutorials/weather-netcdf.md)** — inspect that
+  plugin's conversion contract and stored values
 - **[API Reference](../../reference/index.md)** — look up the public types
   used by template plugins

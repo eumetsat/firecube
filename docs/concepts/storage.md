@@ -55,8 +55,8 @@ uv run firecube ingest <plugin> \
 ```
 
 Set S3 credentials, endpoint, and region in the environment or config before the
-run. See [Configure S3 Access](../quickstart/configuration.md) for the quickstart path
-and [Configuration Reference](../reference/config.md) for the full list.
+run. See [Configure S3 Access](../operations/s3-access.md) for the procedure and
+[Configuration Reference](../reference/config.md) for the full list.
 
 ## Choose A Driver
 
@@ -94,7 +94,7 @@ when you want later inspection, resume, recovery, or cleanup to work.
 
 ## Next Steps
 
-- **[Run Ingestion](../quickstart/ingestion.md)** — runnable local and S3 ingestion examples
-- **[Configure S3 Access](../quickstart/configuration.md)** — set credentials and connection settings
-- **[Storage Drivers](../reference/storage-drivers.md)** — inspect driver values and capabilities
-- **[ChunkManager Operations](../operations/chunk-manager/index.md)** — inspect, recover, delete, rebuild snapshots, or migrate a product
+- **[Run Ingestion](../quickstart/ingestion.md)**: run one local ingestion.
+- **[Configure S3 Access](../operations/s3-access.md)**: set credentials and run against S3.
+- **[Storage Drivers](../reference/storage-drivers.md)**: inspect driver values and capabilities.
+- **[ChunkManager Operations](../operations/chunk-manager/index.md)**: inspect, recover, delete, rebuild snapshots, or migrate a product.

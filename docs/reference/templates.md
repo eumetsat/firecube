@@ -132,7 +132,7 @@ For parallel writes across disjoint slot ranges, see
 ## See Also
 
 - [Plugin Development Overview](../guides/plugins/index.md)
-- [Customize Source Discovery](../guides/plugins/source-discovery.md)
+- [Customize Source Discovery](../guides/plugins/customize-source-discovery.md)
 - [Implement `GenericZarrIngestor`](../guides/plugins/generic-zarr.md)
 - [Implement `GenericParquetIngestor`](../guides/plugins/generic-parquet.md)
 - [Implement `DirectZarrIngestor`](../guides/plugins/direct-zarr.md)

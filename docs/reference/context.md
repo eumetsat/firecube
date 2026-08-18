@@ -73,6 +73,5 @@ all symbols from `firecube.ingestor.api`.
 
 ## See Also
 
-- [Read Plugin Source Data](../guides/plugins/storage-access.md)
 - [Templates](templates.md)
 - [Hooks & Lifecycle](hooks.md)

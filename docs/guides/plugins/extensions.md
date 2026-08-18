@@ -45,14 +45,21 @@ class MyPlugin(DuckDbMixin, GenericParquetIngestor):
         batch: PipelineBatch,
         ctx: PluginContext,
     ) -> Any | None:
-        ...
+        if not batch.items:
+            return None
+
+        for item in batch.items:
+            path = ctx.materialize(item)
+            self.con.execute(
+                "INSERT INTO records SELECT * FROM read_csv_auto(?)", [str(path)]
+            )
+        return self.con.execute("SELECT * FROM records").arrow()
 ```
 
-`GenericZarrIngestor` and `GenericParquetIngestor` call `batch_setup()` before
-their batch work and `batch_teardown()` afterward. The mixin uses those hooks
-to open a connection for the current worker thread, apply DuckDB settings, call
-`prepare_duckdb_schema()`, and close the connection. Use `self.con` only while
-the batch hook is active.
+`GenericZarrIngestor` and `GenericParquetIngestor` drive the mixin's connection
+lifecycle through the cooperative `batch_setup()`/`batch_teardown()` hooks; see
+[`DuckDbMixin`](../../reference/extensions.md#firecube.ingestor.extensions.DuckDbMixin)
+for the exact sequence. Use `self.con` only while the batch hook is active.
 
 The connection is in memory by default. Enable file-backed batch state only
 after checking its worker and workspace requirements for the chosen template.
@@ -113,3 +120,5 @@ it, `build_healpix_binner()` derives the occupied cells from the input.
   producing ordered datasets
 - **[`GenericParquetIngestor` (Tabular)](generic-parquet.md)** — use DuckDB
   while producing tables
+- **[Extensions](../../reference/extensions.md)** — exact signatures and
+  fields for `DuckDbMixin`, the gridding functions, and `HealpixBinner`

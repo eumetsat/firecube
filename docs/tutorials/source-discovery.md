@@ -17,10 +17,10 @@ NetCDF `.nc`, HDF5 `.h5`, and ZIP `.zip` files are included by default.
 Run the Weather plugin without a discovery option:
 
 ```bash
-PRODUCT_URI="file://$PWD/tutorial-output/weather_netcdf_discovery.zarr"
+PRODUCT_URI="file://$PWD/quickstart-output/weather_netcdf_discovery.zarr"
 
-uv run firecube ingest weather_netcdf \
-  --input-data tutorial-data/weather-netcdf \
+firecube ingest weather_netcdf \
+  --input-data quickstart-data/weather-netcdf \
   --target "$PRODUCT_URI" \
   --product-name weather_netcdf_discovery \
   --storage-type local \
@@ -45,13 +45,13 @@ Expected output includes:
 Create one more NetCDF file, this time with the `.nc4` suffix:
 
 ```bash
-uv run python - <<'PY'
+python - <<'PY'
 from pathlib import Path
 
 import numpy as np
 import xarray as xr
 
-path = Path("tutorial-data/weather-netcdf/weather_05.nc4")
+path = Path("quickstart-data/weather-netcdf/weather_05.nc4")
 ds = xr.Dataset(
     data_vars={
         "temperature_c": (
@@ -78,16 +78,16 @@ PY
 Expected output:
 
 ```text
-tutorial-data/weather-netcdf/weather_05.nc4
+quickstart-data/weather-netcdf/weather_05.nc4
 ```
 
 The `.nc4` suffix is not in the built-in set. Add it with `include_patterns`:
 
 ```bash
-PRODUCT_URI="file://$PWD/tutorial-output/weather_netcdf_extended.zarr"
+PRODUCT_URI="file://$PWD/quickstart-output/weather_netcdf_extended.zarr"
 
-uv run firecube ingest weather_netcdf \
-  --input-data tutorial-data/weather-netcdf \
+firecube ingest weather_netcdf \
+  --input-data quickstart-data/weather-netcdf \
   --target "$PRODUCT_URI" \
   --product-name weather_netcdf_extended \
   --storage-type local \
@@ -116,11 +116,11 @@ exclude `.nc`, `.h5`, or `.zip` files that Firecube would otherwise discover.
 Open the product and confirm that it contains all five time steps:
 
 ```bash
-uv run python - <<'PY'
+python - <<'PY'
 import xarray as xr
 
 ds = xr.open_zarr(
-    "tutorial-output/weather_netcdf_extended.zarr",
+    "quickstart-output/weather_netcdf_extended.zarr",
     group="default",
     consolidated=False,
 )
@@ -138,6 +138,6 @@ Frozen({'timestamp': 5, 'latitude': 2, 'longitude': 3})
 ## Next Steps
 
 - **[NetCDF To Zarr: Observability](observability.md)** — add one custom metric to the same plugin
-- **[Read Plugin Source Data](../guides/plugins/storage-access.md)** — materialize discovered items for a product reader
+- **[Customize Source Discovery](../guides/plugins/customize-source-discovery.md)** — the full pattern and filter contracts behind this walkthrough
 - **[API Reference](../reference/index.md)** — look up the public plugin context and template hooks
 - **[Sentinel-3 FRP To Parquet](sentinel3-frp.md)** — download and ingest a real EUMETSAT product

@@ -1,55 +1,115 @@
-# Install a Plugin
+# Create and Install the Example Plugin
 
 ## When To Use This
 
-Install an existing product plugin before running ingestion. Plugin authors
-should use [Plugin Development](../guides/plugins/index.md) instead.
+A Firecube plugin is a separately installed Python package that tells Firecube
+how to discover, read, and convert a particular dataset. Firecube runs the
+ingestion workflow and manages the output product.
+
+This page creates a local `weather_netcdf` plugin for the quickstart. It reads
+the example NetCDF files and returns one ordered `xarray.Dataset`; Firecube
+writes that dataset to Zarr.
 
 ## Prerequisites
 
 - Firecube installed in a Python environment.
-- The distribution name, local path, or Git URL of a compatible plugin package.
+- The environment activated with `source .venv/bin/activate`.
+- The current directory is `firecube-quickstart/`.
 
 ## Steps
 
-1. Install the plugin into the environment that provides the Firecube CLI:
+### Create The Plugin
 
-   ```bash
-   uv run firecube plugins install "PLUGIN_PACKAGE"
-   ```
+Create a plugin project from Firecube's Zarr template:
 
-2. List installed plugins and inspect the plugin's options:
+```bash
+mkdir -p plugins_dev
+firecube plugins create weather-netcdf \
+  --template zarr \
+  --target-dir plugins_dev \
+  --non-interactive
+```
 
-   ```bash
-   uv run firecube plugins list
-   ```
+Expected output starts with:
 
-   The output contains the plugin name used by other Firecube commands. Replace
-   `PLUGIN_NAME` below with that value:
+```text
+✨ Created plugin project: plugins_dev/firecube-weather-netcdf
+```
 
-   ```bash
-   uv run firecube plugins describe PLUGIN_NAME
-   uv run firecube ingest PLUGIN_NAME --show-options
-   ```
+The generated package registers the plugin as `weather_netcdf`. Its Zarr
+template handles discovery, batching, and output writes, but its dataset
+conversion deliberately fails until you implement it.
 
-Read the plugin package documentation for its input data, output format, and
-product-specific options.
+### Implement The Plugin
+
+Open
+`plugins_dev/firecube-weather-netcdf/src/firecube_weather_netcdf/ingestor.py`.
+Replace the generated `build_dataset` method with:
+
+```python
+    def build_dataset(
+        self,
+        group: str,
+        items: list[Any],
+        ctx: PluginContext,
+    ) -> xr.Dataset | None:
+        _ = group
+        if not items:
+            return None
+
+        datasets: list[xr.Dataset] = []
+        for item in items:
+            path = ctx.materialize(item)
+            with xr.open_dataset(path) as source:
+                datasets.append(source.load())
+
+        return xr.concat(datasets, dim="timestamp").sortby("timestamp")
+```
+
+`ctx.materialize(item)` gives `xarray` a local path for each source item.
+`source.load()` keeps the values available after each NetCDF file closes. The
+final line combines the files and orders them by timestamp.
+
+### Install The Plugin
+
+Install the generated project into the active environment in editable mode:
+
+```bash
+firecube plugins install --editable plugins_dev/firecube-weather-netcdf
+```
+
+Editable installation means later changes to the plugin source take effect
+without reinstalling it.
+
+Inspect the registered plugin and its options:
+
+```bash
+firecube plugins list
+firecube plugins describe weather_netcdf
+firecube ingest weather_netcdf --show-options
+```
+
+`plugins list` should contain `weather_netcdf`. `plugins describe` should show
+`weather_netcdf` as both the plugin and product name.
 
 ## Verify
 
-`plugins list` should contain the installed plugin name. `plugins describe`
-should then print its package, product, description, and option sections without
-an import error.
+Run the plugin inspection commands above. They should complete without an
+import error, and `--show-options` should list the engine, storage, and Zarr
+options accepted by the plugin.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Plugin is missing from `plugins list` | The package is installed in a different environment. | Install it with the same `uv` environment used to run Firecube. |
-| Plugin import fails | The plugin and Firecube versions are incompatible or a plugin dependency is missing. | Check the plugin's declared Firecube version and reinstall its dependencies. |
-| Plugin has no expected options | The wrong plugin name was inspected. | Use the exact name printed by `plugins list`. |
+| Plugin is missing from `plugins list` | The package was installed in a different environment. | Run `source .venv/bin/activate`, then repeat the editable install. |
+| `build_dataset` raises `NotImplementedError` | The generated stub is still present. | Replace the method with the implementation above, then run the command again. |
+| Plugin import fails | The method was pasted outside `WeatherNetcdfIngestor` or has invalid indentation. | Put the method inside the generated class and keep its four-space class indentation. |
+| `uv` cannot find a Python environment | The quickstart environment is not active. | Run `source .venv/bin/activate` from `firecube-quickstart/`. |
 
 ## Next Steps
 
-- **[Run Ingestion](ingestion.md)** — ingest source data with the installed plugin
-- **[Plugin Development](../guides/plugins/index.md)** — create a plugin for a new product
+- **[Prepare Source Data](source-data.md)**: create the NetCDF files used by the
+  local ingestion example.
+- **[Plugin Development](../guides/plugins/index.md)**: choose a template and
+  develop a plugin for your own dataset after completing the quickstart.

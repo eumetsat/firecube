@@ -6,8 +6,9 @@ Prepare an external plugin package so Firecube can discover its registered
 class through package metadata.
 
 The generated ingestor already contains the decorator and product name. The
-decorator sets `cls.name`; do not repeat the same value in a `name` class
-attribute. Import SDK types from `firecube.ingestor.api` and helpers from
+[`register_ingestor`](../../reference/templates.md#registration) decorator
+sets `cls.name`; do not repeat the same value in a `name` class attribute.
+Import SDK types from `firecube.ingestor.api` and helpers from
 `firecube.core.api`.
 
 Every concrete plugin class must declare a non-empty

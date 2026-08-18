@@ -10,7 +10,7 @@ plugin and add one metric through `ctx.telemetry`.
 
 ## Prerequisites
 
-- The completed [NetCDF To Zarr](weather-netcdf.md) project in the current
+- The completed [Quickstart](../quickstart/index.md) project in the current
   directory.
 - Docker available with local port `9091` free.
 
@@ -68,10 +68,10 @@ firecube_weather_netcdf_files_total
 ## Run The Plugin
 
 ```bash
-PRODUCT_URI="file://$PWD/tutorial-output/weather_netcdf_observed.zarr"
+PRODUCT_URI="file://$PWD/quickstart-output/weather_netcdf_observed.zarr"
 
-uv run firecube ingest weather_netcdf \
-  --input-data tutorial-data/weather-netcdf \
+firecube ingest weather_netcdf \
+  --input-data quickstart-data/weather-netcdf \
   --target "$PRODUCT_URI" \
   --product-name weather_netcdf_observed \
   --storage-type local \
@@ -100,11 +100,11 @@ Expected command output on stdout includes:
 ## Verify The Product
 
 ```bash
-uv run python - <<'PY'
+python - <<'PY'
 import xarray as xr
 
 ds = xr.open_zarr(
-    "tutorial-output/weather_netcdf_observed.zarr",
+    "quickstart-output/weather_netcdf_observed.zarr",
     group="default",
     consolidated=False,
 )

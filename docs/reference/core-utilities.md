@@ -71,6 +71,5 @@ preparation, and time conversion.
 
 ## See Also
 
-- [Read Plugin Source Data](../guides/plugins/storage-access.md)
 - [Slot-Range Parallelism](parallelism.md)
 - [Storage Drivers](storage-drivers.md)

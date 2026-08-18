@@ -1,25 +1,25 @@
 # Tutorials
 
-Tutorials are step-by-step examples that end in a working plugin and verified
-output. The first three pages build one plugin in order. The Sentinel-3 and
-parallel Zarr tutorials are independent examples. To choose an authoring
-surface for a new product, start with
+Tutorials are step-by-step examples that extend a working plugin and verify its
+output. The first three pages use the plugin created in the Quickstart. The
+Sentinel-3 and parallel Zarr tutorials are independent examples. To choose an
+authoring surface for a new product, start with
 [Plugin Development](../guides/plugins/index.md); the tutorials use concrete
 products only to demonstrate those generic contracts.
 
 ## Before You Start
 
-Install Firecube first: start with the [Quickstart](../quickstart/index.md) or
-[Installation](../quickstart/installation.md) page. Run tutorial commands in the
-same Python environment where Firecube is installed.
+Complete the [Quickstart](../quickstart/index.md) first. It creates the local
+`weather_netcdf` plugin, source files, and initial Zarr product used by the
+first three tutorials. Keep its virtual environment active.
 
 ## First Plugin: NetCDF To Zarr
 
 Complete these pages in order. They use the same generated plugin and input
 data throughout:
 
-1. **[Build The Plugin](weather-netcdf.md)** — read a sequence of NetCDF files
-   and append them to Zarr.
+1. **[Understand The Plugin](weather-netcdf.md)** — inspect how the quickstart
+   plugin reads a sequence of NetCDF files and appends them to Zarr.
 2. **[NetCDF To Zarr: Source Discovery](source-discovery.md)** — extend the same plugin run to
    another NetCDF filename pattern.
 3. **[NetCDF To Zarr: Observability](observability.md)** — add one product-specific
