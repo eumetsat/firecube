@@ -25,7 +25,15 @@ from firecube.ingestor.api import PluginContext
 
 def test_fixture_loads() -> None:
     assert MultiGroupCapableTestIngestor.PRODUCT_NAME == "multi_group_capable_test_product"
-    assert MultiGroupCapableTestIngestor.SUPPORTS_SLOT_RANGE_PARALLELISM is True
+
+
+def test_fixture_index_spec_uses_new_api() -> None:
+    ctx = MagicMock(spec=PluginContext)
+    ingestor = MultiGroupCapableTestIngestor()
+
+    spec = ingestor.index_spec(ctx)
+
+    assert set(spec.groups) == {"group_a", "group_b"}
 
 
 def test_fixture_discover_returns_400_items() -> None:

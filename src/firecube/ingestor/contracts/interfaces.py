@@ -34,9 +34,10 @@ import inspect
 import logging
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, BinaryIO, ClassVar, Protocol, runtime_checkable
+from typing import Any, BinaryIO, Protocol, runtime_checkable
 
 from firecube.core.observability.telemetry import IngestionTelemetry
+from firecube.ingestor.runtime.zarr.contracts import AppendWriteStrategy, RegionWriteStrategy
 from firecube.ingestor.types.context import (
     IngestContext,
     IngestResult,
@@ -186,38 +187,8 @@ class PipelineHost(Protocol):
         ...
 
 
-@runtime_checkable
-class SlotRangeCapable(Protocol):
-    """Protocol for hosts that support slot-range parallel ingestion.
-
-    The engine dispatches to the slot-range scheduling path when the host
-    structurally satisfies this protocol *and* ``SUPPORTS_SLOT_RANGE_PARALLELISM``
-    is True.  Plugins opt in by setting the class variable and implementing the
-    three methods below; they do not need to subclass any particular template.
-    """
-
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool]
-
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        """Globally deterministic mapping from the conceptual time axis to ts_index."""
-        ...
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int] | None:
-        """Return max ts_index + 1 per group across the planned run."""
-        ...
-
-    def filter_items_to_slot_range(
-        self,
-        items: Sequence[Any],
-        slot_start: int,
-        slot_end: int,
-        ctx: PluginContext,
-    ) -> Sequence[Any]:
-        """Filter source items to those whose ts_index falls in [slot_start, slot_end)."""
-        ...
-
-
 __all__ = [
+    "AppendWriteStrategy",
     "DatasetProducer",
     "IngestContext",
     "IngestResult",
@@ -228,8 +199,8 @@ __all__ = [
     "PipelineResult",
     "PipelineRunState",
     "PluginContext",
+    "RegionWriteStrategy",
     "RuntimeIngestContext",
-    "SlotRangeCapable",
     "SourceFile",
     "is_dataset_producer",
 ]

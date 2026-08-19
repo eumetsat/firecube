@@ -44,6 +44,7 @@ from multi_group_capable_test_plugin import (  # type: ignore[reportMissingImpor
     MultiGroupCapableTestIngestor,
 )
 
+from firecube.core.index_spec import RegularTimeAxis
 from firecube.core.zarr.region_writer import RegionZarrWriter
 from firecube.ingestor.api import PluginContext
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
@@ -95,8 +96,13 @@ def _run_direct_zarr_ingest(target_path: Path) -> None:
     """
     ingestor = MultiGroupCapableTestIngestor()
     ctx = cast(PluginContext, MagicMock(spec=PluginContext))
+    ctx._ctx = MagicMock()
+    ingestor._bind_index_at_startup(ctx)
     schema = ingestor.zarr_schema(ctx)
-    global_expected = ingestor.global_expected_time_count(ctx)
+    global_expected = {
+        group: cast(int, cast(RegularTimeAxis, axis).size)
+        for group, axis in ingestor.index_spec(ctx).groups.items()
+    }
 
     _preallocate_schema(target_path, schema, global_expected)
 

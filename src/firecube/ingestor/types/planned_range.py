@@ -116,6 +116,7 @@ def validate_chunk_alignment(
     slot_end: int,
     chunk_shapes_per_group: dict[str, list[tuple[int, ...]]],
     global_expected: dict[str, int] | None = None,
+    shards_per_group: dict[str, list[tuple[int, ...]]] | None = None,
 ) -> None:
     """Raise ``ConfigurationError`` when any group's slot range is misaligned.
 
@@ -124,9 +125,10 @@ def validate_chunk_alignment(
     """
     for group, chunk_shapes in chunk_shapes_per_group.items():
         group_total = (global_expected or {}).get(group)
+        alignment_shapes = [*chunk_shapes, *(shards_per_group or {}).get(group, [])]
         misaligned_shapes = [
             shape
-            for shape in chunk_shapes
+            for shape in alignment_shapes
             if slot_start % shape[0] != 0 or (slot_end % shape[0] != 0 and slot_end != group_total)
         ]
         if misaligned_shapes:
@@ -141,6 +143,7 @@ def warn_if_misaligned(
     chunk_shapes_per_group: dict[str, list[tuple[int, ...]]],
     logger: logging.Logger,
     global_expected: dict[str, int] | None = None,
+    shards_per_group: dict[str, list[tuple[int, ...]]] | None = None,
 ) -> None:
     """Log a warning for each group whose slot range is not chunk-aligned.
 
@@ -149,9 +152,10 @@ def warn_if_misaligned(
     """
     for group, chunk_shapes in chunk_shapes_per_group.items():
         group_total = (global_expected or {}).get(group)
+        alignment_shapes = [*chunk_shapes, *(shards_per_group or {}).get(group, [])]
         misaligned_shapes = [
             shape
-            for shape in chunk_shapes
+            for shape in alignment_shapes
             if slot_start % shape[0] != 0 or (slot_end % shape[0] != 0 and slot_end != group_total)
         ]
         if misaligned_shapes:

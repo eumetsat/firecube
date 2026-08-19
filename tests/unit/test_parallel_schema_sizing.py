@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
@@ -23,8 +24,8 @@ import numpy as np
 import pytest
 import zarr
 
-from firecube.core.api import SlotAxis, SlotIndexModel
 from firecube.core.controlplane import WriteDomain
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.errors import ConfigurationError, SchemaSizeMismatchError
 from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
 from firecube.ingestor.templates.direct_zarr import (
@@ -69,7 +70,6 @@ class _ChunkManager:
 
 class _CapableIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "schema_test"
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def __init__(self, *, intents: list[WriteIntent], chunk_manager: Any) -> None:
         super().__init__(name="schema_test", chunk_manager=chunk_manager)
@@ -79,17 +79,24 @@ class _CapableIngestor(DirectZarrIngestor):
         )
         self._intents = intents
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx) -> dict[str, int] | None:
-        return {"data": 1000}
-
-    def slot_index_model(self, ctx) -> SlotIndexModel:
-        return SlotIndexModel(
+    def index_spec(self, ctx) -> IndexSpec:
+        return IndexSpec(
             name="parallel_schema_sizing_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=1000,
+                )
+            },
+        )
+
+    def inspect_item(self, item: Any, ctx: Any) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
         )
 
     def ingest(self, ctx):  # pragma: no cover - abstract hook not used here
@@ -143,6 +150,7 @@ def test_parallel_schema_uses_global_expected_not_batch_local(
     ingestor._parallel_execution_state = _ParallelExecutionState(global_expected={"data": 1000})
 
     ctx = SimpleNamespace(
+        _ctx=object(),
         run_id="run-1",
         storage=None,
         option=lambda key, default=None: default,

@@ -15,6 +15,7 @@
 """Exceptions for Firecube Ingestor."""
 
 from firecube.core.errors import (
+    ConfigurationError,
     FirecubeError,
     ManifestError,
     SchemaDriftError,
@@ -24,15 +25,6 @@ from firecube.core.errors import (
 
 class IngestorError(FirecubeError):
     """Base exception for all ingestor-layer errors."""
-
-
-class ConfigurationError(IngestorError):
-    """Invalid or conflicting configuration was supplied for a run.
-
-    Raised during option validation and pre-write checks, e.g. unknown or
-    malformed options, missing required inputs, or an existing store whose
-    layout conflicts with the plugin's declaration.
-    """
 
 
 class SchemaSizeMismatchError(IngestorError):

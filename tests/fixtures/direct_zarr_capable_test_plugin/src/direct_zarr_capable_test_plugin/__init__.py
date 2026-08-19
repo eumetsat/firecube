@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+import datetime as dt
+from collections.abc import Iterable
 from typing import Any, ClassVar
 
 import numpy as np
 
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -36,28 +37,30 @@ PRODUCT_NAME = "direct_zarr_capable_test_product"
 @register_ingestor("direct_zarr_capable_test_plugin")
 class DirectZarrCapableTestIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = PRODUCT_NAME
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
         return list(range(200))
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"data": 1000}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        return SlotIndexModel(
-            name="direct_zarr_capable_fixture_v1",
-            epoch="2024-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return IndexSpec(
+            name="direct_zarr_capable_fixture_v2",
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2024-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=1000,
+                )
+            },
         )
 
-    def filter_items_to_slot_range(
-        self, items: Sequence[Any], slot_start: int, slot_end: int, ctx: PluginContext
-    ) -> Sequence[Any]:
-        return [it for it in items if slot_start <= int(it) < slot_end]
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        if not isinstance(item, int):
+            return None
+        return ItemInfo(
+            coordinate=dt.datetime(2024, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=item)
+        )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         data_spec = ZarrArraySpec(
@@ -86,16 +89,22 @@ class DirectZarrCapableTestIngestor(DirectZarrIngestor):
 
     def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
         lat_values = np.arange(10, dtype=np.float64)
-        return [
-            WriteIntent(
-                group="data",
-                array="data",
-                ts_index=int(item),
-                data=np.full((10,), float(item), dtype="float32"),
-                kind="1d",
+        resolved = self.resolved_index(ctx)
+        intents: list[WriteIntent] = []
+        for item in batch.items:
+            info = self.inspect_item(item, ctx)
+            if info is None:
+                continue
+            intents.append(
+                WriteIntent(
+                    group="data",
+                    array="data",
+                    ts_index=resolved.position("data", info.coordinate),
+                    data=np.full((10,), float(item), dtype="float32"),
+                    kind="1d",
+                )
             )
-            for item in batch.items
-        ] + [
+        intents.append(
             WriteIntent(
                 group="data",
                 array="lat",
@@ -103,4 +112,5 @@ class DirectZarrCapableTestIngestor(DirectZarrIngestor):
                 data=lat_values,
                 kind="static",
             )
-        ]
+        )
+        return intents

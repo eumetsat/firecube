@@ -17,15 +17,15 @@
 These integration tests assert that the Phase 3 slot-range parallelism work did
 not regress Phase 2 single-pod ingestion. Specifically:
 
-- A non-capable plugin (``SUPPORTS_SLOT_RANGE_PARALLELISM`` left as default
-  ``False``) must continue to ingest end-to-end without any parallel
-  machinery being engaged.
-- A capable plugin (``SUPPORTS_SLOT_RANGE_PARALLELISM = True``) invoked
-  WITHOUT ``--slot-start``/``--slot-end`` must behave **byte-for-byte
-  identically** to a non-capable plugin: the capability gate must not
-  fire, no global schema setup claim (``zarr_schema_global``) must be
-  written, the per-batch auto-compute schema path must be used, and run
-  IDs must not carry a ``__slot=`` suffix.
+- A non-capable plugin with no ``index_spec`` / ``inspect_item`` override
+  must continue to ingest end-to-end without any parallel machinery being
+  engaged.
+- A capable plugin that opts in via ``index_spec`` and ``inspect_item``,
+  invoked WITHOUT ``--slot-start``/``--slot-end``, must behave
+  **byte-for-byte identically** to a non-capable plugin: the capability
+  gate must not fire, no global schema setup claim (``zarr_schema_global``)
+  must be written, the per-batch auto-compute schema path must be used,
+  and run IDs must not carry a ``__slot=`` suffix.
 - The Phase 2 per-slot claim mechanism must remain operational so the
   ingestion completes without deadlocking on the control plane.
 
@@ -218,7 +218,7 @@ def test_capable_plugin_no_flags_behaves_as_single_pod(
 ) -> None:
     """Capable plugin (SUPPORTS=True) without slot flags == Phase 2 single-pod.
 
-    The key invariant: declaring ``SUPPORTS_SLOT_RANGE_PARALLELISM = True``
+    The key invariant: declaring the index-spec / item-inspection surface
     alone must NOT change runtime behavior when the operator does not pass
     slot flags. No global schema setup, no parallel evidence, no slot
     suffix.
@@ -236,7 +236,7 @@ def test_capable_plugin_no_flags_behaves_as_single_pod(
     _assert_direct_zarr_rows(target_path, expected_rows=200)
 
     assert _PARALLEL_EVIDENCE_MARKER not in combined, (
-        "SUPPORTS_SLOT_RANGE_PARALLELISM=True without slot flags must not "
+        "index_spec/inspect_item without slot flags must not "
         "trigger any parallel evidence logging; "
         f"found marker in output:\n{combined}"
     )

@@ -65,7 +65,6 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "DatasetProducer": "structural protocol",
         "Ingestor": "structural protocol",
         "PipelineHost": "structural protocol",
-        "SlotRangeCapable": "structural protocol",
         "SourceFile": "structural protocol",
         "is_dataset_producer": "structural protocol helper",
         # Engine/CLI plumbing exported for host integration.
@@ -78,6 +77,16 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "config_keys": "CLI introspection helper",
         "discover_ingestors": "CLI discovery helper",
         "merge_batch_metrics": "engine aggregation helper",
+        # Engine-internal slot-range types and helpers; not part of the
+        # plugin-authoring surface. Plugin authors declare index_spec() and
+        # inspect_item(); the engine owns slot assignment and alignment.
+        "PlannedRange": "engine-internal; not part of the plugin-authoring surface",
+        "SlotRange": "engine-internal; not part of the plugin-authoring surface",
+        "chunk_align_ranges": "engine-internal; not part of the plugin-authoring surface",
+        "compute_covered_ranges": "engine-internal; not part of the plugin-authoring surface",
+        "validate_chunk_alignment": "engine-internal; not part of the plugin-authoring surface",
+        "validate_slot_range": "engine-internal; not part of the plugin-authoring surface",
+        "warn_if_misaligned": "engine-internal; not part of the plugin-authoring surface",
     },
     "firecube.core.api": {
         # Control-plane, archive, and host-integration helpers.
@@ -90,6 +99,10 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "read_chunk_grid_with_shards": "engine chunk-grid helper",
         "require_tensogram": "optional-dependency guard",
         "resolve_dataset_target": "engine target resolution helper",
+        # Byte-parity legacy types superseded by IndexSpec + RegularTimeAxis;
+        # older docs versions cover this surface.
+        "SlotAxis": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",
+        "SlotIndexModel": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",
     },
     "firecube.ingestor.extensions": {},
 }

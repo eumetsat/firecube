@@ -126,7 +126,7 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
 
 ### §21 Promote shared slot-range machinery to core (cross-plugin dedup)
 
-- Idea 2: PROMOTED (2026-08-05) — accepted via GitHub #27; see TODO.md §33 for the accepted scope and mixin design constraints, and DONE.md 2026-08-05 for the decision. Ideas 1 and 3: UNDECIDED.
+- Idea 2: SUPERSEDED (2026-08-18) - the mixin path was replaced by the `IndexSpec` clean cut. Ideas 1 and 3 remain UNDECIDED.
 
 - **Origin:** Surfaced while reviewing `firecube-opera-seviri-nordlis` and
   `firecube-mtg-fci-l1c`. Both plugins now opt into
@@ -139,14 +139,9 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
   inline `datetime` math). The core helpers (`iso_to_epoch_s`/`epoch_s_to_iso`/
   `normalize_epoch_iso`) already cover OPERA; confirm MTG adopts them too so
   there's one implementation.
-- **Idea 2 — a core `SlotIndexModel` / `SlotRangeSupport` mixin.** OPERA's
-  reference-epoch-mismatch guard and MTG's `_ensure_index_model_attrs`
-  epoch-stamp/validate solve the identical generic problem (refuse to append
-  under a misaligned slot model). The new `ChunkManager.ensure_slot_index_model`
-  is the foundation; a thin mixin could let cadence-based plugins declare
-  `(epoch, per-group cadence)` and inherit the anchor/append-safety behaviour
-  instead of re-deriving it. Prevents drift as more parallel-capable plugins
-  appear.
+- **Idea 2 — a core `SlotIndexModel` / `SlotRangeSupport` mixin.** Superseded
+  by the `IndexSpec` clean cut. The engine now owns `IndexSpec` and `ResolvedIndex`.
+  Keep this note only as history for the cross-plugin dedup question.
 - **Idea 3 — expose `read_chunk_grid_with_shards` on the public API.** OPERA's
   former `compat.py` hand-read shard layout (a real bug source, now deleted);
   the canonical `firecube.core.zarr.validation.read_chunk_grid_with_shards`

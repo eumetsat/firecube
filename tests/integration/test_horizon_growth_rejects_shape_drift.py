@@ -27,7 +27,7 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.zarr.region_writer import RegionZarrWriter
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
+from firecube.ingestor.api import IndexSpec, RegularTimeAxis, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.errors import SchemaSizeMismatchError
 from firecube.ingestor.registry import loader as _loader
 from firecube.ingestor.templates.direct_zarr import _setup_global_zarr_schema
@@ -148,10 +148,24 @@ def test_cli_preallocate_rejects_existing_smaller_horizon(
 
     import direct_zarr_capable_test_plugin as plugin_module
 
+    def index_spec_small_to_grown(self, ctx):
+        return IndexSpec(
+            name="horizon_growth_v1",
+            groups={
+                GROUP: RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2024-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=GROWN_HORIZON,
+                )
+            },
+        )
+
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "global_expected_time_count",
-        lambda self, ctx: {GROUP: GROWN_HORIZON},
+        "index_spec",
+        index_spec_small_to_grown,
     )
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,

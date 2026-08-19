@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from collections.abc import Iterator
 from pathlib import Path
@@ -26,7 +27,7 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -48,19 +49,25 @@ _MULTI_PLUGIN = "phase33_plan_multi_group"
 
 class _TerminalPartialPlanPlugin(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "phase33_plan_terminal_product"
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"data": 950}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        return SlotIndexModel(
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return IndexSpec(
             name="phase33_plan_terminal_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=950,
+                )
+            },
+        )
+
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
         )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
@@ -85,8 +92,19 @@ class _TerminalPartialPlanPlugin(DirectZarrIngestor):
 class _AlignedPlanPlugin(_TerminalPartialPlanPlugin):
     PRODUCT_NAME: ClassVar[str] = "phase33_plan_aligned_product"
 
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"data": 1000}
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return IndexSpec(
+            name="phase33_plan_aligned_v1",
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=1000,
+                )
+            },
+        )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         return [
@@ -106,22 +124,32 @@ class _AlignedPlanPlugin(_TerminalPartialPlanPlugin):
 
 class _MultiGroupPlanPlugin(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "phase33_plan_multi_product"
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"group_a": 950, "group_b": 1000}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        return SlotIndexModel(
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return IndexSpec(
             name="phase33_plan_multi_v1",
-            epoch="2026-01-01T00:00:00Z",
             groups={
-                "group_a": SlotAxis(cadence_s=1, mode="exact"),
-                "group_b": SlotAxis(cadence_s=1, mode="exact"),
+                "group_a": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=950,
+                ),
+                "group_b": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=1000,
+                ),
             },
+        )
+
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
         )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
@@ -198,7 +226,20 @@ def _plan_args(tmp_path: Path, plugin: str, product_name: str, *, name: str) -> 
 def _run_plan(tmp_path: Path, plugin: str, product_name: str, *, name: str) -> dict[str, object]:
     result = CliRunner().invoke(cli, _plan_args(tmp_path, plugin, product_name, name=name))
     assert result.exit_code == 0, result.output
-    return json.loads(result.output)
+    decoder = json.JSONDecoder()
+    output = result.output.strip()
+    pos, last = 0, None
+    while pos < len(output):
+        try:
+            obj, end = decoder.raw_decode(output, pos)
+            last = obj
+            pos = end
+            while pos < len(output) and output[pos] in " \t\n\r":
+                pos += 1
+        except json.JSONDecodeError:
+            pos += 1
+    assert last is not None, f"No JSON found in output: {result.output!r}"
+    return last
 
 
 def _chunk_shapes_per_group(plugin: DirectZarrIngestor) -> dict[str, list[tuple[int, ...]]]:

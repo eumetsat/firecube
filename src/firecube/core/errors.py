@@ -19,6 +19,15 @@ class FirecubeError(Exception):
     """Base exception for Firecube runtime errors."""
 
 
+class ConfigurationError(FirecubeError):
+    """Invalid or conflicting configuration was supplied for a run.
+
+    Raised during option validation and pre-write checks, e.g. unknown or
+    malformed options, missing required inputs, or an existing store whose
+    layout conflicts with the plugin's declaration.
+    """
+
+
 class SchemaDriftError(FirecubeError):
     """Existing Zarr array metadata drifted from the declared schema.
 

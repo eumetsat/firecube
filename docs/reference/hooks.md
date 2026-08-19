@@ -4,6 +4,10 @@ This reference covers the complete `BaseIngestor` hook surface. Template
 plugins inherit all of these hooks; plugins that own the whole batch pipeline
 subclass `BaseIngestor` directly and implement `_process_batch`.
 
+DirectZarr plugins add the index contract on the template page. See
+[Plugin Templates](templates.md#directzarringestor) and
+[Parallel Zarr Writes](parallelism.md).
+
 Firecube does not yet expose a public storage-writer protocol for custom
 output code. A new external custom pipeline cannot be implemented using only
 stable, typed public storage APIs. Do not import the concrete storage session
@@ -39,13 +43,13 @@ from an internal module as a workaround.
 
 ### Class Declarations
 
-- `PRODUCT_NAME: ClassVar[str]` — required, non-empty product name; checked
+- `PRODUCT_NAME: ClassVar[str]`: required, non-empty product name; checked
   when the class is defined.
-- `time_dim_name: ClassVar[str]` — time dimension name, default
+- `time_dim_name: ClassVar[str]`: time dimension name, default
   `"timestamp"`; a class declaration, not a `--option` field.
-- `template_config_class` — the template config dataclass whose fields become
+- `template_config_class`: the template config dataclass whose fields become
   validated typed options; set by each template.
-- `plugin_config_class` — the plugin's own
+- `plugin_config_class`: the plugin's own
   [`PluginConfig`](config.md#pluginconfig) subclass declaring
   product-specific options.
 
@@ -145,4 +149,5 @@ across runs.
 - [Custom pipeline plugins](../guides/plugins/base-ingestor.md)
 - [Plugin extensions](../guides/plugins/extensions.md)
 - [Context & Results](context.md)
+- [Parallel Zarr Writes](parallelism.md)
 - [Package and Register a Plugin](../guides/plugins/contract.md)

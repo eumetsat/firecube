@@ -14,15 +14,15 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
-from collections.abc import Sequence
 from typing import Any, ClassVar
 
 import numpy as np
 import pytest
 import xarray as xr
 
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -38,7 +38,6 @@ from tests.helpers.storage import make_test_context
 class _ParallelDirectZarrTestIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "directzarr_parallel_test"
     time_dim_name: ClassVar[str] = "time"
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         return [
@@ -58,27 +57,25 @@ class _ParallelDirectZarrTestIngestor(DirectZarrIngestor):
     def discover_source_files(self, ctx: PluginContext) -> list[str]:
         return ["synthetic_item_0", "synthetic_item_1"]
 
-    def filter_items_to_slot_range(
-        self,
-        items: Sequence[Any],
-        slot_start: int,
-        slot_end: int,
-        ctx: PluginContext,
-    ) -> Sequence[Any]:
-        return list(items[slot_start:slot_end])
-
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return 0
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"PARALLEL_GROUP": 1}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        return SlotIndexModel(
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return IndexSpec(
             name="directzarr_parallel_test_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"PARALLEL_GROUP": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "PARALLEL_GROUP": RegularTimeAxis(
+                    coordinate="time",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=1,
+                )
+            },
         )
+
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        if not isinstance(item, str):
+            return None
+        return ItemInfo(coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC))
 
     def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
         return []

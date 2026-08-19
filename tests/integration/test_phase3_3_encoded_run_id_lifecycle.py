@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+import datetime as dt
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, ClassVar
@@ -24,7 +25,7 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -45,32 +46,29 @@ _GROUP = "grp/with/slash"
 
 class UnsafeGroupIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = _PRODUCT
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
         return [(_GROUP, i) for i in range(100)]
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {_GROUP: 100}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        return SlotIndexModel(
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return IndexSpec(
             name="phase33_unsafe_group_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={_GROUP: SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                _GROUP: RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=100,
+                )
+            },
         )
 
-    def filter_items_to_slot_range(
-        self,
-        items: Sequence[Any],
-        slot_start: int,
-        slot_end: int,
-        ctx: PluginContext,
-    ) -> Sequence[Any]:
-        return [it for it in items if slot_start <= int(it[1]) < slot_end]
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item[1]))
+        )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         return [

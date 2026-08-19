@@ -14,13 +14,17 @@
 
 from __future__ import annotations
 
+import datetime as dt
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, ClassVar
 from unittest.mock import MagicMock
 
 import pytest
 
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
+    DirectZarrIngestor,
     EngineConfig,
     IngestContext,
     IngestResult,
@@ -55,12 +59,12 @@ def _host(result: PipelineResult) -> MagicMock:
     return host
 
 
-class _SlotFilteringHost:
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
+class _SlotFilteringHost(DirectZarrIngestor):
+    PRODUCT_NAME: ClassVar[str] = "slot_filtering"
     name = "slot-filtering"
-    batch_id_prefix = "slot_"
 
     def __init__(self, result_batch: PipelineBatch) -> None:
+        super().__init__(name="slot-filtering")
         self._batch_planner = BatchPlanner()
         self._log = MagicMock()
         self._result_batch = result_batch
@@ -68,23 +72,41 @@ class _SlotFilteringHost:
         self.on_batch_success = MagicMock()
         self.on_batch_failure = MagicMock()
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        _ = ctx
+        return IndexSpec(
+            name="slot_filtering_v1",
+            groups={
+                "product": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=100,
+                )
+            },
+        )
 
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"product": 100}
-
-    def filter_items_to_slot_range(
-        self,
-        items: list[int],
-        slot_start: int,
-        slot_end: int,
-        ctx: PluginContext,
-    ) -> list[int]:
-        return [item for item in items if slot_start <= item < slot_end]
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
+        )
 
     def discover_source_files(self, ctx: PluginContext):
         return iter([0, 1, 2, 3, 4])
+
+    def zarr_schema(self, ctx: PluginContext) -> list[Any]:
+        _ = ctx
+        return []
+
+    def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[Any]:
+        _ = (batch, ctx)
+        return []
+
+    def _create_batches(self, ctx: Any, batch_size: int):
+        _ = (ctx, batch_size)
+        return iter([self._result_batch])
 
     def filter_item(self, item: Any, ctx: PluginContext) -> bool:
         return True
@@ -92,10 +114,12 @@ class _SlotFilteringHost:
     def item_size_bytes(self, item: Any) -> int:
         return 0
 
-    def get_batch_groups(self, items: list[Any], ctx: PluginContext) -> list[str]:
+    def get_batch_groups(self, items: Any, ctx: PluginContext) -> list[str]:
         return ["product"]
 
-    def _verify_existing_cube_batch_groups(self, ctx: RuntimeIngestContext, groups: list[str]):
+    def _verify_existing_cube_batch_groups(
+        self, ctx: RuntimeIngestContext, group_paths: Sequence[str]
+    ):
         return None
 
     def _process_batch(self, batch: PipelineBatch, ctx: PluginContext) -> PipelineResult:
@@ -116,6 +140,7 @@ def test_run_sequential_filters_batches_to_configured_slot_range() -> None:
     ctx = _runtime_ctx()
     host = _SlotFilteringHost(_batch())
     cfg = EngineConfig(slot_start=1, slot_end=4)
+    host._bind_index_at_startup(PluginContext(ctx))
 
     state = engine_module.run_sequential(
         ctx=ctx,

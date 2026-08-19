@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 from collections.abc import Sequence
 from typing import Any
 
@@ -63,6 +64,8 @@ from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.runtime.configure import TierConfigurator
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+
+logger = logging.getLogger(__name__)
 
 
 def _configure_ingestor_for_cli(
@@ -210,6 +213,17 @@ def slots(
         cache=False,
     )
     resolved_storage_driver = storage_config.storage_driver
+    identity = resolve_product_identity(
+        target,
+        format="zarr",
+        product_name=product_name,
+        option_name="--target",
+    )
+    binding = StorageBinding(
+        identity=identity,
+        driver=StorageDriverConfig.from_storage_config(storage_config),
+    )
+    chunk_manager = ChunkManager(binding=binding)
 
     plugins = discover_ingestors()
     if plugin not in plugins:
@@ -223,12 +237,6 @@ def slots(
             f"Plugin '{plugin}' does not support slot-range planning. "
             "This command is available for plugins that write Zarr stores in parallel."
         )
-    if not isinstance(ingestor, DirectZarrIngestor) or not ingestor.SUPPORTS_SLOT_RANGE_PARALLELISM:
-        raise click.ClickException(
-            f"Plugin '{plugin}' has not opted into slot-range parallelism. "
-            "See the plugin's documentation for parallel-write support."
-        )
-
     plugin_ctx = _configure_ingestor_for_cli(
         ingestor,
         target=target,
@@ -236,13 +244,21 @@ def slots(
         run_id="zarr-slots",
     )
 
-    global_schema = ingestor.global_expected_time_count(plugin_ctx)
-    if not global_schema:
-        result_description = "None" if global_schema is None else "an empty dict"
+    try:
+        ingestor._bind_index_at_startup(plugin_ctx)
+        resolved_index = ingestor.resolved_index(plugin_ctx)
+    except Exception as exc:
         raise click.ClickException(
-            f"Plugin '{plugin}' returned {result_description}. "
-            "Must return a non-empty dict with positive values per group."
+            f"Plugin '{plugin}' returned no index_spec. "
+            "See the plugin's documentation for parallel-write support."
+        ) from exc
+    current_record = chunk_manager.get_slot_index_model(product=identity.product_name)
+    if current_record is not None and current_record.identity_hash != resolved_index.identity_hash:
+        logger.warning(
+            "Plugin slot-index model differs from persisted record; "
+            "run `firecube zarr preallocate` to reconcile."
         )
+    global_schema = {group: resolved_index.size(group) for group in resolved_index.groups}
     for group_name, expected in global_schema.items():
         if expected <= 0:
             raise click.ClickException(
@@ -257,6 +273,10 @@ def slots(
         validate_global_expected_subset_of_schema(global_schema, schema)
     except ConfigurationError as exc:
         raise click.ClickException(str(exc)) from exc
+
+    from firecube.ingestor.runtime.parallel_gate import warn_on_chunk_alignment
+
+    warn_on_chunk_alignment(global_schema, schema)
 
     resolved_slot_sizes = _resolve_per_group_slot_sizes(schema, slot_size)
 
@@ -706,10 +726,7 @@ def preallocate(
     try:
         ingestor = ingestor_cls(chunk_manager=chunk_manager)
 
-        if (
-            not isinstance(ingestor, DirectZarrIngestor)
-            or not ingestor.SUPPORTS_SLOT_RANGE_PARALLELISM
-        ):
+        if not isinstance(ingestor, DirectZarrIngestor):
             raise click.ClickException(
                 f"Plugin '{plugin}' does not support slot-range parallelism. "
                 "See the plugin's documentation for parallel-write support."
@@ -726,14 +743,17 @@ def preallocate(
         # control-plane BEFORE any Zarr array/group is created. A failure here
         # MUST happen before any store mutation so partially-initialised stores
         # cannot leak into the target on error.
-        if getattr(type(ingestor), "SUPPORTS_SLOT_RANGE_PARALLELISM", False):
-            try:
-                slot_model = ingestor.slot_index_model(plugin_ctx)
-            except Exception as exc:
-                raise click.ClickException(
-                    f"Plugin '{plugin}' failed to resolve slot_index_model: {exc}"
-                ) from exc
+        try:
+            ingestor._bind_index_at_startup(plugin_ctx)
+            resolved_index = ingestor.resolved_index(plugin_ctx)
+        except Exception as exc:
+            raise click.ClickException(
+                f"Plugin '{plugin}' failed to resolve index_spec: {exc}"
+            ) from exc
+        global_expected = {group: resolved_index.size(group) for group in resolved_index.groups}
 
+        slot_model = resolved_index.as_legacy_slot_index_model()
+        if slot_model is not None:
             try:
                 chunk_manager.ensure_slot_index_model(
                     product=identity.product_name,
@@ -745,18 +765,6 @@ def preallocate(
                     f"Failed to record slot_index_model for plugin '{plugin}': {exc}"
                 ) from exc
             _preallocate_run_created = True
-
-        try:
-            global_expected = ingestor.global_expected_time_count(plugin_ctx)
-        except Exception as exc:
-            raise click.ClickException(
-                f"Plugin '{plugin}' failed to report expected time counts: {exc}"
-            ) from exc
-        if not global_expected:
-            raise click.ClickException(
-                f"Plugin '{plugin}' returned {'None' if global_expected is None else 'an empty dict'}. "
-                "Cannot preallocate schema without expected sizes."
-            )
 
         schema = ingestor.zarr_schema(plugin_ctx)
         all_specs = [array for group in schema for array in group.arrays]
@@ -781,6 +789,10 @@ def preallocate(
             validate_global_expected_subset_of_schema(global_expected, schema)
         except ConfigurationError as exc:
             raise click.ClickException(str(exc)) from exc
+
+        from firecube.ingestor.runtime.parallel_gate import warn_on_chunk_alignment
+
+        warn_on_chunk_alignment(global_expected, schema)
 
         coord_names_by_group = {spec.group: spec.coord_names for spec in schema}
 

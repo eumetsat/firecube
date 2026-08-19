@@ -89,7 +89,6 @@ INTERNAL_TOKENS_USER_FORBIDDEN = frozenset(
         "control-plane",
         "DirectZarrIngestor",
         "JOB_COMPLETION_INDEX",
-        "SUPPORTS_SLOT_RANGE_PARALLELISM",
         "SchemaSizeMismatchError",
     }
 )

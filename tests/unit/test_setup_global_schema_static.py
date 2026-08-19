@@ -18,7 +18,7 @@ Static coordinate arrays such as ``lat``/``lon`` do not have a time axis and
 must be created with their declared shape verbatim. The global parallel-schema
 setup must skip the time-axis preallocation logic for these specs, and a
 group composed entirely of static arrays must not require an entry in
-``global_expected_time_count()``.
+``index_spec()``.
 """
 
 from __future__ import annotations

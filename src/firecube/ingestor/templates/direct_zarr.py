@@ -16,11 +16,13 @@
 
 Provides ``DirectZarrIngestor`` — an abstract base for plugins that bypass
 xarray and write directly to Zarr regions using ``RegionZarrWriter``.  The
-plugin implements two hooks plus optional Phase 3 slot-range parallelism:
+plugin implements two hooks plus optional slot-range parallelism:
 
 - ``zarr_schema(ctx)`` — declares groups, arrays, and shapes.
 - ``build_write_intents(batch, ctx)`` — converts a batch into a list of
   ``WriteIntent`` specs describing region writes to execute.
+- ``index_spec(ctx)`` — (optional) declares the time-axis index for parallel ingestion.
+- ``inspect_item(item, ctx)`` — (optional) maps a source item to its slot coordinate.
 
 The template handles store opening, claim coordination, coverage tracking, and metrics.
 """
@@ -37,12 +39,12 @@ from abc import abstractmethod
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 
+from firecube.core.api import IndexSpec, ItemInfo, ResolvedIndex
 from firecube.core.errors import ClaimConflictError
-from firecube.core.slot_index import SlotIndexModel
 from firecube.ingestor.api import (
     BaseIngestor,
     ConfigurationError,
@@ -243,8 +245,8 @@ def _setup_global_zarr_schema(
             if group_has_time_indexed:
                 log.warning(
                     "Group '%s' has time-indexed arrays in zarr_schema() but is missing from "
-                    "global_expected_time_count(); skipping global schema pre-allocation. "
-                    "If this group receives parallel writes, add it to global_expected_time_count().",
+                    "the resolved index; skipping global schema pre-allocation. "
+                    "If this group receives parallel writes, add it to index_spec(ctx).",
                     group_name,
                 )
                 continue
@@ -397,27 +399,45 @@ class ZarrArraySpec:
     """Specification for a single Zarr array within a group."""
 
     name: str
+    """Name of the Zarr array within its group."""
     shape: tuple[int, ...]
+    """Full shape of the array, with time as the first axis when indexed."""
     dtype: np.dtype[Any] | type[np.generic] | type[Any] | str
+    """NumPy dtype or dtype-like value used when creating the array."""
     chunks: tuple[int, ...] | None = None
+    """Chunk shape for the array, or ``None`` to use the template default."""
     fill_value: Any = None
+    """Fill value written into unused cells when the array is preallocated."""
     expected_time_count: int | None = None
+    """Expected number of time slots for time-indexed arrays, if known."""
     shards: tuple[int, ...] | None = None
+    """Optional Zarr sharding shape for the array, or ``None`` to disable sharding."""
     attrs: Mapping[str, Any] | None = None
+    """Array-level attributes stamped into ``zarr.json`` verbatim."""
     dimension_names: tuple[str, ...] | None = None
+    """Dimension names for the array, ordered to match ``shape``."""
     time_indexed: bool = True
+    """Whether the array participates in time-axis preallocation and slot writes."""
     filters: tuple[dict, ...] | None = None
-    """Per-array Zarr v3 filter codecs (ArrayArrayCodec). Each entry: ``{"name": ..., "configuration": {...}}``.
-    None means inherit from template default. Requires template ``zarr_compression=True``.
+    """Per-array codec filters.
+
+    Each entry is a Zarr v3 ArrayArrayCodec config dict. ``None`` inherits the
+    template default; an explicit tuple overrides the template filter pipeline
+    for this array only.
     """
     serializer: dict | None = None
-    """Per-array Zarr v3 serializer codec (ArrayBytesCodec). E.g. ``{"name": "bytes"}``.
-    None means inherit from template default. Requires template ``zarr_compression=True``.
+    """Per-array serializer codec.
+
+    This is a Zarr v3 ArrayBytesCodec config dict. ``None`` inherits the
+    template default; an explicit value overrides the template serializer for
+    this array only.
     """
     compressors: tuple[dict, ...] | None = None
-    """Per-array Zarr v3 compressor codecs (BytesBytesCodec). Each entry: ``{"name": ..., "configuration": {...}}``.
-    Empty tuple ``()`` = explicitly uncompressed for this array ("compress-except-X" pattern).
-    None means inherit from template default. Requires template ``zarr_compression=True``.
+    """Per-array compressor codecs.
+
+    Each entry is a Zarr v3 BytesBytesCodec config dict. ``None`` inherits the
+    template default. An empty tuple means explicitly uncompressed for this
+    array.
     """
 
     def __post_init__(self) -> None:
@@ -526,6 +546,155 @@ class WriteIntent:
     the actual dim/coord name comes from ``IndexedRegionStrategy.time_coord_name``.
     """
 
+    def __post_init__(self) -> None:
+        valid_kinds = {"region", "1d", "timestamp", "static"}
+        if self.kind not in valid_kinds:
+            raise ValueError(
+                f"WriteIntent.kind must be one of {sorted(valid_kinds)!r}; got {self.kind!r}"
+            )
+        if self.kind == "timestamp" and self.timestamp_val is None:
+            raise ValueError("WriteIntent with kind='timestamp' requires timestamp_val to be set")
+
+    @classmethod
+    def slot(cls, *, group: str, array: str, index: int, data: Any) -> WriteIntent:
+        """Produce a 1-D time-slot write intent.
+
+        Args:
+            group: Zarr group name (matches a key in ``zarr_schema``).
+            array: Array name within the group.
+            index: Time-slot index (``ts_index``) for this write.
+            data: Array data to write at this slot.
+
+        Returns:
+            A ``WriteIntent`` with ``kind="1d"`` and ``ts_index=index``.
+
+        Raises:
+            ValueError: If the constructed intent has an invalid kind (should not
+                happen with this factory).
+
+        Examples:
+            >>> import numpy as np
+            >>> intent = WriteIntent.slot(group="data", array="counts", index=7, data=np.zeros((4,)))
+            >>> intent.kind
+            '1d'
+            >>> intent.ts_index
+            7
+        """
+        return cls(group=group, array=array, ts_index=index, data=data, kind="1d")
+
+    @classmethod
+    def region(
+        cls,
+        *,
+        group: str,
+        array: str,
+        index: int,
+        data: Any,
+        y_slice: slice,
+        channel_index: int | None = None,
+    ) -> WriteIntent:
+        """Produce a 2-D region write intent.
+
+        Args:
+            group: Zarr group name.
+            array: Array name within the group.
+            index: Time-slot index (``ts_index``) for this write.
+            data: 2-D array data to write into the region.
+            y_slice: Row slice within the array (required; kw-only).
+            channel_index: Optional channel dimension index.
+
+        Returns:
+            A ``WriteIntent`` with ``kind="region"``, ``ts_index=index``,
+            ``y_slice=y_slice``, and ``channel_index=channel_index``.
+
+        Raises:
+            ValueError: If the constructed intent has an invalid kind.
+
+        Examples:
+            >>> import numpy as np
+            >>> intent = WriteIntent.region(
+            ...     group="data_1km", array="counts", index=3,
+            ...     data=np.zeros((100, 2048)), y_slice=slice(0, 100),
+            ... )
+            >>> intent.kind
+            'region'
+            >>> intent.y_slice
+            slice(0, 100, None)
+        """
+        return cls(
+            group=group,
+            array=array,
+            ts_index=index,
+            data=data,
+            kind="region",
+            y_slice=y_slice,
+            channel_index=channel_index,
+        )
+
+    @classmethod
+    def coordinate(cls, *, group: str, index: int, value: Any) -> WriteIntent:
+        """Produce a timestamp-coordinate write intent.
+
+        Args:
+            group: Zarr group name.
+            index: Time-slot index (``ts_index``) for this coordinate.
+            value: The coordinate value (e.g. a ``datetime`` or ``numpy.datetime64``).
+
+        Returns:
+            A ``WriteIntent`` with ``kind="timestamp"``, ``ts_index=index``,
+            and ``timestamp_val=value``.
+
+        Raises:
+            ValueError: If ``value`` is ``None`` (timestamp_val is required for
+                ``kind="timestamp"``).
+
+        Examples:
+            >>> from datetime import datetime, timezone
+            >>> intent = WriteIntent.coordinate(
+            ...     group="data", index=5,
+            ...     value=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ... )
+            >>> intent.kind
+            'timestamp'
+            >>> intent.ts_index
+            5
+        """
+        return cls(
+            group=group,
+            array="__timestamp__",
+            ts_index=index,
+            data=None,
+            kind="timestamp",
+            timestamp_val=value,
+        )
+
+    @classmethod
+    def static(cls, *, group: str, array: str, data: Any) -> WriteIntent:
+        """Produce a static (non-time-indexed) array write intent.
+
+        Args:
+            group: Zarr group name.
+            array: Array name within the group.
+            data: Array data to write (written once; replayed on resume).
+
+        Returns:
+            A ``WriteIntent`` with ``kind="static"`` and ``ts_index=0``.
+
+        Raises:
+            ValueError: If the constructed intent has an invalid kind.
+
+        Examples:
+            >>> import numpy as np
+            >>> intent = WriteIntent.static(
+            ...     group="data_1km", array="latitude", data=np.zeros((2048,))
+            ... )
+            >>> intent.kind
+            'static'
+            >>> intent.ts_index
+            0
+        """
+        return cls(group=group, array=array, ts_index=0, data=data, kind="static")
+
 
 class DirectZarrIngestor(BaseIngestor):
     """Abstract template for direct-Zarr region-based ingestors.
@@ -542,80 +711,85 @@ class DirectZarrIngestor(BaseIngestor):
 
     template_config_class = ZarrTemplateConfig
 
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = False
-    """Explicit opt-in for within-group parallel ingestion.
+    def index_spec(self, ctx: PluginContext) -> IndexSpec | None:
+        """Override to enable slot-range parallel ingestion.
 
-    Set to True and override ``timestamp_to_ts_index()`` and
-    ``global_expected_time_count()`` to enable slot-range parallelism.
-    """
+        Return an ``IndexSpec`` describing the product's index shape, or
+        ``None`` for serial-only plugins (no ``--slot-start``/``--slot-end``).
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        """Globally deterministic mapping from the conceptual time axis to ts_index.
+        **``index_spec`` MUST be resolvable from typed config alone.** The
+        implementation may read ``self.plugin_config`` and
+        ``self.template_config``; it MUST NOT depend on ``ctx.source``
+        contents (source listing, file peek, or ``--input-data``). Reason:
+        ``firecube zarr slots`` and ``firecube zarr preallocate`` call
+        ``index_spec`` without any ``--input-data``; if your product's epoch
+        or size derives from source, expose an explicit config override (e.g.
+        ``MyConfig.time_epoch``) and raise ``ConfigurationError`` naming the
+        missing config field when the override is absent.
 
-        "timestamp" here is the stable contract token, not the on-disk dim name.
+        Default returns ``None`` (serial-only plugin).
         """
-        raise NotImplementedError(
-            f"{type(self).__name__} did not implement timestamp_to_ts_index. "
-            "Override this method and set SUPPORTS_SLOT_RANGE_PARALLELISM = True "
-            "to enable parallel ingestion."
-        )
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int] | None:
-        """Return max ts_index + 1 per group across the planned run."""
         return None
 
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        """Return the slot-index model governing this product's time axes.
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        """Override to enable slot-range parallel ingestion.
 
-        Plugins that set ``SUPPORTS_SLOT_RANGE_PARALLELISM = True`` MUST
-        override this method.  The returned model is persisted to the
-        control plane and mirrored as Zarr root attributes; it becomes the
-        canonical identity for all concurrent writers targeting this product.
+        Called by the engine for each source item to determine its slot index.
+        Return an ``ItemInfo`` with the item's time coordinate, or ``None``
+        to drop the item from this worker's slot range.
 
-        Default implementation raises :class:`NotImplementedError` so that
-        non-parallel plugins calling this accidentally receive a clear error
-        rather than silent incorrect behaviour.
+        Default raises ``NotImplementedError`` — override this method to
+        enable parallel ingestion.
+
+        Args:
+            item: A source item from the batch.
+            ctx: The plugin context for this run.
+
+        Returns:
+            An ``ItemInfo`` with the item's coordinate, or ``None`` to drop.
+
+        Raises:
+            NotImplementedError: If not overridden.
         """
         raise NotImplementedError(
-            f"{type(self).__name__}.slot_index_model(ctx) must be overridden "
-            "by plugins that set SUPPORTS_SLOT_RANGE_PARALLELISM = True."
+            f"{type(self).__name__} did not override inspect_item(). "
+            "Override this method to enable parallel ingestion; "
+            "return None to drop items your plugin cannot map to a slot."
         )
 
-    def filter_items_to_slot_range(
-        self,
-        items: Sequence[Any],
-        slot_start: int,
-        slot_end: int,
-        ctx: PluginContext,
-    ) -> Sequence[Any]:
-        """Filter source items to those whose ts_index falls in [slot_start, slot_end).
+    def resolved_index(self, ctx: PluginContext) -> ResolvedIndex:
+        """Return the resolved index for this run, cached per context.
 
-        Strongly recommended for parallel ingestion. The default passthrough
-        returns all items unchanged; if ``build_write_intents()`` then emits any
-        WriteIntent whose ts_index falls outside ``[slot_start, slot_end)``, the
-        post-intent assertion will raise ``WriteIntentRangeError`` and FAIL the
-        batch (it does NOT silently discard out-of-range intents).
+        Raises ``ConfigurationError`` if ``index_spec(ctx)`` returns ``None``
+        (serial-only plugin).
+
+        Args:
+            ctx: The plugin context for this run.
+
+        Returns:
+            The ``ResolvedIndex`` for slot-index computation.
+
+        Raises:
+            ConfigurationError: If ``index_spec(ctx)`` returns ``None``.
         """
-        return items
+        if not hasattr(self, "_index_binding"):
+            self._bind_index_at_startup(ctx)
 
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Declaration-time validation for parallel ingestion opt-in."""
-        super().__init_subclass__(**kwargs)
-        if not cls.__dict__.get("SUPPORTS_SLOT_RANGE_PARALLELISM", False):
-            return
-        for method_name in (
-            "timestamp_to_ts_index",
-            "global_expected_time_count",
-            "slot_index_model",
-        ):
-            base_method = getattr(DirectZarrIngestor, method_name)
-            cls_method = getattr(cls, method_name)
-            if cls_method is base_method:
-                raise TypeError(
-                    f"Class {cls.__name__} declares SUPPORTS_SLOT_RANGE_PARALLELISM=True "
-                    f"but does not override {method_name}. "
-                    f"Either override the method or set SUPPORTS_SLOT_RANGE_PARALLELISM=False."
+        cache = getattr(self, "_resolved_index_cache", None)
+        if cache is None:
+            self._resolved_index_cache: dict[int, ResolvedIndex] = {}
+            cache = self._resolved_index_cache
+        key = id(getattr(ctx, "_ctx", ctx))
+        if key not in cache:
+            binding = self._index_binding
+            if binding is None:
+                raise ConfigurationError(
+                    f"{type(self).__name__}.resolved_index(ctx) requires index_spec(ctx) "
+                    "to return a non-None IndexSpec. "
+                    "Override index_spec() to enable parallel ingestion."
                 )
+            cache[key] = binding.resolved
+        return cache[key]
 
     @abstractmethod
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
@@ -632,7 +806,8 @@ class DirectZarrIngestor(BaseIngestor):
             Declare one group with a time-indexed array and its time axis:
 
                 def zarr_schema(self, ctx):
-                    n_times = self.global_expected_time_count(ctx)
+                    n_times = self.resolved_index(ctx).size("FWI")
+                    # Or use a literal for serial mode.
                     return [
                         ZarrGroupSpec(
                             group="FWI",
@@ -697,7 +872,7 @@ class DirectZarrIngestor(BaseIngestor):
                     intents = []
                     for item in batch.items:
                         array, stamp = read_product(ctx.materialize(item))
-                        ts_index = self.timestamp_to_ts_index(stamp, ctx)
+                        ts_index = self.resolved_index(ctx).position("FWI", stamp)
                         intents.append(
                             WriteIntent(
                                 group="FWI",
@@ -719,21 +894,45 @@ class DirectZarrIngestor(BaseIngestor):
                     return intents
         """
 
+    def _bind_index_at_startup(self, ctx: PluginContext) -> None:
+        """Override: bind IndexSpec once at pod startup via base helper.
+
+        Uses BaseIngestor._resolve_index_binding_at_startup so templates do not
+        import runtime binding internals directly. Anchor plan §2114.
+        """
+        self._resolved_index_cache = {}
+        self._index_binding = self._resolve_index_binding_at_startup(ctx)
+
     def _ensure_slot_index_model_at_startup(self, ctx: PluginContext) -> None:
-        """Ensure the product slot-index model is stamped before any array write."""
-        if not getattr(type(self), "SUPPORTS_SLOT_RANGE_PARALLELISM", False):
-            return
-        if self._slot_index_model_stamped:
+        """Override base hook: delegate to _ensure_index_identity_at_startup.
+
+        Completes anchor plan §2102: the base class calls this hook at pod
+        startup; DirectZarrIngestor provides the implementation via
+        _ensure_index_identity_at_startup which writes the legacy slot-index
+        record from the resolved binding.
+        """
+        self._ensure_index_identity_at_startup(ctx)
+
+    def _ensure_index_identity_at_startup(self, ctx: PluginContext) -> None:
+        """Ensure the product index identity is stamped before any array write."""
+        if not hasattr(self, "_index_binding"):
+            self._bind_index_at_startup(ctx)
+
+        binding = self._index_binding
+        if binding is None:
+            return  # serial-mode plugin; no index identity to stamp
+        if getattr(self, "_slot_index_model_stamped", False):
             return
 
         product = _ctx_product_name(ctx, self.name)
         run_id = str(ctx.run_id or ctx.option("run_id", "unknown"))
-        slot_model = self.slot_index_model(ctx)
-        self._chunk_manager.ensure_slot_index_model(
-            product=product,
-            model=slot_model,
-            run_id=run_id,
-        )
+        legacy_model = binding.resolved.as_legacy_slot_index_model()
+        if legacy_model is not None:
+            self._chunk_manager.ensure_slot_index_model(
+                product=product,
+                model=legacy_model,
+                run_id=run_id,
+            )
         self._slot_index_model_stamped = True
 
     def _verify_schema_at_pod_startup(self, ctx: PluginContext) -> None:
@@ -901,19 +1100,17 @@ class DirectZarrIngestor(BaseIngestor):
                 else None
             )
 
-            if slot_range is not None and self.SUPPORTS_SLOT_RANGE_PARALLELISM:
-                if self._parallel_execution_state is None:
-                    raise ConfigurationError(
-                        "Parallel mode active but _parallel_execution_state not initialized. "
-                        "This indicates validate_parallel_capability() was not called. "
-                        "Ensure the capability gate runs in BaseIngestor.run() before _process_batch."
-                    )
-                global_expected = self._parallel_execution_state.global_expected
+            if not hasattr(self, "_index_binding"):
+                self._bind_index_at_startup(ctx)
 
-                # Phase 3.1 T1: Strict coverage — every group receiving WriteIntents MUST be declared
-                # in global_expected_time_count(). Without this, a group could be written to by
+            binding = self._index_binding
+            if slot_range is not None and binding is not None:
+                global_expected = {g: binding.resolved.size(g) for g in binding.resolved.groups}
+
+                # Strict coverage: every group receiving WriteIntents MUST be declared
+                # in index_spec(ctx). Without this, a group could be written to by
                 # parallel pods but schema pre-allocation never happened, causing deadlock or corruption.
-                # Extra groups in global_expected are ALLOWED (debug log only) — they are sidecars
+                # Extra groups in global_expected are ALLOWED (debug log only): they are sidecars
                 # (e.g., lat/lon groups that the plugin manages separately without slot-range intents).
                 groups_with_intents: set[str] = set(group_to_intents.keys())
                 groups_in_global: set[str] = set(global_expected.keys())
@@ -921,10 +1118,10 @@ class DirectZarrIngestor(BaseIngestor):
                 if missing_from_global:
                     raise ConfigurationError(
                         f"Parallel mode: groups {sorted(missing_from_global)} received WriteIntents "
-                        f"but are not declared in global_expected_time_count() (declared: "
+                        f"but are not declared in index_spec(ctx) (declared: "
                         f"{sorted(groups_in_global)}). "
                         "Every group that receives writes must be declared in "
-                        "global_expected_time_count() for safe parallel-pod schema pre-allocation."
+                        "index_spec(ctx) for safe parallel-pod schema pre-allocation."
                     )
                 # Defense in depth: intent groups must also be in zarr_schema()
                 groups_in_schema: set[str] = {spec.group for spec in schema}
@@ -936,7 +1133,7 @@ class DirectZarrIngestor(BaseIngestor):
                         "build_write_intents() must only emit intents for groups declared in "
                         "zarr_schema()."
                     )
-                # Phase 3.3: extras_in_global cannot happen — validate_global_expected_subset_of_schema
+                # extras_in_global cannot happen: validate_global_expected_subset_of_schema
                 # in the capability gate ensures global_expected.keys() ⊆ zarr_schema() groups at startup.
 
             metrics = strategy.write_groups(

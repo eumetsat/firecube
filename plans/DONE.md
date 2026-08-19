@@ -1,5 +1,16 @@
 # Done
 
+## 2026-08-18 — DirectZarrIngestor IndexSpec clean cut
+
+Replaced the defective `DirectZarrSlotAllocationMixin` with a declarative
+`IndexSpec` plus engine-owned `ResolvedIndex` architecture. The old mixin path
+hit a reproducible `RecursionError` and kept `ClassVar` epoch logic incompatible
+with real plugins. Byte identity was preserved for
+FCI and OPERA production cubes. Both `canonical_bytes()` and `identity_hash`
+were verified. Plugins stay pinned to `firecube==0.1.4` until they migrate.
+
+Supersedes: 2026-08-05 mixin acceptance decision.
+
 ## 2026-08-12 — Plugin API reference restructure + docs-coverage contract
 
 Rebuilt the public API reference around a discovery layer and made its coverage machine-checked. Motivated by a plugin-author question that the docs could not answer: multi-group Zarr writes via `get_batch_groups` were reachable in code, documented for the Parquet template only, and absent from the Zarr template's page and every guide.

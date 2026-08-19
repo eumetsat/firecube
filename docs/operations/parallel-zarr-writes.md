@@ -12,12 +12,12 @@ Firecube plans and validates the ranges. Your scheduler starts one
 The plugin must:
 
 - subclass `DirectZarrIngestor`;
-- set `SUPPORTS_SLOT_RANGE_PARALLELISM = True`;
-- declare the complete Zarr schema and indexed extent;
-- map source values to deterministic indexes;
-- implement the required slot-index methods.
+- declare `index_spec(ctx)` with a regular time axis;
+- implement `inspect_item(item, ctx)` to return `ItemInfo(coordinate=...)`;
+- declare the complete Zarr schema;
+- map source values to deterministic indexes through the resolved index.
 
-See the [DirectZarrIngestor guide](../guides/plugins/direct-zarr.md#parallel-writes)
+See the [DirectZarrIngestor guide](../guides/plugins/direct-zarr.md#index-spec-and-write-intents)
 for the plugin contract. Use [Parallelism](../concepts/parallelism.md) first if
 you have not yet chosen a write model.
 
@@ -142,7 +142,7 @@ recovery commands.
 
 ## Next Steps
 
-- **[Parallel Zarr Writes](../concepts/output-formats/zarr/parallel-writes.md)** — understand the slot safety model
-- **[Parallel DirectZarrIngestor Plugin](../tutorials/direct-zarr-parallel.md)** — build a slot-capable plugin
-- **[Scheduling And Write Safety](../concepts/orchestration/write-safety.md)** — coordinate external workers
-- **[CLI Reference](../reference/cli.md)** — look up all slot and ingest flags
+- **[Parallel Zarr Writes](../concepts/output-formats/zarr/parallel-writes.md)** - understand the slot safety model
+- **[Parallel DirectZarrIngestor Plugin](../tutorials/direct-zarr-parallel.md)** - build a direct-indexed plugin
+- **[Scheduling And Write Safety](../concepts/orchestration/write-safety.md)** - coordinate external workers
+- **[CLI Reference](../reference/cli.md)** - look up all slot and ingest flags
