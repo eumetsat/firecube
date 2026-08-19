@@ -5647,7 +5647,10 @@ logic to <code>AppendStrategy.write_groups()</code>.</p>
 <p><code>items</code> is the time-grouped slice for this batch iteration.
 Returns None to skip writing for this group/batch.</p>
 <p>The returned dataset must carry the ingestor's <code>time_dim_name</code>
-dimension; it is appended along that dimension.</p>
+dimension, ordered on that dimension, with values that do not
+overlap another batch; it is appended along that dimension.
+Variables, dimensions, coordinates, and data types must remain
+compatible across batches.</p>
 
 
 <p><span class="doc-section-title">Examples:</span></p>
