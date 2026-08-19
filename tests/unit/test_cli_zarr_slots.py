@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -28,6 +29,7 @@ from firecube.core.api import SlotAxis, SlotIndexModel
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
+    PluginConfig,
     PluginContext,
     WriteIntent,
     ZarrArraySpec,
@@ -366,3 +368,84 @@ def test_zarr_slots_does_not_mutate_target(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert not target_path.exists()
     assert not (tmp_path / ".firecube").exists()
+
+
+def test_slots_option_reaches_plugin_hook(tmp_path: Path) -> None:
+    import direct_zarr_capable_test_plugin as plugin_module
+
+    @dataclass
+    class _SlotsCapableOptionConfig(PluginConfig):
+        horizon_end_iso: str = "2024-01-01T01:00:00Z"
+
+    @register_ingestor("direct_zarr_slots_capable_option_test")
+    class _SlotsCapableOptionIngestor(plugin_module.DirectZarrCapableTestIngestor):
+        plugin_config_class = _SlotsCapableOptionConfig
+
+        def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
+            assert isinstance(self.plugin_config, _SlotsCapableOptionConfig)
+            assert self.plugin_config.horizon_end_iso == "2024-01-01T02:00:00Z"
+            return {"data": 24}
+
+    config = tmp_path / "config.toml"
+    config.write_text("", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--config-file",
+            str(config),
+            "zarr",
+            "slots",
+            "direct_zarr_slots_capable_option_test",
+            "--target",
+            (tmp_path / "slots.zarr").as_uri(),
+            "--product-name",
+            "direct_zarr_slots_capable_option_test",
+            "--storage-type",
+            "local",
+            "--storage-driver",
+            "fsspec",
+            "--write-mode",
+            "direct",
+            "--no-resume",
+            "--option",
+            "horizon_end_iso=2024-01-01T02:00:00Z",
+        ],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    group = next(g for g in payload["groups"] if g["name"] == "data")
+    assert group["total_slots"] == 24
+
+
+def test_slots_non_capable_plugin_is_rejected(tmp_path: Path) -> None:
+    config = tmp_path / "config.toml"
+    config.write_text("", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--config-file",
+            str(config),
+            "zarr",
+            "slots",
+            "direct_zarr_non_capable_test_plugin",
+            "--target",
+            (tmp_path / "slots.zarr").as_uri(),
+            "--product-name",
+            "direct_zarr_non_capable_test_plugin",
+            "--storage-type",
+            "local",
+            "--storage-driver",
+            "fsspec",
+            "--write-mode",
+            "direct",
+            "--no-resume",
+        ],
+        catch_exceptions=True,
+    )
+
+    assert result.exit_code != 0
+    assert "slot-range parallelism" in result.output

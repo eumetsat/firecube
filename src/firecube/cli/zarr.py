@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+from collections.abc import Sequence
 from typing import Any
 
 import click
@@ -64,6 +65,49 @@ from firecube.ingestor.runtime.configure import TierConfigurator
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 
 
+def _configure_ingestor_for_cli(
+    ingestor: Any,
+    *,
+    target: str,
+    options: Sequence[tuple[str, object]] = (),
+    run_id: str,
+    source: str = "",
+    storage: Any = None,
+) -> PluginContext:
+    """Build and configure a PluginContext for CLI zarr commands.
+
+    Mirrors the tier-configuration path used by `ingest`. Coerces plugin
+    options through `coerce_options_for_plugin`, builds an `IngestContext`,
+    wraps into a `RuntimeIngestContext`, runs `TierConfigurator.configure`,
+    and returns the `PluginContext`.
+    """
+    coerced_options = coerce_options_for_plugin(ingestor.name, tuple(options))
+    ingest_ctx = IngestContext(
+        source=source,
+        target=target,
+        in_memory=True,
+        output_format="zarr",
+        options=dict(coerced_options),
+        storage=storage,
+        run_id=run_id,
+    )
+    runtime_ctx = RuntimeIngestContext.from_ingest_context(
+        ingest_ctx,
+        run_id=run_id,
+        temp_root=None,
+        materializer=None,
+    )
+    configurator = TierConfigurator(
+        ingestor.template_config_class,
+        ingestor.plugin_config_class,
+        plugin_name=ingestor.name,
+    )
+    ingestor.engine_config, ingestor.template_config, ingestor.plugin_config = (
+        configurator.configure(runtime_ctx)
+    )
+    return PluginContext(runtime_ctx)
+
+
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.pass_context
 def zarr(ctx: click.Context) -> None:
@@ -87,12 +131,10 @@ Examples:
   firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
       --storage-type local --storage-driver fsspec --write-mode direct
 
-
   # Human-readable table output for inspection
   firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
       --storage-type local --storage-driver fsspec --write-mode direct -f table
 
-
   # Override slot partition size
   firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
       --storage-type local --storage-driver fsspec --write-mode direct --slot-size 200
@@ -131,6 +173,13 @@ Examples:
     help="Disable resume-aware narrowing; emit full [0, total_slots) ranges.",
 )
 @format_option(default="json")
+@click.option(
+    "--option",
+    "option",
+    multiple=True,
+    type=TypedOptionsParam(),
+    help="Plugin/engine option in key=value form.",
+)
 @click.pass_context
 def slots(
     ctx: click.Context,
@@ -143,6 +192,7 @@ def slots(
     slot_size: int | None,
     no_resume: bool,
     output_format: str,
+    option: tuple[tuple[str, object], ...] = (),
 ) -> None:
     """Emit chunk-aligned slot ranges for orchestrated parallel ingestion.
 
@@ -179,7 +229,12 @@ def slots(
             "See the plugin's documentation for parallel-write support."
         )
 
-    plugin_ctx = _build_slots_plugin_context(target=target, product_name=product_name)
+    plugin_ctx = _configure_ingestor_for_cli(
+        ingestor,
+        target=target,
+        options=option,
+        run_id="zarr-slots",
+    )
 
     global_schema = ingestor.global_expected_time_count(plugin_ctx)
     if not global_schema:
@@ -531,12 +586,10 @@ Examples:
   firecube zarr preallocate <plugin> --product-name <name> \\
       --target file:///tmp/x.zarr --storage-type local --storage-driver fsspec --write-mode staged
 
-
   # Re-run on same target: exits 0, logs "no-op" for each matching array
   firecube zarr preallocate <plugin> --product-name <name> \\
       --target file:///tmp/x.zarr --storage-type local --storage-driver fsspec --write-mode staged
 
-
 See also: firecube zarr slots, firecube zarr validate
 """,
 )
@@ -609,14 +662,7 @@ def preallocate(
     from firecube.core.controlplane import ChunkManager
     from firecube.core.uris import storage_uri_from_target
     from firecube.core.zarr.region_writer import RegionZarrWriter
-    from firecube.ingestor.api import (
-        BaseIngestor,
-        IndexedRegionStrategy,
-        IngestContext,
-        PluginContext,
-        RuntimeIngestContext,
-        StorageContext,
-    )
+    from firecube.ingestor.api import BaseIngestor, IndexedRegionStrategy
     from firecube.ingestor.errors import (
         ConfigurationError,
     )
@@ -628,11 +674,6 @@ def preallocate(
     storage_type = apply_smart_default(parsed, storage_type)
     validate_uri_storage_coherence(parse_product_uri(target), storage_type)
     _ = write_mode  # accepted for parity with `firecube ingest`; not used by preallocate
-
-    # Typed coercion of --option pairs against the plugin's config schema
-    # (mirrors `firecube ingest`). Unknown keys (outside the experimental
-    # ``x_*`` namespace) are rejected as UnknownOptionError BEFORE any I/O.
-    coerced_options = coerce_options_for_plugin(plugin, tuple(option))
 
     storage_config = get_storage_config(
         ctx,
@@ -674,30 +715,12 @@ def preallocate(
                 "See the plugin's documentation for parallel-write support."
             )
 
-        ingest_ctx = IngestContext(
-            source=str(input_data) if input_data is not None else "",
-            target=plugin_target,
-            output_format="zarr",
-            options=dict(coerced_options),
-            storage=StorageContext(output=session),
-            run_id="preallocate",
+        plugin_ctx = _configure_ingestor_for_cli(
+            ingestor,
+            target=target,
+            options=option,
+            run_id="zarr-preallocate",
         )
-        runtime_ctx = RuntimeIngestContext.from_ingest_context(
-            ingest_ctx,
-            run_id="preallocate",
-            temp_root=None,
-            materializer=lambda src: src,
-        )
-        # Typed-config tier resolution. Preallocate bypasses BaseIngestor.run(), so we replicate the tier-coercion step here. See plans/IDEAS.md §22 / DONE.md for rationale.
-        configurator = TierConfigurator(
-            ingestor.template_config_class,
-            ingestor.plugin_config_class,
-            plugin_name=ingestor.name,
-        )
-        ingestor.engine_config, ingestor.template_config, ingestor.plugin_config = (
-            configurator.configure(runtime_ctx)
-        )
-        plugin_ctx = PluginContext(runtime_ctx)
 
         # Resolve the plugin's slot-index model and persist it through the
         # control-plane BEFORE any Zarr array/group is created. A failure here
@@ -925,26 +948,6 @@ def _array_schema_mismatches(
             mismatches.append(f"chunks: expected {tuple(expected_chunks)}, found {found_chunks}")
 
     return mismatches
-
-
-def _build_slots_plugin_context(*, target: str, product_name: str) -> PluginContext:
-    """Build a minimal PluginContext for slot-planning hook calls."""
-    ingest_ctx = IngestContext(
-        source="",
-        target=target,
-        in_memory=True,
-        output_format="zarr",
-        options={"product_name": product_name},
-        storage=None,
-        run_id="zarr-slots",
-    )
-    runtime_ctx = RuntimeIngestContext.from_ingest_context(
-        ingest_ctx,
-        run_id="zarr-slots",
-        temp_root=None,
-        materializer=None,
-    )
-    return PluginContext(runtime_ctx)
 
 
 def _query_slots_coverage(

@@ -156,6 +156,9 @@ def test_generated_readme_has_template_specific_markers(template_type: str, tmp_
     for flag in expected_flags:
         assert flag in readme
 
+    assert readme.index("uv run pytest") < readme.index("## Install into Firecube")
+    assert readme.index("## Install into Firecube") < readme.index("## Run a local ingestion")
+
 
 @pytest.mark.unit
 @pytest.mark.parametrize("template_type", ["base", "zarr", "parquet", "direct_zarr"])
@@ -214,3 +217,39 @@ def test_generated_hook_raises_not_implemented(template_type: str, tmp_path: Pat
         assert hook_name in str(exc_info.value), (
             f"NotImplementedError message for {hook_name} should mention the hook name"
         )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("template_type", ["base", "zarr", "parquet", "direct_zarr"])
+def test_generated_ingestor_passes_ruff(template_type: str, tmp_path: Path) -> None:
+    """Generated ingestor.py must stay ruff-clean as templates evolve.
+
+    A template edit that breaks lint or formatting would otherwise only
+    surface when a real user's freshly scaffolded plugin fails their own
+    `ruff check`, not in this repo's CI.
+    """
+    import subprocess
+    import sys
+
+    from firecube.ingestor.devtools.scaffolding import create_plugin_structure
+
+    root = create_plugin_structure("demo-foo", tmp_path, template_type=template_type)
+    ingestor_path = root / "src" / "firecube_demo_foo" / "ingestor.py"
+
+    check = subprocess.run(
+        [sys.executable, "-m", "ruff", "check", str(ingestor_path)],
+        capture_output=True,
+        text=True,
+    )
+    assert check.returncode == 0, (
+        f"ruff check failed for {template_type} template:\n{check.stdout}{check.stderr}"
+    )
+
+    fmt = subprocess.run(
+        [sys.executable, "-m", "ruff", "format", "--check", str(ingestor_path)],
+        capture_output=True,
+        text=True,
+    )
+    assert fmt.returncode == 0, (
+        f"ruff format --check failed for {template_type} template:\n{fmt.stdout}{fmt.stderr}"
+    )

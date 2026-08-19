@@ -53,6 +53,8 @@ dependencies = [
 [project.entry-points."firecube.plugins"]
 {plugin_name} = "{import_name}"
 
+# Optional: expose custom "firecube {plugin_name} ..." subcommands by
+# pointing this at a click.Group. Most plugins don't need it.
 # [project.entry-points."firecube.plugin_cli"]
 # {plugin_name} = "{import_name}.plugin_cli:cli"
 
@@ -98,16 +100,27 @@ See the Firecube plugin development guide for testing guidance.
 """
 '''
 
+_DEPENDENCY_HINT = (
+    '    # "h5netcdf",  # example: uncomment and add your source-format reading library here'
+)
+
 _DEPS_STRING_PER_TEMPLATE: dict[str, str] = {
-    "base": '    "firecube>=0.1.0"',
-    "zarr": '    "firecube>=0.1.0",\n    "xarray"',
+    "base": f'    "firecube>=0.1.0",\n{_DEPENDENCY_HINT}',
+    "zarr": f'    "firecube>=0.1.0",\n    "xarray",\n{_DEPENDENCY_HINT}',
     "parquet": (
         '    "firecube>=0.1.0",\n'
         '    "pyarrow",\n'
         '    # "pandas",  # uncomment if your build_dataset returns pandas.DataFrame'
     ),
-    "direct_zarr": '    "firecube>=0.1.0",\n    "numpy"',
+    "direct_zarr": f'    "firecube>=0.1.0",\n    "numpy",\n{_DEPENDENCY_HINT}',
 }
+
+_DIRECT_ZARR_EXTRA_INCOMPLETE_NOTE = (
+    "\n>\n"
+    "> The generated `zarr_schema` and `build_write_intents` raise "
+    "`NotImplementedError`. Declare your product's actual layout, groups, "
+    "and cadence before preallocating or ingesting."
+)
 
 _README_SUBSTITUTIONS_PER_TEMPLATE: dict[str, dict[str, str]] = {
     "base": {
@@ -115,24 +128,28 @@ _README_SUBSTITUTIONS_PER_TEMPLATE: dict[str, dict[str, str]] = {
         "output_format": "zarr",
         "output_extension": "zarr",
         "write_mode_default": "staged",
+        "extra_incomplete_note": "",
     },
     "zarr": {
         "hook_summary": "build_dataset()",
         "output_format": "zarr",
         "output_extension": "zarr",
         "write_mode_default": "staged",
+        "extra_incomplete_note": "",
     },
     "parquet": {
         "hook_summary": "build_dataset()",
         "output_format": "parquet",
         "output_extension": "parquet",
         "write_mode_default": "staged",
+        "extra_incomplete_note": "",
     },
     "direct_zarr": {
         "hook_summary": "zarr_schema() and build_write_intents()",
         "output_format": "zarr",
         "output_extension": "zarr",
         "write_mode_default": "direct",
+        "extra_incomplete_note": _DIRECT_ZARR_EXTRA_INCOMPLETE_NOTE,
     },
 }
 
