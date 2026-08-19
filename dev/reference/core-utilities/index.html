@@ -4987,6 +4987,10 @@ preparation, and time conversion.</p>
 <td>Convert an ISO-8601 UTC timestamp to whole seconds since Unix epoch.</td>
 </tr>
 <tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.core.api.coerce_to_epoch_s" href="../parallelism/#firecube.core.api.coerce_to_epoch_s"><code>coerce_to_epoch_s</code></a></td>
+<td>Coerce a coordinate value to seconds since the Unix epoch (UTC).</td>
+</tr>
+<tr>
 <td><a class="autorefs autorefs-internal" title="            firecube.core.api.normalize_epoch_iso" href="#firecube.core.api.normalize_epoch_iso"><code>normalize_epoch_iso</code></a></td>
 <td>Round-trip an ISO-8601 UTC string through <code>epoch_s</code> and back to <code>"...Z"</code>.</td>
 </tr>
@@ -6154,7 +6158,9 @@ cheap to import for code paths that never touch the epoch helpers.</p>
 
     </div>
 
-</div><h2 id="see-also">See Also</h2>
+</div><p><code>coerce_to_epoch_s()</code> is documented with the direct-Zarr index types in
+<a href="../parallelism/">Index Specification</a>.</p>
+<h2 id="see-also">See Also</h2>
 <ul>
 <li><a href="../parallelism/">Slot-Range Parallelism</a></li>
 <li><a href="../storage-drivers/">Storage Drivers</a></li>

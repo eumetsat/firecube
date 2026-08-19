@@ -1138,35 +1138,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#edit-the-plugin-class" class="md-nav__link">
+  <a href="#index-spec-and-write-intents" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Edit The Plugin Class
+        Index Spec And Write Intents
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Index Spec And Write Intents">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#choose-a-write-intent-factory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose A Write Intent Factory
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#declare-the-schema-and-writes" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#implement-the-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Declare The Schema And Writes
+        Implement The Plugin
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#parallel-writes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parallel Writes
-      
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -4481,35 +4487,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#edit-the-plugin-class" class="md-nav__link">
+  <a href="#index-spec-and-write-intents" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Edit The Plugin Class
+        Index Spec And Write Intents
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Index Spec And Write Intents">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#choose-a-write-intent-factory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose A Write Intent Factory
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#declare-the-schema-and-writes" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#implement-the-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Declare The Schema And Writes
+        Implement The Plugin
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#parallel-writes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parallel Writes
-      
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -4568,28 +4580,55 @@
 
 <h1 id="implement-directzarringestor">Implement DirectZarrIngestor</h1>
 <h2 id="goal">Goal</h2>
-<p>Implement a plugin that places data at known indexes in declared Zarr arrays.
-This avoids the shared append cursor used by <code>GenericZarrIngestor</code>. When the
-product has a fixed global extent, the optional slot contract lets separate
-ingest processes write disjoint, chunk-aligned ranges of the same group.</p>
-<p>The plugin supplies a schema and explicit write intents instead of returning an
-<code>xarray.Dataset</code>; Firecube creates or validates the arrays and applies the
-intents through <code>zarr-python</code>. Use this class when precise indexed placement or
-same-group slot parallelism justifies that additional responsibility. It also
-supports serial writes; parallelism is not enabled merely by subclassing it.</p>
-<p>Read
-<a href="../../../concepts/output-formats/zarr/direct-region/">DirectZarrIngestor (Region)</a>
-before implementing the schema.</p>
-<h2 id="edit-the-plugin-class">Edit The Plugin Class</h2>
-<p>Follow <a href="../create-a-plugin/">Create a Plugin</a>, select <code>zarr</code> and the
-<code>zarr-python</code> write strategy, then <a href="../install-a-plugin/">install the plugin</a>.</p>
-<p>Edit <code>src/firecube_my_plugin/ingestor.py</code>. Keep the generated registration and
-product name, and replace the <code>zarr_schema</code> and <code>build_write_intents</code> stubs.
-The creation-time write strategy selects this class. The later ingest flag
-<code>--write-mode direct</code> selects direct target writing rather than staged upload.</p>
-<h2 id="declare-the-schema-and-writes">Declare The Schema And Writes</h2>
-<p>The source parser and array layout are product-specific. This small example
-shows the contract for one indexed array without prescribing a source format:</p>
+<p>Use <code>DirectZarrIngestor</code> when the plugin knows each item's time coordinate and must place data at explicit Zarr indexes. The direct path is:</p>
+<ul>
+<li><code>index_spec(ctx)</code> declares the indexed time axis.</li>
+<li><code>inspect_item(item, ctx)</code> returns <code>ItemInfo(coordinate=...)</code>.</li>
+<li><code>zarr_schema(ctx)</code> declares the arrays.</li>
+<li><code>build_write_intents(batch, ctx)</code> emits <code>WriteIntent</code> objects.</li>
+</ul>
+<p>Firecube resolves the declared index once, sizes arrays from <code>resolved_index(ctx).size(group)</code>, and then applies the emitted write intents.</p>
+<p>Read <a href="../../../reference/parallelism/">Parallel Zarr writes</a> for the public index types and resolver helpers.</p>
+<h2 id="index-spec-and-write-intents">Index Spec And Write Intents</h2>
+<h3 id="choose-a-write-intent-factory">Choose A Write Intent Factory</h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Factory</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Common path</td>
+<td><code>WriteIntent.slot(...)</code></td>
+<td>1-D writes on the time axis.</td>
+</tr>
+<tr>
+<td>Common path</td>
+<td><code>WriteIntent.coordinate(...)</code></td>
+<td>Timestamp coordinate arrays.</td>
+</tr>
+<tr>
+<td>Common path</td>
+<td><code>WriteIntent.static(...)</code></td>
+<td>Arrays that do not share the indexed axis.</td>
+</tr>
+<tr>
+<td>Advanced path</td>
+<td><code>WriteIntent.region(...)</code></td>
+<td>2-D region writes.</td>
+</tr>
+<tr>
+<td>Escape hatch</td>
+<td><code>WriteIntent(...)</code></td>
+<td>Only when no factory fits.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="implement-the-plugin">Implement The Plugin</h3>
+<p>Follow <a href="../create-a-plugin/">Create a Plugin</a>, choose the <code>zarr</code> template, and keep the generated registration and product name. Replace the <code>index_spec</code>, <code>inspect_item</code>, <code>zarr_schema</code>, and <code>build_write_intents</code> stubs.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
@@ -4597,150 +4636,104 @@ shows the contract for one indexed array without prescribing a source format:</p
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">DirectZarrIngestor</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">PipelineBatch</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">PluginContext</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">WriteIntent</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">ZarrArraySpec</span><span class="p">,</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">ZarrGroupSpec</span><span class="p">,</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">register_ingestor</span><span class="p">,</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">)</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_product_item</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="o">...</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">IndexSpec</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">ItemInfo</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">PipelineBatch</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">PluginContext</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">RegularTimeAxis</span><span class="p">,</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">WriteIntent</span><span class="p">,</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">ZarrArraySpec</span><span class="p">,</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">ZarrGroupSpec</span><span class="p">,</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">register_ingestor</span><span class="p">,</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">)</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_plugin&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">DirectZarrIngestor</span><span class="p">):</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;my_product&quot;</span>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">zarr_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ZarrGroupSpec</span><span class="p">]:</span>
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>        <span class="k">return</span> <span class="p">[</span>
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>            <span class="n">ZarrGroupSpec</span><span class="p">(</span>
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>                <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>                <span class="n">coord_names</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;timestamp&quot;</span><span class="p">}),</span>
-<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>                <span class="n">arrays</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>                    <span class="n">ZarrArraySpec</span><span class="p">(</span>
-<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>                        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,),</span>
-<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>                        <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;datetime64[ns]&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>                        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">24</span><span class="p">,),</span>
-<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>                        <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,),</span>
-<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>                    <span class="p">),</span>
-<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>                    <span class="n">ZarrArraySpec</span><span class="p">(</span>
-<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>                        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>                        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
-<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>                        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>                        <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">),</span>
-<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>                    <span class="p">),</span>
-<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>                <span class="p">],</span>
-<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>            <span class="p">)</span>
-<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>        <span class="p">]</span>
-<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>
-<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_write_intents</span><span class="p">(</span>
-<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>        <span class="n">batch</span><span class="p">:</span> <span class="n">PipelineBatch</span><span class="p">,</span>
-<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">,</span>
-<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">WriteIntent</span><span class="p">]:</span>
-<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>        <span class="n">intents</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">WriteIntent</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batch</span><span class="o">.</span><span class="n">items</span><span class="p">:</span>
-<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>            <span class="n">index</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="n">read_product_item</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
-<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>            <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,):</span>
-<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected four sample values, got </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>
-<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>            <span class="n">intents</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
-<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>                <span class="p">[</span>
-<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>                    <span class="n">WriteIntent</span><span class="p">(</span>
-<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>                        <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>                        <span class="n">array</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>                        <span class="n">ts_index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>                        <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>                        <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>                        <span class="n">timestamp_val</span><span class="o">=</span><span class="n">timestamp</span><span class="p">,</span>
-<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>                    <span class="p">),</span>
-<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>                    <span class="n">WriteIntent</span><span class="p">(</span>
-<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>                        <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>                        <span class="n">array</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>                        <span class="n">ts_index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-<a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>                        <span class="n">data</span><span class="o">=</span><span class="n">values</span><span class="p">,</span>
-<a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a>                        <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;1d&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a>                    <span class="p">),</span>
-<a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a>                <span class="p">]</span>
-<a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>            <span class="p">)</span>
-<a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a>        <span class="k">return</span> <span class="n">intents</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_product_item</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="o">...</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_plugin&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">DirectZarrIngestor</span><span class="p">):</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;my_product&quot;</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">index_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexSpec</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="n">_</span> <span class="o">=</span> <span class="n">ctx</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>        <span class="k">return</span> <span class="n">IndexSpec</span><span class="p">(</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_product_v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>            <span class="n">groups</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">RegularTimeAxis</span><span class="p">(</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>                    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>                    <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>                    <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>                    <span class="n">size</span><span class="o">=</span><span class="mi">1008</span><span class="p">,</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>                <span class="p">),</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>            <span class="p">},</span>
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>        <span class="p">)</span>
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">zarr_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ZarrGroupSpec</span><span class="p">]:</span>
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>        <span class="n">n_times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolved_index</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>        <span class="k">return</span> <span class="p">[</span>
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>            <span class="n">ZarrGroupSpec</span><span class="p">(</span>
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>                <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>                <span class="n">coord_names</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;timestamp&quot;</span><span class="p">}),</span>
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>                <span class="n">arrays</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>                    <span class="n">ZarrArraySpec</span><span class="p">(</span>
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>                        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_times</span><span class="p">,),</span>
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>                        <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;datetime64[ns]&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>                        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">24</span><span class="p">,),</span>
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>                        <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,),</span>
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>                    <span class="p">),</span>
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>                    <span class="n">ZarrArraySpec</span><span class="p">(</span>
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>                        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_times</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>                        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>                        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>                        <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">),</span>
+<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>                    <span class="p">),</span>
+<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>                <span class="p">],</span>
+<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>            <span class="p">)</span>
+<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>        <span class="p">]</span>
+<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>
+<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">inspect_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ItemInfo</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>        <span class="n">stamp</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="n">read_product_item</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,):</span>
+<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected four sample values, got </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>        <span class="k">return</span> <span class="n">ItemInfo</span><span class="p">(</span><span class="n">coordinate</span><span class="o">=</span><span class="n">stamp</span><span class="p">)</span>
+<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>
+<a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_write_intents</span><span class="p">(</span>
+<a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>        <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a>        <span class="n">batch</span><span class="p">:</span> <span class="n">PipelineBatch</span><span class="p">,</span>
+<a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">,</span>
+<a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">WriteIntent</span><span class="p">]:</span>
+<a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>        <span class="n">intents</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">WriteIntent</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batch</span><span class="o">.</span><span class="n">items</span><span class="p">:</span>
+<a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a>            <span class="n">stamp</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="n">read_product_item</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+<a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a>            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolved_index</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">position</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">stamp</span><span class="p">)</span>
+<a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a>            <span class="n">intents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">WriteIntent</span><span class="o">.</span><span class="n">coordinate</span><span class="p">(</span><span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">stamp</span><span class="p">))</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>            <span class="n">intents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+<a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a>                <span class="n">WriteIntent</span><span class="o">.</span><span class="n">slot</span><span class="p">(</span>
+<a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a>                    <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-86" name="__codelineno-0-86" href="#__codelineno-0-86"></a>                    <span class="n">array</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-87" name="__codelineno-0-87" href="#__codelineno-0-87"></a>                    <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+<a id="__codelineno-0-88" name="__codelineno-0-88" href="#__codelineno-0-88"></a>                    <span class="n">data</span><span class="o">=</span><span class="n">values</span><span class="p">,</span>
+<a id="__codelineno-0-89" name="__codelineno-0-89" href="#__codelineno-0-89"></a>                <span class="p">)</span>
+<a id="__codelineno-0-90" name="__codelineno-0-90" href="#__codelineno-0-90"></a>            <span class="p">)</span>
+<a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a>        <span class="k">return</span> <span class="n">intents</span>
 </code></pre></div>
-<p>Replace the illustrative group, arrays, dimensions, chunks, and parser with the
-product's actual schema. Every intent must name a declared group and array.
-Use <code>time_indexed=False</code> with a <code>static</code> intent for arrays that do not share the
-indexed axis.</p>
-<p>In serial ingestion, an indexed array may start at length zero. Firecube grows
-it when a later intent requires more capacity. A fixed global extent is required
-only for slot-range parallelism.</p>
-<p>See the <a href="../../../reference/templates/#directzarringestor">Plugin Templates</a> for all
-schema and intent fields.</p>
-<h2 id="parallel-writes">Parallel Writes</h2>
-<p>Serial ingestion needs only <code>zarr_schema</code> and <code>build_write_intents</code>. To let
-several processes write disjoint ranges of one group, the class must also
-provide the complete parallel contract:</p>
-<table>
-<thead>
-<tr>
-<th>API</th>
-<th>Requirement</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>SUPPORTS_SLOT_RANGE_PARALLELISM = True</code></td>
-<td>Opt in to slot-range validation.</td>
-</tr>
-<tr>
-<td><code>timestamp_to_ts_index(group, timestamp_val)</code></td>
-<td>Map each indexed coordinate value to one deterministic integer index.</td>
-</tr>
-<tr>
-<td><code>global_expected_time_count(ctx)</code></td>
-<td>Return the complete indexed extent for every group with time-indexed arrays.</td>
-</tr>
-<tr>
-<td><code>slot_index_model(ctx)</code></td>
-<td>Return the <code>SlotIndexModel</code> that defines the product's indexed axes.</td>
-</tr>
-<tr>
-<td><code>filter_items_to_slot_range(...)</code></td>
-<td>Recommended: avoid processing source items outside the assigned range.</td>
-</tr>
-</tbody>
-</table>
-<p>Firecube checks the three required method overrides when the class is defined;
-omitting any of them while parallel support is enabled raises <code>TypeError</code>.
-<code>filter_items_to_slot_range</code> defaults to a passthrough, but an intent outside
-the assigned range still fails with <code>WriteIntentRangeError</code>.</p>
-<p>Use the <a href="../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor tutorial</a>
-for a complete implementation and worker run. The
-<a href="../../../reference/parallelism/">Slot-Range Parallelism</a>
-contains the exact signatures and slot-index types.</p>
+<p>Use <code>WriteIntent.static(...)</code> for arrays that never move with the time axis, such as latitude and longitude grids. Every intent must target a declared group and array.</p>
 <h2 id="verify">Verify</h2>
-<p>First check registration and configuration:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>firecube-my-plugin
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>my_plugin
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>--show-options
+<p>Run one ingest against a small input and confirm the store is written:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--input-data<span class="w"> </span>./path/to/input<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
 </code></pre></div>
-<p>Then ingest a small, representative input supported by the product parser:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input-data<span class="w"> </span>./path/to/input<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
-</code></pre></div>
-<p>Open the written groups with the product's normal reader. Confirm the declared
-shape, chunks, dimensions, coordinate values, and at least one known written
-region. Repeat the same input and confirm that static data and indexed writes
-follow the product's replay policy.</p>
+<p>The run should create the target store, write the declared arrays, and report no schema or index errors.</p>
 <h2 id="common-mistakes">Common Mistakes</h2>
 <table>
 <thead>
@@ -4751,29 +4744,28 @@ follow the product's replay policy.</p>
 </thead>
 <tbody>
 <tr>
-<td>Treating the schema as implicit</td>
-<td>Declare every group and array that an intent can target.</td>
+<td>Replacing <code>index_spec</code> with the old slot-era hooks</td>
+<td>Declare the time axis in <code>IndexSpec</code> and derive indexes from <code>ResolvedIndex</code>.</td>
 </tr>
 <tr>
-<td>Omitting named dimensions</td>
-<td>Set <code>dimension_names</code> when downstream xarray readers need them.</td>
+<td>Returning raw source indexes from <code>inspect_item</code></td>
+<td>Return <code>ItemInfo(coordinate=...)</code> and let Firecube resolve the slot index.</td>
 </tr>
 <tr>
-<td>Leaving the indexed coordinate unwritten</td>
-<td>Emit a <code>timestamp</code> intent for the configured index coordinate.</td>
+<td>Sizing arrays from the input files</td>
+<td>Use <code>resolved_index(ctx).size(group)</code> in <code>zarr_schema</code>.</td>
 </tr>
 <tr>
-<td>Assuming serial direct writes need preallocation</td>
-<td>Start indexed arrays at zero length unless parallel workers require a fixed extent.</td>
+<td>Importing private runtime modules</td>
+<td>Import from <code>firecube.ingestor.api</code>.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../../concepts/output-formats/zarr/direct-region/">DirectZarrIngestor (Region)</a></strong> — understand schema-driven array placement</li>
-<li><strong><a href="../../../concepts/output-formats/zarr/parallel-writes/">Parallel Zarr Writes</a></strong> — understand the optional slot safety model</li>
-<li><strong><a href="../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor</a></strong> — build a complete slot-capable plugin</li>
-<li><strong><a href="../../../reference/templates/">Plugin Templates</a></strong> — look up schema and write-intent fields</li>
+<li><strong><a href="../../../reference/parallelism/">Parallel Zarr Writes</a></strong> - reference for <code>IndexSpec</code>, <code>RegularTimeAxis</code>, and <code>ResolvedIndex</code></li>
+<li><strong><a href="../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor</a></strong> - complete tutorial with real timestamps</li>
+<li><strong><a href="../../../reference/templates/">Plugin Templates</a></strong> - full template surface</li>
 </ul>
 
 

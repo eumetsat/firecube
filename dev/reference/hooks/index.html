@@ -5244,6 +5244,9 @@
 <p>This reference covers the complete <code>BaseIngestor</code> hook surface. Template
 plugins inherit all of these hooks; plugins that own the whole batch pipeline
 subclass <code>BaseIngestor</code> directly and implement <code>_process_batch</code>.</p>
+<p>DirectZarr plugins add the index contract on the template page. See
+<a href="../templates/#directzarringestor">Plugin Templates</a> and
+<a href="../parallelism/">Parallel Zarr Writes</a>.</p>
 <p>Firecube does not yet expose a public storage-writer protocol for custom
 output code. A new external custom pipeline cannot be implemented using only
 stable, typed public storage APIs. Do not import the concrete storage session
@@ -5481,13 +5484,13 @@ reinterpreting the store.</p>
 
 </div><h3 id="class-declarations">Class Declarations</h3>
 <ul>
-<li><code>PRODUCT_NAME: ClassVar[str]</code> — required, non-empty product name; checked
+<li><code>PRODUCT_NAME: ClassVar[str]</code>: required, non-empty product name; checked
   when the class is defined.</li>
-<li><code>time_dim_name: ClassVar[str]</code> — time dimension name, default
+<li><code>time_dim_name: ClassVar[str]</code>: time dimension name, default
   <code>"timestamp"</code>; a class declaration, not a <code>--option</code> field.</li>
-<li><code>template_config_class</code> — the template config dataclass whose fields become
+<li><code>template_config_class</code>: the template config dataclass whose fields become
   validated typed options; set by each template.</li>
-<li><code>plugin_config_class</code> — the plugin's own
+<li><code>plugin_config_class</code>: the plugin's own
   <a href="../config/#pluginconfig"><code>PluginConfig</code></a> subclass declaring
   product-specific options.</li>
 </ul>
@@ -6276,6 +6279,7 @@ If it's already local, the path is returned directly.</p>
 <li><a href="../../guides/plugins/base-ingestor/">Custom pipeline plugins</a></li>
 <li><a href="../../guides/plugins/extensions/">Plugin extensions</a></li>
 <li><a href="../context/">Context &amp; Results</a></li>
+<li><a href="../parallelism/">Parallel Zarr Writes</a></li>
 <li><a href="../../guides/plugins/contract/">Package and Register a Plugin</a></li>
 </ul>
 

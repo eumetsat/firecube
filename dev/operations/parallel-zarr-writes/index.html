@@ -4607,12 +4607,12 @@ group.</p>
 <p>The plugin must:</p>
 <ul>
 <li>subclass <code>DirectZarrIngestor</code>;</li>
-<li>set <code>SUPPORTS_SLOT_RANGE_PARALLELISM = True</code>;</li>
-<li>declare the complete Zarr schema and indexed extent;</li>
-<li>map source values to deterministic indexes;</li>
-<li>implement the required slot-index methods.</li>
+<li>declare <code>index_spec(ctx)</code> with a regular time axis;</li>
+<li>implement <code>inspect_item(item, ctx)</code> to return <code>ItemInfo(coordinate=...)</code>;</li>
+<li>declare the complete Zarr schema;</li>
+<li>map source values to deterministic indexes through the resolved index.</li>
 </ul>
-<p>See the <a href="../../guides/plugins/direct-zarr/#parallel-writes">DirectZarrIngestor guide</a>
+<p>See the <a href="../../guides/plugins/direct-zarr/#index-spec-and-write-intents">DirectZarrIngestor guide</a>
 for the plugin contract. Use <a href="../../concepts/parallelism/">Parallelism</a> first if
 you have not yet chosen a write model.</p>
 <h2 id="1-preallocate-the-product">1. Preallocate The Product</h2>
@@ -4728,10 +4728,10 @@ are disjoint and chunk-aligned.</p>
 recovery commands.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../concepts/output-formats/zarr/parallel-writes/">Parallel Zarr Writes</a></strong> — understand the slot safety model</li>
-<li><strong><a href="../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor Plugin</a></strong> — build a slot-capable plugin</li>
-<li><strong><a href="../../concepts/orchestration/write-safety/">Scheduling And Write Safety</a></strong> — coordinate external workers</li>
-<li><strong><a href="../../reference/cli/">CLI Reference</a></strong> — look up all slot and ingest flags</li>
+<li><strong><a href="../../concepts/output-formats/zarr/parallel-writes/">Parallel Zarr Writes</a></strong> - understand the slot safety model</li>
+<li><strong><a href="../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor Plugin</a></strong> - build a direct-indexed plugin</li>
+<li><strong><a href="../../concepts/orchestration/write-safety/">Scheduling And Write Safety</a></strong> - coordinate external workers</li>
+<li><strong><a href="../../reference/cli/">CLI Reference</a></strong> - look up all slot and ingest flags</li>
 </ul>
 
 

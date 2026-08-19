@@ -4582,7 +4582,7 @@ is not a separate plugin class, and it does not apply to
 <p>An append writer finds the next position from the current group length. Two
 writers extending the group would share its shape, metadata, append cursor, and
 possibly its trailing physical chunk, so Firecube serializes that mutation.</p>
-<p>A slot-capable <code>DirectZarrIngestor</code> takes a different approach. The complete
+<p>A direct-indexed <code>DirectZarrIngestor</code> takes a different approach. The complete
 indexed extent is created first, the plugin maps product coordinates to absolute
 indexes, and the slot planner produces disjoint ranges aligned with the
 physical chunks of every time-indexed array. An external scheduler passes one
@@ -4590,7 +4590,7 @@ range to each ingest process, and Firecube validates that range before writing.
 Workers can then write one group concurrently without sharing an append cursor
 or a physical chunk.</p>
 <p>This is optional. A normal <code>DirectZarrIngestor</code> run remains serial unless the
-plugin declares the slot contract and the processes are launched with assigned
+plugin declares the index spec and the processes are launched with assigned
 ranges.</p>
 <h2 id="why-slots-are-needed">Why Slots Are Needed</h2>
 <p>Concurrent writes are safe only when workers cannot modify the same physical
@@ -4604,7 +4604,7 @@ chunk size is greater than one. Two ranges that are disjoint at the index level
 can still share a physical chunk. Firecube therefore requires slot boundaries
 to align with the indexed chunk layout of every writable array.</p>
 <h2 id="what-the-plugin-must-know">What The Plugin Must Know</h2>
-<p>A slot-capable plugin must provide:</p>
+<p>A plugin must provide:</p>
 <ul>
 <li>the fixed global indexed extent for each writable group;</li>
 <li>one deterministic mapping from coordinate values to integer indexes;</li>
@@ -4613,7 +4613,7 @@ to align with the indexed chunk layout of every writable array.</p>
 </ul>
 <p>These requirements are additional to the normal <code>DirectZarrIngestor</code> schema
 and write-intent contract. The
-<a href="../../../../guides/plugins/direct-zarr/#parallel-writes"><code>DirectZarrIngestor</code> guide</a>
+<a href="../../../../guides/plugins/direct-zarr/#index-spec-and-write-intents"><code>DirectZarrIngestor</code> guide</a>
 lists the public hooks.</p>
 <h2 id="what-firecube-coordinates">What Firecube Coordinates</h2>
 <p>Firecube creates or validates the shared schema, plans ranges, rejects unsafe
@@ -4633,15 +4633,15 @@ scheduler.</p>
 </ul>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></strong> —
+<li><strong><a href="../../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></strong> -
   preallocate, plan, launch, verify, and recover workers</li>
-<li><strong><a href="../../../../guides/plugins/direct-zarr/#parallel-writes"><code>DirectZarrIngestor</code> Guide</a></strong> —
-  implement the slot-capable plugin hooks</li>
-<li><strong><a href="../../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor Plugin</a></strong> —
+<li><strong><a href="../../../../guides/plugins/direct-zarr/#index-spec-and-write-intents"><code>DirectZarrIngestor</code> Guide</a></strong> -
+  implement the index contract and write-intent hooks</li>
+<li><strong><a href="../../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor Plugin</a></strong> -
   build a complete parallel example</li>
-<li><strong><a href="../../../benchmarks/#same-group-slot-scaling">Benchmarks</a></strong> — review one
+<li><strong><a href="../../../benchmarks/#same-group-slot-scaling">Benchmarks</a></strong> - review one
   measured slot-scaling workload</li>
-<li><strong><a href="../../../parallelism/">Parallelism</a></strong> — compare concurrency across Firecube
+<li><strong><a href="../../../parallelism/">Parallelism</a></strong> - compare concurrency across Firecube
   output formats</li>
 </ul>
 
