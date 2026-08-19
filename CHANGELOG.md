@@ -48,6 +48,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   GPL/AGPL/SSPL license deny-list on pull requests.
 - `py.typed` marker (PEP 561) so plugin authors get IDE type support for
   `firecube` imports.
+- `firecube zarr slots` now accepts `--option` and resolves typed plugin
+  config via `TierConfigurator`, matching `firecube zarr preallocate`.
 
 ### Changed
 
@@ -55,6 +57,9 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   converted to match.
 - CI test lanes follow `plans/TESTING_STANDARDS.md`: the `test` job excludes
   `docs_static` and `snapshot`; the `docs` job runs them.
+- `iso_to_epoch_s` now rejects naive ISO 8601 strings and accepts only UTC-
+  explicit inputs (`Z`, `+00:00`, or `-00:00`). Consumer action: callers
+  passing naive timestamps must append `Z` (or `+00:00`).
 - `ZarrTemplateConfig.zarr_compression` now defaults to `True` (was `False`), aligning
   firecube with zarr-python v3's default codec pipeline (`ZstdCodec(level=0)`). Explicit
   `zarr_compression = false` still disables compression. Because PR #25 never shipped
@@ -71,6 +76,10 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 - `include_patterns` is documented as additive to the built-in `.zip`/`.h5`/
   `.nc` selection; the reference previously stated that it replaced them.
+- `SlotAxis.__post_init__` now rejects `bool` and non-integral `cadence_s`
+  values that previously slipped through Python's `int` subclass semantics;
+  accepted types are Python `int` and `numpy.integer` subclasses
+  (e.g. `np.int64`).
 
 ### Removed
 

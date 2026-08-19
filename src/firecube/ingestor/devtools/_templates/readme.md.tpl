@@ -1,6 +1,6 @@
 # {start_case_name} Ingestor Plugin
 
-> **This plugin project is incomplete.** Implement `{hook_summary}` before this plugin can produce output. Until then, ingestion runs will raise `NotImplementedError`.
+> **This plugin project is incomplete.** Implement `{hook_summary}` before this plugin can produce output. Until then, ingestion runs will raise `NotImplementedError`.{extra_incomplete_note}
 
 ## What this plugin does
 
@@ -12,9 +12,14 @@
 uv sync
 ```
 
-Add product behavior and behavior-based tests before running `pytest`.
+Implement `{hook_summary}` in the generated ingestor, then add behavior-based
+tests for the source data and output contract.
 
-## Install into firecube
+```bash
+uv run pytest
+```
+
+## Install into Firecube
 
 ```bash
 uv run firecube plugins install --editable .
@@ -23,9 +28,9 @@ uv run firecube plugins describe {plugin_name}
 
 `firecube plugins describe` should list `[ENGINE]` options. If you add plugin-specific options via a `PluginConfig` subclass, they will appear under `[PLUGIN]`.
 
-## After you implement the hook
+## Run a local ingestion
 
-Once `{hook_summary}` is implemented, run:
+After the implementation and tests pass, run:
 
 ```bash
 uv run firecube ingest {plugin_name} \

@@ -187,7 +187,10 @@ class GenericZarrIngestor(BaseIngestor):
         Returns None to skip writing for this group/batch.
 
         The returned dataset must carry the ingestor's ``time_dim_name``
-        dimension; it is appended along that dimension.
+        dimension, ordered on that dimension, with values that do not
+        overlap another batch; it is appended along that dimension.
+        Variables, dimensions, coordinates, and data types must remain
+        compatible across batches.
 
         Examples:
             Build one dataset per batch from the discovered items:

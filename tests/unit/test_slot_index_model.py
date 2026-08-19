@@ -16,6 +16,9 @@
 
 from __future__ import annotations
 
+from typing import cast
+
+import numpy as np
 import pytest
 
 from firecube.core.errors import (
@@ -64,6 +67,29 @@ def test_slot_axis_rejects_negative_cadence() -> None:
 def test_slot_axis_rejects_invalid_mode() -> None:
     with pytest.raises(ValueError, match="mode"):
         SlotAxis(cadence_s=300, mode="invalid")  # type: ignore[arg-type]
+
+
+def test_slot_axis_rejects_bool_cadence() -> None:
+    with pytest.raises(TypeError):
+        SlotAxis(cadence_s=True, mode="exact")
+    with pytest.raises(TypeError):
+        SlotAxis(cadence_s=False, mode="exact")
+
+
+def test_slot_axis_rejects_float_cadence() -> None:
+    with pytest.raises(TypeError):
+        SlotAxis(cadence_s=cast(int, 1.5), mode="exact")
+
+
+def test_slot_axis_rejects_string_cadence() -> None:
+    with pytest.raises(TypeError):
+        SlotAxis(cadence_s="1", mode="exact")  # type: ignore[arg-type]
+
+
+def test_slot_axis_accepts_numpy_int64_cadence() -> None:
+    axis = SlotAxis(cadence_s=cast(int, np.int64(300)), mode="exact")
+    assert axis.cadence_s == 300
+    assert axis.mode == "exact"
 
 
 def test_slot_index_model_rejects_empty_name() -> None:

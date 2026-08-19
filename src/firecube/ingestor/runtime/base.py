@@ -221,14 +221,24 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         ``run(ctx)``          — top-level orchestration entry point.
         ``_create_batches``   — delegates to ``BatchPlanner``.
         ``finalize_pipeline`` — delegates to ``PipelineExecutor``.
+
+    Attributes:
+        time_dim_name: The firecube append/index dimension name written into
+            the Zarr store. Defaults to ``"timestamp"`` for backward
+            compatibility; mirrors the ``PRODUCT_NAME`` pattern. Not a
+            config-tier field, not exposed via ``--option`` — a property of
+            the plugin/product, not a per-run knob. Override on a plugin
+            subclass to match the product's own naming convention (e.g.
+            ``time_dim_name: ClassVar[str] = "time"``), matching whatever
+            dimension the plugin's own hook implementation actually
+            produces. The runtime engine also consumes this name to seed
+            coordinate-array chunks in staged mode. Plugin declaration is
+            authoritative: changing it against an existing store fails
+            loudly with migration guidance rather than silently
+            reinterpreting the store.
     """
 
     PRODUCT_NAME: ClassVar[str]
-    # Firecube's append/index dimension name as written into the Zarr store.
-    # Default 'timestamp' preserves back-compat.
-    # Plugins override on their subclass for CF-1.8 conventional naming (e.g.
-    # `time_dim_name: ClassVar[str] = 'time'`). NOT a config-tier field,
-    # NOT exposed via --option.
     time_dim_name: ClassVar[str] = "timestamp"
     name: str
 
@@ -370,7 +380,29 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         return files
 
     def filter_item(self, item: Any, ctx: PluginContext) -> bool:
-        """Filter items before batching (Hook). Default: True."""
+        """Decide whether one discovered item proceeds to batching (Hook).
+
+        Called once per item, after discovery and before batching.
+        Returning ``False`` drops the item silently; it never reaches a
+        batch or a plugin hook. Unlike ``include_patterns``/
+        ``discover_source_files``, which control which files discovery
+        finds at all, this hook filters items discovery has already found.
+
+        Args:
+            item: One discovered item, in whatever form discovery produced
+                it.
+            ctx: Read-only plugin context.
+
+        Returns:
+            ``True`` to keep the item, ``False`` to drop it. Default:
+            ``True`` (keep all).
+
+        Examples:
+            Drop zero-byte files before they reach batching:
+
+                def filter_item(self, item, ctx):
+                    return Path(item).stat().st_size > 0
+        """
         return True
 
     def item_size_bytes(self, item: Any) -> int | None:

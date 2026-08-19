@@ -43,6 +43,8 @@ class {class_name}Config(PluginConfig):
 @register_ingestor("{plugin_name}")
 class {class_name}(GenericZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "{plugin_name}"
+    # See BaseIngestor.time_dim_name in the Firecube API reference.
+    time_dim_name: ClassVar[str] = "timestamp"
     plugin_config_class = {class_name}Config
 
     def build_dataset(self, group: str, items: list[Any], ctx: PluginContext) -> xr.Dataset | None:

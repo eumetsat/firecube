@@ -22,11 +22,11 @@ verify they agree on the partitioning scheme without coordinating beforehand.
 
 Stability rules:
 
-* ``canonical_bytes()`` is deterministic: groups are emitted in alphabetical
+ ``canonical_bytes()`` is deterministic: groups are emitted in alphabetical
   order, JSON keys are sorted, and the separators are tight. ``time_unit=None``
   is always serialised as ``"time_unit":null``.
-* ``identity_hash`` is never embedded inside the hashed payload.
-* Epoch normalisation is the explicit responsibility of
+ ``identity_hash`` is never embedded inside the hashed payload.
+ Epoch normalisation is the explicit responsibility of
   :func:`normalize_epoch_iso`; ``canonical_bytes()`` does NOT silently mutate
   the stored epoch string. ``"Z"`` and ``"+00:00"`` therefore deliberately
   produce different hashes -- callers that want them to converge must
@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import numbers
 from dataclasses import dataclass
 from typing import Literal
 
@@ -59,6 +60,15 @@ class SlotAxis:
     mode: Literal["exact", "floor"]
 
     def __post_init__(self) -> None:
+        if isinstance(self.cadence_s, bool) or not isinstance(self.cadence_s, numbers.Integral):
+            raise TypeError(
+                f"cadence_s must be an integral type "
+                f"(Python int or numpy.integer subclass); bool is explicitly rejected. "
+                f"Got: {type(self.cadence_s).__name__}({self.cadence_s!r})"
+            )
+        # Normalize numpy.integer (e.g. np.int64) to Python int so json.dumps in
+        # canonical_bytes() doesn't crash. Byte output unchanged for equal values.
+        object.__setattr__(self, "cadence_s", int(self.cadence_s))
         if self.cadence_s <= 0:
             raise ValueError(f"cadence_s must be > 0, got {self.cadence_s!r}")
         if self.mode not in {"exact", "floor"}:
@@ -152,17 +162,14 @@ def iso_to_epoch_s(iso: str) -> int:
         bare = text[:-1]
     elif text.endswith("+00:00"):
         bare = text[: -len("+00:00")]
+    elif text.endswith("-00:00"):
+        bare = text[: -len("-00:00")]
     else:
-        # Any other explicit timezone offset (including non-UTC offsets) is rejected.
-        # np.datetime64 silently accepts naive ISO strings, so we cannot rely on it
-        # to validate the offset for us.
-        for sign in ("+", "-"):
-            sign_idx = text.rfind(sign)
-            # The leading sign of the year is at index 0 (or 1 after a space), so
-            # only treat a sign that appears at position >= 10 as a TZ offset.
-            if sign_idx >= 10:
-                raise ValueError(f"iso must be UTC ('Z' or '+00:00' offset), got {iso!r}")
-        bare = text
+        raise ValueError(
+            f"iso_to_epoch_s requires UTC-explicit ISO 8601 input "
+            f"(end with 'Z', '+00:00', or '-00:00'). Got: {iso!r}. "
+            f"To fix: use 'YYYY-MM-DDTHH:MM:SSZ'."
+        )
 
     try:
         when = np.datetime64(bare, "s")
