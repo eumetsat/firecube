@@ -27,6 +27,7 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.errors import SlotIndexModelConflictError
+from firecube.core.index_spec import IndexSpec, RegularTimeAxis
 from firecube.core.slot_index import (
     SLOT_INDEX_MODEL_ATTR,
     SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
@@ -92,7 +93,7 @@ def _root_attrs(target_path: Path) -> dict[str, Any]:
 
 def _model(epoch: str) -> SlotIndexModel:
     return SlotIndexModel(
-        name="direct_zarr_capable_fixture_v1",
+        name="direct_zarr_capable_fixture_v2",
         epoch=epoch,
         groups={"data": SlotAxis(cadence_s=1, mode="exact")},
     )
@@ -151,14 +152,25 @@ def test_divergent_epoch_raises_conflict(tmp_path: Path, monkeypatch: pytest.Mon
         target_path,
     )
 
-    def different_epoch_slot_index_model(self: Any, ctx: Any) -> SlotIndexModel:
+    def different_epoch_index_spec(self: Any, ctx: Any) -> IndexSpec:
         _ = (self, ctx)
-        return _model("2025-01-01T00:00:00Z")
+        return IndexSpec(
+            name="direct_zarr_capable_fixture_v2",
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2025-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=1000,
+                )
+            },
+        )
 
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "slot_index_model",
-        different_epoch_slot_index_model,
+        "index_spec",
+        different_epoch_index_spec,
     )
     with pytest.raises(SlotIndexModelConflictError):
         CliRunner().invoke(

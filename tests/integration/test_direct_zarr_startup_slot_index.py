@@ -25,6 +25,7 @@ resolves and persists the slot-index model BEFORE
 
 from __future__ import annotations
 
+import datetime as dt
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, ClassVar, cast
@@ -39,6 +40,7 @@ from firecube.core.controlplane.types import (
     SlotIndexModelRecord,
 )
 from firecube.core.errors import SlotIndexModelConflictError
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.slot_index import SlotAxis, SlotIndexModel
 from firecube.core.storage.binding import StorageBinding
@@ -64,7 +66,6 @@ PRODUCT_NAME = "startup_slot_index_test_product"
 
 class _CapableIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = PRODUCT_NAME
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def __init__(self, *, chunk_manager: ChunkManager, model_name: str = "startup_v1") -> None:
         super().__init__(name=PRODUCT_NAME, chunk_manager=chunk_manager)
@@ -74,20 +75,25 @@ class _CapableIngestor(DirectZarrIngestor):
             SimpleNamespace(write_mode="direct", slot_start=0, slot_end=10, slot_group=None),
         )
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        _ = group
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
         _ = ctx
-        return {"data": 10}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        _ = ctx
-        return SlotIndexModel(
+        return IndexSpec(
             name=self._model_name,
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=10,
+                )
+            },
+        )
+
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
         )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
@@ -176,6 +182,7 @@ def _zarr_metadata_files(tmp_path: Path) -> list[Path]:
 
 def _plugin_ctx() -> Any:
     return SimpleNamespace(
+        _ctx=object(),
         run_id="run-1",
         storage=None,
         option=lambda key, default=None: default,
@@ -212,8 +219,10 @@ def test_startup_routes_through_service(tmp_path: Path, monkeypatch: pytest.Monk
 
     assert not current_json.exists(), "preconditions: control-plane record absent"
 
-    ingestor._ensure_slot_index_model_at_startup(cast(Any, _plugin_ctx()))
-    ingestor._verify_schema_at_pod_startup(cast(Any, _plugin_ctx()))
+    ctx = cast(Any, _plugin_ctx())
+    ingestor._bind_index_at_startup(ctx)
+    ingestor._ensure_slot_index_model_at_startup(ctx)
+    ingestor._verify_schema_at_pod_startup(ctx)
 
     assert current_json.exists(), "slot-index current.json must be written by the gate"
     record = SlotIndexModelRecord.from_json_bytes(current_json.read_bytes())
@@ -227,24 +236,15 @@ def test_startup_routes_through_service(tmp_path: Path, monkeypatch: pytest.Monk
 def test_non_opt_in_plugin_bypasses_service(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Plugins without SUPPORTS_SLOT_RANGE_PARALLELISM never reach the gate."""
+    """Plugins without an index_spec / inspect_item opt-in never reach the gate."""
     chunk_manager = _make_chunk_manager(tmp_path)
     ingestor = _NonCapableIngestor(chunk_manager=chunk_manager)
     ingestor._parallel_execution_state = _ParallelExecutionState(global_expected={"data": 10})
     _patch_resolve(monkeypatch, ingestor, tmp_path)
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", lambda **kwargs: None)
 
-    slot_model_attr = _NonCapableIngestor.slot_index_model
-
-    def fail_if_called(self, ctx):  # type: ignore[no-untyped-def]
-        _ = (self, ctx)
-        raise AssertionError("slot_index_model must NOT be called for non-opt-in plugins")
-
-    monkeypatch.setattr(_NonCapableIngestor, "slot_index_model", fail_if_called)
-    try:
-        ingestor._verify_schema_at_pod_startup(cast(Any, _plugin_ctx()))
-    finally:
-        monkeypatch.setattr(_NonCapableIngestor, "slot_index_model", slot_model_attr)
+    ingestor._index_binding = None
+    ingestor._verify_schema_at_pod_startup(cast(Any, _plugin_ctx()))
 
     assert not _slot_index_current_path(tmp_path).exists(), (
         "non-opt-in plugin must not create slot_index/current.json"
@@ -272,7 +272,10 @@ def test_failure_before_mutation_under_cp_conflict(
     pre_conflict_zarr_files = {p: p.read_bytes() for p in _zarr_metadata_files(tmp_path)}
 
     ingestor = _CapableIngestor(chunk_manager=chunk_manager, model_name="new_v1")
-    new_model = ingestor.slot_index_model(cast(Any, _plugin_ctx()))
+    ctx = cast(Any, _plugin_ctx())
+    ingestor._bind_index_at_startup(ctx)
+    new_model = ingestor.resolved_index(ctx).as_legacy_slot_index_model()
+    assert new_model is not None
     assert new_model.identity_hash != prior_model.identity_hash, (
         "precondition: new model identity differs from prior"
     )
@@ -284,13 +287,13 @@ def test_failure_before_mutation_under_cp_conflict(
     def fail_if_called(**kwargs: Any) -> None:
         _ = kwargs
         setup_witness["called"] = True
-        raise AssertionError("_setup_global_zarr_schema must NOT run after a slot-model conflict")
+        raise AssertionError("_setup_global_zarr_schema must NOT run after an index-spec conflict")
 
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", fail_if_called)
 
     with pytest.raises(SlotIndexModelConflictError):
-        ingestor._ensure_slot_index_model_at_startup(cast(Any, _plugin_ctx()))
-        ingestor._verify_schema_at_pod_startup(cast(Any, _plugin_ctx()))
+        ingestor._ensure_slot_index_model_at_startup(ctx)
+        ingestor._verify_schema_at_pod_startup(ctx)
 
     assert setup_witness["called"] is False
     post_conflict_zarr_files = {p: p.read_bytes() for p in _zarr_metadata_files(tmp_path)}
@@ -306,7 +309,7 @@ def test_failure_before_mutation_under_cp_conflict(
 def test_failure_before_mutation_under_plugin_raise(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A plugin-side slot_index_model failure leaves the store untouched."""
+    """A plugin-side index_spec failure leaves the store untouched."""
     chunk_manager = _make_chunk_manager(tmp_path)
     ingestor = _CapableIngestor(chunk_manager=chunk_manager)
     ingestor._parallel_execution_state = _ParallelExecutionState(global_expected={"data": 10})
@@ -314,9 +317,9 @@ def test_failure_before_mutation_under_plugin_raise(
 
     def slot_model_raises(self, ctx):  # type: ignore[no-untyped-def]
         _ = (self, ctx)
-        raise ConfigurationError("plugin-induced slot_index_model failure")
+        raise ConfigurationError("plugin-induced index_spec failure")
 
-    monkeypatch.setattr(_CapableIngestor, "slot_index_model", slot_model_raises)
+    monkeypatch.setattr(_CapableIngestor, "index_spec", slot_model_raises)
 
     setup_witness = {"called": False}
 
@@ -330,9 +333,11 @@ def test_failure_before_mutation_under_plugin_raise(
     current_json = _slot_index_current_path(tmp_path)
     assert not current_json.exists(), "precondition: no prior slot-index record"
 
+    ctx = cast(Any, _plugin_ctx())
     with pytest.raises(ConfigurationError, match="plugin-induced"):
-        ingestor._ensure_slot_index_model_at_startup(cast(Any, _plugin_ctx()))
-        ingestor._verify_schema_at_pod_startup(cast(Any, _plugin_ctx()))
+        ingestor._bind_index_at_startup(ctx)
+        ingestor._ensure_slot_index_model_at_startup(ctx)
+        ingestor._verify_schema_at_pod_startup(ctx)
 
     assert setup_witness["called"] is False
     assert not current_json.exists(), (
@@ -355,24 +360,26 @@ def test_second_call_returns_existing_record_without_rewrite(
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", lambda **kwargs: None)
 
     plugin_calls = {"count": 0}
-    original_slot_model = _CapableIngestor.slot_index_model
+    original_slot_model = _CapableIngestor.index_spec
 
     def counting_slot_model(self, ctx):  # type: ignore[no-untyped-def]
         plugin_calls["count"] += 1
         return original_slot_model(self, ctx)
 
-    monkeypatch.setattr(_CapableIngestor, "slot_index_model", counting_slot_model)
+    monkeypatch.setattr(_CapableIngestor, "index_spec", counting_slot_model)
 
-    ingestor._ensure_slot_index_model_at_startup(cast(Any, _plugin_ctx()))
-    ingestor._verify_schema_at_pod_startup(cast(Any, _plugin_ctx()))
+    ctx = cast(Any, _plugin_ctx())
+    ingestor._bind_index_at_startup(ctx)
+    ingestor._ensure_slot_index_model_at_startup(ctx)
+    ingestor._verify_schema_at_pod_startup(ctx)
     first_record_bytes = _slot_index_current_path(tmp_path).read_bytes()
 
-    ingestor._ensure_slot_index_model_at_startup(cast(Any, _plugin_ctx()))
-    ingestor._verify_schema_at_pod_startup(cast(Any, _plugin_ctx()))
+    ingestor._ensure_slot_index_model_at_startup(ctx)
+    ingestor._verify_schema_at_pod_startup(ctx)
     second_record_bytes = _slot_index_current_path(tmp_path).read_bytes()
 
     assert plugin_calls["count"] == 1, (
-        f"slot_index_model(ctx) must be called exactly once per pod, got {plugin_calls['count']}"
+        f"index_spec(ctx) must be called exactly once per pod, got {plugin_calls['count']}"
     )
     assert first_record_bytes == second_record_bytes, (
         "current.json must be byte-identical across repeated startup calls"

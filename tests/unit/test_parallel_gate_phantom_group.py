@@ -14,12 +14,14 @@
 
 from __future__ import annotations
 
+import datetime as dt
+from types import SimpleNamespace
 from typing import Any, ClassVar
 
 import numpy as np
 import pytest
 
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import DirectZarrIngestor, PipelineBatch, PluginContext, WriteIntent
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.runtime.parallel_gate import (
@@ -40,27 +42,32 @@ def _group(name: str) -> ZarrGroupSpec:
 
 class _CapableIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "parallel_gate_phantom"
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def __init__(self, *, global_expected: dict[str, int], schema: list[ZarrGroupSpec]) -> None:
         super().__init__(name="parallel_gate_phantom")
         self._global_expected = global_expected
         self._schema = schema
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        _ = group
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
         _ = ctx
-        return self._global_expected
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        _ = ctx
-        return SlotIndexModel(
+        return IndexSpec(
             name="parallel_gate_phantom_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                group: RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=count,
+                )
+                for group, count in self._global_expected.items()
+            },
+        )
+
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
         )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
@@ -74,6 +81,10 @@ class _CapableIngestor(DirectZarrIngestor):
     def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
         _ = (batch, ctx)
         return []
+
+
+def _ctx() -> Any:
+    return SimpleNamespace(_ctx=object())
 
 
 def test_subset_validator_passes_when_all_global_groups_in_schema() -> None:
@@ -102,9 +113,11 @@ def test_subset_validator_called_by_capability_gate() -> None:
         global_expected={"data": 100, "phantom": 50},
         schema=[_group("data")],
     )
+    ctx = _ctx()
+    ingestor._bind_index_at_startup(ctx)
 
     with pytest.raises(ConfigurationError, match="phantom"):
-        validate_parallel_capability(ingestor, 0, 10, ctx=None)  # type: ignore[arg-type]
+        validate_parallel_capability(ingestor, 0, 10, ctx=ctx)
 
 
 def test_subset_validator_passes_when_schema_has_extras() -> None:

@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+import datetime as dt
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -23,7 +24,7 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -43,37 +44,38 @@ _PRODUCT = "phase33_phantom_group_product"
 
 class _PhantomGroupPlugin(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = _PRODUCT
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
         _ = ctx
         return [("real_group", 0)]
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        _ = group
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
         _ = ctx
-        return {"real_group": 100, "phantom": 50}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        _ = ctx
-        return SlotIndexModel(
+        return IndexSpec(
             name="phase33_phantom_group_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"real_group": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "real_group": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=100,
+                ),
+                "phantom": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=100,
+                ),
+            },
         )
 
-    def filter_items_to_slot_range(
-        self,
-        items: Sequence[Any],
-        slot_start: int,
-        slot_end: int,
-        ctx: PluginContext,
-    ) -> Sequence[Any]:
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
         _ = ctx
-        return [item for item in items if slot_start <= int(item[1]) < slot_end]
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item[1]))
+        )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         _ = ctx

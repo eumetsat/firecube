@@ -23,13 +23,14 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 from firecube.core.controlplane import SpanCoverage, WriteDomain
+from firecube.core.index_resolve import ResolvedIndex
+from firecube.core.index_spec import AxisSpec, IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.intake import CatalogGroupInfo
 from firecube.ingestor.config.engine import EngineConfig, config_keys
 from firecube.ingestor.contracts.interfaces import (
     DatasetProducer,
     Ingestor,
     PipelineHost,
-    SlotRangeCapable,
     SourceFile,
     is_dataset_producer,
 )
@@ -101,6 +102,7 @@ if TYPE_CHECKING:
 __all__ = [
     "AppendStrategy",
     "AppendWriteStrategy",
+    "AxisSpec",
     "BaseIngestor",
     "CatalogGroupInfo",
     "ConfigurationError",
@@ -110,12 +112,14 @@ __all__ = [
     "GenericParquetIngestor",
     "GenericTensogramIngestor",
     "GenericZarrIngestor",
+    "IndexSpec",
     "IndexedRegionStrategy",
     "IngestContext",
     "IngestManifest",
     "IngestResult",
     "Ingestor",
     "IngestorError",
+    "ItemInfo",
     "LocalSourceFile",
     "ManifestError",
     "OutputPaths",
@@ -130,13 +134,14 @@ __all__ = [
     "PluginContext",
     "RangeOverlapError",
     "RegionWriteStrategy",
+    "RegularTimeAxis",
+    "ResolvedIndex",
     "ResultMetrics",
     "ResumeConflictError",
     "RuntimeIngestContext",
     "SchemaDriftError",
     "SchemaSizeMismatchError",
     "SlotRange",
-    "SlotRangeCapable",
     "SourceFile",
     "SpanCoverage",
     "StorageContext",

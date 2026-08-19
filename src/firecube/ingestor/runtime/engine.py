@@ -47,6 +47,9 @@ from firecube.core.observability import attach_context, capture_context, detach_
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.contracts.interfaces import PipelineHost
 from firecube.ingestor.runtime.aggregation import normalize_plugin_aggregate_metrics
+from firecube.ingestor.runtime.index_binding import (
+    filter_items_by_index,
+)
 from firecube.ingestor.runtime.parallel_evidence import log_filter_evidence
 from firecube.ingestor.runtime.telemetry import derive_pipeline_summary, result_totals
 from firecube.ingestor.types.context import (
@@ -497,33 +500,40 @@ def _create_batches_with_parallel_filter(
     In single-pod mode (slot_start/slot_end not set), this is a pass-through
     to ``host._create_batches(ctx, batch_size)`` with no behavior change.
     """
-    from firecube.ingestor.contracts.interfaces import SlotRangeCapable
-
     slot_start = engine_config.slot_start
     slot_end = engine_config.slot_end
+    from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 
-    if (
-        slot_start is not None
-        and slot_end is not None
-        and isinstance(host, SlotRangeCapable)
-        and host.SUPPORTS_SLOT_RANGE_PARALLELISM
-    ):
+    if slot_start is not None and slot_end is not None and isinstance(host, DirectZarrIngestor):
         from firecube.ingestor.errors import ConfigurationError
 
         plugin_ctx = PluginContext(ctx)
         base_host = cast("BaseIngestor", host)
+        binding = getattr(host, "_index_binding", None)
+        if binding is None:
+            raise ConfigurationError(
+                "--slot-start/--slot-end require index_spec(); the plugin returned None"
+            )
 
         all_items = list(base_host.discover_source_files(plugin_ctx))
         original_count = len(all_items)
 
         try:
-            filtered = host.filter_items_to_slot_range(all_items, slot_start, slot_end, plugin_ctx)
+            filtered = filter_items_by_index(
+                all_items,
+                binding.resolved,
+                slot_start,
+                slot_end,
+                engine_config.slot_group,
+                host.inspect_item,
+                plugin_ctx,
+            )
         except Exception as exc:
-            raise ConfigurationError(f"filter_items_to_slot_range raised an error: {exc}") from exc
+            raise ConfigurationError(f"filter_items_by_index raised an error: {exc}") from exc
 
         if not isinstance(filtered, (list, tuple)):
             raise TypeError(
-                f"filter_items_to_slot_range must return a Sequence, got {type(filtered).__name__}"
+                f"filter_items_by_index must return a Sequence, got {type(filtered).__name__}"
             )
         filtered_items = list(filtered)
         filtered_count = len(filtered_items)

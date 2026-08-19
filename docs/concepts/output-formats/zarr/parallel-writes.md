@@ -19,7 +19,7 @@ An append writer finds the next position from the current group length. Two
 writers extending the group would share its shape, metadata, append cursor, and
 possibly its trailing physical chunk, so Firecube serializes that mutation.
 
-A slot-capable `DirectZarrIngestor` takes a different approach. The complete
+A direct-indexed `DirectZarrIngestor` takes a different approach. The complete
 indexed extent is created first, the plugin maps product coordinates to absolute
 indexes, and the slot planner produces disjoint ranges aligned with the
 physical chunks of every time-indexed array. An external scheduler passes one
@@ -28,7 +28,7 @@ Workers can then write one group concurrently without sharing an append cursor
 or a physical chunk.
 
 This is optional. A normal `DirectZarrIngestor` run remains serial unless the
-plugin declares the slot contract and the processes are launched with assigned
+plugin declares the index spec and the processes are launched with assigned
 ranges.
 
 ## Why Slots Are Needed
@@ -49,7 +49,7 @@ to align with the indexed chunk layout of every writable array.
 
 ## What The Plugin Must Know
 
-A slot-capable plugin must provide:
+A plugin must provide:
 
 - the fixed global indexed extent for each writable group;
 - one deterministic mapping from coordinate values to integer indexes;
@@ -58,7 +58,7 @@ A slot-capable plugin must provide:
 
 These requirements are additional to the normal `DirectZarrIngestor` schema
 and write-intent contract. The
-[`DirectZarrIngestor` guide](../../../guides/plugins/direct-zarr.md#parallel-writes)
+[`DirectZarrIngestor` guide](../../../guides/plugins/direct-zarr.md#index-spec-and-write-intents)
 lists the public hooks.
 
 ## What Firecube Coordinates
@@ -82,13 +82,13 @@ scheduler.
 
 ## Next Steps
 
-- **[Run Parallel Zarr Writes](../../../operations/parallel-zarr-writes.md)** —
+- **[Run Parallel Zarr Writes](../../../operations/parallel-zarr-writes.md)** -
   preallocate, plan, launch, verify, and recover workers
-- **[`DirectZarrIngestor` Guide](../../../guides/plugins/direct-zarr.md#parallel-writes)** —
-  implement the slot-capable plugin hooks
-- **[Parallel DirectZarrIngestor Plugin](../../../tutorials/direct-zarr-parallel.md)** —
+- **[`DirectZarrIngestor` Guide](../../../guides/plugins/direct-zarr.md#index-spec-and-write-intents)** -
+  implement the index contract and write-intent hooks
+- **[Parallel DirectZarrIngestor Plugin](../../../tutorials/direct-zarr-parallel.md)** -
   build a complete parallel example
-- **[Benchmarks](../../benchmarks.md#same-group-slot-scaling)** — review one
+- **[Benchmarks](../../benchmarks.md#same-group-slot-scaling)** - review one
   measured slot-scaling workload
-- **[Parallelism](../../parallelism.md)** — compare concurrency across Firecube
+- **[Parallelism](../../parallelism.md)** - compare concurrency across Firecube
   output formats

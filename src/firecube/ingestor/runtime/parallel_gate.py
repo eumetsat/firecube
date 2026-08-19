@@ -20,7 +20,10 @@ import logging
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from firecube.core.index_resolve import ExtentUnknownError
 from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.runtime.index_binding import IndexBinding
+from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 
 if TYPE_CHECKING:
     from firecube.ingestor.runtime.base import BaseIngestor
@@ -56,19 +59,45 @@ def validate_global_expected_subset_of_schema(
         )
 
 
+def warn_on_chunk_alignment(
+    global_expected: dict[str, int],
+    schema: Sequence[ZarrGroupSpec],
+    logger: logging.Logger = log,
+) -> None:
+    """Warn when a time-indexed array's chunk size does not divide the expected count."""
+    for group_spec in schema:
+        group_name = group_spec.group
+        expected = global_expected.get(group_name)
+        if expected is None:
+            continue
+        for arr_spec in group_spec.arrays:
+            if not arr_spec.time_indexed:
+                continue
+            alignment_shape = arr_spec.shards if arr_spec.shards is not None else arr_spec.chunks
+            if alignment_shape and alignment_shape[0] > 0 and expected % alignment_shape[0] != 0:
+                logger.warning(
+                    "Group %r array %r: expected time count %d is not a multiple of "
+                    "time-alignment size %d; the final alignment unit will be partially filled.",
+                    group_name,
+                    arr_spec.name,
+                    expected,
+                    alignment_shape[0],
+                )
+
+
 def validate_parallel_capability(
     ingestor: BaseIngestor,
     slot_start: int | None,
     slot_end: int | None,
     ctx: PluginContext,
     slot_group: str | None = None,
-) -> dict[str, int] | None:
+) -> IndexBinding | None:
     """Validate plugin supports slot-range parallelism.
 
-    Returns cached global schema if applicable.
+    Returns the resolved index binding if applicable.
 
     Returns:
-        dict[str, int] if parallel mode is active (global_expected_time_count() result)
+        IndexBinding if parallel mode is active
         None if single-pod mode (no slot flags provided)
 
     Raises:
@@ -81,48 +110,62 @@ def validate_parallel_capability(
     if slot_start is None or slot_end is None:
         raise ConfigurationError("--slot-start and --slot-end must be provided together")
 
-    from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
-
     if not isinstance(ingestor, DirectZarrIngestor):
         raise ConfigurationError(
             f"Slot ranges are only supported for DirectZarrIngestor plugins. "
             f"Plugin {type(ingestor).__name__} is not a DirectZarrIngestor."
         )
 
-    if not ingestor.SUPPORTS_SLOT_RANGE_PARALLELISM:
+    if ingestor.index_spec(ctx) is None:
         raise ConfigurationError(
-            f"Plugin {type(ingestor).__name__} has not opted into slot-range parallelism. "
-            "Implement timestamp_to_ts_index(), global_expected_time_count(), "
-            "and set SUPPORTS_SLOT_RANGE_PARALLELISM = True."
+            "--slot-start/--slot-end require index_spec(); the plugin returned None"
         )
 
-    global_schema = ingestor.global_expected_time_count(ctx)
-    if not global_schema:
+    if not hasattr(ingestor, "_index_binding"):
+        ingestor._bind_index_at_startup(ctx)
+
+    binding = getattr(ingestor, "_index_binding", None)
+    if binding is None:
         raise ConfigurationError(
-            f"Plugin {type(ingestor).__name__}.global_expected_time_count() returned "
-            f"{'None' if global_schema is None else 'empty dict'}. "
-            "Must return a non-empty dict[str, int] with positive values when "
-            "SUPPORTS_SLOT_RANGE_PARALLELISM=True."
+            "--slot-start/--slot-end require index_spec(); the plugin returned None"
         )
-    for group, count in global_schema.items():
-        if count <= 0:
+
+    for group in binding.resolved.groups:
+        try:
+            binding.resolved.size(group)
+        except ExtentUnknownError as exc:
             raise ConfigurationError(
-                f"Plugin {type(ingestor).__name__}.global_expected_time_count() returned "
-                f"non-positive count {count} for group '{group}'. All values must be positive."
-            )
+                f"group {group!r}: axis has no fixed extent — set RegularTimeAxis(end=...) "
+                "or size=... to enable parallel ingestion"
+            ) from exc
+
+    if type(ingestor).inspect_item is DirectZarrIngestor.inspect_item:
+        raise ConfigurationError("--slot-start/--slot-end require inspect_item() override")
+
+    global_expected = {group: binding.resolved.size(group) for group in binding.resolved.groups}
 
     if slot_start is not None and slot_end is not None:
         schema = ingestor.zarr_schema(ctx)
-        validate_global_expected_subset_of_schema(global_schema, schema)
+        if schema:
+            validate_global_expected_subset_of_schema(global_expected, schema)
+            warn_on_chunk_alignment(global_expected, schema)
         chunk_shapes_per_group: dict[str, list[tuple[int, ...]]] = {}
+        shard_shapes_per_group: dict[str, list[tuple[int, ...]]] = {}
         for group_spec in schema:
             shapes = [
                 arr_spec.chunks
                 for arr_spec in group_spec.arrays
-                if arr_spec.chunks is not None and getattr(arr_spec, "time_indexed", True)
+                if arr_spec.chunks is not None and arr_spec.time_indexed
+            ]
+            shard_shapes = [
+                arr_spec.shards
+                for arr_spec in group_spec.arrays
+                if arr_spec.shards is not None and arr_spec.time_indexed
             ]
             if shapes:
                 chunk_shapes_per_group[group_spec.group] = shapes
+            if shard_shapes:
+                shard_shapes_per_group[group_spec.group] = shard_shapes
 
         if slot_group is not None:
             schema_groups = {spec.group for spec in schema}
@@ -138,6 +181,11 @@ def validate_parallel_capability(
                 for group, shapes in chunk_shapes_per_group.items()
                 if group == slot_group
             }
+            shard_shapes_per_group = {
+                group: shapes
+                for group, shapes in shard_shapes_per_group.items()
+                if group == slot_group
+            }
 
         if chunk_shapes_per_group:
             from firecube.ingestor.types.planned_range import (
@@ -146,19 +194,25 @@ def validate_parallel_capability(
             )
 
             warn_if_misaligned(
-                slot_start, slot_end, chunk_shapes_per_group, log, global_expected=global_schema
+                slot_start,
+                slot_end,
+                chunk_shapes_per_group,
+                log,
+                global_expected=global_expected,
+                shards_per_group=shard_shapes_per_group,
             )
             validate_chunk_alignment(
                 slot_start,
                 slot_end,
                 chunk_shapes_per_group,
-                global_expected=global_schema,
+                global_expected=global_expected,
+                shards_per_group=shard_shapes_per_group,
             )
 
     log.info(
-        "Parallel capability validated: slot_range=[%s, %s), global_schema=%s",
+        "Parallel capability validated: slot_range=[%s, %s), global_expected=%s",
         slot_start,
         slot_end,
-        global_schema,
+        global_expected,
     )
-    return global_schema
+    return binding

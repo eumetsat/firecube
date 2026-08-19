@@ -37,26 +37,14 @@ class _DirectZarrStub(DirectZarrIngestor):
 
 
 def test_default_supports_flag_is_false() -> None:
-    assert DirectZarrIngestor.SUPPORTS_SLOT_RANGE_PARALLELISM is False
+    assert _DirectZarrStub().index_spec(cast(PluginContext, MagicMock(spec=PluginContext))) is None
 
 
-def test_default_timestamp_to_ts_index_raises_not_implemented() -> None:
-    ingestor = _DirectZarrStub()
-    with pytest.raises(NotImplementedError, match=r"SUPPORTS_SLOT_RANGE_PARALLELISM"):
-        ingestor.timestamp_to_ts_index("g", 0)
-
-
-def test_default_global_expected_time_count_returns_none() -> None:
+def test_default_inspect_item_raises_not_implemented() -> None:
     ingestor = _DirectZarrStub()
     ctx = cast(PluginContext, MagicMock(spec=PluginContext))
-    assert ingestor.global_expected_time_count(ctx) is None
-
-
-def test_default_filter_returns_items_unchanged() -> None:
-    ingestor = _DirectZarrStub()
-    items = [1, 2, 3]
-    ctx = cast(PluginContext, MagicMock(spec=PluginContext))
-    assert ingestor.filter_items_to_slot_range(items, 0, 10, ctx) is items
+    with pytest.raises(NotImplementedError, match=r"inspect_item"):
+        ingestor.inspect_item(object(), ctx)
 
 
 def test_simple_subclass_works_without_implementing_new_methods() -> None:

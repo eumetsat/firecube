@@ -43,9 +43,9 @@ def _resolve_per_group_slot_sizes(
     per_group: dict[str, int] = {}
     for group_spec in schema:
         time_chunks = [
-            int(arr_spec.chunks[0])
+            int((arr_spec.shards if arr_spec.shards is not None else arr_spec.chunks)[0])
             for arr_spec in group_spec.arrays
-            if arr_spec.chunks is not None and arr_spec.chunks
+            if arr_spec.time_indexed and arr_spec.chunks is not None and arr_spec.chunks
         ]
         if not time_chunks:
             continue

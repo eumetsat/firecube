@@ -42,6 +42,10 @@ Plugins interact with the engine through a narrow public surface. Reaching past 
 - Every concrete `BaseIngestor` subclass must declare `PRODUCT_NAME: ClassVar[str]`, enforced at class-definition time via `__init_subclass__`. Abstract templates (e.g. `GenericZarrIngestor`) are exempt.
 - `PipelineResult.metrics` is typed `ResultMetrics` (not a plain dict). `PipelineResult.outputs` is `OutputPaths` (not a plain dict). Both are importable from `firecube.ingestor.api`.
 - Plugins must not construct `PipelineResult(output_path=...)`. Use `PipelineResult(outputs=OutputPaths(primary=...))`. Enforced at the constructor: the legacy `output_path=` kwarg was removed from `PipelineResult` and `IngestResult` and raises `TypeError`. The read-only `result.output_path` property remains as a compatibility view of `outputs.primary`. See DONE.md 2026-06-11.
+- Parallel DirectZarr plugins declare `index_spec(ctx) -> IndexSpec | None`. `None` means serial mode. A non-`None` spec enables engine-owned slot-index resolution and parallel ingestion.
+- Plugins that return an `IndexSpec` must also implement `inspect_item(item, ctx) -> ItemInfo | None`. It maps each source item to a coordinate the engine can place in the resolved index.
+- `resolved_index(ctx)` is engine-owned. Plugins use it for read-only lookup, not for deriving their own slot model.
+- The old `SUPPORTS_SLOT_RANGE_PARALLELISM` and `slot_index_model()` mixin-era surface is removed.
 - Plugins depend on `firecube.ingestor.api` and `firecube.core.api` only. Deep imports into `runtime/` or `core/` internals are not part of the contract.
 
 ## Zarr Runtime Surfaces

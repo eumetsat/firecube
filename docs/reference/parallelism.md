@@ -1,85 +1,57 @@
-# Slot-Range Parallelism
+# Index Specification
 
-This reference covers the types and methods for parallel `DirectZarrIngestor`
-writes, where independent workers write disjoint half-open slot ranges of the
-same store. Methods live on `DirectZarrIngestor`; range and model types are
-imported from `firecube.ingestor.api` and `firecube.core.api` as indicated.
+This reference covers the public types used to declare and resolve direct-Zarr index specs. `IndexSpec` and `RegularTimeAxis` describe the layout. `inspect_item()` returns `ItemInfo`, and `resolve_index_spec()` turns the declarative spec into a cached `ResolvedIndex` for the run.
 
-Set `SUPPORTS_SLOT_RANGE_PARALLELISM = True` only when the plugin implements
-all three required methods below. Firecube checks the overrides when the
-class is defined. An intent whose index falls outside the worker's assigned
-range fails the run with
-[`WriteIntentRangeError`](exceptions.md#firecube.ingestor.api.WriteIntentRangeError).
+`coerce_to_epoch_s()` normalizes supported timestamp values to Unix epoch seconds.
 
-{{ render_api_summary("firecube.ingestor.api", [
-    "DirectZarrIngestor.timestamp_to_ts_index",
-    "DirectZarrIngestor.global_expected_time_count",
-    "DirectZarrIngestor.slot_index_model",
-    "DirectZarrIngestor.filter_items_to_slot_range",
-    "SlotRange",
-    "PlannedRange",
-    "validate_slot_range",
-    "chunk_align_ranges",
-    "compute_covered_ranges",
-    "validate_chunk_alignment",
-    "warn_if_misaligned",
+{{ render_api_summary("firecube.core.api", [
+    "AxisSpec",
+    "IndexSpec",
+    "RegularTimeAxis",
+    "ItemInfo",
+    "ResolvedIndex",
+    "coerce_to_epoch_s",
+    "resolve_index_spec",
 ]) }}
 
-## Required Methods
+## Core API
 
-::: firecube.ingestor.api.DirectZarrIngestor.timestamp_to_ts_index
-    options:
-        inherited_members: true
+::: firecube.core.api.AxisSpec
 
-::: firecube.ingestor.api.DirectZarrIngestor.global_expected_time_count
-    options:
-        inherited_members: true
+::: firecube.core.api.IndexSpec
 
-::: firecube.ingestor.api.DirectZarrIngestor.slot_index_model
-    options:
-        inherited_members: true
+::: firecube.core.api.RegularTimeAxis
 
-## Optional Filtering
+::: firecube.core.api.ItemInfo
 
-`filter_items_to_slot_range` is optional but recommended. Its default returns
-all items unchanged. Firecube still rejects any resulting intent whose index
-is outside the worker's assigned half-open range.
+::: firecube.core.api.ResolvedIndex
 
-::: firecube.ingestor.api.DirectZarrIngestor.filter_items_to_slot_range
-    options:
-        inherited_members: true
+::: firecube.core.api.coerce_to_epoch_s
 
-## Range Types
+::: firecube.core.api.resolve_index_spec
 
-::: firecube.ingestor.api.SlotRange
+## Ingestor Re-Exports
 
-::: firecube.ingestor.api.PlannedRange
+The public ingestor facade re-exports the declarative types used by plugin code.
 
-## Range Validation
+::: firecube.ingestor.api.AxisSpec
 
-::: firecube.ingestor.api.validate_slot_range
+::: firecube.ingestor.api.IndexSpec
 
-::: firecube.ingestor.api.chunk_align_ranges
+::: firecube.ingestor.api.RegularTimeAxis
 
-::: firecube.ingestor.api.compute_covered_ranges
+::: firecube.ingestor.api.ItemInfo
 
-::: firecube.ingestor.api.validate_chunk_alignment
+::: firecube.ingestor.api.ResolvedIndex
 
-::: firecube.ingestor.api.warn_if_misaligned
+## Resolved Index Behavior
 
-## Slot-Index Model
+`ResolvedIndex` is the object plugin code uses after resolution. The key methods are `size(group)`, `position(group, coordinate)`, and `coordinate(group, index)`.
 
-The slot-index model types are imported from `firecube.core.api`. The related
-epoch/ISO time helpers are documented in
-[Core Utilities](core-utilities.md#time-conversion).
-
-::: firecube.core.api.SlotIndexModel
-
-::: firecube.core.api.SlotAxis
+Use `resolved_index(ctx).size(group)` when a schema needs the declared time extent before writes begin. Use `resolved_index(ctx).position(group, coordinate)` when a write needs the slot index for a timestamp-like value.
 
 ## See Also
 
 - [Implement `DirectZarrIngestor`](../guides/plugins/direct-zarr.md)
 - [Parallel DirectZarrIngestor tutorial](../tutorials/direct-zarr-parallel.md)
 - [Run Parallel Zarr Writes](../operations/parallel-zarr-writes.md)
-- [Exceptions](exceptions.md)

@@ -25,8 +25,8 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import SlotAxis, SlotIndexModel
 from firecube.core.controlplane.types import SlotIndexModelRecord
+from firecube.core.index_spec import IndexSpec, RegularTimeAxis
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.registry import loader as _loader
 
@@ -145,19 +145,26 @@ def test_preallocate_and_ingest_stamp_same_model(
 ) -> None:
     import direct_zarr_capable_test_plugin as plugin_module
 
-    def batch_sized_slot_index_model(self: Any, ctx: Any) -> SlotIndexModel:
+    def batch_sized_index_spec(self: Any, ctx: Any) -> IndexSpec:
         _ = ctx
         batch_size = getattr(getattr(self, "engine_config", None), "pipeline_batch_size", 0)
-        return SlotIndexModel(
+        return IndexSpec(
             name=f"direct_zarr_capable_fixture_batch_{batch_size}",
-            epoch="2024-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2024-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=batch_size,
+                )
+            },
         )
 
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "slot_index_model",
-        batch_sized_slot_index_model,
+        "index_spec",
+        batch_sized_index_spec,
     )
     preallocate_target = tmp_path / "preallocated.zarr"
     ingest_target = tmp_path / "ingested.zarr"

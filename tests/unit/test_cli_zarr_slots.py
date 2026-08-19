@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -25,7 +26,7 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -39,26 +40,32 @@ from firecube.ingestor.api import (
 from firecube.ingestor.registry import loader
 
 
-def _cli_slot_model() -> SlotIndexModel:
-    return SlotIndexModel(
+def _cli_index_spec(size: int) -> IndexSpec:
+    return IndexSpec(
         name="cli_zarr_slots_test_v1",
-        epoch="2026-01-01T00:00:00Z",
-        groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+        groups={
+            "data": RegularTimeAxis(
+                coordinate="timestamp",
+                epoch="2026-01-01T00:00:00Z",
+                cadence_s=1,
+                mode="exact",
+                size=size,
+            )
+        },
     )
 
 
 class _SlotsCapablePlugin(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "slots_capable_product"
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return _cli_index_spec(1000)
 
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"data": 1000}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        return _cli_slot_model()
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
+        )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         return [
@@ -82,8 +89,8 @@ class _SlotsCapablePlugin(DirectZarrIngestor):
 class _SlotsCapableRemainderPlugin(_SlotsCapablePlugin):
     PRODUCT_NAME: ClassVar[str] = "slots_capable_remainder_product"
 
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"data": 950}
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return _cli_index_spec(950)
 
 
 class _SlotsNonCapablePlugin(DirectZarrIngestor):
@@ -356,7 +363,7 @@ def test_zarr_slots_capability_check_fails_for_non_capable(tmp_path: Path) -> No
     result = CliRunner().invoke(cli, _required_args(tmp_path, "slots_test_noncapable"))
 
     assert result.exit_code != 0, result.output
-    assert "has not opted into slot-range parallelism" in result.output
+    assert "returned no index_spec" in result.output
 
 
 def test_zarr_slots_does_not_mutate_target(tmp_path: Path) -> None:
@@ -381,10 +388,21 @@ def test_slots_option_reaches_plugin_hook(tmp_path: Path) -> None:
     class _SlotsCapableOptionIngestor(plugin_module.DirectZarrCapableTestIngestor):
         plugin_config_class = _SlotsCapableOptionConfig
 
-        def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
+        def index_spec(self, ctx: PluginContext) -> IndexSpec:
             assert isinstance(self.plugin_config, _SlotsCapableOptionConfig)
             assert self.plugin_config.horizon_end_iso == "2024-01-01T02:00:00Z"
-            return {"data": 24}
+            return IndexSpec(
+                name="direct_zarr_slots_capable_option_test_v1",
+                groups={
+                    "data": RegularTimeAxis(
+                        coordinate="timestamp",
+                        epoch="2024-01-01T00:00:00Z",
+                        cadence_s=300,
+                        mode="exact",
+                        size=24,
+                    )
+                },
+            )
 
     config = tmp_path / "config.toml"
     config.write_text("", encoding="utf-8")
@@ -448,4 +466,4 @@ def test_slots_non_capable_plugin_is_rejected(tmp_path: Path) -> None:
     )
 
     assert result.exit_code != 0
-    assert "slot-range parallelism" in result.output
+    assert "returned no index_spec" in result.output

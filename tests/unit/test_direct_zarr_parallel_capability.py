@@ -14,12 +14,14 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Mapping
+from types import SimpleNamespace
 from typing import Any, ClassVar
 
 import pytest
 
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     BaseIngestor,
     DirectZarrIngestor,
@@ -34,12 +36,23 @@ from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.runtime.parallel_gate import validate_parallel_capability
 
 
-def _slot_model() -> SlotIndexModel:
-    return SlotIndexModel(
+def _slot_model() -> IndexSpec:
+    return IndexSpec(
         name="parallel_capability_test_v1",
-        epoch="2026-01-01T00:00:00Z",
-        groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+        groups={
+            "data": RegularTimeAxis(
+                coordinate="timestamp",
+                epoch="2026-01-01T00:00:00Z",
+                cadence_s=1,
+                mode="exact",
+                size=1000,
+            )
+        },
     )
+
+
+def _ctx() -> Any:
+    return SimpleNamespace(_ctx=object())
 
 
 class SimpleBaseIngestor(BaseIngestor):
@@ -68,16 +81,15 @@ class SimpleNonCapable(DirectZarrIngestor):
 
 class SimpleCapable(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "test_cap"
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int] | None:
-        return {"data": 1000}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
         return _slot_model()
+
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
+        )
 
     def zarr_schema(self, ctx: PluginContext) -> list[Any]:
         return [ZarrGroupSpec(group="data")]
@@ -88,57 +100,25 @@ class SimpleCapable(DirectZarrIngestor):
 
 def test_non_direct_zarr_ingestor_fails() -> None:
     with pytest.raises(ConfigurationError, match="not a DirectZarrIngestor"):
-        validate_parallel_capability(SimpleBaseIngestor(), 0, 100, ctx=None)  # type: ignore[arg-type]
+        validate_parallel_capability(SimpleBaseIngestor(), 0, 100, ctx=_ctx())
 
 
 def test_direct_zarr_non_capable_fails() -> None:
     with pytest.raises(ConfigurationError) as exc_info:
-        validate_parallel_capability(SimpleNonCapable(), 0, 100, ctx=None)  # type: ignore[arg-type]
+        validate_parallel_capability(SimpleNonCapable(), 0, 100, ctx=_ctx())
 
     message = str(exc_info.value)
-    assert "has not opted into slot-range parallelism" in message
+    assert "require index_spec" in message
 
 
 def test_capable_plugin_passes() -> None:
-    result = validate_parallel_capability(SimpleCapable(), 0, 100, ctx=None)  # type: ignore[arg-type]
+    result = validate_parallel_capability(SimpleCapable(), 0, 100, ctx=_ctx())
 
-    assert result == {"data": 1000}
-
-
-def test_empty_global_count_returns_none_fails() -> None:
-    class EmptyGlobalCount(SimpleCapable):
-        PRODUCT_NAME: ClassVar[str] = "test_empty"
-
-        def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int] | None:
-            return {}
-
-    with pytest.raises(ConfigurationError, match="empty dict"):
-        validate_parallel_capability(EmptyGlobalCount(), 0, 100, ctx=None)  # type: ignore[arg-type]
-
-
-def test_global_count_returning_none_fails() -> None:
-    class NoneGlobalCount(SimpleCapable):
-        PRODUCT_NAME: ClassVar[str] = "test_none"
-
-        def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int] | None:
-            return None
-
-    with pytest.raises(ConfigurationError, match="None"):
-        validate_parallel_capability(NoneGlobalCount(), 0, 100, ctx=None)  # type: ignore[arg-type]
+    assert result is not None
+    assert result.resolved.size("data") == 1000
 
 
 def test_no_slot_flags_returns_none() -> None:
-    result = validate_parallel_capability(SimpleBaseIngestor(), None, None, ctx=None)  # type: ignore[arg-type]
+    result = validate_parallel_capability(SimpleBaseIngestor(), None, None, ctx=_ctx())
 
     assert result is None
-
-
-def test_non_positive_global_count_fails() -> None:
-    class NonPositiveGlobalCount(SimpleCapable):
-        PRODUCT_NAME: ClassVar[str] = "test_non_positive"
-
-        def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int] | None:
-            return {"data": 0}
-
-    with pytest.raises(ConfigurationError, match="non-positive count"):
-        validate_parallel_capability(NonPositiveGlobalCount(), 0, 100, ctx=None)  # type: ignore[arg-type]

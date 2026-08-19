@@ -135,10 +135,7 @@ def test_non_capable_plugin_fails(tmp_path: Path) -> None:
     )
 
     assert result.exit_code != 0, result.output
-    assert (
-        "does not support slot-range parallelism" in result.output
-        or "SUPPORTS_SLOT_RANGE_PARALLELISM" in result.output
-    )
+    assert "failed to resolve index_spec" in result.output
 
 
 def test_preallocate_fresh_target(tmp_path: Path) -> None:

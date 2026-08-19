@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from contextlib import nullcontext
 from types import SimpleNamespace
 from typing import Any, ClassVar, cast
@@ -21,7 +22,7 @@ from typing import Any, ClassVar, cast
 import numpy as np
 import pytest
 
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
 from firecube.ingestor.templates.direct_zarr import (
@@ -75,7 +76,6 @@ def _schema() -> list[ZarrGroupSpec]:
 
 class _CapableIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "schema_startup_test"
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def __init__(
         self, *, chunk_manager: _ChunkManager, intents: list[WriteIntent] | None = None
@@ -87,20 +87,25 @@ class _CapableIngestor(DirectZarrIngestor):
         )
         self._intents = intents if intents is not None else [_intent()]
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        _ = group
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: Any) -> dict[str, int] | None:
+    def index_spec(self, ctx: Any) -> IndexSpec:
         _ = ctx
-        return {"data": 10}
-
-    def slot_index_model(self, ctx: Any) -> SlotIndexModel:
-        _ = ctx
-        return SlotIndexModel(
+        return IndexSpec(
             name="schema_startup_test_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=10,
+                )
+            },
+        )
+
+    def inspect_item(self, item: Any, ctx: Any) -> ItemInfo | None:
+        _ = ctx
+        return ItemInfo(
+            coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=int(item))
         )
 
     def ingest(self, ctx: Any):  # pragma: no cover - abstract hook not used here
@@ -126,7 +131,9 @@ def _intent() -> WriteIntent:
 
 
 def _ctx() -> Any:
-    return SimpleNamespace(run_id="run-1", storage=None, option=lambda key, default=None: default)
+    return SimpleNamespace(
+        _ctx=object(), run_id="run-1", storage=None, option=lambda key, default=None: default
+    )
 
 
 def _patch_strategy(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:

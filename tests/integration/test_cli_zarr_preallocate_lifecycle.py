@@ -137,7 +137,7 @@ def test_preallocate_records_failed_run_on_post_slot_index_error(
 
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "global_expected_time_count",
+        "zarr_schema",
         explode,
     )
 

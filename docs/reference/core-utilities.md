@@ -22,6 +22,7 @@ preparation, and time conversion.
     "materialize_hdf5_path",
     "epoch_s_to_iso",
     "iso_to_epoch_s",
+    "coerce_to_epoch_s",
     "normalize_epoch_iso",
 ]) }}
 
@@ -68,6 +69,9 @@ preparation, and time conversion.
 ::: firecube.core.api.iso_to_epoch_s
 
 ::: firecube.core.api.normalize_epoch_iso
+
+`coerce_to_epoch_s()` is documented with the direct-Zarr index types in
+[Index Specification](parallelism.md).
 
 ## See Also
 

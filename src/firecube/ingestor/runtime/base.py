@@ -535,6 +535,34 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         _ = ctx
         return
 
+    def _resolve_index_binding_at_startup(self, ctx: PluginContext) -> Any:
+        """Internal helper: resolve index binding at pod startup.
+
+        Owns the lazy import from firecube.ingestor.runtime.index_binding so that
+        DirectZarrIngestor (a template) can call this WITHOUT importing runtime
+        internals from direct_zarr.py — which would violate the architecture boundary
+        enforced by tests/architecture/test_import_boundaries.py.
+
+        Returns None if the plugin's index_spec() returns None.
+        """
+        from firecube.ingestor.runtime.index_binding import resolve_index_spec_for_ingestor
+
+        return resolve_index_spec_for_ingestor(self, ctx)
+
+    def _bind_index_at_startup(self, ctx: PluginContext) -> None:
+        """Hook: bind IndexSpec to a resolved IndexBinding at pod startup.
+
+        Called on the main thread BEFORE validate_parallel_capability and
+        BEFORE _ensure_slot_index_model_at_startup. Base default sets
+        self._index_binding = None to clear stale state from any prior run.
+
+        Templates that need pre-bound index state (currently only
+        DirectZarrIngestor) override this to resolve and store their binding.
+        Anchor plan §2114.
+        """
+        _ = ctx
+        self._index_binding = None
+
     def _ensure_slot_index_model_at_startup(self, ctx: PluginContext) -> None:
         """Optional lifecycle hook for per-pod slot-index model negotiation."""
         _ = ctx
@@ -712,10 +740,30 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 collect_wal_metrics() as wal_metrics,
                 ingest_span,
             ):
+                self._bind_index_at_startup(runtime_plugin_ctx)
+
+                binding = getattr(self, "_index_binding", None)
+                if binding is not None:
+                    from firecube.ingestor.runtime.parallel_gate import (
+                        validate_global_expected_subset_of_schema,
+                        warn_on_chunk_alignment,
+                    )
+                    from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+
+                    ingestor_self: Any = self
+                    if isinstance(ingestor_self, DirectZarrIngestor):
+                        global_expected = {
+                            group: binding.resolved.size(group) for group in binding.resolved.groups
+                        }
+                        schema = ingestor_self.zarr_schema(runtime_plugin_ctx)
+                        if schema:
+                            validate_global_expected_subset_of_schema(global_expected, schema)
+                            warn_on_chunk_alignment(global_expected, schema)
+
                 # 3.5 Capability gate for slot-range parallel ingestion
                 from firecube.ingestor.runtime.parallel_gate import validate_parallel_capability
 
-                parallel_global_schema = validate_parallel_capability(
+                parallel_binding = validate_parallel_capability(
                     ingestor=self,
                     slot_start=self.engine_config.slot_start,
                     slot_end=self.engine_config.slot_end,
@@ -723,8 +771,13 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     slot_group=self.engine_config.slot_group,
                 )
                 self._parallel_execution_state = (
-                    _ParallelExecutionState(global_expected=parallel_global_schema)
-                    if parallel_global_schema is not None
+                    _ParallelExecutionState(
+                        global_expected={
+                            group: parallel_binding.resolved.size(group)
+                            for group in parallel_binding.resolved.groups
+                        }
+                    )
+                    if parallel_binding is not None
                     else None
                 )
 

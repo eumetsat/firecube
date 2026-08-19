@@ -20,6 +20,7 @@ uv pip install -e tests/fixtures/direct_zarr_capable_test_plugin
 uv pip install -e tests/fixtures/direct_zarr_non_capable_test_plugin
 uv pip install -e tests/fixtures/multi_group_capable_test_plugin
 uv pip install -e tests/fixtures/cf_time_dim_test_plugin
+uv pip install -e tests/fixtures/index_spec_test_plugin
 uv pip install -e tests/fixtures/slot_shape_test_plugin
 ```
 
@@ -113,6 +114,9 @@ Core design rules for this batch ingestor, including control-plane model and obs
 - `PipelineResult.metrics` is typed `ResultMetrics` (not a plain dict). `PipelineResult.outputs` is `OutputPaths` (not a plain dict). Both are importable from `firecube.ingestor.api`.
 - Plugins must not construct `PipelineResult(output_path=...)` — use `PipelineResult(outputs=OutputPaths(primary=...))`. The legacy kwarg was removed and raises `TypeError`; the read-only `result.output_path` property remains for readers.
 - Plugins may declare `time_dim_name: ClassVar[str]` on their `BaseIngestor` subclass to control the firecube append/index dimension name written into the Zarr store; default is `"timestamp"`. Mirrors the `PRODUCT_NAME` pattern. This is NOT a config-tier field and is NOT exposed via `--option`. The runtime engine consumes this name to seed coordinate-array chunks in staged mode so that plugin value-based timestamp resolvers (e.g. `resolve_timestamp_index`) see real coord values instead of NaT on re-ingest.
+- DirectZarr parallel plugins declare `index_spec(ctx) -> IndexSpec | None` on the plugin. `None` means serial mode. A non-`None` spec opts into engine-owned slot-index resolution.
+- If a plugin returns an `IndexSpec`, it must also implement `inspect_item(item, ctx) -> ItemInfo | None`. The engine uses that mapping to place each item in the resolved index.
+- Plugins must not rely on `SUPPORTS_SLOT_RANGE_PARALLELISM` or `slot_index_model()`. Those mixin-era hooks were removed with the clean cut.
 
 ### Plugin-specific CLI helpers (optional)
 - Core CLI hosts plugin utilities under `firecube plugins <plugin> ...` when a plugin registers a Click group under the `firecube.plugin_cli` entry-point group (e.g. in `pyproject.toml`: `[project.entry-points."firecube.plugin_cli"]` with `my_plugin = "my_plugin.plugin_cli:cli"`). Merely creating a `plugin_cli` module is not enough — the entry point must be declared.

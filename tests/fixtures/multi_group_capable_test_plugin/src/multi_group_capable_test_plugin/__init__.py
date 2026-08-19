@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+import datetime as dt
+from collections.abc import Iterable
 from typing import Any, ClassVar
 
 import numpy as np
 
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -37,42 +38,43 @@ PRODUCT_NAME = "multi_group_capable_test_product"
 class MultiGroupCapableTestIngestor(DirectZarrIngestor):
     """Test fixture: 2 writable groups with heterogeneous chunks for Phase 3.1 testing.
 
-    group_a: primary=(100,10), calibration=(50,4) — heterogeneous chunks WITHIN group
-    group_b: primary=(50,5) — different chunks ACROSS groups vs group_a
+    group_a: primary=(100,10), calibration=(50,4) - heterogeneous chunks WITHIN group
+    group_b: primary=(50,5) - different chunks ACROSS groups vs group_a
 
     400 source items: 200 for group_a (ts_index 0..199), 200 for group_b (ts_index 0..199)
     """
 
     PRODUCT_NAME: ClassVar[str] = PRODUCT_NAME
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
         return [("group_a", i) for i in range(200)] + [("group_b", i) for i in range(200)]
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
-
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return {"group_a": 1000, "group_b": 500}
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        return SlotIndexModel(
-            name="multi_group_capable_fixture_v1",
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        shared_axis = RegularTimeAxis(
+            coordinate="timestamp",
             epoch="2024-01-01T00:00:00Z",
+            cadence_s=1,
+            mode="exact",
+            size=1000,
+        )
+        return IndexSpec(
+            name="multi_group_capable_fixture_v2",
             groups={
-                "group_a": SlotAxis(cadence_s=1, mode="exact"),
-                "group_b": SlotAxis(cadence_s=1, mode="exact"),
+                "group_a": shared_axis,
+                "group_b": shared_axis,
             },
         )
 
-    def filter_items_to_slot_range(
-        self,
-        items: Sequence[Any],
-        slot_start: int,
-        slot_end: int,
-        ctx: PluginContext,
-    ) -> Sequence[Any]:
-        return [it for it in items if slot_start <= int(it[1]) < slot_end]
+    def inspect_item(self, item: Any, ctx: PluginContext) -> ItemInfo | None:
+        if not (isinstance(item, tuple) and len(item) == 2):
+            return None
+        group, timestamp_val = item
+        if not isinstance(group, str) or not isinstance(timestamp_val, int):
+            return None
+        return ItemInfo(
+            coordinate=dt.datetime(2024, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=timestamp_val),
+            group=group,
+        )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         return [
@@ -119,7 +121,7 @@ class MultiGroupCapableTestIngestor(DirectZarrIngestor):
                     ZarrArraySpec(
                         name="primary",
                         chunks=(50, 5),
-                        shape=(500, 5),
+                        shape=(1000, 5),
                         dtype=np.float32,
                         dimension_names=("timestamp", "x"),
                         attrs={"role": "primary", "units": "1"},
@@ -130,7 +132,11 @@ class MultiGroupCapableTestIngestor(DirectZarrIngestor):
 
     def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
         intents: list[WriteIntent] = []
+        resolved = self.resolved_index(ctx)
         for item in batch.items:
+            info = self.inspect_item(item, ctx)
+            if info is None:
+                continue
             group, ts_idx = item
             ts_idx_int = int(ts_idx)
             if group == "group_a":
@@ -138,7 +144,7 @@ class MultiGroupCapableTestIngestor(DirectZarrIngestor):
                     WriteIntent(
                         group="group_a",
                         array="primary",
-                        ts_index=ts_idx_int,
+                        ts_index=resolved.position("group_a", info.coordinate),
                         data=np.full((10,), float(ts_idx_int), dtype="float32"),
                         kind="1d",
                     )
@@ -165,7 +171,7 @@ class MultiGroupCapableTestIngestor(DirectZarrIngestor):
                     WriteIntent(
                         group="group_a",
                         array="calibration",
-                        ts_index=ts_idx_int,
+                        ts_index=resolved.position("group_a", info.coordinate),
                         data=np.full((4,), float(ts_idx_int), dtype="float32"),
                         kind="1d",
                     )
@@ -175,7 +181,7 @@ class MultiGroupCapableTestIngestor(DirectZarrIngestor):
                     WriteIntent(
                         group="group_b",
                         array="primary",
-                        ts_index=ts_idx_int,
+                        ts_index=resolved.position("group_b", info.coordinate),
                         data=np.full((5,), float(ts_idx_int), dtype="float32"),
                         kind="1d",
                     )

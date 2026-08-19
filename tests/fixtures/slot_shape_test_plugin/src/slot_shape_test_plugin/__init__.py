@@ -12,26 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Shape-only fixture plugins for slot-index model integration tests.
+"""Shape-only fixture plugins for index-spec integration tests.
 
 Two ingestors with deliberately different slot-index shapes:
 
-* ``FixedEpochShapeIngestor`` — four nested groups, uniform floor cadence,
+* ``FixedEpochShapeIngestor`` - four nested groups, uniform floor cadence,
   hardcoded epoch.
-* ``OptionEpochShapeIngestor`` — five groups with mixed exact cadences,
+* ``OptionEpochShapeIngestor`` - five groups with mixed exact cadences,
   epoch read from ``ctx.options["reference_epoch"]`` and normalized.
 
 Neither implements write intents; they exist only to feed
-``plugin.slot_index_model(ctx)`` into ``ChunkManager.ensure_slot_index_model``.
+``plugin.index_spec(ctx)`` into the parallel gate and index resolver tests.
 """
 
 from __future__ import annotations
 
-from abc import abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from typing import Any, ClassVar
 
-from firecube.core.api import SlotAxis, SlotIndexModel, normalize_epoch_iso
+from firecube.core.api import IndexSpec, RegularTimeAxis, normalize_epoch_iso
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -44,47 +43,89 @@ from firecube.ingestor.api import (
 
 DEFAULT_REFERENCE_EPOCH = "2024-01-01T00:00:00Z"
 
-_FIXED_EPOCH_GROUPS: dict[str, SlotAxis] = {
-    "groupA/data_hi": SlotAxis(cadence_s=600, mode="floor"),
-    "groupA/data_lo": SlotAxis(cadence_s=600, mode="floor"),
-    "groupB/data_hi": SlotAxis(cadence_s=600, mode="floor"),
-    "groupB/data_lo": SlotAxis(cadence_s=600, mode="floor"),
+_FIXED_EPOCH_GROUPS: dict[str, RegularTimeAxis] = {
+    "groupA/data_hi": RegularTimeAxis(
+        coordinate="timestamp",
+        epoch="2024-09-24T00:00:00Z",
+        cadence_s=600,
+        mode="floor",
+        size=1,
+    ),
+    "groupA/data_lo": RegularTimeAxis(
+        coordinate="timestamp",
+        epoch="2024-09-24T00:00:00Z",
+        cadence_s=600,
+        mode="floor",
+        size=1,
+    ),
+    "groupB/data_hi": RegularTimeAxis(
+        coordinate="timestamp",
+        epoch="2024-09-24T00:00:00Z",
+        cadence_s=600,
+        mode="floor",
+        size=1,
+    ),
+    "groupB/data_lo": RegularTimeAxis(
+        coordinate="timestamp",
+        epoch="2024-09-24T00:00:00Z",
+        cadence_s=600,
+        mode="floor",
+        size=1,
+    ),
 }
 
-_OPTION_EPOCH_GROUPS: dict[str, SlotAxis] = {
-    "fast_a/data": SlotAxis(cadence_s=300, mode="exact"),
-    "fast_b/data": SlotAxis(cadence_s=300, mode="exact"),
-    "slow_a/data": SlotAxis(cadence_s=900, mode="exact"),
-    "slow_b/data": SlotAxis(cadence_s=900, mode="exact"),
-    "slow_c/data": SlotAxis(cadence_s=900, mode="exact"),
-}
+
+def _option_epoch_groups(epoch: str) -> dict[str, RegularTimeAxis]:
+    return {
+        "fast_a/data": RegularTimeAxis(
+            coordinate="timestamp",
+            epoch=epoch,
+            cadence_s=300,
+            mode="exact",
+            size=1,
+        ),
+        "fast_b/data": RegularTimeAxis(
+            coordinate="timestamp",
+            epoch=epoch,
+            cadence_s=300,
+            mode="exact",
+            size=1,
+        ),
+        "slow_a/data": RegularTimeAxis(
+            coordinate="timestamp",
+            epoch=epoch,
+            cadence_s=900,
+            mode="exact",
+            size=1,
+        ),
+        "slow_b/data": RegularTimeAxis(
+            coordinate="timestamp",
+            epoch=epoch,
+            cadence_s=900,
+            mode="exact",
+            size=1,
+        ),
+        "slow_c/data": RegularTimeAxis(
+            coordinate="timestamp",
+            epoch=epoch,
+            cadence_s=900,
+            mode="exact",
+            size=1,
+        ),
+    }
 
 
 class _ShapeOnlyIngestor(DirectZarrIngestor):
-    SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
-
-    _groups: ClassVar[dict[str, SlotAxis]]
-
-    @abstractmethod
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel: ...
+    PRODUCT_NAME: ClassVar[str] = "_shape_only_ingestor"
+    _groups: ClassVar[dict[str, RegularTimeAxis]]
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
         return []
 
-    def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-        return int(timestamp_val)
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
+        return IndexSpec(name=self._index_name, groups=dict(self._groups))
 
-    def global_expected_time_count(self, ctx: PluginContext) -> dict[str, int]:
-        return dict.fromkeys(self._groups, 0)
-
-    def filter_items_to_slot_range(
-        self,
-        items: Sequence[Any],
-        slot_start: int,
-        slot_end: int,
-        ctx: PluginContext,
-    ) -> Sequence[Any]:
-        return [it for it in items if slot_start <= int(it) < slot_end]
+    _index_name: ClassVar[str]
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         groups: list[ZarrGroupSpec] = []
@@ -109,27 +150,19 @@ class _ShapeOnlyIngestor(DirectZarrIngestor):
 @register_ingestor("fixed_epoch_shape_plugin")
 class FixedEpochShapeIngestor(_ShapeOnlyIngestor):
     PRODUCT_NAME: ClassVar[str] = "fixed_epoch_shape"
+    _index_name: ClassVar[str] = "fixed_epoch_shape_v1"
 
-    _groups: ClassVar[dict[str, SlotAxis]] = _FIXED_EPOCH_GROUPS
-
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
-        return SlotIndexModel(
-            name="fixed_epoch_shape_v1",
-            epoch="2024-09-24T00:00:00Z",
-            groups=dict(self._groups),
-        )
+    _groups: ClassVar[dict[str, RegularTimeAxis]] = _FIXED_EPOCH_GROUPS
 
 
 @register_ingestor("option_epoch_shape_plugin")
 class OptionEpochShapeIngestor(_ShapeOnlyIngestor):
     PRODUCT_NAME: ClassVar[str] = "option_epoch_shape"
+    _index_name: ClassVar[str] = "option_epoch_shape_v1"
 
-    _groups: ClassVar[dict[str, SlotAxis]] = _OPTION_EPOCH_GROUPS
+    _groups: ClassVar[dict[str, RegularTimeAxis]] = _option_epoch_groups(DEFAULT_REFERENCE_EPOCH)
 
-    def slot_index_model(self, ctx: PluginContext) -> SlotIndexModel:
+    def index_spec(self, ctx: PluginContext) -> IndexSpec:
         raw_epoch = str(ctx.options.get("reference_epoch", DEFAULT_REFERENCE_EPOCH))
-        return SlotIndexModel(
-            name="option_epoch_shape_v1",
-            epoch=normalize_epoch_iso(raw_epoch),
-            groups=dict(self._groups),
-        )
+        epoch = normalize_epoch_iso(raw_epoch)
+        return IndexSpec(name=self._index_name, groups=_option_epoch_groups(epoch))

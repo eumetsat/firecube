@@ -25,12 +25,12 @@ def test_directzarr_writeintent_has_timestamp_val_field():
 
 
 @pytest.mark.unit
-def test_directzarr_has_timestamp_to_ts_index_method():
-    """The 'timestamp_to_ts_index' method is part of the stable DirectZarrIngestor contract."""
+def test_directzarr_has_index_spec_method():
+    """The 'index_spec' method is part of the stable DirectZarrIngestor contract."""
     from firecube.ingestor.api import DirectZarrIngestor
 
-    assert hasattr(DirectZarrIngestor, "timestamp_to_ts_index")
-    assert callable(DirectZarrIngestor.timestamp_to_ts_index)
+    assert hasattr(DirectZarrIngestor, "index_spec")
+    assert callable(DirectZarrIngestor.index_spec)
 
 
 @pytest.mark.unit
@@ -38,5 +38,12 @@ def test_writeintent_kind_timestamp_token():
     """The intent kind 'timestamp' is a stable dispatch token (not the dim name)."""
     from firecube.ingestor.api import WriteIntent
 
-    intent = WriteIntent(group="g", array="a", ts_index=0, data=None, kind="timestamp")
+    intent = WriteIntent(
+        group="g",
+        array="a",
+        ts_index=0,
+        data=None,
+        kind="timestamp",
+        timestamp_val="2026-01-01T00:00:00Z",
+    )
     assert intent.kind == "timestamp"

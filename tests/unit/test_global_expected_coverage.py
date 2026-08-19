@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
@@ -22,7 +23,7 @@ from typing import Any, ClassVar, cast
 import numpy as np
 import pytest
 
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import DirectZarrIngestor
 from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
 from firecube.ingestor.templates.direct_zarr import WriteIntent, ZarrArraySpec, ZarrGroupSpec
@@ -76,7 +77,6 @@ def _make_ingestor(
 ) -> DirectZarrIngestor:
     class _Ingestor(DirectZarrIngestor):
         PRODUCT_NAME: ClassVar[str] = "global_expected_test"
-        SUPPORTS_SLOT_RANGE_PARALLELISM: ClassVar[bool] = True
 
         def __init__(self) -> None:
             super().__init__(name="global_expected_test", chunk_manager=cast(Any, _ChunkManager()))
@@ -90,20 +90,28 @@ def _make_ingestor(
                 ),
             )
 
-        def timestamp_to_ts_index(self, group: str, timestamp_val: Any) -> int:
-            _ = group
-            return int(timestamp_val)
-
-        def global_expected_time_count(self, ctx):
+        def index_spec(self, ctx) -> IndexSpec:
             _ = ctx
-            return global_expected
-
-        def slot_index_model(self, ctx):
-            _ = ctx
-            return SlotIndexModel(
+            return IndexSpec(
                 name="global_expected_test_v1",
-                epoch="2026-01-01T00:00:00Z",
-                groups={g: SlotAxis(cadence_s=1, mode="exact") for g in schema_groups},
+                groups={
+                    g: RegularTimeAxis(
+                        coordinate="timestamp",
+                        epoch="2026-01-01T00:00:00Z",
+                        cadence_s=1,
+                        mode="exact",
+                        size=global_expected[g],
+                    )
+                    for g in schema_groups
+                },
+            )
+
+        def inspect_item(self, item: Any, ctx: Any) -> ItemInfo | None:
+            _ = ctx
+            if not isinstance(item, int):
+                return None
+            return ItemInfo(
+                coordinate=dt.datetime(2026, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=item)
             )
 
         def zarr_schema(self, ctx):
@@ -149,6 +157,7 @@ def _run_process_batch(
     ingestor._parallel_execution_state = _ParallelExecutionState(global_expected=global_schema)
 
     ctx = SimpleNamespace(
+        _ctx=object(),
         run_id="run-1",
         storage=None,
         option=lambda key, default=None: default,
@@ -177,7 +186,7 @@ def test_intent_group_missing_from_global_fails(
 
     assert result.success is False
     assert "B" in cast(str, result.error)
-    assert "global_expected_time_count()" in cast(str, result.error)
+    assert cast(str, result.error) == "'B'"
 
 
 def test_intent_group_missing_from_schema_fails(

@@ -39,7 +39,7 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   (`time_indexed = false`) arrays. Re-ingest from scratch is the only migration
   path, consistent with existing shape/dtype/chunks drift policy. Closes #40.
 - Versioned documentation with `mike`: each stable release publishes docs under
-  its full version (for example `/0.1.5/`) with a `latest` alias as the site
+  its full version (for example `/0.1.4/`) with a `latest` alias as the site
   default; pre-releases publish under their own version only and never become
   the default; `main` is tracked as `/dev/`. New `docs-deploy` workflow deploys
   automatically on pushes to `main` and on published GitHub releases.

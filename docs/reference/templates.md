@@ -102,14 +102,17 @@ Options are declared through
 
 ## DirectZarrIngestor
 
-Subclass `DirectZarrIngestor` and implement `zarr_schema` and
-`build_write_intents`.
+Subclass `DirectZarrIngestor` and implement `index_spec`, `inspect_item`,
+`zarr_schema`, and `build_write_intents`.
 
 ::: firecube.ingestor.api.DirectZarrIngestor
     options:
         show_bases: false
         inherited_members: true
         members:
+          - index_spec
+          - inspect_item
+          - resolved_index
           - zarr_schema
           - build_write_intents
           - get_batch_groups
@@ -118,8 +121,12 @@ On this template `get_batch_groups` is derived from the groups declared in
 `zarr_schema` and is not an override point; overriding it breaks the
 agreement between groups and schema.
 
+Use `resolved_index(ctx).size(group)` when the declared index extent controls
+array shape, and `resolved_index(ctx).position(group, coordinate)` when a write
+needs the slot index for a timestamp value.
+
 For parallel writes across disjoint slot ranges, see
-[Slot-Range Parallelism](parallelism.md).
+[Parallelism](parallelism.md).
 
 ### Schema And Write Types
 

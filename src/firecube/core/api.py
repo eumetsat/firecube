@@ -34,6 +34,8 @@ from firecube.core.formats import (
     read_hdf5_array,
     rename_time_dim,
 )
+from firecube.core.index_resolve import ResolvedIndex, coerce_to_epoch_s, resolve_index_spec
+from firecube.core.index_spec import AxisSpec, IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.intake import CatalogGroupInfo
 from firecube.core.product import ensure_product_uri, resolve_dataset_target
 from firecube.core.slot_index import (
@@ -55,13 +57,19 @@ from firecube.core.zarr.time_decode import decode_time_array
 from firecube.core.zarr.validation import read_chunk_grid_with_shards
 
 __all__ = [
+    "AxisSpec",
     "CatalogGroupInfo",
+    "IndexSpec",
+    "ItemInfo",
     "RegionZarrWriterProtocol",
+    "RegularTimeAxis",
+    "ResolvedIndex",
     "RunInfo",
     "SlotAxis",
     "SlotIndexModel",
     "StorageConfig",
     "clean_netcdf_encoding",
+    "coerce_to_epoch_s",
     "create_filesystem_for_uri",
     "decode_time_array",
     "delete_path",
@@ -85,4 +93,5 @@ __all__ = [
     "rename_time_dim",
     "require_tensogram",
     "resolve_dataset_target",
+    "resolve_index_spec",
 ]

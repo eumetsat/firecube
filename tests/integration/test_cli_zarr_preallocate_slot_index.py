@@ -39,7 +39,7 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import SlotAxis, SlotIndexModel
+from firecube.core.index_spec import IndexSpec, RegularTimeAxis
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.registry import loader as _loader
 
@@ -93,18 +93,25 @@ def test_option_forwards_to_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     target_dir = tmp_path / "out.zarr"
     import direct_zarr_capable_test_plugin as plugin_module
 
-    def slot_model_using_option(self, ctx):
+    def index_spec_using_option(self, ctx):
         marker = str(ctx.options.get("x_test_key", "default"))
-        return SlotIndexModel(
+        return IndexSpec(
             name=f"forwarded_{marker}_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=10,
+                )
+            },
         )
 
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "slot_index_model",
-        slot_model_using_option,
+        "index_spec",
+        index_spec_using_option,
     )
 
     result = CliRunner().invoke(
@@ -125,20 +132,27 @@ def test_typed_coercion_for_int_option(tmp_path: Path, monkeypatch: pytest.Monke
 
     seen: dict[str, object] = {}
 
-    def slot_model_capturing_type(self, ctx):
+    def index_spec_capturing_type(self, ctx):
         value = ctx.options.get("pipeline_workers")
         seen["value"] = value
         seen["type"] = type(value).__name__
-        return SlotIndexModel(
+        return IndexSpec(
             name="typed_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=10,
+                )
+            },
         )
 
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "slot_index_model",
-        slot_model_capturing_type,
+        "index_spec",
+        index_spec_capturing_type,
     )
 
     result = CliRunner().invoke(
@@ -157,20 +171,27 @@ def test_unknown_option_rejected_before_any_write(
     target_dir = tmp_path / "out.zarr"
     import direct_zarr_capable_test_plugin as plugin_module
 
-    called = {"slot_index_model": 0}
+    called = {"index_spec": 0}
 
-    def slot_model_should_not_run(self, ctx):
-        called["slot_index_model"] += 1
-        return SlotIndexModel(
+    def index_spec_should_not_run(self, ctx):
+        called["index_spec"] += 1
+        return IndexSpec(
             name="should_not_run_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=10,
+                )
+            },
         )
 
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "slot_index_model",
-        slot_model_should_not_run,
+        "index_spec",
+        index_spec_should_not_run,
     )
 
     result = CliRunner().invoke(
@@ -179,7 +200,7 @@ def test_unknown_option_rejected_before_any_write(
     )
 
     assert result.exit_code != 0, result.output
-    assert called["slot_index_model"] == 0, "plugin was invoked despite unknown option"
+    assert called["index_spec"] == 0, "plugin was invoked despite unknown option"
     assert not _current_json_path(target_dir).exists(), (
         "slot_index/current.json must not be created when --option is rejected"
     )
@@ -194,18 +215,25 @@ def test_x_namespace_passthrough(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 
     received: dict[str, object] = {}
 
-    def slot_model_reading_x_key(self, ctx):
+    def index_spec_reading_x_key(self, ctx):
         received["flag"] = ctx.options.get("x_experimental_flag")
-        return SlotIndexModel(
+        return IndexSpec(
             name="x_namespace_v1",
-            epoch="2026-01-01T00:00:00Z",
-            groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+            groups={
+                "data": RegularTimeAxis(
+                    coordinate="timestamp",
+                    epoch="2026-01-01T00:00:00Z",
+                    cadence_s=1,
+                    mode="exact",
+                    size=10,
+                )
+            },
         )
 
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "slot_index_model",
-        slot_model_reading_x_key,
+        "index_spec",
+        index_spec_reading_x_key,
     )
 
     result = CliRunner().invoke(
@@ -225,27 +253,27 @@ def test_slot_index_model_failure_before_mutation(
     target_dir = tmp_path / "out.zarr"
     import direct_zarr_capable_test_plugin as plugin_module
 
-    def slot_model_raises(self, ctx):
-        raise ConfigurationError("test-induced slot_index_model failure")
+    def index_spec_raises(self, ctx):
+        raise ConfigurationError("test-induced index_spec failure")
 
     monkeypatch.setattr(
         plugin_module.DirectZarrCapableTestIngestor,
-        "slot_index_model",
-        slot_model_raises,
+        "index_spec",
+        index_spec_raises,
     )
 
     result = CliRunner().invoke(cli, _args(f"file://{target_dir}"))
 
     assert result.exit_code != 0, result.output
-    assert "slot_index_model" in result.output, (
-        f"expected the error to mention slot_index_model; got: {result.output!r}"
+    assert "index_spec" in result.output, (
+        f"expected the error to mention index_spec; got: {result.output!r}"
     )
     assert _zarr_json_files(target_dir) == [], (
-        f"target must contain NO zarr.json after slot_index_model failure, found "
+        f"target must contain NO zarr.json after index_spec failure, found "
         f"{_zarr_json_files(target_dir)!r}"
     )
     assert not _current_json_path(target_dir).exists(), (
-        "slot_index/current.json must not be created when slot_index_model raises"
+        "slot_index/current.json must not be created when index_spec raises"
     )
     assert "Traceback" not in result.output
     assert "ConfigurationError" not in result.output
