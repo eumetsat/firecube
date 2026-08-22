@@ -2891,6 +2891,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/firecube-index/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inspect And Manage The Resolved Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4729,6 +4757,56 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#firecube-zarr-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        index
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="index">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube-zarr-index-rebuild" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rebuild
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube-zarr-index-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        show
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube-zarr-index-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#firecube-zarr-multires" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5381,6 +5459,56 @@
   
     <nav class="md-nav" aria-label="zarr">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube-zarr-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        index
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="index">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube-zarr-index-rebuild" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rebuild
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube-zarr-index-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        show
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube-zarr-index-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#firecube-zarr-multires" class="md-nav__link">
@@ -7386,10 +7514,160 @@ zarr slots to emit parallel ingestion plans.</p>
 </tr>
 </tbody>
 </table>
+<h4 id="firecube-zarr-index">firecube zarr index</h4>
+<p>Inspect resolved-index control-plane records.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>firecube zarr index [OPTIONS] COMMAND [ARGS]...
+</code></pre></div>
+<p><strong>Options:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--help</code>, <code>-h</code></td>
+<td>boolean</td>
+<td>Show this message and exit.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<h5 id="firecube-zarr-index-rebuild">firecube zarr index rebuild</h5>
+<p>Rebuild the resolved-index record from a plugin declaration.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>firecube zarr index rebuild [OPTIONS]
+</code></pre></div>
+<p><strong>Options:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--target</code></td>
+<td>text</td>
+<td>Product Zarr URI to rebuild the index for.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--plugin</code></td>
+<td>text</td>
+<td>Plugin name used to resolve the index spec.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--product-name</code></td>
+<td>text</td>
+<td>Logical product name.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--help</code>, <code>-h</code></td>
+<td>boolean</td>
+<td>Show this message and exit.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<h5 id="firecube-zarr-index-show">firecube zarr index show</h5>
+<p>Show the current resolved-index record.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>firecube zarr index show [OPTIONS]
+</code></pre></div>
+<p><strong>Options:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--target</code></td>
+<td>text</td>
+<td>Product Zarr URI to inspect.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--product-name</code></td>
+<td>text</td>
+<td>Logical product name.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>boolean</td>
+<td>Emit the raw record as JSON.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td><code>--help</code>, <code>-h</code></td>
+<td>boolean</td>
+<td>Show this message and exit.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<h5 id="firecube-zarr-index-verify">firecube zarr index verify</h5>
+<p>Verify the current resolved-index record and mirrored root attr.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>firecube zarr index verify [OPTIONS]
+</code></pre></div>
+<p><strong>Options:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--target</code></td>
+<td>text</td>
+<td>Product Zarr URI to inspect.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--product-name</code></td>
+<td>text</td>
+<td>Logical product name.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--plugin</code></td>
+<td>text</td>
+<td>Optional plugin name to compare against.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--help</code>, <code>-h</code></td>
+<td>boolean</td>
+<td>Show this message and exit.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
 <h4 id="firecube-zarr-multires">firecube zarr multires</h4>
 <p>Build multi-resolution Zarr pyramid for an existing product.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>firecube zarr multires [OPTIONS]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>firecube zarr multires [OPTIONS]
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7446,7 +7724,7 @@ zarr slots to emit parallel ingestion plans.</p>
 this command is a no-op. If arrays exist with mismatched schema, exits non-zero
 with a diff showing expected vs found values. Safe to re-run.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>firecube zarr preallocate [OPTIONS] PLUGIN
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>firecube zarr preallocate [OPTIONS] PLUGIN
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7514,7 +7792,7 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <p>Read-only: does NOT mutate target storage or tracking state.
 JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>firecube zarr slots [OPTIONS] PLUGIN
+<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>firecube zarr slots [OPTIONS] PLUGIN
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7595,7 +7873,7 @@ JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 without modifying any data. Requires --product and --group; exits with a
 structured JSON summary.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>firecube zarr validate [OPTIONS]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>firecube zarr validate [OPTIONS]
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
