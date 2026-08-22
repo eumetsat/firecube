@@ -100,7 +100,7 @@ def _run_direct_zarr_ingest(target_path: Path) -> None:
     ingestor._bind_index_at_startup(ctx)
     schema = ingestor.zarr_schema(ctx)
     global_expected = {
-        group: cast(int, cast(RegularTimeAxis, axis).size)
+        group: cast(int, cast(RegularTimeAxis, axis).slot_count)
         for group, axis in ingestor.index_spec(ctx).groups.items()
     }
 

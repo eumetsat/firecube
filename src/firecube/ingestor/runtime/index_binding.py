@@ -29,7 +29,6 @@ class IndexBinding:
     Args:
         spec: The ``IndexSpec`` that was resolved.
         resolved: The resolved index ready for slot-index computation.
-        ctx_id: ``id(ctx._ctx)`` at resolution time; used as the cache key.
     """
 
     spec: IndexSpec
@@ -37,9 +36,6 @@ class IndexBinding:
 
     resolved: ResolvedIndex
     """The resolved index ready for slot-index computation."""
-
-    ctx_id: int
-    """Identity of the plugin context at resolution time (cache key)."""
 
 
 def resolve_index_spec_for_ingestor(ingestor: Any, ctx: Any) -> IndexBinding | None:
@@ -69,7 +65,7 @@ def resolve_index_spec_for_ingestor(ingestor: Any, ctx: Any) -> IndexBinding | N
 
     time_dim_name: str = ingestor._resolve_time_dim_name()
     resolved = resolve_index_spec(spec, time_dim_name=time_dim_name)
-    return IndexBinding(spec=spec, resolved=resolved, ctx_id=id(ctx._ctx))
+    return IndexBinding(spec=spec, resolved=resolved)
 
 
 def filter_items_by_index(
@@ -118,7 +114,7 @@ def filter_items_by_index(
         active_group = groups[0]
     else:
         # Multiple groups: allow slot_group=None when all groups share the same
-        # axis object (identity check per plan task 1.3). This covers the common
+        # axis object (Python is-check on axis identity). This covers the common
         # case where a plugin declares multiple groups with the same RegularTimeAxis
         # instance (e.g. FCI data_1km + data_2km sharing one axis).
         axes = [resolved._spec.groups[g] for g in groups]
@@ -126,8 +122,12 @@ def filter_items_by_index(
             active_group = groups[0]
         else:
             raise ConfigurationError(
-                "Multiple groups in the resolved index with different axes; "
-                "set slot_group to specify which group to use for slot-range filtering. "
+                "Multiple groups in the resolved index reference distinct axis instances "
+                "(Python `is` identity check across groups). When a plugin uses multiple "
+                "index-spec groups without an explicit `slot_group`, all groups must "
+                "point to the SAME axis object (not merely value-equal axes). Either "
+                "share one axis instance across the groups in your `index_spec()`, or "
+                "pass `slot_group=...` to name the group to use for slot-range filtering. "
                 f"Available groups: {list(groups)}"
             )
 

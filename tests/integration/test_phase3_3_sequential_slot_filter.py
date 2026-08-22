@@ -40,6 +40,7 @@ def reset_plugin_registry() -> Iterator[None]:
     _loader._LOADED = False
     _loader.AVAILABLE_INGESTORS.clear()
     importlib.reload(importlib.import_module(_PLUGIN))
+    _loader._LOADED = True
     yield
     _loader._LOADED = original_loaded
     _loader.AVAILABLE_INGESTORS.clear()

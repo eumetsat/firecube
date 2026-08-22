@@ -48,7 +48,7 @@ class _NoInspectPlugin(DirectZarrIngestor):
                     coordinate="timestamp",
                     epoch="2024-01-01T00:00:00Z",
                     cadence_s=600,
-                    size=10,
+                    slot_count=10,
                 )
             },
         )
@@ -71,7 +71,7 @@ class _FullPlugin(DirectZarrIngestor):
                     coordinate="timestamp",
                     epoch="2024-01-01T00:00:00Z",
                     cadence_s=600,
-                    size=10,
+                    slot_count=10,
                 )
             },
         )

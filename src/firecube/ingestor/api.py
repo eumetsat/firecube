@@ -22,9 +22,16 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
+from firecube.core.api import (
+    AxisSpec,
+    IndexSpec,
+    IntegerAxis,
+    ItemInfo,
+    RegularTimeAxis,
+    ResolvedIndex,
+    ResolvedIndexRecord,
+)
 from firecube.core.controlplane import SpanCoverage, WriteDomain
-from firecube.core.index_resolve import ResolvedIndex
-from firecube.core.index_spec import AxisSpec, IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.intake import CatalogGroupInfo
 from firecube.ingestor.config.engine import EngineConfig, config_keys
 from firecube.ingestor.contracts.interfaces import (
@@ -119,6 +126,7 @@ __all__ = [
     "IngestResult",
     "Ingestor",
     "IngestorError",
+    "IntegerAxis",
     "ItemInfo",
     "LocalSourceFile",
     "ManifestError",
@@ -136,6 +144,7 @@ __all__ = [
     "RegionWriteStrategy",
     "RegularTimeAxis",
     "ResolvedIndex",
+    "ResolvedIndexRecord",
     "ResultMetrics",
     "ResumeConflictError",
     "RuntimeIngestContext",

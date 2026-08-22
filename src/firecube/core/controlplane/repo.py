@@ -61,6 +61,7 @@ from firecube.core.controlplane.types import (
     SNAPSHOT_DIRNAME,
     ChunkInfo,
     ClaimInfo,
+    IndexEnsuredEvent,
     RunInfo,
     SpanCoverage,
     WriteDomain,
@@ -299,6 +300,9 @@ class ManifestRepository:
             expected_time_count=expected_time_count,
             meta=meta,
         )
+
+    def record_index_ensured_event(self, event: IndexEnsuredEvent) -> None:
+        self._wal_writer.record_index_ensured_event(event)
 
     def record_slot_index_model_event(
         self,

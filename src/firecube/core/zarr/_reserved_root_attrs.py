@@ -35,6 +35,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from firecube.core.controlplane.types import (
+    RESOLVED_INDEX_ATTR,
+    RESOLVED_INDEX_IDENTITY_HASH_ATTR,
+)
 from firecube.core.slot_index import (
     SLOT_INDEX_MODEL_ATTR,
     SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
@@ -46,6 +50,8 @@ RESERVED_ROOT_ATTRS: frozenset[str] = frozenset(
     {
         SLOT_INDEX_MODEL_ATTR,
         SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
+        RESOLVED_INDEX_ATTR,
+        RESOLVED_INDEX_IDENTITY_HASH_ATTR,
     }
 )
 

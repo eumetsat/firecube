@@ -241,7 +241,7 @@ class IndexedRegionStrategy:
             # repeating it here under an exclusive per-batch claim is redundant and
             # would make concurrent pods on the same group race on idempotent setup.
             # Skip the claim and the ensure in that mode only; single-pod runs keep
-            # the §24 claim-then-ensure ordering byte-for-byte unchanged.
+            # the claim-then-ensure ordering byte-for-byte unchanged.
             parallel_mode = slot_range is not None
             schema_ctx = (
                 contextlib.nullcontext()

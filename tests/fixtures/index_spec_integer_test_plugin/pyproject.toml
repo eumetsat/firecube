@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "index-spec-integer-test-plugin"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["firecube"]
+
+[project.entry-points."firecube.plugins"]
+index_spec_integer = "index_spec_integer_test_plugin:IntegerAxisIngestor"
+index_spec_integer_mixed = "index_spec_integer_test_plugin:MixedAxisIngestor"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/index_spec_integer_test_plugin"]

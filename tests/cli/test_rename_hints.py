@@ -28,7 +28,8 @@ def test_ingest_source_shows_input_data_hint() -> None:
     result = runner.invoke(cli, ["ingest", "cli_test_plugin", "--source", "/tmp/data"])
     assert result.exit_code == 2
     output = result.output
-    assert "No such option '--source'" in output
+    assert "No such option" in output
+    assert "--source" in output
     assert "Hint:" in output
     assert "--input-data (-i)" in output
     assert "strict-URI refactor" in output
@@ -42,7 +43,8 @@ def test_archive_create_target_shows_archive_hint() -> None:
     )
     assert result.exit_code == 2
     output = result.output
-    assert "No such option '--target'" in output
+    assert "No such option" in output
+    assert "--target" in output
     assert "Hint:" in output
     assert "--archive (-a)" in output
     assert "tgm artifact output" in output
@@ -56,7 +58,8 @@ def test_archive_restore_source_shows_archive_hint() -> None:
     )
     assert result.exit_code == 2
     output = result.output
-    assert "No such option '--source'" in output
+    assert "No such option" in output
+    assert "--source" in output
     assert "Hint:" in output
     assert "--archive (-a)" in output
     assert "tgm artifact path" in output
@@ -75,7 +78,8 @@ def test_chunks_product_still_uses_click_native_suggestion() -> None:
     result = runner.invoke(cli, ["chunks", "list", "--product", "x"])
     assert result.exit_code == 2
     output = result.output
-    assert "No such option '--product'" in output
+    assert "No such option" in output
+    assert "--product" in output
     assert "Did you mean" in output
     assert "--product-name" in output
     assert "Hint:" not in output

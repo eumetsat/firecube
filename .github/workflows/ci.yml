@@ -31,6 +31,8 @@ jobs:
           uv pip install -e tests/fixtures/multi_group_capable_test_plugin
           uv pip install -e tests/fixtures/cf_time_dim_test_plugin
           uv pip install -e tests/fixtures/slot_shape_test_plugin
+          uv pip install -e tests/fixtures/index_spec_test_plugin
+          uv pip install -e tests/fixtures/index_spec_integer_test_plugin
       - run: uv run pyright
 
   test:
@@ -48,6 +50,8 @@ jobs:
           uv pip install -e tests/fixtures/multi_group_capable_test_plugin
           uv pip install -e tests/fixtures/cf_time_dim_test_plugin
           uv pip install -e tests/fixtures/slot_shape_test_plugin
+          uv pip install -e tests/fixtures/index_spec_test_plugin
+          uv pip install -e tests/fixtures/index_spec_integer_test_plugin
       - run: uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -n auto --cov=firecube --cov-report=term-missing -q
 
   docs:
@@ -66,6 +70,8 @@ jobs:
           uv pip install -e tests/fixtures/multi_group_capable_test_plugin
           uv pip install -e tests/fixtures/cf_time_dim_test_plugin
           uv pip install -e tests/fixtures/slot_shape_test_plugin
+          uv pip install -e tests/fixtures/index_spec_test_plugin
+          uv pip install -e tests/fixtures/index_spec_integer_test_plugin
       - name: Documentation and help-text drift checks
         run: uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
 

@@ -278,7 +278,7 @@ def _setup_global_zarr_schema(
             name=f"{group_name}:setup",
         )
         # Bounded retry for the exclusive schema-setup claim.
-        # Pattern mirrors ChunkManager.ensure_slot_index_model().
+        # Pattern mirrors the control-plane claim convergence helpers.
         # On ClaimConflictError, re-check convergence before sleeping/retrying:
         # another pod may have finished schema setup while we were waiting.
         _schema_max_retries = 5
@@ -898,42 +898,43 @@ class DirectZarrIngestor(BaseIngestor):
         """Override: bind IndexSpec once at pod startup via base helper.
 
         Uses BaseIngestor._resolve_index_binding_at_startup so templates do not
-        import runtime binding internals directly. Anchor plan §2114.
+        import runtime binding internals directly.
         """
         self._resolved_index_cache = {}
         self._index_binding = self._resolve_index_binding_at_startup(ctx)
 
-    def _ensure_slot_index_model_at_startup(self, ctx: PluginContext) -> None:
-        """Override base hook: delegate to _ensure_index_identity_at_startup.
-
-        Completes anchor plan §2102: the base class calls this hook at pod
-        startup; DirectZarrIngestor provides the implementation via
-        _ensure_index_identity_at_startup which writes the legacy slot-index
-        record from the resolved binding.
-        """
+    def _ensure_index_record_at_startup(self, ctx: PluginContext) -> None:
+        """Override base hook: delegate to _ensure_index_identity_at_startup."""
         self._ensure_index_identity_at_startup(ctx)
 
     def _ensure_index_identity_at_startup(self, ctx: PluginContext) -> None:
-        """Ensure the product index identity is stamped before any array write."""
+        """Writes engine-owned `.firecube/index/current.json`; called once at pod startup."""
         if not hasattr(self, "_index_binding"):
             self._bind_index_at_startup(ctx)
 
         binding = self._index_binding
         if binding is None:
             return  # serial-mode plugin; no index identity to stamp
-        if getattr(self, "_slot_index_model_stamped", False):
+        if getattr(self, "_resolved_index_stamped", False):
             return
 
         product = _ctx_product_name(ctx, self.name)
+        self._check_legacy_index_record_at_startup(product=product, plugin_name=self.name)
         run_id = str(ctx.run_id or ctx.option("run_id", "unknown"))
-        legacy_model = binding.resolved.as_legacy_slot_index_model()
-        if legacy_model is not None:
-            self._chunk_manager.ensure_slot_index_model(
-                product=product,
-                model=legacy_model,
-                run_id=run_id,
-            )
-        self._slot_index_model_stamped = True
+        record = binding.resolved.as_resolved_index_record(run_id=run_id)
+        stored_record, outcome = self._chunk_manager.ensure_resolved_index(
+            product=product,
+            record=record,
+            run_id=run_id,
+        )
+        self._emit_index_ensured_event(
+            ctx=ctx,
+            product=product,
+            run_id=run_id,
+            record=stored_record,
+            outcome=outcome,
+        )
+        self._resolved_index_stamped = True
 
     def _verify_schema_at_pod_startup(self, ctx: PluginContext) -> None:
         """Verify global direct-Zarr schema once per pod process before batches run."""

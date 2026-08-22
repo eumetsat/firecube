@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Integration tests for ``firecube zarr preallocate`` typed options and slot-index model.
+"""Integration tests for ``firecube zarr preallocate`` typed options and resolved indexes.
 
 Covers:
 
 * ``--option`` flag plumbs values into ``PluginContext.options`` for
-  ``slot_index_model(ctx)`` to consume.
+  ``index_spec(ctx)`` to consume.
 * Typed coercion of int-typed engine options: ``pipeline_workers=7`` arrives
   inside the plugin as ``int(7)``, not ``str("7")``.
 * Unknown option keys (outside the experimental ``x_*`` namespace) are
   rejected by ``coerce_options_for_plugin`` before any control-plane or
   Zarr write happens.
 * ``x_*`` experimental keys pass through unchanged.
-* A ``slot_index_model(ctx)`` failure exits non-zero AND leaves the target
-  Zarr store empty (no ``zarr.json`` files, no ``.firecube/slot_index/current.json``).
+* An ``index_spec(ctx)`` failure exits non-zero AND leaves the target
+  Zarr store empty with no resolved or legacy index record.
 """
 
 from __future__ import annotations
@@ -54,6 +54,7 @@ def reset_plugin_registry() -> Iterator[None]:
     _loader._LOADED = False
     _loader.AVAILABLE_INGESTORS.clear()
     importlib.reload(importlib.import_module("direct_zarr_capable_test_plugin"))
+    _loader._LOADED = True
     yield
     _loader._LOADED = original_loaded
     _loader.AVAILABLE_INGESTORS.clear()
@@ -80,6 +81,10 @@ def _args(target: str, *extra: str) -> list[str]:
 
 
 def _current_json_path(target_dir: Path) -> Path:
+    return target_dir / ".firecube" / "index" / "current.json"
+
+
+def _legacy_current_json_path(target_dir: Path) -> Path:
     return target_dir / ".firecube" / "slot_index" / "current.json"
 
 
@@ -103,7 +108,7 @@ def test_option_forwards_to_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPat
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=10,
+                    slot_count=10,
                 )
             },
         )
@@ -121,9 +126,10 @@ def test_option_forwards_to_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
     assert result.exit_code == 0, result.output
     current_json = _current_json_path(target_dir)
-    assert current_json.exists(), "slot_index/current.json not written"
+    assert current_json.exists(), "index/current.json not written"
+    assert not _legacy_current_json_path(target_dir).exists()
     record = json.loads(current_json.read_text())
-    assert record["model"]["name"] == "forwarded_hello_v1", record
+    assert record["index"]["name"] == "forwarded_hello_v1", record
 
 
 def test_typed_coercion_for_int_option(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -144,7 +150,7 @@ def test_typed_coercion_for_int_option(tmp_path: Path, monkeypatch: pytest.Monke
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=10,
+                    slot_count=10,
                 )
             },
         )
@@ -183,7 +189,7 @@ def test_unknown_option_rejected_before_any_write(
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=10,
+                    slot_count=10,
                 )
             },
         )
@@ -202,6 +208,9 @@ def test_unknown_option_rejected_before_any_write(
     assert result.exit_code != 0, result.output
     assert called["index_spec"] == 0, "plugin was invoked despite unknown option"
     assert not _current_json_path(target_dir).exists(), (
+        "index/current.json must not be created when --option is rejected"
+    )
+    assert not _legacy_current_json_path(target_dir).exists(), (
         "slot_index/current.json must not be created when --option is rejected"
     )
     assert _zarr_json_files(target_dir) == [], (
@@ -225,7 +234,7 @@ def test_x_namespace_passthrough(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=10,
+                    slot_count=10,
                 )
             },
         )
@@ -273,6 +282,9 @@ def test_slot_index_model_failure_before_mutation(
         f"{_zarr_json_files(target_dir)!r}"
     )
     assert not _current_json_path(target_dir).exists(), (
+        "index/current.json must not be created when index_spec raises"
+    )
+    assert not _legacy_current_json_path(target_dir).exists(), (
         "slot_index/current.json must not be created when index_spec raises"
     )
     assert "Traceback" not in result.output

@@ -12,7 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Canonical metric schema and emission service for firecube. Sole owner of RUN_SUMMARY_SCHEMA. Imported by runtime aggregation and domain collectors."""
+"""Canonical metric schema and emission service for firecube.
+
+Sole owner of ``RUN_SUMMARY_SCHEMA``. Imported by runtime aggregation and
+domain collectors.
+
+Internal metric emission facade. NOT part of ``firecube.core.api``. External
+callers should use ``ctx.telemetry`` from within a plugin instead
+(per DESIGN.md observability rules).
+"""
 
 from __future__ import annotations
 
@@ -21,9 +29,14 @@ import logging
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, Literal
 
 from firecube.core.observability.telemetry.sinks import IngestionTelemetry
+
+if TYPE_CHECKING:
+    from firecube.core.controlplane import ChunkManager
+    from firecube.core.controlplane.types import IndexEnsuredOutcome, ResolvedIndexRecord
 
 # Counter/gauge names (single source of truth).
 METRIC_PIPELINE_BATCHES = "firecube_pipeline_batches_total"
@@ -70,6 +83,9 @@ WAL_SUMMARY_KEY_SNAPSHOT_REBUILD_COUNT = "wal_snapshot_rebuild_count"
 RESUME_GUARD_SUMMARY_KEY_ENFORCE_DURATION = "resume_guard_enforce_duration_s"
 RESUME_GUARD_SUMMARY_KEY_RUNS_ENUMERATED = "resume_guard_runs_enumerated"
 RESUME_GUARD_SUMMARY_KEY_SPANS_SCANNED = "resume_guard_spans_scanned"
+
+METRIC_INDEX_ENSURED = "firecube_index_ensured"
+INDEX_ENSURED_EVENT = "index_ensured"
 
 MetricKind = Literal["counter", "gauge"]
 
@@ -224,7 +240,97 @@ class TelemetryService:
                 meta=meta,
             )
 
+    def emit_index_ensured(
+        self,
+        *,
+        product: str,
+        identity_hash: str,
+        axis_kinds: tuple[str, ...],
+        groups: tuple[str, ...],
+        outcome: Literal["created", "matched_existing", "conflict_refused", "rebuilt"],
+    ) -> None:
+        """Emit the ``index_ensured`` telemetry event.
+
+        Fires once per :meth:`ChunkManager.ensure_resolved_index` call from
+        DirectZarr startup or ``firecube zarr index rebuild``. The counter value is
+        always 1; the interesting content is the ``meta`` payload. Multi-value
+        ``axis_kinds`` and ``groups`` are joined with commas so Prometheus labels
+        stay a single low-cardinality string per emission.
+        """
+        if not self._telemetry:
+            return
+        meta = {
+            "plugin": self._plugin_name,
+            "product": product,
+            "outcome": outcome,
+            "identity_hash": identity_hash,
+            "axis_kinds": ",".join(sorted(axis_kinds)),
+            "groups": ",".join(sorted(groups)),
+        }
+        self._telemetry.emit(METRIC_INDEX_ENSURED, 1.0, kind="counter", meta=meta)
+
     def flush(self) -> None:
         """Flush telemetry buffer."""
         if self._telemetry:
             self._telemetry.flush()
+
+
+def emit_index_ensured_full(
+    manager: ChunkManager,
+    telemetry: TelemetryService | None,
+    *,
+    product: str,
+    run_id: str,
+    record: ResolvedIndexRecord,
+    outcome: IndexEnsuredOutcome,
+    logger: logging.Logger,
+) -> None:
+    """Record the resolved-index WAL audit event and matching telemetry counter."""
+    # Lazy import: importing any controlplane submodule at module-load time
+    # triggers controlplane/__init__.py, which closes an 8-hop cycle via
+    # filesystem/instrumentation.py back into this module. Keeping this
+    # import inside the function body defers execution until first call,
+    # after both packages are fully initialised. Test guard:
+    # tests/unit/test_metrics_no_import_cycle.py (dual-probe subprocess).
+    from firecube.core.controlplane.types import IndexEnsuredEvent
+
+    groups_by_name = record.index.get("groups", {}) or {}
+    axis_kinds = tuple(sorted({str(g.get("kind", "")) for g in groups_by_name.values()}))
+    group_names = tuple(sorted(groups_by_name.keys()))
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+    try:
+        manager.record_index_ensured_event(
+            IndexEnsuredEvent(
+                run_id=run_id,
+                product=product,
+                identity_hash=record.identity_hash,
+                axis_kinds=axis_kinds,
+                groups=group_names,
+                outcome=outcome,
+                timestamp=timestamp,
+            )
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to record index_ensured WAL audit event for product %s: %s",
+            product,
+            exc,
+        )
+
+    if telemetry is None:
+        return
+    try:
+        telemetry.emit_index_ensured(
+            product=product,
+            identity_hash=record.identity_hash,
+            axis_kinds=axis_kinds,
+            groups=group_names,
+            outcome=outcome,
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to emit index_ensured telemetry for product %s: %s",
+            product,
+            exc,
+        )

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Non-parallel ingest must still negotiate slot-index models for opt-in plugins."""
+"""Non-parallel ingest must still negotiate resolved indexes for opt-in plugins."""
 
 from __future__ import annotations
 
@@ -26,14 +26,14 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.errors import SlotIndexModelConflictError
-from firecube.core.index_spec import IndexSpec, RegularTimeAxis
-from firecube.core.slot_index import (
-    SLOT_INDEX_MODEL_ATTR,
-    SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
-    SlotAxis,
-    SlotIndexModel,
+from firecube.core.controlplane.types import (
+    RESOLVED_INDEX_ATTR,
+    RESOLVED_INDEX_IDENTITY_HASH_ATTR,
+    canonical_index_bytes,
 )
+from firecube.core.errors import ResolvedIndexConflictError
+from firecube.core.index_resolve import resolve_index_spec
+from firecube.core.index_spec import IndexSpec, RegularTimeAxis
 from firecube.ingestor.registry import loader as _loader
 
 pytestmark = pytest.mark.integration
@@ -47,6 +47,7 @@ def reset_plugin_registry() -> Iterator[None]:
     _loader.AVAILABLE_INGESTORS.clear()
     importlib.reload(importlib.import_module("direct_zarr_capable_test_plugin"))
     importlib.reload(importlib.import_module("direct_zarr_non_capable_test_plugin"))
+    _loader._LOADED = True
     yield
     _loader._LOADED = original_loaded
     _loader.AVAILABLE_INGESTORS.clear()
@@ -91,17 +92,30 @@ def _root_attrs(target_path: Path) -> dict[str, Any]:
     return dict(root.attrs)
 
 
-def _model(epoch: str) -> SlotIndexModel:
-    return SlotIndexModel(
+def _index_spec(epoch: str) -> IndexSpec:
+    return IndexSpec(
         name="direct_zarr_capable_fixture_v2",
-        epoch=epoch,
-        groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+        groups={
+            "data": RegularTimeAxis(
+                coordinate="timestamp",
+                epoch=epoch,
+                cadence_s=1,
+                mode="exact",
+                slot_count=1000,
+            )
+        },
     )
+
+
+def _expected_index_record(epoch: str) -> Any:
+    return resolve_index_spec(
+        _index_spec(epoch), time_dim_name="timestamp"
+    ).as_resolved_index_record(run_id="expected")
 
 
 def test_fresh_store_stamps_model(tmp_path: Path) -> None:
     target_path = tmp_path / "out.zarr"
-    expected = _model("2024-01-01T00:00:00Z")
+    expected = _expected_index_record("2024-01-01T00:00:00Z")
 
     _run_ingest(
         "direct_zarr_capable_test_plugin",
@@ -110,13 +124,13 @@ def test_fresh_store_stamps_model(tmp_path: Path) -> None:
     )
 
     attrs = _root_attrs(target_path)
-    assert attrs[SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR] == expected.identity_hash
-    assert attrs[SLOT_INDEX_MODEL_ATTR] == expected.canonical_bytes().decode("utf-8")
+    assert attrs[RESOLVED_INDEX_IDENTITY_HASH_ATTR] == expected.identity_hash
+    assert attrs[RESOLVED_INDEX_ATTR] == canonical_index_bytes(expected.index).decode("utf-8")
 
 
 def test_identical_model_reingest_is_idempotent(tmp_path: Path) -> None:
     target_path = tmp_path / "out.zarr"
-    expected = _model("2024-01-01T00:00:00Z")
+    expected = _expected_index_record("2024-01-01T00:00:00Z")
 
     _run_ingest(
         "direct_zarr_capable_test_plugin",
@@ -124,9 +138,9 @@ def test_identical_model_reingest_is_idempotent(tmp_path: Path) -> None:
         target_path,
     )
     first_attrs = _root_attrs(target_path)
-    assert first_attrs[SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR] == expected.identity_hash
+    assert first_attrs[RESOLVED_INDEX_IDENTITY_HASH_ATTR] == expected.identity_hash
 
-    # Second ingest with the same model — Row 2: idempotent no-op, no error.
+    # Second ingest with the same resolved index: idempotent no-op, no error.
     result = CliRunner().invoke(
         cli,
         _ingest_args(
@@ -139,7 +153,7 @@ def test_identical_model_reingest_is_idempotent(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
 
     second_attrs = _root_attrs(target_path)
-    assert second_attrs[SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR] == expected.identity_hash
+    assert second_attrs[RESOLVED_INDEX_IDENTITY_HASH_ATTR] == expected.identity_hash
 
 
 def test_divergent_epoch_raises_conflict(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -162,7 +176,7 @@ def test_divergent_epoch_raises_conflict(tmp_path: Path, monkeypatch: pytest.Mon
                     epoch="2025-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=1000,
+                    slot_count=1000,
                 )
             },
         )
@@ -172,7 +186,7 @@ def test_divergent_epoch_raises_conflict(tmp_path: Path, monkeypatch: pytest.Mon
         "index_spec",
         different_epoch_index_spec,
     )
-    with pytest.raises(SlotIndexModelConflictError):
+    with pytest.raises(ResolvedIndexConflictError):
         CliRunner().invoke(
             cli,
             _ingest_args(
@@ -195,5 +209,5 @@ def test_non_declaring_plugin_unchanged(tmp_path: Path) -> None:
     )
 
     attrs = _root_attrs(target_path)
-    assert SLOT_INDEX_MODEL_ATTR not in attrs
-    assert SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR not in attrs
+    assert RESOLVED_INDEX_ATTR not in attrs
+    assert RESOLVED_INDEX_IDENTITY_HASH_ATTR not in attrs

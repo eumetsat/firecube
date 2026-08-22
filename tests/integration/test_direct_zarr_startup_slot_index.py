@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Integration tests for DirectZarr pod-startup slot-index model routing.
+"""Integration tests for DirectZarr pod-startup resolved-index routing.
 
-Verifies that ``DirectZarrIngestor._ensure_slot_index_model_at_startup``
-resolves and persists the slot-index model BEFORE
+Verifies that ``DirectZarrIngestor._ensure_index_record_at_startup``
+resolves and persists the engine-owned resolved index BEFORE
 ``_verify_schema_at_pod_startup`` runs schema mutation, and that:
 
 * Non-opt-in plugins never trigger the gate.
 * Plugin-side and control-plane-side gate failures leave the target store and
-  the on-disk ``current.json`` file in their pre-call state (no partial writes).
+  the on-disk ``index/current.json`` file in their pre-call state.
 """
 
 from __future__ import annotations
@@ -35,14 +35,15 @@ import pytest
 
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import (
+    INDEX_CURRENT_FILENAME,
+    INDEX_DIRNAME,
     SLOT_INDEX_CURRENT_FILENAME,
     SLOT_INDEX_DIRNAME,
-    SlotIndexModelRecord,
+    ResolvedIndexRecord,
 )
-from firecube.core.errors import SlotIndexModelConflictError
+from firecube.core.errors import ResolvedIndexConflictError
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.product.identity import ProductIdentity
-from firecube.core.slot_index import SlotAxis, SlotIndexModel
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
@@ -85,7 +86,7 @@ class _CapableIngestor(DirectZarrIngestor):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=10,
+                    slot_count=10,
                 )
             },
         )
@@ -169,6 +170,10 @@ def _slot_index_current_path(tmp_path: Path) -> Path:
     return tmp_path / PRODUCT_NAME / ".firecube" / SLOT_INDEX_DIRNAME / SLOT_INDEX_CURRENT_FILENAME
 
 
+def _index_current_path(tmp_path: Path) -> Path:
+    return tmp_path / PRODUCT_NAME / ".firecube" / INDEX_DIRNAME / INDEX_CURRENT_FILENAME
+
+
 def _store_path(tmp_path: Path) -> Path:
     return tmp_path / PRODUCT_NAME
 
@@ -202,34 +207,37 @@ def _patch_resolve(
 
 
 def test_startup_routes_through_service(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """On a fresh store, the slot-index gate runs BEFORE schema mutation."""
+    """On a fresh store, the resolved-index gate runs BEFORE schema mutation."""
     chunk_manager = _make_chunk_manager(tmp_path)
     ingestor = _CapableIngestor(chunk_manager=chunk_manager)
     ingestor._parallel_execution_state = _ParallelExecutionState(global_expected={"data": 10})
     _patch_resolve(monkeypatch, ingestor, tmp_path)
 
-    current_json = _slot_index_current_path(tmp_path)
-    ordering_witness: dict[str, bool] = {"current_json_present_at_setup": False}
+    current_json = _index_current_path(tmp_path)
+    legacy_json = _slot_index_current_path(tmp_path)
+    ordering_witness: dict[str, bool] = {"index_current_json_present_at_setup": False}
 
     def spy_setup_global_schema(**kwargs: Any) -> None:
         _ = kwargs
-        ordering_witness["current_json_present_at_setup"] = current_json.exists()
+        ordering_witness["index_current_json_present_at_setup"] = current_json.exists()
 
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", spy_setup_global_schema)
 
-    assert not current_json.exists(), "preconditions: control-plane record absent"
+    assert not current_json.exists(), "preconditions: resolved-index record absent"
+    assert not legacy_json.exists(), "preconditions: legacy slot-index record absent"
 
     ctx = cast(Any, _plugin_ctx())
     ingestor._bind_index_at_startup(ctx)
-    ingestor._ensure_slot_index_model_at_startup(ctx)
+    ingestor._ensure_index_record_at_startup(ctx)
     ingestor._verify_schema_at_pod_startup(ctx)
 
-    assert current_json.exists(), "slot-index current.json must be written by the gate"
-    record = SlotIndexModelRecord.from_json_bytes(current_json.read_bytes())
-    assert record.model.name == "startup_v1"
+    assert current_json.exists(), "resolved-index current.json must be written by the gate"
+    assert not legacy_json.exists(), "startup must not write legacy slot_index/current.json"
+    record = ResolvedIndexRecord.from_json_bytes(current_json.read_bytes())
+    assert record.index["name"] == "startup_v1"
     assert record.recorded_by_run_id == "run-1"
-    assert ordering_witness["current_json_present_at_setup"] is True, (
-        "_setup_global_zarr_schema must be called AFTER the slot-index gate writes current.json"
+    assert ordering_witness["index_current_json_present_at_setup"] is True, (
+        "_setup_global_zarr_schema must be called AFTER the resolved-index gate writes current.json"
     )
 
 
@@ -246,6 +254,9 @@ def test_non_opt_in_plugin_bypasses_service(
     ingestor._index_binding = None
     ingestor._verify_schema_at_pod_startup(cast(Any, _plugin_ctx()))
 
+    assert not _index_current_path(tmp_path).exists(), (
+        "non-opt-in plugin must not create index/current.json"
+    )
     assert not _slot_index_current_path(tmp_path).exists(), (
         "non-opt-in plugin must not create slot_index/current.json"
     )
@@ -254,30 +265,31 @@ def test_non_opt_in_plugin_bypasses_service(
 def test_failure_before_mutation_under_cp_conflict(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A pre-seeded conflicting record causes the gate to raise before any Zarr write."""
+    """A pre-seeded conflicting resolved index raises before any Zarr write."""
     chunk_manager = _make_chunk_manager(tmp_path)
-    prior_model = SlotIndexModel(
-        name="prior_v1",
-        epoch="2026-01-01T00:00:00Z",
-        groups={"data": SlotAxis(cadence_s=1, mode="exact")},
+    prior_ingestor = _CapableIngestor(chunk_manager=chunk_manager, model_name="prior_v1")
+    prior_ctx = cast(Any, _plugin_ctx())
+    prior_ingestor._bind_index_at_startup(prior_ctx)
+    prior_record = prior_ingestor.resolved_index(prior_ctx).as_resolved_index_record(
+        run_id="prior-run"
     )
-    chunk_manager.ensure_slot_index_model(
-        product=PRODUCT_NAME, model=prior_model, run_id="prior-run"
+    chunk_manager.ensure_resolved_index(
+        product=PRODUCT_NAME, record=prior_record, run_id="prior-run"
     )
-    current_json = _slot_index_current_path(tmp_path)
+    current_json = _index_current_path(tmp_path)
     assert current_json.exists(), "precondition: prior record was seeded"
     prior_record_bytes = current_json.read_bytes()
-    prior_record = SlotIndexModelRecord.from_json_bytes(prior_record_bytes)
-    assert prior_record.identity_hash == prior_model.identity_hash
+    stored_prior_record = ResolvedIndexRecord.from_json_bytes(prior_record_bytes)
+    assert stored_prior_record.identity_hash == prior_record.identity_hash
+    assert not _slot_index_current_path(tmp_path).exists(), "precondition: no legacy record"
     pre_conflict_zarr_files = {p: p.read_bytes() for p in _zarr_metadata_files(tmp_path)}
 
     ingestor = _CapableIngestor(chunk_manager=chunk_manager, model_name="new_v1")
     ctx = cast(Any, _plugin_ctx())
     ingestor._bind_index_at_startup(ctx)
-    new_model = ingestor.resolved_index(ctx).as_legacy_slot_index_model()
-    assert new_model is not None
-    assert new_model.identity_hash != prior_model.identity_hash, (
-        "precondition: new model identity differs from prior"
+    new_record = ingestor.resolved_index(ctx).as_resolved_index_record(run_id="run-1")
+    assert new_record.identity_hash != prior_record.identity_hash, (
+        "precondition: new resolved-index identity differs from prior"
     )
     ingestor._parallel_execution_state = _ParallelExecutionState(global_expected={"data": 10})
     _patch_resolve(monkeypatch, ingestor, tmp_path)
@@ -291,8 +303,8 @@ def test_failure_before_mutation_under_cp_conflict(
 
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", fail_if_called)
 
-    with pytest.raises(SlotIndexModelConflictError):
-        ingestor._ensure_slot_index_model_at_startup(ctx)
+    with pytest.raises(ResolvedIndexConflictError):
+        ingestor._ensure_index_record_at_startup(ctx)
         ingestor._verify_schema_at_pod_startup(ctx)
 
     assert setup_witness["called"] is False
@@ -330,18 +342,22 @@ def test_failure_before_mutation_under_plugin_raise(
 
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", fail_if_called)
 
-    current_json = _slot_index_current_path(tmp_path)
-    assert not current_json.exists(), "precondition: no prior slot-index record"
+    current_json = _index_current_path(tmp_path)
+    assert not current_json.exists(), "precondition: no prior resolved-index record"
+    assert not _slot_index_current_path(tmp_path).exists(), "precondition: no legacy record"
 
     ctx = cast(Any, _plugin_ctx())
     with pytest.raises(ConfigurationError, match="plugin-induced"):
         ingestor._bind_index_at_startup(ctx)
-        ingestor._ensure_slot_index_model_at_startup(ctx)
+        ingestor._ensure_index_record_at_startup(ctx)
         ingestor._verify_schema_at_pod_startup(ctx)
 
     assert setup_witness["called"] is False
     assert not current_json.exists(), (
-        "slot-index current.json must NOT be created when the plugin raises"
+        "resolved-index current.json must NOT be created when the plugin raises"
+    )
+    assert not _slot_index_current_path(tmp_path).exists(), (
+        "legacy slot_index/current.json must NOT be created when the plugin raises"
     )
     zarr_files = _zarr_metadata_files(tmp_path)
     assert zarr_files == [], (
@@ -370,13 +386,15 @@ def test_second_call_returns_existing_record_without_rewrite(
 
     ctx = cast(Any, _plugin_ctx())
     ingestor._bind_index_at_startup(ctx)
-    ingestor._ensure_slot_index_model_at_startup(ctx)
+    ingestor._ensure_index_record_at_startup(ctx)
     ingestor._verify_schema_at_pod_startup(ctx)
-    first_record_bytes = _slot_index_current_path(tmp_path).read_bytes()
+    current_json = _index_current_path(tmp_path)
+    legacy_json = _slot_index_current_path(tmp_path)
+    first_record_bytes = current_json.read_bytes()
 
-    ingestor._ensure_slot_index_model_at_startup(ctx)
+    ingestor._ensure_index_record_at_startup(ctx)
     ingestor._verify_schema_at_pod_startup(ctx)
-    second_record_bytes = _slot_index_current_path(tmp_path).read_bytes()
+    second_record_bytes = current_json.read_bytes()
 
     assert plugin_calls["count"] == 1, (
         f"index_spec(ctx) must be called exactly once per pod, got {plugin_calls['count']}"
@@ -384,3 +402,4 @@ def test_second_call_returns_existing_record_without_rewrite(
     assert first_record_bytes == second_record_bytes, (
         "current.json must be byte-identical across repeated startup calls"
     )
+    assert not legacy_json.exists(), "startup must not write legacy slot_index/current.json"

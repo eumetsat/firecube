@@ -285,7 +285,8 @@ def test_runs_list_basename_mismatch(tmp_path: Path) -> None:
         runs = []
     else:
         json_start = next(i for i, line in enumerate(output_lines) if line.strip() == "[")
-        runs = json.loads("\n".join(output_lines[json_start:]))
+        json_text = "\n".join(output_lines[json_start:]).split("\n--- Logging error ---", 1)[0]
+        runs = json.loads(json_text)
     assert len(runs) == 1, runs
     assert runs[0]["run_id"] == "run-001"
     assert runs[0]["status"] == "started"

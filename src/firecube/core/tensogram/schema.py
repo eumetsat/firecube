@@ -21,7 +21,6 @@ from typing import Any
 
 import firecube
 
-# Archive format version.
 ARCHIVE_VERSION: str = "v1"
 
 # Message role constants (stored in firecube.role within message metadata)
@@ -49,9 +48,6 @@ def make_data_meta(
 
     Returns a dict suitable for passing to TensogramFile.append().
     """
-    # Tensogram >=0.18 metadata frames are free-form; the wire version lives in
-    # the file preamble, not here. The legacy top-level "version" key (the
-    # removed GlobalMetadata.version field from tensogram <0.18) is not written.
     meta: dict[str, Any] = {
         "base": base,
         "firecube": {

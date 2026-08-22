@@ -62,7 +62,7 @@ class _RecursionProbePlugin(DirectZarrIngestor):
                     epoch=_EPOCH,
                     cadence_s=600,
                     mode="floor",
-                    size=12,
+                    slot_count=12,
                 )
             },
         )

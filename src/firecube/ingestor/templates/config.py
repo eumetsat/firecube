@@ -70,6 +70,9 @@ def _validate_zarr_codecs(codecs: list[dict] | None) -> None:
     split_zarr_codecs(normalized_codecs)
 
     if len(codecs) == 1:
+        # A single-entry list is valid (e.g. one compressor with no serializer
+        # declared). codecs_from_list below requires a full Zarr pipeline
+        # including an ArrayBytesCodec, so skip it for the single-entry case.
         return
 
     from zarr.core.codec_pipeline import codecs_from_list

@@ -45,7 +45,7 @@ def _slot_model() -> IndexSpec:
                 epoch="2026-01-01T00:00:00Z",
                 cadence_s=1,
                 mode="exact",
-                size=1000,
+                slot_count=1000,
             )
         },
     )

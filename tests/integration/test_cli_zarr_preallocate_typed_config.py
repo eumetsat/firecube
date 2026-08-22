@@ -25,7 +25,7 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.controlplane.types import SlotIndexModelRecord
+from firecube.core.controlplane.types import ResolvedIndexRecord
 from firecube.core.index_spec import IndexSpec, RegularTimeAxis
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.registry import loader as _loader
@@ -43,6 +43,7 @@ def reset_plugin_registry() -> Iterator[None]:
     _loader._LOADED = False
     _loader.AVAILABLE_INGESTORS.clear()
     importlib.reload(importlib.import_module("direct_zarr_capable_test_plugin"))
+    _loader._LOADED = True
     yield
     _loader._LOADED = original_loaded
     _loader.AVAILABLE_INGESTORS.clear()
@@ -94,9 +95,9 @@ def _ingest_args(target_path: Path, *options: str) -> list[str]:
     return args
 
 
-def _slot_index_record(target_path: Path) -> SlotIndexModelRecord:
-    record_path = target_path / ".firecube" / "slot_index" / "current.json"
-    return SlotIndexModelRecord.from_json_bytes(record_path.read_bytes())
+def _resolved_index_record(target_path: Path) -> ResolvedIndexRecord:
+    record_path = target_path / ".firecube" / "index" / "current.json"
+    return ResolvedIndexRecord.from_json_bytes(record_path.read_bytes())
 
 
 def test_option_reaches_plugin_hook(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -156,7 +157,7 @@ def test_preallocate_and_ingest_stamp_same_model(
                     epoch="2024-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=batch_size,
+                    slot_count=batch_size,
                 )
             },
         )
@@ -180,7 +181,7 @@ def test_preallocate_and_ingest_stamp_same_model(
 
     assert preallocate_result.exit_code == 0, preallocate_result.output
     assert ingest_result.exit_code == 0, ingest_result.output
-    preallocate_record = _slot_index_record(preallocate_target)
-    ingest_record = _slot_index_record(ingest_target)
+    preallocate_record = _resolved_index_record(preallocate_target)
+    ingest_record = _resolved_index_record(ingest_target)
     assert preallocate_record.identity_hash == ingest_record.identity_hash
-    assert "300" in preallocate_record.model.name
+    assert "300" in str(preallocate_record.index["name"])

@@ -100,7 +100,7 @@ def _make_ingestor(
                         epoch="2026-01-01T00:00:00Z",
                         cadence_s=1,
                         mode="exact",
-                        size=global_expected[g],
+                        slot_count=global_expected[g],
                     )
                     for g in schema_groups
                 },

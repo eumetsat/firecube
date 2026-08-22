@@ -49,7 +49,7 @@ def _cli_index_spec(size: int) -> IndexSpec:
                 epoch="2026-01-01T00:00:00Z",
                 cadence_s=1,
                 mode="exact",
-                size=size,
+                slot_count=size,
             )
         },
     )
@@ -399,7 +399,7 @@ def test_slots_option_reaches_plugin_hook(tmp_path: Path) -> None:
                         epoch="2024-01-01T00:00:00Z",
                         cadence_s=300,
                         mode="exact",
-                        size=24,
+                        slot_count=24,
                     )
                 },
             )

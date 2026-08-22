@@ -1,5 +1,28 @@
 # Done
 
+## 2026-08-20 — IntegerAxis + ResolvedIndexRecord + firecube zarr index CLI 
+
+Added `IntegerAxis` as a second concrete `AxisSpec` alongside `RegularTimeAxis`.
+Plugins declare `IntegerAxis(size=N)` in `index_spec()` when items map to a
+zero-based integer position rather than a timestamp. A single `IndexSpec` can
+mix both axis kinds across groups.
+
+Added `ResolvedIndexRecord`: the on-disk control-plane record written to
+`.firecube/index/current.json` after the engine resolves an `IndexSpec`. The
+record stores the `identity_hash` of the resolved spec; subsequent runs verify
+the hash before writing, protecting the cube from silent schema drift.
+
+Added `firecube zarr index show/verify/rebuild` CLI commands for inspecting and
+recovering the resolved-index record. `rebuild` is the migration path for cubes
+written by Firecube v0.1.4.post1 and earlier that used the legacy slot-index
+format.
+
+Both `IntegerAxis` and `ResolvedIndexRecord` are exported from
+`firecube.core.api` and `firecube.ingestor.api`.
+
+Supersedes: 2026-08-18 DirectZarrIngestor IndexSpec clean cut (extends it with
+the integer-axis kind and the persisted record type).
+
 ## 2026-08-18 — DirectZarrIngestor IndexSpec clean cut
 
 Replaced the defective `DirectZarrSlotAllocationMixin` with a declarative

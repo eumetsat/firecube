@@ -59,7 +59,7 @@ class _TerminalPartialPlanPlugin(DirectZarrIngestor):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=950,
+                    slot_count=950,
                 )
             },
         )
@@ -101,7 +101,7 @@ class _AlignedPlanPlugin(_TerminalPartialPlanPlugin):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=1000,
+                    slot_count=1000,
                 )
             },
         )
@@ -134,14 +134,14 @@ class _MultiGroupPlanPlugin(DirectZarrIngestor):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=950,
+                    slot_count=950,
                 ),
                 "group_b": RegularTimeAxis(
                     coordinate="timestamp",
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=1000,
+                    slot_count=1000,
                 ),
             },
         )

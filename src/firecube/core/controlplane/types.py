@@ -26,7 +26,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from firecube.core.errors import ManifestError
 from firecube.core.slot_index import SlotAxis, SlotIndexModel
@@ -58,6 +58,25 @@ SLOT_INDEX_DIRNAME = "slot_index"
 SLOT_INDEX_CURRENT_FILENAME = "current.json"
 EVENT_SLOT_INDEX_MODEL_RECORDED = "slot_index_model_recorded"
 EVENT_SLOT_INDEX_MODEL_VERIFIED = "slot_index_model_verified"
+EVENT_INDEX_ENSURED = "index_ensured"
+INDEX_ENSURED_OUTCOME_CREATED = "created"
+INDEX_ENSURED_OUTCOME_MATCHED_EXISTING = "matched_existing"
+INDEX_ENSURED_OUTCOME_CONFLICT_REFUSED = "conflict_refused"
+INDEX_ENSURED_OUTCOME_REBUILT = "rebuilt"
+INDEX_ENSURED_OUTCOMES = frozenset(
+    {
+        INDEX_ENSURED_OUTCOME_CREATED,
+        INDEX_ENSURED_OUTCOME_MATCHED_EXISTING,
+        INDEX_ENSURED_OUTCOME_CONFLICT_REFUSED,
+        INDEX_ENSURED_OUTCOME_REBUILT,
+    }
+)
+
+# NOTE: legacy slot-index attrs live in core/slot_index.py alongside SlotIndexModel; resolved-index attrs live here alongside ResolvedIndexRecord. Both follow the pattern "co-locate reserved attr constants with the type that uses them".
+INDEX_DIRNAME = "index"
+INDEX_CURRENT_FILENAME = "current.json"
+RESOLVED_INDEX_ATTR = "firecube_resolved_index"
+RESOLVED_INDEX_IDENTITY_HASH_ATTR = "firecube_resolved_index_identity_hash"
 
 MAINTENANCE_OP_DELETE = "delete"
 MAINTENANCE_OP_SCRUB = "scrub"
@@ -70,6 +89,14 @@ MAINTENANCE_OPS = frozenset(
     }
 )
 MAINTENANCE_KIND = "maintenance"
+
+
+def canonical_index_bytes(index: dict[str, Any]) -> bytes:
+    """Return the canonical UTF-8 JSON encoding of a resolved-index payload."""
+
+    return json.dumps(index, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +145,53 @@ class ChunkEvent:
         if self.meta:
             payload["meta"] = dict(self.meta)
         return payload
+
+
+IndexEnsuredOutcome = Literal[
+    "created",
+    "matched_existing",
+    "conflict_refused",
+    "rebuilt",
+]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class IndexEnsuredEvent:
+    """WAL audit event for an ensured resolved index."""
+
+    run_id: str
+    product: str
+    identity_hash: str
+    axis_kinds: tuple[str, ...]
+    groups: tuple[str, ...]
+    outcome: IndexEnsuredOutcome
+    timestamp: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.axis_kinds, tuple):
+            raise TypeError(f"axis_kinds must be a tuple, got {type(self.axis_kinds).__name__}")
+        if not isinstance(self.groups, tuple):
+            raise TypeError(f"groups must be a tuple, got {type(self.groups).__name__}")
+        if self.outcome not in INDEX_ENSURED_OUTCOMES:
+            raise ValueError(
+                f"outcome must be one of {sorted(INDEX_ENSURED_OUTCOMES)!r}, got {self.outcome!r}"
+            )
+        object.__setattr__(self, "axis_kinds", tuple(sorted(self.axis_kinds)))
+        object.__setattr__(self, "groups", tuple(sorted(self.groups)))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the event to a JSON-compatible dict for WAL storage."""
+
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "run_id": self.run_id,
+            "product": self.product,
+            "identity_hash": self.identity_hash,
+            "axis_kinds": list(self.axis_kinds),
+            "groups": list(self.groups),
+            "outcome": self.outcome,
+            "timestamp": self.timestamp,
+        }
 
 
 @dataclass(slots=True)
@@ -344,6 +418,96 @@ class DeletionPlan:
     def size_gb(self) -> float:
         """Total size in gigabytes."""
         return self.total_size / (1024 * 1024 * 1024)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ResolvedIndexRecord:
+    """On-disk record for an engine-resolved index payload."""
+
+    schema_version: str = "v1"
+    recorded_at: str
+    recorded_by_run_id: str
+    identity_hash: str
+    index: dict[str, Any]
+
+    def __post_init__(self) -> None:
+        if len(self.identity_hash) != 64 or not all(
+            c in "0123456789abcdef" for c in self.identity_hash
+        ):
+            raise ValueError(
+                f"identity_hash must be a 64-character lowercase hex string, "
+                f"got {self.identity_hash!r} (length {len(self.identity_hash)})"
+            )
+
+    def to_json_bytes(self) -> bytes:
+        """Serialise to the on-disk wire format (deterministic, UTF-8 JSON)."""
+
+        payload = {
+            "schema_version": self.schema_version,
+            "recorded_at": self.recorded_at,
+            "recorded_by_run_id": self.recorded_by_run_id,
+            "identity_hash": self.identity_hash,
+            "index": self.index,
+        }
+        return json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ).encode("utf-8")
+
+    @classmethod
+    def from_json_bytes(cls, data: bytes) -> ResolvedIndexRecord:
+        """Parse and validate an on-disk resolved-index record."""
+
+        try:
+            parsed = json.loads(data)
+        except (json.JSONDecodeError, TypeError, UnicodeDecodeError, ValueError) as exc:
+            raise ManifestError(f"resolved-index record is not valid JSON: {exc}") from exc
+
+        if not isinstance(parsed, dict):
+            raise ManifestError(
+                f"resolved-index record must decode to a JSON object, got {type(parsed).__name__}"
+            )
+
+        required = {
+            "schema_version",
+            "recorded_at",
+            "recorded_by_run_id",
+            "identity_hash",
+            "index",
+        }
+        missing = required - set(parsed)
+        if missing:
+            raise ManifestError(f"resolved-index record missing required fields: {sorted(missing)}")
+
+        if parsed["schema_version"] != "v1":
+            raise ManifestError(
+                f"resolved-index record schema_version must be 'v1', got {parsed['schema_version']!r}"
+            )
+
+        try:
+            index = parsed["index"]
+            if not isinstance(index, dict):
+                raise TypeError(f"expected dict, got {type(index).__name__}")
+            recomputed = hashlib.sha256(canonical_index_bytes(index)).hexdigest()
+        except (TypeError, ValueError) as exc:
+            raise ManifestError(
+                f"resolved-index record has invalid index structure: {exc}"
+            ) from exc
+
+        stored_hash = parsed["identity_hash"]
+        if stored_hash != recomputed:
+            raise ManifestError(
+                "resolved-index record identity-hash mismatch: "
+                f"stored={stored_hash!r} recomputed={recomputed!r} "
+                "(corrupt on-disk record or tampering)"
+            )
+
+        return cls(
+            schema_version=parsed["schema_version"],
+            recorded_at=parsed["recorded_at"],
+            recorded_by_run_id=parsed["recorded_by_run_id"],
+            identity_hash=stored_hash,
+            index=index,
+        )
 
 
 @dataclass(frozen=True, slots=True)

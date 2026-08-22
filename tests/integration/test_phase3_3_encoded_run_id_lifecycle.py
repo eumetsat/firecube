@@ -59,7 +59,7 @@ class UnsafeGroupIngestor(DirectZarrIngestor):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=100,
+                    slot_count=100,
                 )
             },
         )
@@ -105,6 +105,7 @@ def reset_plugin_registry() -> Iterator[None]:
     _loader._LOADED = False
     _loader.AVAILABLE_INGESTORS.clear()
     register_ingestor(_PLUGIN)(UnsafeGroupIngestor)
+    _loader._LOADED = True
     yield
     _loader._LOADED = original_loaded
     _loader.AVAILABLE_INGESTORS.clear()

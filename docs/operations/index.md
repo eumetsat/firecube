@@ -43,6 +43,7 @@ For S3 products, configure the S3 storage settings and credentials described in
 | Configure an S3-backed ingestion | [Configure S3 Access](s3-access.md) |
 | Create an Intake catalog for a product | [Create an Intake Catalog](intake-catalog.md) |
 | Run several workers against one Zarr group | [Run Parallel Zarr Writes](parallel-zarr-writes.md) |
+| Inspect or rebuild the resolved-index record | [Inspect And Manage The Resolved Index](firecube-index.md) |
 | Inspect product state | [Inspect ChunkManager State](chunk-manager/inspect.md) |
 | Recover from a crashed run | [Recover Runs And Claims](chunk-manager/recover.md) |
 | Delete stale data or reingest a range | [Delete And Reingest](chunk-manager/delete.md) |

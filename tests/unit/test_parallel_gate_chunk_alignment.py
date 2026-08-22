@@ -42,7 +42,7 @@ class _ChunkWarningIngestor(DirectZarrIngestor):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=self._expected,
+                    slot_count=self._expected,
                 )
             },
         )

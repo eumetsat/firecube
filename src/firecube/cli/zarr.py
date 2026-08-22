@@ -24,7 +24,8 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
-from collections.abc import Sequence
+import os
+from collections.abc import Generator, Sequence
 from typing import Any
 
 import click
@@ -51,8 +52,10 @@ from firecube.cli._uri_policy import (
     parse_product_uri,
     validate_uri_storage_coherence,
 )
+from firecube.cli.index import index as index_group
 from firecube.core import observability
 from firecube.core.controlplane import ChunkManager, WriteDomain
+from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
@@ -61,11 +64,74 @@ from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
 from firecube.core.zarr.validation import validate_group_with_fs
 from firecube.ingestor.api import IngestContext, PluginContext, RuntimeIngestContext
 from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.runtime.configure import TierConfigurator
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 
 logger = logging.getLogger(__name__)
+
+
+def _warn_stderr(message: str) -> None:
+    """Write an operator warning to stderr without contaminating Click stdout capture."""
+    os.write(2, f"{message}\n".encode())
+
+
+class _WarnFilter(logging.Filter):
+    """Block WARNING+ records for a target logger and its descendants.
+
+    Thread-safe replacement for `logger.disabled = True`, which mutates a
+    shared attribute and races between CLI threads. This filter is per-instance
+    and only silences WARNING and above; DEBUG/INFO on the target logger stay
+    visible if the operator has enabled them.
+    """
+
+    def __init__(self, name: str) -> None:
+        super().__init__()
+        self._target = name
+        self._target_dot = name + "."
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.name != self._target and not record.name.startswith(self._target_dot):
+            return True
+        return record.levelno < logging.WARNING
+
+
+@contextlib.contextmanager
+def _suppress_logger_warnings(logger_name: str) -> Generator[None]:
+    """Temporarily suppress WARNING+ records that would corrupt JSON CLI output.
+
+    Attaches ``_WarnFilter`` to the target logger and to every handler along
+    the target's ancestor chain (up to and including root) because Python's
+    ``logging`` does not consult ancestor-logger filters when a descendant
+    record propagates: only handler-level filters are called on the way up.
+    Attaching at handlers is what actually blocks descendant WARNING records
+    before they reach the stderr sink that would corrupt JSON output.
+    """
+    target = logging.getLogger(logger_name)
+    flt = _WarnFilter(logger_name)
+    target.addFilter(flt)
+    handlers_touched: list[logging.Handler] = []
+    current: logging.Logger | None = target
+    while current is not None:
+        for handler in list(current.handlers):
+            handler.addFilter(flt)
+            handlers_touched.append(handler)
+        if not current.propagate:
+            break
+        current = current.parent
+    try:
+        yield
+    finally:
+        for handler in handlers_touched:
+            handler.removeFilter(flt)
+        target.removeFilter(flt)
+
+
+def _discover_ingestors_quietly() -> dict[str, type[Any]]:
+    """Discover plugins without allowing registry warnings to contaminate JSON output."""
+    with _suppress_logger_warnings("firecube.registry"):
+        return discover_ingestors()
 
 
 def _configure_ingestor_for_cli(
@@ -225,7 +291,11 @@ def slots(
     )
     chunk_manager = ChunkManager(binding=binding)
 
-    plugins = discover_ingestors()
+    plugins = (
+        ingestor_loader.AVAILABLE_INGESTORS
+        if plugin in ingestor_loader.AVAILABLE_INGESTORS
+        else _discover_ingestors_quietly()
+    )
     if plugin not in plugins:
         raise click.ClickException(f"Unknown plugin '{plugin}'.")
     ingestor_cls = plugins[plugin]
@@ -237,12 +307,13 @@ def slots(
             f"Plugin '{plugin}' does not support slot-range planning. "
             "This command is available for plugins that write Zarr stores in parallel."
         )
-    plugin_ctx = _configure_ingestor_for_cli(
-        ingestor,
-        target=target,
-        options=option,
-        run_id="zarr-slots",
-    )
+    with _suppress_logger_warnings("firecube.registry"):
+        plugin_ctx = _configure_ingestor_for_cli(
+            ingestor,
+            target=target,
+            options=option,
+            run_id="zarr-slots",
+        )
 
     try:
         ingestor._bind_index_at_startup(plugin_ctx)
@@ -252,11 +323,19 @@ def slots(
             f"Plugin '{plugin}' returned no index_spec. "
             "See the plugin's documentation for parallel-write support."
         ) from exc
-    current_record = chunk_manager.get_slot_index_model(product=identity.product_name)
+    current_record = chunk_manager.get_resolved_index(product=identity.product_name)
     if current_record is not None and current_record.identity_hash != resolved_index.identity_hash:
-        logger.warning(
-            "Plugin slot-index model differs from persisted record; "
-            "run `firecube zarr preallocate` to reconcile."
+        _warn_stderr(
+            "Plugin resolved index differs from persisted record; "
+            "run `firecube zarr index rebuild` to reconcile."
+        )
+    elif (
+        current_record is None
+        and chunk_manager.get_slot_index_model(product=identity.product_name) is not None
+    ):
+        _warn_stderr(
+            "Legacy slot-index record detected without a resolved-index record; "
+            "run `firecube zarr index rebuild` to migrate."
         )
     global_schema = {group: resolved_index.size(group) for group in resolved_index.groups}
     for group_name, expected in global_schema.items():
@@ -276,7 +355,11 @@ def slots(
 
     from firecube.ingestor.runtime.parallel_gate import warn_on_chunk_alignment
 
-    warn_on_chunk_alignment(global_schema, schema)
+    if output_format == "json":
+        with _suppress_logger_warnings("firecube.ingestor.runtime.parallel_gate"):
+            warn_on_chunk_alignment(global_schema, schema)
+    else:
+        warn_on_chunk_alignment(global_schema, schema)
 
     resolved_slot_sizes = _resolve_per_group_slot_sizes(schema, slot_size)
 
@@ -680,6 +763,8 @@ def preallocate(
     from typing import cast
 
     from firecube.core.controlplane import ChunkManager
+    from firecube.core.controlplane.manager import check_legacy_index_record
+    from firecube.core.errors import LegacyIndexRecordError
     from firecube.core.uris import storage_uri_from_target
     from firecube.core.zarr.region_writer import RegionZarrWriter
     from firecube.ingestor.api import BaseIngestor, IndexedRegionStrategy
@@ -717,7 +802,7 @@ def preallocate(
 
     chunk_manager = ChunkManager(binding=binding)
     plugin_target = identity.product_uri.to_str()
-    # Run-lifecycle bookkeeping: ``ensure_slot_index_model`` creates a
+    # Run-lifecycle bookkeeping: ``ensure_resolved_index`` creates a
     # non-terminal ``run.json`` (status=started). The command MUST drive that
     # run to a terminal state (complete/failed) before returning so the next
     # slot-range ingest is not blocked by ``ResumeGuard`` on a stuck run.
@@ -739,7 +824,7 @@ def preallocate(
             run_id="zarr-preallocate",
         )
 
-        # Resolve the plugin's slot-index model and persist it through the
+        # Resolve the plugin's index and persist it through the
         # control-plane BEFORE any Zarr array/group is created. A failure here
         # MUST happen before any store mutation so partially-initialised stores
         # cannot leak into the target on error.
@@ -752,19 +837,41 @@ def preallocate(
             ) from exc
         global_expected = {group: resolved_index.size(group) for group in resolved_index.groups}
 
-        slot_model = resolved_index.as_legacy_slot_index_model()
-        if slot_model is not None:
-            try:
-                chunk_manager.ensure_slot_index_model(
-                    product=identity.product_name,
-                    model=slot_model,
-                    run_id="preallocate",
-                )
-            except Exception as exc:
-                raise click.ClickException(
-                    f"Failed to record slot_index_model for plugin '{plugin}': {exc}"
-                ) from exc
-            _preallocate_run_created = True
+        record = resolved_index.as_resolved_index_record(run_id="preallocate")
+        try:
+            check_legacy_index_record(
+                chunk_manager,
+                product=identity.product_name,
+                plugin_name=plugin,
+            )
+        except LegacyIndexRecordError as exc:
+            raise click.ClickException(str(exc)) from exc
+        _persisted_record, outcome = chunk_manager.ensure_resolved_index(
+            product=identity.product_name,
+            record=record,
+            run_id="preallocate",
+        )
+        _preallocate_run_created = True
+        telemetry = TelemetryService(
+            observability.create_ingestion_telemetry(
+                plugin=plugin,
+                product=identity.product_name,
+                output_format="zarr",
+                write_mode=write_mode,
+                run_id="preallocate",
+            ),
+            plugin,
+        )
+        emit_index_ensured_full(
+            chunk_manager,
+            telemetry,
+            product=identity.product_name,
+            run_id="preallocate",
+            record=_persisted_record,
+            outcome=outcome,
+            logger=logger,
+        )
+        click.echo(f"resolved index: {outcome}")
 
         schema = ingestor.zarr_schema(plugin_ctx)
         all_specs = [array for group in schema for array in group.arrays]
@@ -892,7 +999,7 @@ def preallocate(
         # Terminate the preallocate run BEFORE closing the manager so the
         # terminal event reaches the WAL writer. Guarded by
         # ``_preallocate_run_created``: non-parallel plugins never call
-        # ``ensure_slot_index_model``, so no run.json exists and any terminal
+        # ``ensure_resolved_index``, so no run.json exists and any terminal
         # write would be spurious.
         try:
             if _preallocate_run_created:
@@ -1077,3 +1184,6 @@ def _emit_slots_output(output: dict[str, Any], output_format: str) -> None:
             click.echo(f"{entry['group']},{entry['slot_start']},{entry['slot_end']}")
         return
     raise click.ClickException(f"Unsupported output format: {output_format}")
+
+
+zarr.add_command(index_group, name="index")

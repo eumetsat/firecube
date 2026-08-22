@@ -160,6 +160,7 @@ nav:
       - Create an Intake Catalog: operations/intake-catalog.md
     - Zarr:
       - Run Parallel Zarr Writes: operations/parallel-zarr-writes.md
+      - Inspect And Manage The Resolved Index: operations/firecube-index.md
     - ChunkManager:
       - Overview: operations/chunk-manager/index.md
       - Inspect: operations/chunk-manager/inspect.md

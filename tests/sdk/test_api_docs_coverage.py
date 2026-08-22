@@ -93,16 +93,16 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "CatalogGroupInfo": "host integration type",
         "RegionZarrWriterProtocol": "engine writer protocol",
         "RunInfo": "control-plane type",
+        # Byte-parity legacy types superseded by IndexSpec + RegularTimeAxis;
+        # older docs versions cover this surface.
+        "SlotAxis": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",
+        "SlotIndexModel": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",
         "decode_time_array": "archive integration helper",
         "describe_control_plane": "control-plane inspection helper",
         "ensure_product_uri": "engine URI helper",
         "read_chunk_grid_with_shards": "engine chunk-grid helper",
         "require_tensogram": "optional-dependency guard",
         "resolve_dataset_target": "engine target resolution helper",
-        # Byte-parity legacy types superseded by IndexSpec + RegularTimeAxis;
-        # older docs versions cover this surface.
-        "SlotAxis": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",
-        "SlotIndexModel": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",
     },
     "firecube.ingestor.extensions": {},
 }

@@ -30,11 +30,12 @@ from typing import Any, ClassVar, cast, get_type_hints
 
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.metrics import collect_wal_metrics
+from firecube.core.controlplane.types import IndexEnsuredOutcome
 from firecube.core.filesystem import collect_filesystem_metrics
 from firecube.core.formats import discover_input_files
 from firecube.core.intake import CatalogGroupInfo
 from firecube.core.observability import create_ingestion_telemetry
-from firecube.core.observability.metrics import TelemetryService
+from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
@@ -285,6 +286,29 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     def _resolve_time_dim_name(self) -> str:
         return type(self).time_dim_name
 
+    def _emit_index_ensured_event(
+        self,
+        *,
+        ctx: PluginContext,
+        product: str,
+        run_id: str,
+        record: Any,
+        outcome: IndexEnsuredOutcome,
+    ) -> None:
+        telemetry_handle = getattr(ctx, "telemetry", None)
+        telemetry = (
+            TelemetryService(telemetry_handle, self.name) if telemetry_handle is not None else None
+        )
+        emit_index_ensured_full(
+            self._chunk_manager,
+            telemetry,
+            product=product,
+            run_id=run_id,
+            record=record,
+            outcome=outcome,
+            logger=self._log,
+        )
+
     @classmethod
     def describe_options(cls) -> dict[str, list[str]]:
         """Return structured options documentation for CLI introspection."""
@@ -327,9 +351,9 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
         self._firecube_engine = None  # Lazy init for PipelineExecutor
         self._parallel_execution_state: _ParallelExecutionState | None = None
-        # True once ensure_slot_index_model has succeeded in this pod process;
-        # fast-path in _ensure_slot_index_model_at_startup.
-        self._slot_index_model_stamped: bool = False
+        # True once the engine-owned resolved-index record has been ensured in
+        # this pod process; fast-path in _ensure_index_record_at_startup.
+        self._resolved_index_stamped: bool = False
 
     # --- BatchPlanHost Protocol Implementation ---
 
@@ -553,20 +577,30 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         """Hook: bind IndexSpec to a resolved IndexBinding at pod startup.
 
         Called on the main thread BEFORE validate_parallel_capability and
-        BEFORE _ensure_slot_index_model_at_startup. Base default sets
+        BEFORE _ensure_index_record_at_startup. Base default sets
         self._index_binding = None to clear stale state from any prior run.
 
         Templates that need pre-bound index state (currently only
         DirectZarrIngestor) override this to resolve and store their binding.
-        Anchor plan §2114.
         """
         _ = ctx
         self._index_binding = None
 
-    def _ensure_slot_index_model_at_startup(self, ctx: PluginContext) -> None:
-        """Optional lifecycle hook for per-pod slot-index model negotiation."""
+    def _ensure_index_record_at_startup(self, ctx: PluginContext) -> None:
+        """Optional lifecycle hook for per-pod resolved-index record negotiation."""
         _ = ctx
         return
+
+    def _check_legacy_index_record_at_startup(self, *, product: str, plugin_name: str) -> None:
+        """Fail when a product only has the legacy slot-index record."""
+
+        from firecube.core.controlplane.manager import check_legacy_index_record
+
+        check_legacy_index_record(
+            self._chunk_manager,
+            product=product,
+            plugin_name=plugin_name,
+        )
 
     def _validate_context_hook_signatures(self) -> None:
         """Enforce PluginContext vs RuntimeIngestContext boundary on subclass hooks.
@@ -818,7 +852,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 )
                 run_started_recorded = True
 
-                self._ensure_slot_index_model_at_startup(runtime_plugin_ctx)
+                self._ensure_index_record_at_startup(runtime_plugin_ctx)
                 self._verify_schema_at_pod_startup(runtime_plugin_ctx)
 
                 # 6. Planning

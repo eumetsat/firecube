@@ -34,7 +34,7 @@ class IndexSpecSingleGroupIngestor(DirectZarrIngestor):
                     epoch=_EPOCH,
                     cadence_s=300,
                     mode="exact",
-                    size=12,
+                    slot_count=12,
                 )
             },
         )
@@ -98,14 +98,14 @@ class IndexSpecMultiGroupIngestor(DirectZarrIngestor):
                     epoch=_EPOCH,
                     cadence_s=300,
                     mode="exact",
-                    size=12,
+                    slot_count=12,
                 ),
                 "slow": RegularTimeAxis(
                     coordinate="timestamp",
                     epoch=_EPOCH,
                     cadence_s=600,
                     mode="floor",
-                    size=6,
+                    slot_count=6,
                 ),
             },
         )
@@ -175,7 +175,7 @@ class IndexSpecCustomTimeDimIngestor(DirectZarrIngestor):
                     epoch=_EPOCH,
                     cadence_s=60,
                     mode="exact",
-                    size=5,
+                    slot_count=5,
                 )
             },
         )

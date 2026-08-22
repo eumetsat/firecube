@@ -56,6 +56,8 @@ OPERATOR_FACING_PATHS: frozenset[tuple[str, ...]] = frozenset(
         ("archive", "validate"),
         ("archive", "list"),
         ("catalog", "intake"),
+        ("zarr", "index", "show"),
+        ("zarr", "index", "verify"),
     }
 )
 
