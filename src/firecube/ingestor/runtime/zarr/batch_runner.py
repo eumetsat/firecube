@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Batch-execution helpers for GenericZarrIngestor._process_batch (§22 facade thinning).
+"""Batch-execution helpers for GenericZarrIngestor._process_batch.
 
 Each helper extracts one inline responsibility from _process_batch, matching
-the §4a service decomposition precedent (append_services.py + append.py).
+the service decomposition pattern used by append_services.py + append.py.
 """
 
 from __future__ import annotations

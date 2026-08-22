@@ -19,7 +19,7 @@ def _make_resolved(cadence_s: int = 600, size: int = 10, group: str = "data"):
         name="v1",
         groups={
             group: RegularTimeAxis(
-                coordinate="timestamp", epoch=_EPOCH, cadence_s=cadence_s, size=size
+                coordinate="timestamp", epoch=_EPOCH, cadence_s=cadence_s, slot_count=size
             )
         },
     )
@@ -84,8 +84,12 @@ def test_filter_multi_group_requires_slot_group():
     spec = IndexSpec(
         name="v1",
         groups={
-            "fast": RegularTimeAxis(coordinate="timestamp", epoch=_EPOCH, cadence_s=300, size=12),
-            "slow": RegularTimeAxis(coordinate="timestamp", epoch=_EPOCH, cadence_s=600, size=6),
+            "fast": RegularTimeAxis(
+                coordinate="timestamp", epoch=_EPOCH, cadence_s=300, slot_count=12
+            ),
+            "slow": RegularTimeAxis(
+                coordinate="timestamp", epoch=_EPOCH, cadence_s=600, slot_count=6
+            ),
         },
     )
     resolved = resolve_index_spec(spec, time_dim_name="timestamp")

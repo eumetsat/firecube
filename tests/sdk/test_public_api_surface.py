@@ -41,7 +41,9 @@ _REMOVED_INGESTOR_API: tuple[str, ...] = (
 )
 
 _KEPT_CORE_API: tuple[str, ...] = (
+    "IntegerAxis",
     "RegionZarrWriterProtocol",
+    "ResolvedIndexRecord",
     "SlotAxis",
     "SlotIndexModel",
     "decode_time_array",
@@ -51,7 +53,12 @@ _KEPT_CORE_API: tuple[str, ...] = (
     "read_chunk_grid_with_shards",
 )
 
-_KEPT_INGESTOR_API: tuple[str, ...] = ("RuntimeIngestContext", "verify_dim_compatibility")
+_KEPT_INGESTOR_API: tuple[str, ...] = (
+    "IntegerAxis",
+    "ResolvedIndexRecord",
+    "RuntimeIngestContext",
+    "verify_dim_compatibility",
+)
 
 
 @pytest.mark.parametrize("name", _REMOVED_CORE_API)

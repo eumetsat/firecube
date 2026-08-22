@@ -157,7 +157,7 @@ def test_cli_preallocate_rejects_existing_smaller_horizon(
                     epoch="2024-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=GROWN_HORIZON,
+                    slot_count=GROWN_HORIZON,
                 )
             },
         )

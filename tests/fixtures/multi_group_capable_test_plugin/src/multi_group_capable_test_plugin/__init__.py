@@ -55,7 +55,7 @@ class MultiGroupCapableTestIngestor(DirectZarrIngestor):
             epoch="2024-01-01T00:00:00Z",
             cadence_s=1,
             mode="exact",
-            size=1000,
+            slot_count=1000,
         )
         return IndexSpec(
             name="multi_group_capable_fixture_v2",
@@ -73,7 +73,6 @@ class MultiGroupCapableTestIngestor(DirectZarrIngestor):
             return None
         return ItemInfo(
             coordinate=dt.datetime(2024, 1, 1, tzinfo=dt.UTC) + dt.timedelta(seconds=timestamp_val),
-            group=group,
         )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:

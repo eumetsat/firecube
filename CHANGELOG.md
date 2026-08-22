@@ -9,6 +9,23 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- `IntegerAxis` axis type for `IndexSpec`: declare a zero-based integer axis
+  with a fixed `slot_count` when items map to an integer position rather than a
+  timestamp. Importable from `firecube.core.api` and `firecube.ingestor.api`.
+  A single `IndexSpec` can mix `IntegerAxis` and `RegularTimeAxis` groups.
+- `ResolvedIndexRecord`: on-disk control-plane record written to
+  `.firecube/index/current.json` after the engine resolves an `IndexSpec`.
+  Stores the `identity_hash` of the resolved spec; subsequent runs verify the
+  hash before writing. Importable from `firecube.core.api` and
+  `firecube.ingestor.api`.
+- `firecube zarr index` CLI command group with three subcommands:
+  - `firecube zarr index show --target <uri> --product-name <name>` — print the
+    current resolved-index record; add `--json` for machine-readable output.
+  - `firecube zarr index verify --target <uri> --product-name <name>` — confirm the
+    record can be read and is not a legacy format.
+  - `firecube zarr index rebuild --target <uri> --plugin <name> --product-name <name>`
+    — regenerate the record from a plugin's `index_spec()` declaration.
+    Use this to migrate cubes written by Firecube v0.1.4.post1 and earlier.
 - Per-topic API reference pages (templates, hooks, context, exceptions,
   slot-range parallelism, extensions, core utilities) behind a Reference
   overview, each opening with a summary table. Coverage now includes the full
@@ -53,6 +70,7 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Changed
 
+- `ResolvedIndexConflictError` message now includes a field-level diff (groups symmetric difference, per-group axis changes, top-level name/scalar changes) alongside the two truncated hashes -- no more hash-only conflict messages.
 - `docstring_style` pinned to `google` in `mkdocs.yml`; numpy-style docstrings
   converted to match.
 - CI test lanes follow `plans/TESTING_STANDARDS.md`: the `test` job excludes
@@ -83,8 +101,30 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Removed
 
+- Removed unused `ItemInfo.key` and `ItemInfo.group` fields. These were placeholders.
 - `docs/reference/api.md` and `docs/reference/advanced-plugin-api.md`, replaced
   by the per-topic pages; deep links to their headings no longer resolve.
+- `SUPPORTS_SLOT_RANGE_PARALLELISM` class variable and the `SlotRangeCapable`
+  Protocol/mixin: DirectZarr parallelism is now declared exclusively via
+  `index_spec(ctx) -> IndexSpec | None`. Plugins that still inherit from
+  `SlotRangeCapable` should drop the base class and set `PRODUCT_NAME` explicitly.
+- `slot_index_model()` hook on `BaseIngestor`: replaced by `index_spec()`.
+  The legacy `SlotIndexModel` record is still readable for backwards
+  compatibility with cubes written by v0.1.4.post1 (see `firecube zarr index
+  rebuild` to migrate).
+- `timestamp_to_ts_index()` hook: engine-owned slot resolution now handles
+  timestamp→slot mapping via `IndexSpec`'s `resolve_index_spec`.
+- `global_expected_time_count()` hook: derivable from `IndexSpec` groups
+  directly; no plugin-side callback needed.
+- `filter_items_to_slot_range()` hook: replaced by
+  `firecube.ingestor.runtime.index_binding.filter_items_by_index`, called by
+  the engine after `IndexSpec` resolution.
+
+Migration for 0.1.4.post1 plugins: remove all six symbols from your plugin
+class, implement `index_spec()` returning an `IndexSpec`, and implement
+`inspect_item(item, ctx) -> ItemInfo | None` for the engine to place each
+item in the resolved index. See `docs/operations/firecube-index.md` for
+the migration procedure including `firecube zarr index rebuild`.
 
 ## [0.1.4.post1] - 2026-07-24
 

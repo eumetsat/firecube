@@ -4,15 +4,15 @@ Plugin authors declare an ``IndexSpec`` describing the time-axis structure of
 their product. The engine resolves it once into a ``ResolvedIndex`` (see
 ``firecube.core.index_resolve``) and caches it for the run.
 
-Only ``RegularTimeAxis`` is currently shipped. Additional axis types are
-planned as additive extensions in future releases.
+``RegularTimeAxis`` and ``IntegerAxis`` are currently shipped. Additional axis
+types are planned as additive extensions in future releases.
 """
 
 from __future__ import annotations
 
-from collections.abc import Hashable, Mapping
+import numbers
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from numbers import Integral
 from typing import Any, Literal
 
 from firecube.core.slot_index import (
@@ -25,10 +25,10 @@ from firecube.core.slot_index import (
 class AxisSpec:
     """Marker base for axis specifications.
 
-    ``RegularTimeAxis`` is the only current implementation. Additional axis
-    types are planned as additive extensions in future releases. The resolver
-    in ``index_resolve.py`` dispatches on ``isinstance`` -- no abstract methods
-    are required here.
+    ``RegularTimeAxis`` and ``IntegerAxis`` are the current implementations.
+    Additional axis types are planned as additive extensions in future
+    releases. The resolver in ``index_resolve.py`` dispatches on
+    ``isinstance`` -- no abstract methods are required here.
     """
 
 
@@ -44,16 +44,17 @@ class RegularTimeAxis(AxisSpec):
         mode: Alignment mode. ``"exact"`` requires timestamps to fall exactly
             on slot boundaries; ``"floor"`` maps each timestamp to the nearest
             preceding boundary.
-        end: Optional UTC-explicit ISO 8601 string for the axis end (exclusive).
-            Must be aligned to the cadence and strictly after ``epoch``.
-            At most one of ``end`` and ``size`` may be set.
-        size: Optional number of slots. Must be positive.
-            At most one of ``end`` and ``size`` may be set.
+        end_date: Optional UTC-explicit ISO 8601 string for the axis end
+            (exclusive). Must be aligned to the cadence and strictly after
+            ``epoch``. At most one of ``end_date`` and ``slot_count`` may
+            be set.
+        slot_count: Optional total number of slots. Must be positive.
+            At most one of ``end_date`` and ``slot_count`` may be set.
 
     Note:
-        Both ``end`` and ``size`` may be ``None`` for serial-mode plugins that
-        do not declare a fixed horizon. The parallel gate will raise
-        ``ConfigurationError`` if it cannot determine the extent.
+        Both ``end_date`` and ``slot_count`` may be ``None`` for serial-mode
+        plugins that do not declare a fixed horizon. The parallel gate will
+        raise ``ConfigurationError`` if it cannot determine the extent.
     """
 
     coordinate: str
@@ -68,14 +69,37 @@ class RegularTimeAxis(AxisSpec):
     mode: Literal["exact", "floor"] = "exact"
     """Alignment mode: ``"exact"`` or ``"floor"``."""
 
-    end: str | None = None
-    """Optional UTC-explicit ISO 8601 end string (exclusive, cadence-aligned)."""
+    end_date: str | None = None
+    """UTC-explicit ISO 8601 timestamp for the axis end (exclusive).
 
-    size: int | None = None
-    """Optional number of slots (positive integer)."""
+    The last written slot's left edge is at ``end_date - cadence_s``; the axis
+    covers the half-open interval ``[epoch, end_date)``.
+
+    Must be strictly after ``epoch`` and aligned to ``cadence_s`` (i.e.
+    ``(end_date - epoch)`` must be a whole multiple of ``cadence_s``).
+    Misalignment raises ``ValueError`` with the two nearest aligned
+    boundaries in the error message.
+
+    Mutually exclusive with ``slot_count``. Leave both ``None`` for
+    serial-mode plugins without a fixed horizon.
+    """
+
+    slot_count: int | None = None
+    """Total number of slots on the axis (positive integer).
+
+    Equivalent to ``(end_date - epoch) // cadence_s`` when ``end_date`` is
+    provided instead; the two spellings are algebraically identical, pick
+    whichever expresses the product horizon most naturally.
+
+    Sets the shape of the time dimension in the preallocated Zarr store:
+    time-indexed arrays are created with shape ``(slot_count, ...)``.
+
+    Mutually exclusive with ``end_date``. Leave both ``None`` for
+    serial-mode plugins without a fixed horizon.
+    """
 
     def __post_init__(self) -> None:
-        if not isinstance(self.cadence_s, Integral) or isinstance(self.cadence_s, bool):
+        if not isinstance(self.cadence_s, numbers.Integral) or isinstance(self.cadence_s, bool):
             raise TypeError(
                 "cadence_s must be an integral type (int or numpy.integer); "
                 f"got {type(self.cadence_s).__name__!r}"
@@ -89,17 +113,18 @@ class RegularTimeAxis(AxisSpec):
 
         epoch_s = _utc_explicit_epoch_s(self.epoch, "epoch")
 
-        if self.end is not None and self.size is not None:
+        if self.end_date is not None and self.slot_count is not None:
             raise ValueError(
-                "at most one of end/size may be set; "
+                "at most one of end_date/slot_count may be set; "
                 "leave both None for serial-mode without a fixed horizon"
             )
 
-        if self.end is not None:
-            end_s = _utc_explicit_epoch_s(self.end, "end")
+        if self.end_date is not None:
+            end_s = _utc_explicit_epoch_s(self.end_date, "end_date")
             if end_s <= epoch_s:
                 raise ValueError(
-                    f"end must be strictly after epoch; epoch={self.epoch!r}, end={self.end!r}"
+                    f"end_date must be strictly after epoch; "
+                    f"epoch={self.epoch!r}, end_date={self.end_date!r}"
                 )
             remainder = (end_s - epoch_s) % self.cadence_s
             if remainder != 0:
@@ -107,12 +132,38 @@ class RegularTimeAxis(AxisSpec):
                 nearest_lo = epoch_s_to_iso(epoch_s + floor_count * self.cadence_s)
                 nearest_hi = epoch_s_to_iso(epoch_s + (floor_count + 1) * self.cadence_s)
                 raise ValueError(
-                    f"end is not aligned to cadence_s={self.cadence_s}; "
+                    f"end_date is not aligned to cadence_s={self.cadence_s}; "
                     f"nearest aligned boundaries are {nearest_lo!r} and {nearest_hi!r}"
                 )
 
-        if self.size is not None and self.size <= 0:
-            raise ValueError(f"size must be positive; got {self.size}")
+        if self.slot_count is not None and self.slot_count <= 0:
+            raise ValueError(f"slot_count must be positive; got {self.slot_count}")
+
+
+@dataclass(frozen=True, kw_only=True)
+class IntegerAxis(AxisSpec):
+    """A zero-based integer axis with a fixed slot count.
+
+    Args:
+        slot_count: Total number of integer positions on the axis
+            (positive integer). Sets the shape of the axis dimension
+            in the preallocated Zarr store: arrays indexed by this
+            axis are created with shape ``(slot_count, ...)``.
+    """
+
+    slot_count: int
+    """Total number of integer positions on the axis (positive integer)."""
+
+    def __post_init__(self) -> None:
+        if isinstance(self.slot_count, bool) or not isinstance(self.slot_count, numbers.Integral):
+            raise TypeError(
+                "slot_count must be an integral type (Python int or numpy.integer subclass); "
+                f"bool is explicitly rejected. Got: {type(self.slot_count).__name__}"
+                f"({self.slot_count!r})"
+            )
+        object.__setattr__(self, "slot_count", int(self.slot_count))
+        if self.slot_count < 1:
+            raise ValueError(f"slot_count must be >= 1, got {self.slot_count!r}")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -132,7 +183,7 @@ class IndexSpec:
         ...     coordinate="time",
         ...     epoch="2024-01-01T00:00:00Z",
         ...     cadence_s=600,
-        ...     size=1008,
+        ...     end_date="2024-01-08T00:00:00Z",  # or slot_count=1008
         ... )
         >>> spec = IndexSpec(name="my_product_v1", groups={"data": axis})
     """
@@ -174,27 +225,17 @@ class IndexSpec:
 class ItemInfo:
     """Metadata returned by ``inspect_item`` describing a single source item.
 
-    All fields are optional. The engine uses ``coordinate`` to map the item
-    to a time-slot index; ``key`` and ``group`` are available for plugins that
-    need to route items to specific groups or use a non-default key.
+    The engine uses ``coordinate`` to map the item to a position on its
+    assigned axis.
 
     Args:
-        coordinate: The item's time coordinate value (e.g. a UTC ISO string,
-            ``datetime``, or ``numpy.datetime64``). Used by the resolver to
-            compute ``ts_index``.
-        key: Optional hashable key for deduplication or routing.
-        group: Optional group name override. When set, the engine routes this
-            item to the named group only.
+        coordinate: The item's coordinate value. For ``RegularTimeAxis`` this
+            is a UTC-explicit timestamp. For ``IntegerAxis`` this is an integer
+            coordinate.
     """
 
     coordinate: Any = None
-    """Time coordinate value for slot-index resolution."""
-
-    key: Hashable | None = None
-    """Optional hashable key for deduplication or routing."""
-
-    group: str | None = None
-    """Optional group name override."""
+    """Coordinate value used by the resolver to compute a position."""
 
 
 def _utc_explicit_epoch_s(value: str, field_name: str) -> int:

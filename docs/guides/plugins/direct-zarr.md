@@ -66,7 +66,7 @@ class MyPlugin(DirectZarrIngestor):
                     coordinate="timestamp",
                     epoch="2024-01-01T00:00:00Z",
                     cadence_s=600,
-                    size=1008,
+                    end_date="2024-01-08T00:00:00Z",
                 ),
             },
         )
@@ -141,6 +141,113 @@ uv run firecube ingest my_plugin \
 ```
 
 The run should create the target store, write the declared arrays, and report no schema or index errors.
+
+## Integer Axis
+
+Use `IntegerAxis` when items map to a zero-based integer position rather than a
+timestamp. The axis has a fixed size and no epoch or cadence.
+
+```python
+from firecube.ingestor.api import (
+    DirectZarrIngestor,
+    IndexSpec,
+    IntegerAxis,
+    ItemInfo,
+    PipelineBatch,
+    PluginContext,
+    WriteIntent,
+    ZarrArraySpec,
+    ZarrGroupSpec,
+    register_ingestor,
+)
+from typing import ClassVar
+
+
+@register_ingestor("my_integer_plugin")
+class MyIntegerPlugin(DirectZarrIngestor):
+    PRODUCT_NAME: ClassVar[str] = "my_integer_product"
+
+    def index_spec(self, ctx: PluginContext) -> IndexSpec | None:
+        _ = ctx
+        return IndexSpec(
+            name="my_integer_product_v1",
+            groups={
+                "data": IntegerAxis(slot_count=256),
+            },
+        )
+
+    def inspect_item(self, item: object, ctx: PluginContext) -> ItemInfo | None:
+        # Return the integer position as the coordinate.
+        position: int = ...  # derive from item
+        return ItemInfo(coordinate=position)
+
+    def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
+        n = self.resolved_index(ctx).size("data")
+        return [
+            ZarrGroupSpec(
+                group="data",
+                arrays=[
+                    ZarrArraySpec(
+                        name="value",
+                        shape=(n,),
+                        dtype="float32",
+                        chunks=(32,),
+                        dimension_names=("index",),
+                    ),
+                ],
+            )
+        ]
+
+    def build_write_intents(
+        self,
+        batch: PipelineBatch,
+        ctx: PluginContext,
+    ) -> list[WriteIntent]:
+        intents: list[WriteIntent] = []
+        for item in batch.items:
+            info = self.inspect_item(item, ctx)
+            if info is None:
+                continue
+            idx = self.resolved_index(ctx).position("data", info.coordinate)
+            intents.append(
+                WriteIntent.slot(
+                    group="data",
+                    array="value",
+                    index=idx,
+                    data=...,
+                )
+            )
+        return intents
+```
+
+### Mixed Axes
+
+A single `IndexSpec` can mix `IntegerAxis` and `RegularTimeAxis` groups. Each
+group resolves its own axis independently.
+
+```python
+from firecube.ingestor.api import IndexSpec, IntegerAxis, RegularTimeAxis
+
+
+def index_spec(self, ctx):
+    return IndexSpec(
+        name="my_mixed_product_v1",
+        groups={
+            "data": RegularTimeAxis(
+                coordinate="timestamp",
+                epoch="2024-01-01T00:00:00Z",
+                cadence_s=600,
+                end_date="2024-01-08T00:00:00Z",
+            ),
+            "lookup": IntegerAxis(slot_count=64),
+        },
+    )
+```
+
+Use `resolved_index(ctx).size("data")` and `resolved_index(ctx).size("lookup")`
+separately in `zarr_schema`. Use `resolved_index(ctx).position("data", stamp)`
+for the time group and `resolved_index(ctx).position("lookup", integer_key)` for
+the integer group.
 
 ## Common Mistakes
 

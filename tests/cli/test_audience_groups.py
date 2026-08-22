@@ -59,10 +59,19 @@ def test_every_top_level_group_has_audience(name: str, group: click.Group) -> No
 
 
 def test_user_facing_groups_have_no_operator_only_leaves() -> None:
+    """Nested subgroups own their own audience.
+
+    This check enforces audience consistency only at the direct-child level
+    of a top-level group; commands in nested subgroups (path depth > 2) are
+    classified by their own path entry.
+    """
+
     for name, audience in GROUP_AUDIENCE.items():
         if audience != "user":
             continue
-        operator_leaves = sorted(path for path in OPERATOR_FACING_PATHS if path and path[0] == name)
+        operator_leaves = sorted(
+            path for path in OPERATOR_FACING_PATHS if path and path[0] == name and len(path) == 2
+        )
         assert not operator_leaves, (
             f"User-facing group {name!r} contains operator-facing leaves: "
             f"{operator_leaves}. Either reclassify the group or move the leaves."
@@ -70,10 +79,18 @@ def test_user_facing_groups_have_no_operator_only_leaves() -> None:
 
 
 def test_operator_facing_groups_have_no_user_only_leaves() -> None:
+    """Nested subgroups own their own audience.
+
+    Mirror of the user-facing check above: only direct children of a
+    top-level group must match the group's audience.
+    """
+
     for name, audience in GROUP_AUDIENCE.items():
         if audience != "operator":
             continue
-        user_leaves = sorted(path for path in USER_FACING_PATHS if path and path[0] == name)
+        user_leaves = sorted(
+            path for path in USER_FACING_PATHS if path and path[0] == name and len(path) == 2
+        )
         assert not user_leaves, (
             f"Operator-facing group {name!r} contains user-facing leaves: "
             f"{user_leaves}. Either reclassify the group or move the leaves."

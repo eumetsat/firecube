@@ -81,3 +81,33 @@ class SlotIndexModelClaimTimeoutError(SlotIndexModelError):
     claim before its timeout elapses, typically because another writer is
     mid-negotiation and has not yet released its claim.
     """
+
+
+class ResolvedIndexError(FirecubeError):
+    """Base class for resolved-index persistence and claim failures."""
+
+
+class ResolvedIndexConflictError(ResolvedIndexError):
+    """A different resolved index is already recorded for this product.
+
+    Raised when an incoming resolved-index record's ``identity_hash`` does not
+    match the hash already persisted in the control plane. Callers should include
+    a field-level diff in the message so operators can see the incompatible
+    groups, axis fields, and hashes without opening the record files manually.
+    """
+
+
+class ResolvedIndexClaimTimeoutError(ResolvedIndexError):
+    """Failed to observe resolved-index convergence within the retry budget."""
+
+
+class LegacyIndexRecordError(ResolvedIndexError):
+    """A legacy ``.firecube/slot_index/current.json`` record was found without ``.firecube/index/current.json``.
+
+    Raised at startup when the cube was previously written by a firecube
+    version that predates the resolved-index record and the record has not
+    yet been produced. The operator must migrate the cube by re-resolving the
+    index, typically via ``firecube zarr index rebuild``. Continuing silently would
+    let firecube stamp a fresh resolved-index record that could disagree with
+    the legacy partitioning of already-written data.
+    """

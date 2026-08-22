@@ -89,9 +89,12 @@ def test_runs_list_json_includes_slot_fields(tmp_path: Path) -> None:
     try:
         runs = json.loads(result.output)
     except json.JSONDecodeError:
-        json_start = result.output.rfind("\n[")
-        assert json_start != -1, result.output
-        runs = json.loads(result.output[json_start + 1 :])
+        if "\n--- Logging error ---" in result.output:
+            runs = json.loads(result.output.split("\n--- Logging error ---", 1)[0])
+        else:
+            json_start = result.output.rfind("\n[")
+            assert json_start != -1, result.output
+            runs = json.loads(result.output[json_start + 1 :])
     runs_by_id = {run["run_id"]: run for run in runs}
 
     assert runs_by_id["run-slot"]["slot_range"] == [100, 200]

@@ -19,6 +19,7 @@ Plugins should import from this module rather than accessing core internals dire
 
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane import RunInfo, describe_control_plane
+from firecube.core.controlplane.types import ResolvedIndexRecord
 from firecube.core.filesystem import (
     create_filesystem_for_uri,
     delete_path,
@@ -35,7 +36,7 @@ from firecube.core.formats import (
     rename_time_dim,
 )
 from firecube.core.index_resolve import ResolvedIndex, coerce_to_epoch_s, resolve_index_spec
-from firecube.core.index_spec import AxisSpec, IndexSpec, ItemInfo, RegularTimeAxis
+from firecube.core.index_spec import AxisSpec, IndexSpec, IntegerAxis, ItemInfo, RegularTimeAxis
 from firecube.core.intake import CatalogGroupInfo
 from firecube.core.product import ensure_product_uri, resolve_dataset_target
 from firecube.core.slot_index import (
@@ -60,10 +61,12 @@ __all__ = [
     "AxisSpec",
     "CatalogGroupInfo",
     "IndexSpec",
+    "IntegerAxis",
     "ItemInfo",
     "RegionZarrWriterProtocol",
     "RegularTimeAxis",
     "ResolvedIndex",
+    "ResolvedIndexRecord",
     "RunInfo",
     "SlotAxis",
     "SlotIndexModel",

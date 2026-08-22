@@ -58,7 +58,7 @@ class _IntegrationPlugin(DirectZarrIngestor):
                     epoch=_EPOCH,
                     cadence_s=600,
                     mode="exact",
-                    size=10,
+                    slot_count=10,
                 )
             },
         )

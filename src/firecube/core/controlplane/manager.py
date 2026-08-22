@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 # pyright: reportCallIssue=false, reportAttributeAccessIssue=false
+import hashlib
 import json
 import logging
 import random
@@ -24,7 +25,7 @@ import time
 from collections.abc import Callable, Generator, Iterable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane.deletion import DeletionEngine
@@ -32,6 +33,10 @@ from firecube.core.controlplane.repo import ManifestRepository
 from firecube.core.controlplane.types import (
     EVENT_SLOT_INDEX_MODEL_RECORDED,
     EVENT_SLOT_INDEX_MODEL_VERIFIED,
+    INDEX_CURRENT_FILENAME,
+    INDEX_DIRNAME,
+    RESOLVED_INDEX_ATTR,
+    RESOLVED_INDEX_IDENTITY_HASH_ATTR,
     SLOT_INDEX_CURRENT_FILENAME,
     SLOT_INDEX_DIRNAME,
     AbandonSweepResult,
@@ -39,14 +44,20 @@ from firecube.core.controlplane.types import (
     ClaimInfo,
     ClearSweepResult,
     DeletionPlan,
+    IndexEnsuredEvent,
+    ResolvedIndexRecord,
     RunInfo,
     SlotIndexModelRecord,
     SpanCoverage,
     WriteDomain,
+    canonical_index_bytes,
 )
 from firecube.core.errors import (
     ClaimConflictError,
+    LegacyIndexRecordError,
     ManifestError,
+    ResolvedIndexClaimTimeoutError,
+    ResolvedIndexConflictError,
     SlotIndexModelClaimTimeoutError,
     SlotIndexModelConflictError,
     SlotIndexUnmanagedStoreError,
@@ -122,6 +133,66 @@ def _dedupe_active_spans(chunks: list[ChunkInfo]) -> list[ChunkInfo]:
         if winners.get(key) == str(meta.get("run_id", "")):
             deduped.append(chunk)
     return deduped
+
+
+def _json_repr(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _group_axis_summary(group_payload: Any) -> dict[str, Any]:
+    if not isinstance(group_payload, dict):
+        return {"kind": None, "size": None, "params": group_payload}
+    return {
+        "kind": group_payload.get("kind"),
+        "size": group_payload.get("size"),
+        "params": group_payload.get("params", {}),
+    }
+
+
+def _format_resolved_index_diff(stored: dict[str, Any], incoming: dict[str, Any]) -> str:
+    """Format a field-level diff between two resolved-index payloads."""
+
+    lines = ["resolved index field diff:"]
+
+    for field in ("schema_version", "name"):
+        stored_value = stored.get(field)
+        incoming_value = incoming.get(field)
+        if stored_value != incoming_value:
+            lines.append(
+                f"- {field}: stored={_json_repr(stored_value)} "
+                f"incoming={_json_repr(incoming_value)}"
+            )
+
+    stored_groups_raw = stored.get("groups", {})
+    incoming_groups_raw = incoming.get("groups", {})
+    stored_groups = stored_groups_raw if isinstance(stored_groups_raw, dict) else {}
+    incoming_groups = incoming_groups_raw if isinstance(incoming_groups_raw, dict) else {}
+    stored_group_names = set(stored_groups)
+    incoming_group_names = set(incoming_groups)
+    only_stored = sorted(stored_group_names - incoming_group_names)
+    only_incoming = sorted(incoming_group_names - stored_group_names)
+    if only_stored:
+        lines.append(f"- groups.only_in_stored={_json_repr(only_stored)}")
+    if only_incoming:
+        lines.append(f"- groups.only_in_incoming={_json_repr(only_incoming)}")
+
+    for group in sorted(stored_group_names & incoming_group_names):
+        stored_axis = _group_axis_summary(stored_groups[group])
+        incoming_axis = _group_axis_summary(incoming_groups[group])
+        for field in ("kind", "size", "params"):
+            stored_value = stored_axis.get(field)
+            incoming_value = incoming_axis.get(field)
+            if stored_value != incoming_value:
+                lines.append(
+                    f"- group {group!r}.{field}: stored={_json_repr(stored_value)} "
+                    f"incoming={_json_repr(incoming_value)}"
+                )
+
+    stored_hash = hashlib.sha256(canonical_index_bytes(stored)).hexdigest()[:16]
+    incoming_hash = hashlib.sha256(canonical_index_bytes(incoming)).hexdigest()[:16]
+    lines.append(f"stored_hash={stored_hash}")
+    lines.append(f"incoming_hash={incoming_hash}")
+    return "\n".join(lines)
 
 
 class ChunkManager:
@@ -385,6 +456,17 @@ class ChunkManager:
             expected_time_count=expected_time_count,
             meta=meta,
         )
+
+    def record_index_ensured_event(self, event: IndexEnsuredEvent) -> None:
+        """Record an ``index_ensured`` audit event summarising the resolved index.
+
+        Fired once at DirectZarr pod startup and once per ``firecube zarr index
+        rebuild`` invocation. The payload carries only ``identity_hash``,
+        ``axis_kinds``, ``groups`` and ``outcome`` — never the full resolved
+        payload — so operators can correlate WAL entries with telemetry without
+        duplicating the on-disk record.
+        """
+        self.repo.record_index_ensured_event(event)
 
     def discover_manifests(self) -> list[str]:
         """Scan the workspace for products with control-plane roots."""
@@ -672,6 +754,171 @@ class ChunkManager:
                 result.skipped_missing.append(claim.domain)
         return result
 
+    # ------------------------------------------------------------------
+    # Resolved index: control-plane authoritative current.json.
+    # ------------------------------------------------------------------
+
+    def get_resolved_index(self, *, product: str) -> ResolvedIndexRecord | None:
+        """Read the stored resolved-index record, or ``None`` if absent."""
+
+        control_root_uri = self.repo.get_control_root_uri(product)
+        _fs, control_root = self.repo._get_fs(control_root_uri)
+        current_json = control_root.join(INDEX_DIRNAME).join(INDEX_CURRENT_FILENAME)
+        try:
+            with _fs.open(current_json, "rb") as fh:
+                data = fh.read()
+        except FileNotFoundError:
+            return None
+        return ResolvedIndexRecord.from_json_bytes(data)
+
+    def ensure_resolved_index(
+        self,
+        *,
+        product: str,
+        record: ResolvedIndexRecord,
+        run_id: str | None = None,
+        max_retries: int = 5,
+        initial_backoff_s: float = 0.1,
+    ) -> tuple[ResolvedIndexRecord, Literal["created", "matched_existing"]]:
+        """Ensure ``.firecube/index/current.json`` matches ``record``.
+
+        This is the engine's resolved-index API. It uses a dedicated
+        ``resolved_index:current`` write claim and implements the fresh-store
+        and matched-existing precedence needed for startup negotiation.
+        """
+
+        if run_id is not None and run_id != record.recorded_by_run_id:
+            raise ValueError(
+                "run_id must match record.recorded_by_run_id: "
+                f"run_id={run_id!r} recorded_by_run_id={record.recorded_by_run_id!r}"
+            )
+        if not record.recorded_by_run_id:
+            raise ValueError("recorded_by_run_id must be non-empty")
+        domain = WriteDomain(product=product, category="resolved_index", name="current")
+        backoff = float(initial_backoff_s)
+        for attempt in range(int(max_retries) + 1):
+            try:
+                with self.acquire_claim(
+                    product=product, domain=domain, owner_id=record.recorded_by_run_id
+                ):
+                    return self._apply_resolved_index_precedence(product, record)
+            except ClaimConflictError:
+                cp_record = self.get_resolved_index(product=product)
+                if cp_record is not None and cp_record.identity_hash != record.identity_hash:
+                    self._record_conflict_refused_index_ensured_event(
+                        product=product,
+                        record=record,
+                    )
+                    raise ResolvedIndexConflictError(
+                        "concurrent write detected with incompatible resolved index: "
+                        f"stored={cp_record.identity_hash[:16]} "
+                        f"declared={record.identity_hash[:16]}"
+                    ) from None
+                if cp_record is not None:
+                    return cp_record, "matched_existing"
+                if attempt == int(max_retries):
+                    raise ResolvedIndexClaimTimeoutError(
+                        f"resolved_index claim held for >{max_retries} retries; "
+                        "current.json convergence not observed within retry budget"
+                    ) from None
+                time.sleep(backoff + random.random() * backoff)
+                backoff *= 2
+        raise ResolvedIndexClaimTimeoutError(
+            "exhausted retries without converging on resolved_index"
+        )
+
+    def _apply_resolved_index_precedence(
+        self, product: str, record: ResolvedIndexRecord
+    ) -> tuple[ResolvedIndexRecord, Literal["created", "matched_existing"]]:
+        """Apply the resolved-index precedence matrix under the current claim."""
+
+        cp_record = self.get_resolved_index(product=product)
+        attrs_hash = self.read_resolved_index_attrs_hash(product=product)
+
+        if cp_record is None and attrs_hash is None:
+            control_root_uri = self.repo.get_control_root_uri(product)
+            _fs, control_root = self.repo._get_fs(control_root_uri)
+            index_dir = control_root.join(INDEX_DIRNAME)
+            current_json = index_dir.join(INDEX_CURRENT_FILENAME)
+            try:
+                _fs.makedirs(index_dir, exist_ok=True)
+            except Exception:
+                self.log.debug(
+                    "resolved_index.makedirs_noop",
+                    extra={"product": product, "path": str(index_dir)},
+                )
+            _fs.atomic_writer.write_atomic(current_json, record.to_json_bytes())
+            self._mirror_resolved_index_attrs(product, record)
+            return record, "created"
+
+        if (
+            cp_record is not None
+            and cp_record.identity_hash == record.identity_hash
+            and attrs_hash == record.identity_hash
+        ):
+            return cp_record, "matched_existing"
+
+        if (
+            cp_record is not None
+            and cp_record.identity_hash == record.identity_hash
+            and attrs_hash is None
+        ):
+            self._mirror_resolved_index_attrs(product, cp_record)
+            return cp_record, "created"
+
+        if cp_record is None and attrs_hash is not None:
+            raise ManifestError(
+                "zarr root attrs have resolved-index identity hash but no control-plane record"
+            )
+
+        if cp_record is not None and cp_record.identity_hash != record.identity_hash:
+            self._record_conflict_refused_index_ensured_event(
+                product=product,
+                record=record,
+            )
+            raise ResolvedIndexConflictError(
+                "plugin declares incompatible resolved index:\n"
+                f"{_format_resolved_index_diff(cp_record.index, record.index)}"
+            )
+
+        if cp_record is not None and attrs_hash != record.identity_hash:
+            raise ManifestError(
+                "zarr root attrs have drifted from authoritative resolved-index record: "
+                f"cp_hash={cp_record.identity_hash[:16]} "
+                f"attrs_hash={str(attrs_hash)[:16]!r}"
+            )
+
+        raise ManifestError(
+            "unhandled resolved-index precedence state (cp_record present, "
+            "hashes agree on identity yet no earlier branch matched): "
+            f"cp_record={cp_record!r} attrs_hash={attrs_hash!r}"
+        )
+
+    def _record_conflict_refused_index_ensured_event(
+        self, *, product: str, record: ResolvedIndexRecord
+    ) -> None:
+        groups_by_name = record.index.get("groups", {}) or {}
+        axis_kinds = tuple(sorted({str(g.get("kind", "")) for g in groups_by_name.values()}))
+        group_names = tuple(sorted(groups_by_name.keys()))
+        try:
+            self.record_index_ensured_event(
+                IndexEnsuredEvent(
+                    run_id=record.recorded_by_run_id,
+                    product=product,
+                    identity_hash=record.identity_hash,
+                    axis_kinds=axis_kinds,
+                    groups=group_names,
+                    outcome="conflict_refused",
+                    timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                )
+            )
+        except Exception as exc:
+            self.log.error(
+                "Failed to record conflict_refused index_ensured WAL audit event for product %s: %s",
+                product,
+                exc,
+            )
+
     def abandon_stale_runs(
         self, *, product: str, reason: str, dry_run: bool = True
     ) -> AbandonSweepResult:
@@ -769,7 +1016,7 @@ class ChunkManager:
                         f"declared={model.identity_hash[:16]}"
                     ) from None
                 if cp_record is not None:
-                    attrs_hash = self._read_slot_index_attrs_hash(product=product)
+                    attrs_hash = self.read_slot_index_attrs_hash(product=product)
                     if attrs_hash == model.identity_hash:
                         self.repo.record_slot_index_model_event(
                             product=product,
@@ -812,7 +1059,7 @@ class ChunkManager:
         +-----+----+-------+--------+-------------------------------------------+
         """
         cp_record = self.get_slot_index_model(product=product)
-        attrs_hash = self._read_slot_index_attrs_hash(product=product)
+        attrs_hash = self.read_slot_index_attrs_hash(product=product)
 
         if cp_record is None and attrs_hash is None:
             # Row 1: fresh store, declare + mirror + RECORDED.
@@ -952,13 +1199,92 @@ class ChunkManager:
             }
         )
 
-    def _read_slot_index_attrs_hash(self, *, product: str) -> str | None:
-        """Read the reserved identity-hash root attr, returning ``None`` if absent.
+    def _mirror_resolved_index_attrs(self, product: str, record: ResolvedIndexRecord) -> None:
+        """Write the resolved-index attrs to the zarr root group.
+
+        Must be called INSIDE the ``resolved_index:current`` claim. Bypasses
+        the reserved-root-attrs guard by design: the resolved-index service is
+        the authoritative writer of these reserved root attrs, and the guard
+        exists to block external (user/plugin) code paths only.
+        """
+        import zarr
+        from zarr.storage import LocalStore
+
+        from firecube.core.filesystem.store_factory import create_zarr_store
+        from firecube.core.uris import is_remote_target, local_path_from_target
+
+        product_root = str(self.get_product_root(product))
+        if is_remote_target(product_root):
+            storage_config = self.storage_config
+            if storage_config is None:
+                raise RuntimeError(
+                    "storage_config is required to open the remote zarr root "
+                    "for resolved-index attr mirroring"
+                )
+            handle = create_zarr_store(uri=product_root, storage_config=storage_config, mode="a")
+            root = zarr.open_group(**handle.zarr_kwargs(), mode="a", zarr_format=3)
+        else:
+            store = LocalStore(str(local_path_from_target(product_root)))
+            root = zarr.open_group(store=store, mode="a", zarr_format=3)
+        root.attrs.update(
+            {
+                RESOLVED_INDEX_ATTR: canonical_index_bytes(record.index).decode("utf-8"),
+                RESOLVED_INDEX_IDENTITY_HASH_ATTR: record.identity_hash,
+            }
+        )
+
+    def read_resolved_index_attrs_hash(self, *, product: str) -> str | None:
+        """Read the resolved-index identity hash mirrored on the product's
+        Zarr root attributes, or ``None`` if not present.
+
+        Public read-only query used by the ``firecube zarr index verify`` and
+        ``firecube zarr index rebuild`` CLI to detect attrs/on-disk-record drift.
+
+        Args:
+            product: Logical product name.
+
+        Returns:
+            The identity hash string, or ``None`` if the attribute is absent
+            (fresh store, or attrs were cleared after the record was written).
+        """
+
+        import zarr
+        from zarr.storage import LocalStore
+
+        from firecube.core.filesystem.store_factory import create_zarr_store
+        from firecube.core.uris import is_remote_target, local_path_from_target
+
+        product_root = str(self.get_product_root(product))
+        try:
+            if is_remote_target(product_root):
+                storage_config = self.storage_config
+                if storage_config is None:
+                    return None
+                handle = create_zarr_store(
+                    uri=product_root, storage_config=storage_config, mode="r"
+                )
+                root = zarr.open_group(**handle.zarr_kwargs(), mode="r", zarr_format=3)
+            else:
+                local = local_path_from_target(product_root)
+                store = LocalStore(str(local))
+                root = zarr.open_group(store=store, mode="r", zarr_format=3)
+        except Exception:
+            return None
+        value = root.attrs.get(RESOLVED_INDEX_IDENTITY_HASH_ATTR)
+        if value is None:
+            return None
+        return str(value)
+
+    def read_slot_index_attrs_hash(self, *, product: str) -> str | None:
+        """Read the legacy slot-index identity hash mirrored on root attrs.
+
+        Public read-only query used by the ``firecube zarr index rebuild`` CLI to
+        detect slot-index attrs/on-disk-record drift.
 
         Returns ``None`` when the zarr root group is missing, unreadable, or
         does not yet carry the reserved attr. The probe never raises, because
         a missing or pre-existing-but-untouched store is the legitimate Row 1
-        fresh-store input — only a real I/O failure under the claim should
+        fresh-store input. Only a real I/O failure under the claim should
         surface, and the precedence-matrix caller will see it during the
         subsequent write step.
         """
@@ -988,3 +1314,42 @@ class ChunkManager:
         if value is None:
             return None
         return str(value)
+
+
+def check_legacy_index_record(
+    chunk_manager: ChunkManager,
+    *,
+    product: str,
+    plugin_name: str,
+) -> None:
+    """Raise ``LegacyIndexRecordError`` when only the legacy slot-index record is present.
+
+    Detects legacy cubes whose control plane still
+    carries ``.firecube/slot_index/current.json`` but has not yet produced the
+    ``.firecube/index/current.json`` resolved-index record. Called at ``DirectZarrIngestor``
+    pod startup and by ``firecube zarr preallocate`` BEFORE any
+    :meth:`ChunkManager.ensure_resolved_index` call so a legacy cube cannot be
+    silently overwritten by a fresh resolved-index stamp.
+
+    Presence check only: the legacy payload is never trusted for policy. Fresh
+    cubes (both files absent) and already-migrated cubes (new file present)
+    pass through without raising.
+    """
+    if chunk_manager.get_resolved_index(product=product) is not None:
+        return
+    control_root_uri = chunk_manager.repo.get_control_root_uri(product)
+    fs, control_root_path = chunk_manager.repo._get_fs(control_root_uri)
+    current_json = control_root_path.join(SLOT_INDEX_DIRNAME).join(SLOT_INDEX_CURRENT_FILENAME)
+    try:
+        with fs.open(current_json, "rb"):
+            pass
+    except FileNotFoundError:
+        return
+    control_root = chunk_manager.get_control_root(product)
+    legacy_path = f"{control_root.rstrip('/')}/{SLOT_INDEX_DIRNAME}/{SLOT_INDEX_CURRENT_FILENAME}"
+    product_uri = chunk_manager.get_product_root(product)
+    raise LegacyIndexRecordError(
+        f"Legacy index record detected at {legacy_path}. "
+        f"Run `firecube zarr index rebuild --target {product_uri} --plugin {plugin_name} "
+        f"--product-name {product}` to migrate."
+    )

@@ -103,6 +103,8 @@ uv pip install -e tests/fixtures/direct_zarr_non_capable_test_plugin
 uv pip install -e tests/fixtures/multi_group_capable_test_plugin
 uv pip install -e tests/fixtures/cf_time_dim_test_plugin
 uv pip install -e tests/fixtures/slot_shape_test_plugin
+uv pip install -e tests/fixtures/index_spec_test_plugin
+uv pip install -e tests/fixtures/index_spec_integer_test_plugin
 ```
 
 This is required before running the full integration suite. Without these fixtures,

@@ -211,7 +211,8 @@ def test_successful_restore_appears_in_chunks_runs_list_cli(tmp_path: Path) -> N
         env=env,
     )
     assert list_result.exit_code == 0, list_result.output
-    runs = json.loads(list_result.output)
+    runs_output = list_result.output.split("\n--- Logging error ---", 1)[0]
+    runs = json.loads(runs_output)
     archive_runs = [r for r in runs if "archive-restore-" in r["run_id"]]
     assert len(archive_runs) == 1
     assert archive_runs[0]["status"] == "complete"

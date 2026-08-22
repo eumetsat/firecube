@@ -10,13 +10,14 @@ from __future__ import annotations
 import datetime as dt
 import functools
 import hashlib
-import json
+import numbers
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 
-from firecube.core.index_spec import AxisSpec, IndexSpec, RegularTimeAxis
+from firecube.core.controlplane.types import ResolvedIndexRecord, canonical_index_bytes
+from firecube.core.index_spec import AxisSpec, IndexSpec, IntegerAxis, RegularTimeAxis
 from firecube.core.slot_index import (
     SlotAxis,
     SlotIndexModel,
@@ -80,7 +81,7 @@ def coerce_to_epoch_s(value: Any, *, mode: str = "floor") -> int:
         TypeError: If ``value`` is not one of the accepted types.
         ValueError: In ``"exact"`` mode, if the value has sub-second precision.
     """
-    import pandas as pd  # lazy import -- pandas is optional in some environments
+    import pandas as pd  # lazy import: keep at function scope to defer import cost
 
     if isinstance(value, str):
         return iso_to_epoch_s(value)
@@ -144,15 +145,17 @@ class RegularTimeResolver:
         """Total number of slots.
 
         Raises:
-            ExtentUnknownError: If neither ``end`` nor ``size`` is set on the axis.
+            ExtentUnknownError: If neither ``end_date`` nor ``slot_count`` is
+                set on the axis.
         """
-        if self.axis.size is not None:
-            return self.axis.size
-        if self.axis.end is not None:
-            end_s = iso_to_epoch_s(self.axis.end)
+        if self.axis.slot_count is not None:
+            return self.axis.slot_count
+        if self.axis.end_date is not None:
+            end_s = iso_to_epoch_s(self.axis.end_date)
             return (end_s - self._epoch_s) // self.axis.cadence_s
         raise ExtentUnknownError(
-            "regular axis has no fixed extent: set either end or size to enable parallel ingestion"
+            "regular axis has no fixed extent: set either end_date or slot_count "
+            "to enable parallel ingestion"
         )
 
     def position(self, coordinate: Any) -> int:
@@ -196,6 +199,67 @@ class RegularTimeResolver:
         return np.datetime64(self._epoch_s + index * self.axis.cadence_s, "s")
 
 
+@dataclass(frozen=True)
+class IntegerResolver:
+    """Resolver for an ``IntegerAxis``.
+
+    Satisfies the ``AxisResolver`` Protocol. Coordinates and indexes are the
+    same zero-based integral values.
+
+    Args:
+        axis: The ``IntegerAxis`` specification to resolve.
+    """
+
+    axis: IntegerAxis
+
+    @property
+    def size(self) -> int:
+        """Total number of slots on this axis."""
+        return self.axis.slot_count
+
+    def position(self, coordinate: Any) -> int:
+        """Map an integer coordinate value to its zero-based slot index.
+
+        Args:
+            coordinate: The integral coordinate value.
+
+        Returns:
+            The zero-based slot index.
+
+        Raises:
+            TypeError: If ``coordinate`` is not an integral type, or is bool.
+            IndexError: If ``coordinate`` is outside ``[0, size)``.
+        """
+        return self._validate_integral_coordinate(coordinate)
+
+    def coordinate(self, index: int) -> int:
+        """Map a slot index back to its integer coordinate value.
+
+        Args:
+            index: The integral zero-based slot index.
+
+        Returns:
+            The integer coordinate value.
+
+        Raises:
+            TypeError: If ``index`` is not an integral type, or is bool.
+            IndexError: If ``index`` is outside ``[0, size)``.
+        """
+        return self._validate_integral_coordinate(index)
+
+    def _validate_integral_coordinate(self, coordinate: Any) -> int:
+        if isinstance(coordinate, bool) or not isinstance(coordinate, numbers.Integral):
+            raise TypeError(
+                "coordinate must be an integral type "
+                "(Python int or numpy.integer subclass); bool is explicitly rejected. "
+                f"Got: {type(coordinate).__name__}({coordinate!r})"
+            )
+        coord = int(coordinate)
+        if coord < 0 or coord >= self.axis.slot_count:
+            raise IndexError(f"coordinate {coord} out of range [0, {self.axis.slot_count})")
+        return coord
+
+
 def _resolver_for(axis: AxisSpec) -> AxisResolver:
     """Dispatch an axis specification to its resolver.
 
@@ -213,9 +277,11 @@ def _resolver_for(axis: AxisSpec) -> AxisResolver:
     """
     if isinstance(axis, RegularTimeAxis):
         return RegularTimeResolver(axis=axis)
+    if isinstance(axis, IntegerAxis):
+        return IntegerResolver(axis=axis)
     raise NotImplementedError(
         f"No resolver for axis type {type(axis).__name__!r}; "
-        "currently supported: RegularTimeAxis. "
+        "currently supported: RegularTimeAxis, IntegerAxis. "
         "Additional axis types are planned as additive extensions in future releases."
     )
 
@@ -224,14 +290,11 @@ class ResolvedIndex:
     """A resolved, immutable index for a multi-group DirectZarr product.
 
     Built by ``resolve_index_spec``; cached per ``(id(ctx._ctx), spec)``
-    on the ``DirectZarrIngestor`` instance (task 1.5).
+    on the ``DirectZarrIngestor`` instance.
 
-    The ``identity_hash`` is content-addressed: it is a stable hash of the
-    spec name, sorted group names, and per-axis canonical form. For
-    regular-only specs, this hash equals
-    ``as_legacy_slot_index_model().identity_hash`` (byte-parity for
-    existing FCI + OPERA cubes). This parity is an implementation detail,
-    not the contract; the semantic definition allows extension.
+    The ``identity_hash`` is content-addressed from the canonical
+    resolved-index payload. It intentionally does not track the legacy
+    slot-index model hash.
     """
 
     def __init__(
@@ -248,29 +311,62 @@ class ResolvedIndex:
         """Sorted tuple of group names."""
         return self._groups
 
+    def canonical_index_payload(self) -> dict[str, Any]:
+        """Return the canonical resolved-index payload."""
+
+        groups: dict[str, dict[str, Any]] = {}
+        for group in self._groups:
+            axis = self._spec.groups[group]
+            resolver = self._resolvers[group]
+            if isinstance(axis, RegularTimeAxis):
+                params: dict[str, Any] = {
+                    "epoch": axis.epoch,
+                    "cadence_s": axis.cadence_s,
+                    "mode": axis.mode,
+                }
+                if axis.end_date is not None:
+                    params["end_date"] = axis.end_date
+                groups[group] = {
+                    "kind": "regular_time",
+                    "size": resolver.size,
+                    "params": params,
+                }
+                continue
+            if isinstance(axis, IntegerAxis):
+                groups[group] = {"kind": "integer", "size": resolver.size, "params": {}}
+                continue
+            raise NotImplementedError(
+                f"No canonical resolved-index payload for axis type {type(axis).__name__!r}"
+            )
+
+        return {
+            "schema_version": "v1",
+            "name": self._spec.name,
+            "groups": groups,
+        }
+
+    def as_resolved_index_record(
+        self, *, run_id: str, recorded_at: str | None = None
+    ) -> ResolvedIndexRecord:
+        """Build the on-disk resolved-index record for this resolved spec."""
+
+        if recorded_at is None:
+            recorded_at = dt.datetime.now(dt.UTC).isoformat().replace("+00:00", "Z")
+        index = self.canonical_index_payload()
+        identity_hash = hashlib.sha256(canonical_index_bytes(index)).hexdigest()
+        return ResolvedIndexRecord(
+            schema_version="v1",
+            recorded_at=recorded_at,
+            recorded_by_run_id=run_id,
+            identity_hash=identity_hash,
+            index=index,
+        )
+
     @functools.cached_property
     def identity_hash(self) -> str:
-        """Content-addressed hash of the resolved spec.
+        """Content-addressed hash of the canonical resolved-index payload."""
 
-        Stable across runs for the same spec. For regular-only specs,
-        equals ``as_legacy_slot_index_model().identity_hash`` (byte-parity
-        for existing cubes -- implementation detail, not the contract).
-        """
-        legacy = self.as_legacy_slot_index_model()
-        if legacy is not None:
-            return legacy.identity_hash
-        # Non-regular axes: hash the spec directly (future extensions)
-        payload = json.dumps(
-            {
-                "name": self._spec.name,
-                "groups": {
-                    group: {"type": type(axis).__name__}
-                    for group, axis in sorted(self._spec.groups.items())
-                },
-            },
-            sort_keys=True,
-        ).encode()
-        return hashlib.sha256(payload).hexdigest()
+        return hashlib.sha256(canonical_index_bytes(self.canonical_index_payload())).hexdigest()
 
     def size(self, group: str) -> int:
         """Total number of slots for the given group.

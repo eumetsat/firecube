@@ -83,6 +83,8 @@ def pytest_sessionstart(session):
         ("multi_group_capable_test_plugin", "multi_group_capable_test_plugin"),
         ("cf_time_dim_test_plugin", "cf_time_dim_test_plugin"),
         ("slot_shape_test_plugin", "slot_shape_test_plugin"),
+        ("index_spec_test_plugin", "index_spec_test_plugin"),
+        ("index_spec_integer_test_plugin", "index_spec_integer_test_plugin"),
     )
     missing_plugins = []
 

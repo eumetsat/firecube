@@ -54,6 +54,10 @@ class {class_name}(DirectZarrIngestor):
 
     def index_spec(self, ctx: PluginContext) -> IndexSpec:
         config = self.plugin_config
+        # Use RegularTimeAxis for timestamp-indexed groups (most common).
+        # Use IntegerAxis(size=N) instead when items map to a zero-based
+        # integer position rather than a timestamp, for example:
+        #   "data": IntegerAxis(size=256)
         return IndexSpec(
             name="{plugin_name}_v1",
             groups={{

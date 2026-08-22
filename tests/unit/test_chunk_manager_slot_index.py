@@ -327,7 +327,7 @@ def test_read_slot_index_attrs_hash_for_remote_product_uses_driver_aware_zarr_st
     )
     monkeypatch.setattr(zarr, "open_group", fake_open_group)
 
-    result = cm._read_slot_index_attrs_hash(product="prod1")
+    result = cm.read_slot_index_attrs_hash(product="prod1")
 
     assert create_calls == [
         {

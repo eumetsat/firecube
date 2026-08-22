@@ -2,28 +2,29 @@
 
 ## Goal
 
-Build a `DirectZarrIngestor` that maps real timestamps to a regular time axis, then run two workers against one Zarr store.
+Build a `DirectZarrIngestor` that reads NetCDF files, maps their timestamps to a regular time axis, and runs two workers against one Zarr store.
 
 ## Prerequisites
 
 - Firecube installed. Start with [Installation](../quickstart/installation.md).
 - Run every command below in the same Python environment where Firecube is installed.
 
-## 1. Create Tiny Timestamped Files
+## 1. Create Tiny NetCDF Files
 
-Each `.npy` file represents one real timestamp. The file name carries the timestamp that `inspect_item()` reads.
+Each NetCDF file holds one observation: four `temperature_cells` values and a global `timestamp` attribute that says when the observation was taken. The plugin reads the timestamp from inside the file, not from the file name.
 
 ```bash
 mkdir -p tutorial-data/grid-parallel
 uv run python - <<'PY'
 from pathlib import Path
 
-import numpy as np
+import numpy
+import xarray
 
-out = Path("tutorial-data/grid-parallel")
-out.mkdir(parents=True, exist_ok=True)
+output_directory = Path("tutorial-data/grid-parallel")
+output_directory.mkdir(parents=True, exist_ok=True)
 
-for i, stamp in enumerate([
+timestamps = [
     "2024-01-01T00:00:00Z",
     "2024-01-01T00:10:00Z",
     "2024-01-01T00:20:00Z",
@@ -32,8 +33,17 @@ for i, stamp in enumerate([
     "2024-01-01T00:50:00Z",
     "2024-01-01T01:00:00Z",
     "2024-01-01T01:10:00Z",
-]):
-    np.save(out / f"{stamp}.npy", np.full((4,), float(i), dtype="float32"))
+]
+
+for file_number, timestamp in enumerate(timestamps):
+    values = numpy.full((4,), float(file_number), dtype="float32")
+    dataset = xarray.Dataset(
+        data_vars={"temperature_cells": ("sample", values)},
+        attrs={"timestamp": timestamp},
+    )
+    dataset.to_netcdf(output_directory / f"temperature-{file_number:02d}.nc")
+
+print("wrote", len(timestamps), "files")
 PY
 ```
 
@@ -54,11 +64,11 @@ Replace `plugins_dev/firecube-grid-parallel/src/firecube_grid_parallel/ingestor.
 ```python
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import datetime
 from typing import ClassVar
 
 import numpy as np
+import xarray
 
 from firecube.ingestor.api import (
     DirectZarrIngestor,
@@ -74,12 +84,6 @@ from firecube.ingestor.api import (
 )
 
 
-def read_product_item(path: Path) -> tuple[datetime, np.ndarray]:
-    stamp = datetime.fromisoformat(path.stem.replace("Z", "+00:00")).astimezone(timezone.utc)
-    data = np.load(path).astype("float32")
-    return stamp, data
-
-
 @register_ingestor("grid_parallel")
 class GridParallelIngestor(DirectZarrIngestor):
     PRODUCT_NAME: ClassVar[str] = "grid_parallel"
@@ -93,7 +97,7 @@ class GridParallelIngestor(DirectZarrIngestor):
                     coordinate="timestamp",
                     epoch="2024-01-01T00:00:00Z",
                     cadence_s=600,
-                    size=8,
+                    end_date="2024-01-01T01:20:00Z",  # 8 slots of 600 s from the epoch
                 ),
             },
         )
@@ -124,10 +128,17 @@ class GridParallelIngestor(DirectZarrIngestor):
         ]
 
     def inspect_item(self, item: object, ctx: PluginContext) -> ItemInfo | None:
-        stamp, values = read_product_item(ctx.materialize(item))
+        file_path = ctx.materialize(item)
+        dataset = xarray.open_dataset(file_path)
+        timestamp_text = str(dataset.attrs["timestamp"])
+        values = dataset["temperature_cells"].values
+        dataset.close()
+
         if values.shape != (4,):
             raise ValueError(f"Expected four sample values, got {values.shape}")
-        return ItemInfo(coordinate=stamp)
+
+        timestamp = datetime.fromisoformat(timestamp_text)
+        return ItemInfo(coordinate=timestamp)
 
     def build_write_intents(
         self,
@@ -136,19 +147,33 @@ class GridParallelIngestor(DirectZarrIngestor):
     ) -> list[WriteIntent]:
         intents: list[WriteIntent] = []
         for item in batch.items:
-            stamp, values = read_product_item(ctx.materialize(item))
-            index = self.resolved_index(ctx).position("data", stamp)
-            intents.append(WriteIntent.coordinate(group="data", index=index, value=stamp))
+            file_path = ctx.materialize(item)
+            dataset = xarray.open_dataset(file_path)
+            timestamp_text = str(dataset.attrs["timestamp"])
+            values = dataset["temperature_cells"].values
+            dataset.close()
+
+            timestamp = datetime.fromisoformat(timestamp_text)
+            slot_index = self.resolved_index(ctx).position("data", timestamp)
+
+            intents.append(
+                WriteIntent.coordinate(group="data", index=slot_index, value=timestamp)
+            )
             intents.append(
                 WriteIntent.slot(
                     group="data",
                     array="temperature_cells",
-                    index=index,
+                    index=slot_index,
                     data=values,
                 )
             )
         return intents
 ```
+
+The two hooks read the file the same explicit way:
+
+- `inspect_item()` opens the NetCDF file, reads the `timestamp` attribute, parses it with `datetime.fromisoformat()`, and hands the timestamp to Firecube as the item's coordinate.
+- `build_write_intents()` opens the file again, maps the timestamp to a slot index with `position()`, and emits one coordinate write and one data write for that slot.
 
 ## 4. Install The Plugin
 
@@ -221,12 +246,13 @@ uv run python - <<'PY'
 import zarr
 
 root = zarr.open_group("tutorial-output/grid_parallel.zarr", mode="r")
-arr = root["data/temperature_cells"]
+temperature = root["data/temperature_cells"]
 
-print("shape:", arr.shape)
-print("first cell by timestamp:", arr[:, 0].tolist())
+print("shape:", temperature.shape)
+print("first cell by timestamp:", temperature[:, 0].tolist())
 
-assert arr.shape == (8, 4)
+assert temperature.shape == (8, 4)
+assert temperature[:, 0].tolist() == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
 PY
 ```
 

@@ -39,23 +39,25 @@ def validate_global_expected_subset_of_schema(
 ) -> None:
     """Raise ConfigurationError if global_expected contains a group absent from zarr_schema().
 
-    This catches the class of bugs where global_expected_time_count() declares a group
-    that the plugin's zarr_schema() does not actually create. Without this check, the
-    per-group filter in _verify_schema_at_pod_startup silently no-ops and writes a
+    This catches the class of bugs where the caller-supplied ``global_expected``
+    mapping declares a group that the plugin's zarr_schema() does not actually
+    create. Without this check, the per-group filter in
+    ``_verify_schema_at_pod_startup`` silently no-ops and writes a
     false-success audit record for a nonexistent group.
 
-    Phase 3.2 _process_batch already detected this via a DEBUG log (extras_in_global
-    treated as sidecars), but deferred the audit-record damage. This validator catches
-    it at capability-gate time, BEFORE any audit records are written.
+    This validator runs at capability-gate time, BEFORE any audit records are
+    written; a mismatch between the expected-time mapping and the schema
+    surfaces as a clean ``ConfigurationError`` rather than as a downstream
+    audit-log discrepancy.
     """
     schema_groups = {spec.group for spec in schema}
     phantom_groups = set(global_expected.keys()) - schema_groups
     if phantom_groups:
         raise ConfigurationError(
-            f"global_expected_time_count() declares groups {sorted(phantom_groups)} "
+            f"Expected-time mapping declares groups {sorted(phantom_groups)} "
             f"that are not in zarr_schema() (schema declares: {sorted(schema_groups)}). "
             f"Either add these groups to zarr_schema() or remove them from "
-            f"global_expected_time_count()."
+            f"the expected-time mapping."
         )
 
 
@@ -135,8 +137,9 @@ def validate_parallel_capability(
             binding.resolved.size(group)
         except ExtentUnknownError as exc:
             raise ConfigurationError(
-                f"group {group!r}: axis has no fixed extent — set RegularTimeAxis(end=...) "
-                "or size=... to enable parallel ingestion"
+                f"group {group!r}: axis has no fixed extent — set "
+                "RegularTimeAxis(end_date=...) or slot_count=... "
+                "to enable parallel ingestion"
             ) from exc
 
     if type(ingestor).inspect_item is DirectZarrIngestor.inspect_item:

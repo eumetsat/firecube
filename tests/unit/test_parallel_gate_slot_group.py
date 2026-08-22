@@ -71,7 +71,7 @@ class SlotGroupCapable(DirectZarrIngestor):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=100,
+                    slot_count=100,
                 )
                 for spec in self._schema
             },

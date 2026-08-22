@@ -59,14 +59,14 @@ class _PhantomGroupPlugin(DirectZarrIngestor):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=100,
+                    slot_count=100,
                 ),
                 "phantom": RegularTimeAxis(
                     coordinate="timestamp",
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=100,
+                    slot_count=100,
                 ),
             },
         )

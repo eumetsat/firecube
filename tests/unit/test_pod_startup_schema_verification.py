@@ -97,7 +97,7 @@ class _CapableIngestor(DirectZarrIngestor):
                     epoch="2026-01-01T00:00:00Z",
                     cadence_s=1,
                     mode="exact",
-                    size=10,
+                    slot_count=10,
                 )
             },
         )

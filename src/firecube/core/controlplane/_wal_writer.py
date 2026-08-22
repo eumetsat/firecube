@@ -24,11 +24,13 @@ from firecube.core.controlplane import types
 from firecube.core.controlplane.events import RunEventWriter
 from firecube.core.controlplane.repo_utils import parse_pod_run_id_slot
 from firecube.core.controlplane.types import (
+    EVENT_INDEX_ENSURED,
     EVENT_SLOT_INDEX_MODEL_RECORDED,
     EVENT_SLOT_INDEX_MODEL_VERIFIED,
     MAINTENANCE_KIND,
     MAINTENANCE_OPS,
     SCHEMA_VERSION,
+    IndexEnsuredEvent,
     SpanCoverage,
     build_span_entry,
 )
@@ -317,6 +319,15 @@ class ManifestWalWriter:
             types.EVENT_SCHEMA_VERIFICATION,
             record,
             meta=event_meta,
+            flush=False,
+        )
+
+    def record_index_ensured_event(self, event: IndexEnsuredEvent) -> None:
+        record = event.to_dict()
+        self._writer(event.product, event.run_id, resume_existing=True).append(
+            EVENT_INDEX_ENSURED,
+            record,
+            meta={},
             flush=False,
         )
 
