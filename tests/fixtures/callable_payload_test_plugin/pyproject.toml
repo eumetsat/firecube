@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "callable-payload-test-plugin"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["firecube"]
+
+[project.entry-points."firecube.plugins"]
+callable_payload_safe = "callable_payload_test_plugin:CallablePayloadSafeIngestor"
+callable_payload_unsafe = "callable_payload_test_plugin:CallablePayloadUnsafeIngestor"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/callable_payload_test_plugin"]

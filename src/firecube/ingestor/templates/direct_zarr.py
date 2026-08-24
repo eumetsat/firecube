@@ -36,7 +36,7 @@ import logging
 import random
 import time
 from abc import abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -530,12 +530,21 @@ class WriteIntent:
     - ``"1d"`` → ``write_1d(group, array, ts_index, data)``
     - ``"timestamp"`` → ``write_timestamp(group, ts_index, timestamp_val)``
     - ``"static"`` → ``write_static(group, array_name, data)`` (non-time-indexed; ``ts_index`` is ignored)
+
+    ``data`` may be an eager ``numpy.ndarray`` or a zero-arg callable that
+    returns one. It is resolved exactly once at dispatch time, in dispatch
+    order. The callable must close over stable inputs (paths, configuration),
+    not open file handles or per-batch scratch objects. Callable data is
+    supported for ``kind="region"`` and ``kind="static"`` only. Passing a
+    callable for other kinds raises ``TypeError`` at construction. Any
+    callable exception propagates with the same error surface as an eager
+    payload rejection.
     """
 
     group: str
     array: str
     ts_index: int
-    data: np.ndarray | Any
+    data: np.ndarray | Callable[[], np.ndarray] | Any
     kind: str = "region"
     y_slice: slice | None = None
     channel_index: int | None = None
@@ -552,25 +561,36 @@ class WriteIntent:
             raise ValueError(
                 f"WriteIntent.kind must be one of {sorted(valid_kinds)!r}; got {self.kind!r}"
             )
+        callable_kinds = {"region", "static"}
+        if callable(self.data) and self.kind not in callable_kinds:
+            supported_kinds = "', '".join(sorted(callable_kinds))
+            raise TypeError(
+                f"callable data is not supported for kind={self.kind!r}; "
+                f"supported kinds: '{supported_kinds}'"
+            )
         if self.kind == "timestamp" and self.timestamp_val is None:
             raise ValueError("WriteIntent with kind='timestamp' requires timestamp_val to be set")
 
     @classmethod
     def slot(cls, *, group: str, array: str, index: int, data: Any) -> WriteIntent:
-        """Produce a 1-D time-slot write intent.
+        """Write a 1-D array slice at a single time slot.
+
+        Use this for 1-D arrays that grow along the time axis — per-slot
+        scalars, per-slot vectors, or any array where each slot contributes
+        one row. The array must be declared with ``time_indexed=True`` in
+        :class:`ZarrArraySpec`.
+
+        ``data`` must be an eager ``np.ndarray``; callable payloads are not
+        supported for ``kind="1d"`` and raise ``TypeError`` at construction.
 
         Args:
-            group: Zarr group name (matches a key in ``zarr_schema``).
+            group: Zarr group name matching a :class:`ZarrGroupSpec` in the schema.
             array: Array name within the group.
-            index: Time-slot index (``ts_index``) for this write.
+            index: Time-slot index for this write.
             data: Array data to write at this slot.
 
         Returns:
             A ``WriteIntent`` with ``kind="1d"`` and ``ts_index=index``.
-
-        Raises:
-            ValueError: If the constructed intent has an invalid kind (should not
-                happen with this factory).
 
         Examples:
             >>> import numpy as np
@@ -593,22 +613,25 @@ class WriteIntent:
         y_slice: slice,
         channel_index: int | None = None,
     ) -> WriteIntent:
-        """Produce a 2-D region write intent.
+        """Write a 2-D spatial region at a single time slot.
+
+        Use this for the main image arrays — counts, radiances, quality flags,
+        pixel times — where each slot contributes a spatial tile. The array
+        must be declared with ``time_indexed=True`` in :class:`ZarrArraySpec`.
+
+        ``data`` may be an eager ``np.ndarray`` or a zero-arg callable
+        ``Callable[[], np.ndarray]``; the callable is resolved at dispatch time.
 
         Args:
-            group: Zarr group name.
+            group: Zarr group name matching a :class:`ZarrGroupSpec` in the schema.
             array: Array name within the group.
-            index: Time-slot index (``ts_index``) for this write.
-            data: 2-D array data to write into the region.
-            y_slice: Row slice within the array (required; kw-only).
-            channel_index: Optional channel dimension index.
+            index: Time-slot index for this write.
+            data: 2-D array data, or a callable that returns it.
+            y_slice: Row slice within the array.
+            channel_index: Channel dimension index, or ``None`` for non-channel arrays.
 
         Returns:
-            A ``WriteIntent`` with ``kind="region"``, ``ts_index=index``,
-            ``y_slice=y_slice``, and ``channel_index=channel_index``.
-
-        Raises:
-            ValueError: If the constructed intent has an invalid kind.
+            A ``WriteIntent`` with ``kind="region"``.
 
         Examples:
             >>> import numpy as np
@@ -633,20 +656,24 @@ class WriteIntent:
 
     @classmethod
     def coordinate(cls, *, group: str, index: int, value: Any) -> WriteIntent:
-        """Produce a timestamp-coordinate write intent.
+        """Write the time-axis coordinate value for a single slot.
+
+        Use this to record the actual timestamp (or integer index) that
+        corresponds to ``ts_index``. The engine writes it into the time
+        coordinate array so the output cube is self-describing.
 
         Args:
-            group: Zarr group name.
-            index: Time-slot index (``ts_index``) for this coordinate.
-            value: The coordinate value (e.g. a ``datetime`` or ``numpy.datetime64``).
+            group: Zarr group name matching a :class:`ZarrGroupSpec` in the schema.
+            index: Time-slot index for this coordinate.
+            value: The coordinate value for this slot — typically a
+                ``datetime``, ``numpy.datetime64``, or integer. Must not be
+                ``None``.
 
         Returns:
-            A ``WriteIntent`` with ``kind="timestamp"``, ``ts_index=index``,
-            and ``timestamp_val=value``.
+            A ``WriteIntent`` with ``kind="timestamp"``.
 
         Raises:
-            ValueError: If ``value`` is ``None`` (timestamp_val is required for
-                ``kind="timestamp"``).
+            ValueError: If ``value`` is ``None``.
 
         Examples:
             >>> from datetime import datetime, timezone
@@ -670,28 +697,38 @@ class WriteIntent:
 
     @classmethod
     def static(cls, *, group: str, array: str, data: Any) -> WriteIntent:
-        """Produce a static (non-time-indexed) array write intent.
+        """Write a static (non-time-indexed) array — coordinate grids, lookup tables, masks.
+
+        Use this for arrays that are the same across every time slot: latitude/
+        longitude grids, channel names, calibration tables, spatial references.
+        The array must be declared with ``time_indexed=False`` in
+        :class:`ZarrArraySpec`; the engine pre-creates it at its declared shape
+        during schema setup.
+
+        **Write-once contract**: the engine writes the array on the first ingest
+        run and stamps a marker attribute. On any subsequent run (resume or
+        re-ingest) the incoming data must be byte-identical to what was already
+        written, or the ingest fails with :class:`SchemaDriftError`. There is no
+        partial-update path for static arrays.
+
+        ``data`` may be an eager ``np.ndarray`` or a zero-arg callable
+        ``Callable[[], np.ndarray]``; the callable is resolved at dispatch time.
 
         Args:
-            group: Zarr group name.
-            array: Array name within the group.
-            data: Array data to write (written once; replayed on resume).
+            group: Zarr group name matching a :class:`ZarrGroupSpec` in the schema.
+            array: Array name declared with ``time_indexed=False`` in that group.
+            data: Data to write, or a callable that returns it.
 
         Returns:
-            A ``WriteIntent`` with ``kind="static"`` and ``ts_index=0``.
+            A ``WriteIntent`` with ``kind="static"``.
 
         Raises:
-            ValueError: If the constructed intent has an invalid kind.
-
-        Examples:
-            >>> import numpy as np
-            >>> intent = WriteIntent.static(
-            ...     group="data_1km", array="latitude", data=np.zeros((2048,))
-            ... )
-            >>> intent.kind
-            'static'
-            >>> intent.ts_index
-            0
+            SchemaDriftError: On resume, if ``data`` does not match the
+                already-committed array byte-for-byte (NaN-aware).
+            TypeError: If ``data`` is callable and ``kind`` is not ``"static"``
+                (cannot happen via this factory; raised by ``__post_init__``
+                only when constructing ``WriteIntent`` directly with a
+                mismatched kind).
         """
         return cls(group=group, array=array, ts_index=0, data=data, kind="static")
 

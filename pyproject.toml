@@ -135,6 +135,8 @@ markers = [
     "plugin: plugin tests",
     "s3: s3 tests",
     "concurrency: concurrency tests",
+    "benchmark: peak-retained-payload regression-smoke harness (Linux + /usr/bin/time -v; skips gracefully otherwise)",
+    "benchmark_evidence: long-form high-fidelity benchmark evidence (manual; not part of default CI lane)",
 ]
 
 [tool.bandit]

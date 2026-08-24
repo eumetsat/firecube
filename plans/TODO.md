@@ -150,48 +150,6 @@ power in the default test loop.
 
 ---
 
-### §F3 Lazy WriteIntent payload (generalized to time-indexed data)
-
-**Goal:** Reduce DirectZarr per-slot peak memory during the write phase without changing the plugin API contract, by making `WriteIntent.data` support just-in-time payload materialization.
-
-**Trigger evidence (2026-07-12):**
-- MTG FCI L1C FDHSI baseline measured ~14.8 GiB retained per worker (single-worker smoke tests, full memray attribution 99.9% accounted). Dominant payload: `pixel_time` float64, ~9.4 GiB (~66%), time-indexed region intents.
-- Operator-observed 12-worker × 12-slot 2h ingest reached ~178 GiB total per pod, consistent with linear scaling of the per-worker per-slot retention.
-- Plugin-side sub-batching empirically ruled out (2026-07-12 POC): three configurations (baseline / naive internal iteration / cached internal iteration) plateau together within noise at the baseline retention level. Root cause: `build_write_intents()` returns a materialized `list[WriteIntent]` whose ndarrays remain live until `write_groups()` completes; internal iteration reshapes order but not retention.
-- Multi-batch sub-batching variants (yield-per-nc_part `discover_source_files`) additionally blocked by: per-slot claim has no retry (deterministic reproduction of `ClaimConflictError`, 2026-07-12); `CoverageTracker` records at `(group, ts_index)` only (mid-slot crash-resume produces silently incomplete data).
-
-**Architectural shape:**
-- `WriteIntent.data: np.ndarray | Callable[[], np.ndarray] | Any` — additive union.
-- Core resolves the callable just before dispatch in `_dispatch_intent` / `_dispatch_static_intent` (`indexed_region.py`).
-- Eager `ndarray` path remains valid. Existing plugins unchanged.
-- All six preflight invariants preserved: slot-range validation, `expected_time_count` autosize, `allow_grow`, group presence validation, per-slot claim grouping, `len(intents)` metric.
-
-**Design constraints that must be addressed:**
-1. **Scratch lifetime.** Plugin-side batch scratch that deletes on `build_write_intents` exit (e.g. MTG's `BatchScratch`) invalidates closures that read from scratch files. Either extend scratch past write time (new lifecycle contract), or require callables to read from stable source inputs only.
-2. **Plugin-side provider caches.** Providers like `LatLonProvider._cache` retain arrays independently of the intent list. Lazy intent payloads do not free them. This is a separate plugin concern to document, not fix here.
-3. **Static array resume check.** `_dispatch_static_intent` in `indexed_region.py` fully materializes the existing on-disk array for NaN-aware comparison on resume. Until this comparison is revisited, lazy static payloads do not shrink resume peak.
-4. **`kind="1d"` and `kind="timestamp"` payloads.** Small enough that laziness is not required; scope may be limited to `kind="region"` and `kind="static"` initially.
-
-**Alternatives explicitly rejected:**
-- Iterator-lazy `build_write_intents` (`-> Iterable[WriteIntent]`): breaks all six preflight invariants; saves list-container refs only, not payload bytes. See DESIGN.md "Risks To Avoid".
-- Plugin-side sub-batching with shared `ts_index` (nc_part / tile / channel per batch): per-slot claim raises `ClaimConflictError` on any concurrent second acquirer (no retry loop at the dispatch site); `CoverageTracker` records at `(group, ts_index)` only, so mid-slot crash-resume produces silently incomplete slots (data-integrity hazard); per-batch `BatchScratch` cleanup on the multi-batch variant would force ~40× ZIP re-extraction. Internal-iteration sub-batching (single batch, chunked emission) is safe but empirically ineffective (2026-07-12 POC: three configurations plateau within noise at the baseline retention level). See DESIGN.md "Risks To Avoid".
-
-**Acceptance criteria:**
-- Callable payloads accepted by `_dispatch_intent` and `_dispatch_static_intent` for at least `kind="region"` and `kind="static"`.
-- Peak-retained-payload regression test (see TEST_GAPS.md P2 §4) shows the new floor is bounded by "one materialized payload + writer overhead", not by "sum of all intents' payloads". For MTG FCI FDHSI reference workload, must measurably improve on the ~14.8 GiB current floor.
-- No behavior change for eager `ndarray` payloads; existing plugin fixtures unchanged.
-- Documented lifetime contract for callable payloads relative to `build_write_intents` return: what the plugin must keep alive.
-
-**Prerequisites before merging:**
-- Peak-retained-payload regression harness (TEST_GAPS.md P2 §4).
-- Retained-root capture (memray) demonstrating pixel_time as the retention source under the current eager path, and the reduction under the new lazy path.
-
-**Effort:** 1-2 weeks. Not "days" — safety scaffolding (lifetime contract, resume-check interaction, regression harness) dominates.
-
-**References:** IDEAS.md §F3 (superseded 2026-07-12); DONE.md "DirectZarr plugin parity — core fixes" (2026-06-25); DONE.md "DirectZarr per-slot payload retention — bite-the-pill + §F3 promotion" (2026-07-12).
-
----
-
 ### §9 Span planning (optional pre-declared spans)
 
 **Goal:** Make spans a stable unit of work for orchestration and maintenance without making ChunkManager product-aware.
