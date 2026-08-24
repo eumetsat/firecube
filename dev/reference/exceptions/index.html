@@ -4356,6 +4356,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#indexedwrite-compilation-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IndexedWrite Compilation Errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IndexedWriteCompilationError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IndexedWriteCompilationError
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#core-api-re-exports" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4393,6 +4415,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NoDiscoveredItemsError
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.core.api.IndexedWriteCompilationError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IndexedWriteCompilationError
       
     </span>
   </a>
@@ -4822,6 +4855,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#indexedwrite-compilation-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IndexedWrite Compilation Errors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.IndexedWriteCompilationError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IndexedWriteCompilationError
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#core-api-re-exports" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4859,6 +4914,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NoDiscoveredItemsError
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.core.api.IndexedWriteCompilationError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IndexedWriteCompilationError
       
     </span>
   </a>
@@ -4931,6 +4997,10 @@ discovery.</p>
 <tr>
 <td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.NoDiscoveredItemsError" href="#firecube.ingestor.api.NoDiscoveredItemsError"><code>NoDiscoveredItemsError</code></a></td>
 <td>Discovery found no items for an irregular time axis.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.IndexedWriteCompilationError" href="#firecube.ingestor.api.IndexedWriteCompilationError"><code>IndexedWriteCompilationError</code></a></td>
+<td>IndexedWrite compilation failed for a coordinate-bound write intent.</td>
 </tr>
 <tr>
 <td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.SchemaDriftError" href="#firecube.ingestor.api.SchemaDriftError"><code>SchemaDriftError</code></a></td>
@@ -5403,6 +5473,57 @@ The time axis shape[0] is handled specially: smaller fails, larger warns.</p>
 
     </div>
 
+</div><h2 id="indexedwrite-compilation-errors">IndexedWrite Compilation Errors</h2>
+<p><code>IndexedWriteCompilationError</code> is raised when the engine cannot map an
+<code>IndexedWrite.coordinate</code> to a slot index at compile time.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="firecube.ingestor.api.IndexedWriteCompilationError" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.IndexedWriteCompilationError</span>
+
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></code></p>
+
+
+
+        <p>IndexedWrite compilation failed for a coordinate-bound write intent.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
 </div><h2 id="core-api-re-exports">Core API Re-Exports</h2>
 <p>The core facade re-exports the error types used by plugin code and the engine.</p>
 
@@ -5549,11 +5670,60 @@ The time axis shape[0] is handled specially: smaller fails, larger warns.</p>
 
     </div>
 
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="firecube.core.api.IndexedWriteCompilationError" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.IndexedWriteCompilationError</span>
+
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></code></p>
+
+
+
+        <p>IndexedWrite compilation failed for a coordinate-bound write intent.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
 </div><h2 id="see-also">See Also</h2>
 <ul>
 <li><a href="../templates/">Templates</a></li>
 <li><a href="../parallelism/">Index Specification</a></li>
 <li><a href="../../guides/plugins/irregular-axis/">IrregularTimeAxis Plugin Guide</a></li>
+<li><a href="../../guides/plugins/direct-zarr/">Implement DirectZarrIngestor</a></li>
 </ul>
 
 
