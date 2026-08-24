@@ -2,346 +2,346 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/benchmarks/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/best-practices/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/chunk-management/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/chunkmanager/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/configuration/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/glossary/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/orchestration/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/parallelism/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/performance/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/production-guide/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/storage/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/observability/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/observability/logs/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/observability/metrics/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/observability/traces/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/orchestration/execution-shapes/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/orchestration/external-orchestrator/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/orchestration/retries/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/orchestration/write-safety/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/output-formats/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/output-formats/archive/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/output-formats/parquet/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/output-formats/zarr/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/output-formats/zarr/direct-region/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/output-formats/zarr/generic-append/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/output-formats/zarr/parallel-writes/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/concepts/plugins/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/contributing/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/contributing/firecube-contributors/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/base-ingestor/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/cli-and-config/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/contract/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/create-a-plugin/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/customize-source-discovery/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/direct-zarr/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/extensions/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/generic-parquet/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/generic-zarr/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/install-a-plugin/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/multi-group-writes/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/observability/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/guides/plugins/source-discovery/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/firecube-index/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/intake-catalog/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/parallel-zarr-writes/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/s3-access/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/archive/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/archive/create/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/archive/inspect/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/archive/restore/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/chunk-manager/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/chunk-manager/delete/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/chunk-manager/inspect/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/chunk-manager/post-crash-recovery/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/chunk-manager/recover/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/operations/chunk-manager/snapshots/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/quickstart/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/quickstart/catalogs/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/quickstart/configuration/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/quickstart/ingestion/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/quickstart/installation/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/quickstart/plugins/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/quickstart/source-data/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/cli/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/config/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/context/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/core-utilities/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/exceptions/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/extensions/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/hooks/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/observability/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/parallelism/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/storage-drivers/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/reference/templates/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/tutorials/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/tutorials/direct-zarr-parallel/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/tutorials/observability/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/tutorials/sentinel3-frp/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/tutorials/source-discovery/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/tutorials/weather-csv/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
     <url>
          <loc>https://eumetsat.github.io/firecube/dev/tutorials/weather-netcdf/</loc>
-         <lastmod>2026-08-22</lastmod>
+         <lastmod>2026-08-24</lastmod>
     </url>
 </urlset>
