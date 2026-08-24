@@ -23,6 +23,7 @@ ALLOWED_TEMPLATES_FIRECUBE_PREFIXES = (
     "firecube.core.api",
     "firecube.core.errors",  # error classes needed for exception handling in templates
     "firecube.core.filesystem",
+    "firecube.core.indexed_write",  # IndexedWrite dataclass lives in core; imported by direct_zarr compiler
     "firecube.core.slot_index",  # direct import avoids circular-load via firecube.core.api
     "firecube.core.uris",
     "firecube.core.zarr.codec_pipeline",

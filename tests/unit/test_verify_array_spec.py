@@ -49,15 +49,18 @@ def _make_array(
     shape=(4, 3, 2),
     dtype: Any = np.float32,
     chunks=(2, 3, 2),
+    shards: Any = None,
     fill_value: Any = 0.0,
 ):
-    return writer.ensure_group(
-        "grp/data",
-        shape=shape,
-        dtype=dtype,
-        chunks=chunks,
-        fill_value=fill_value,
-    )
+    kwargs = {
+        "shape": shape,
+        "dtype": dtype,
+        "chunks": chunks,
+        "fill_value": fill_value,
+    }
+    if shards is not None:
+        kwargs["shards"] = shards
+    return writer.ensure_group("grp/data", **kwargs)
 
 
 def test_matching_passes(writer):
@@ -150,15 +153,22 @@ def test_spec_chunks_none_skips_check(writer):
     writer.verify_array_spec("grp/data", _make_spec(chunks=None), expected_time_count=4)
 
 
-def test_matching_shards_passes(writer):
-    writer.ensure_group(
-        "grp/data",
-        shape=(4, 3, 2),
-        dtype=np.float32,
-        chunks=(2, 3, 2),
-        shards=(4, 3, 2),
-        fill_value=0.0,
-    )
+def test_verify_array_spec_raises_on_sharded_disk_unsharded_spec(writer):
+    _make_array(writer, shards=(4, 3, 2))
+
+    with pytest.raises(SchemaDriftError, match="sharded"):
+        writer.verify_array_spec("grp/data", _make_spec(shards=None), expected_time_count=4)
+
+
+def test_verify_array_spec_passes_when_both_unsharded(writer):
+    _make_array(writer)
+
+    writer.verify_array_spec("grp/data", _make_spec(shards=None), expected_time_count=4)
+
+
+def test_verify_array_spec_passes_when_both_sharded(writer):
+    _make_array(writer, shards=(4, 3, 2))
+
     writer.verify_array_spec(
         "grp/data",
         _make_spec(shards=(4, 3, 2)),

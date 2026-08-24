@@ -509,17 +509,27 @@ class RegionZarrWriter:
                     "Use the same fill value when declaring the schema.",
                 )
 
-        if spec.shards is not None:
-            existing_shards = getattr(arr, "shards", None)
-            if existing_shards is not None:
-                existing_shards_tuple = tuple(existing_shards)
-                if existing_shards_tuple != tuple(spec.shards):
-                    _fail(
-                        "shards",
-                        existing_shards_tuple,
-                        tuple(spec.shards),
-                        "Recreate the array with matching shards.",
-                    )
+        existing_shards = getattr(arr, "shards", None)
+        if spec.shards is None and existing_shards is not None:
+            _fail(
+                "shards",
+                tuple(existing_shards),
+                None,
+                "Existing on-disk array is sharded but the declared spec has shards=None. "
+                "Concurrent region writes greater than 1 require both the declared spec and "
+                "the opened array to be unsharded. Recreate the array with matching shards, "
+                "or set zarr_region_write_concurrency=1 to use serial writes.",
+            )
+
+        if spec.shards is not None and existing_shards is not None:
+            existing_shards_tuple = tuple(existing_shards)
+            if existing_shards_tuple != tuple(spec.shards):
+                _fail(
+                    "shards",
+                    existing_shards_tuple,
+                    tuple(spec.shards),
+                    "Recreate the array with matching shards.",
+                )
 
         if spec.attrs is not None:
             assert_attrs_safe(spec.attrs)
@@ -611,7 +621,8 @@ class RegionZarrWriter:
         Raises:
             ValueError: If target array rank is unsupported.
         """
-        arr = self._open_root()[f"{group}/{array_name}"]
+        root = self._root if self._root is not None else self._open_root()
+        arr = root[f"{group}/{array_name}"]
         if arr.ndim == 4:
             if channel_index is None:
                 arr[ts_index, y_slice, :, :] = data

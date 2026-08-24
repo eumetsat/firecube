@@ -24,10 +24,13 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import itertools
 import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ALL_COMPLETED, FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import replace
+from operator import index as operator_index
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -68,6 +71,22 @@ log = logging.getLogger("firecube.runtime.zarr.strategies.indexed_region")
 # "already written in a prior run" signal on resume. Registered in
 # ``firecube.core.zarr._reserved_attrs.RESERVED_ARRAY_ATTRS``.
 _STATIC_WRITTEN_ATTR = "firecube_static_written"
+
+
+@dataclasses.dataclass(frozen=True)
+class _RegionFutureMeta:
+    group: str
+    array: str
+    ts_index: int
+    aligned: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class _RegionSelection:
+    ts_index: int
+    y_start: int
+    y_stop: int
+    channel_index: int | None
 
 
 def _schema_dimension_names(arr_spec: Any, time_coord_name: str) -> tuple[str, ...] | None:
@@ -116,6 +135,7 @@ class IndexedRegionStrategy:
         slot_range: tuple[int, int] | None = None,
         slot_group: str | None = None,
         codec_pipelines_by_array: Mapping[tuple[str, str], tuple[Any, Any, Any]] | None = None,
+        region_write_concurrency: int = 1,
     ) -> dict[str, Any]:
         """Execute write intents grouped by Zarr group and return metrics.
 
@@ -134,10 +154,13 @@ class IndexedRegionStrategy:
                 provided, all intents are validated before any schema setup or
                 writes occur.
             slot_group: Optional group name that this pod owns.  When set
-                together with ``slot_range``, the post-intent assertion only
-                validates intents for ``slot_group``; intents for other groups
-                are skipped with a warning (not silently dropped) and no
-                writes happen for them.
+            together with ``slot_range``, the post-intent assertion only
+            validates intents for ``slot_group``; intents for other groups
+            are skipped with a warning (not silently dropped) and no
+            writes happen for them.
+            region_write_concurrency: Maximum concurrent region writes per
+                claimed timestamp slot. ``1`` uses the historical serial
+                dispatch path.
 
         Returns:
             dict with ``"coverage"`` list and ``"duration_s"`` float.
@@ -149,6 +172,28 @@ class IndexedRegionStrategy:
         schema_by_group: dict[str, Any] = {}
         for spec in effective_schema:
             schema_by_group[spec.group] = spec
+
+        array_specs_by_path = {
+            (group_spec.group, arr_spec.name): arr_spec
+            for group_spec in effective_schema
+            for arr_spec in getattr(group_spec, "arrays", ())
+        }
+
+        if region_write_concurrency < 1:
+            raise ValueError(
+                f"region_write_concurrency must be >= 1, got {region_write_concurrency}"
+            )
+
+        if region_write_concurrency > 1:
+            self._validate_declared_concurrent_region_intents(
+                group_to_intents=group_to_intents,
+                array_specs_by_path=array_specs_by_path,
+                slot_group=slot_group,
+                slot_range=slot_range,
+            )
+
+        region_writes_total_count = 0
+        region_writes_aligned_count = 0
 
         if slot_range is not None:
             slot_start, slot_end = slot_range
@@ -295,13 +340,241 @@ class IndexedRegionStrategy:
                 intent for intent in intents if getattr(intent, "kind", None) != "static"
             ]
 
-            for intent in static_intents:
-                self._dispatch_static_intent(writer, intent)
+            region_writes_total_count += sum(
+                1 for intent in timed_intents if getattr(intent, "kind", None) == "region"
+            )
 
-            intents_by_slot: dict[int, list[Any]] = {}
-            for intent in timed_intents:
-                intents_by_slot.setdefault(intent.ts_index, []).append(intent)
+            if region_write_concurrency > 1:
+                region_writes_aligned_count += self._count_declared_aligned_region_writes(
+                    timed_intents,
+                    array_specs_by_path,
+                )
 
+            if region_write_concurrency == 1:
+                for intent in static_intents:
+                    self._dispatch_static_intent(writer, intent)
+
+                intents_by_slot: dict[int, list[Any]] = {}
+                for intent in timed_intents:
+                    intents_by_slot.setdefault(intent.ts_index, []).append(intent)
+
+                for ts_index, slot_intents in intents_by_slot.items():
+                    if claim_for_slot is not None:
+                        slot_ctx = claim_for_slot(group_name, ts_index)
+                    elif claim_for_group is not None:
+                        slot_ctx = claim_for_group(group_name)
+                    else:
+                        slot_ctx = contextlib.nullcontext()
+                    with slot_ctx:
+                        for intent in slot_intents:
+                            self._dispatch_intent(writer, intent)
+                            if intent.kind == "timestamp" and intent.timestamp_val is not None:
+                                tracker.record_write(
+                                    group=group_name,
+                                    arrays=[self._time_coord_name],
+                                    ts_index=intent.ts_index,
+                                    time_val=intent.timestamp_val,
+                                    aligned=True,
+                                )
+                            elif intent.kind == "region":
+                                tracker.record_write(
+                                    group=group_name,
+                                    arrays=[intent.array],
+                                    ts_index=intent.ts_index,
+                                    time_val=None,
+                                    aligned=True,
+                                )
+                            elif intent.kind == "1d":
+                                # Only advance coverage time bounds when this 1-D write
+                                # targets the declared time-coord array AND carries a real
+                                # timestamp value. Non-time-coord 1-D writes still register
+                                # their index range (for span coverage) but pass
+                                # ``time_val=None`` so they cannot poison ``time_min``/
+                                # ``time_max`` with arbitrary data.
+                                is_time_coord = intent.array == self._time_coord_name
+                                time_val = (
+                                    intent.timestamp_val
+                                    if is_time_coord and intent.timestamp_val is not None
+                                    else None
+                                )
+                                tracker.record_write(
+                                    group=group_name,
+                                    arrays=[intent.array],
+                                    ts_index=intent.ts_index,
+                                    time_val=time_val,
+                                    aligned=True,
+                                )
+            else:
+                root = writer._open_root()
+                aligned_by_intent = self._validate_opened_concurrent_region_targets(
+                    root=root,
+                    group_name=group_name,
+                    timed_intents=timed_intents,
+                    array_specs_by_path=array_specs_by_path,
+                )
+
+                for intent in static_intents:
+                    self._dispatch_static_intent(writer, intent)
+
+                self._dispatch_timed_intents_concurrently(
+                    writer=writer,
+                    group_name=group_name,
+                    timed_intents=timed_intents,
+                    claim_for_group=claim_for_group,
+                    claim_for_slot=claim_for_slot,
+                    tracker=tracker,
+                    region_write_concurrency=region_write_concurrency,
+                    aligned_by_intent=aligned_by_intent,
+                    time_coord_name=self._time_coord_name,
+                )
+
+        coverage = [dataclasses.asdict(c) for c in tracker.build_coverage()]
+        return {
+            "coverage": coverage,
+            "duration_s": time.monotonic() - t0,
+            "region_write_concurrency_effective": region_write_concurrency,
+            "region_writes_aligned_count": region_writes_aligned_count,
+            "region_writes_total_count": region_writes_total_count,
+        }
+
+    @classmethod
+    def _validate_declared_concurrent_region_intents(
+        cls,
+        *,
+        group_to_intents: dict[str, list[Any]],
+        array_specs_by_path: Mapping[tuple[str, str], Any],
+        slot_group: str | None,
+        slot_range: tuple[int, int] | None,
+    ) -> None:
+        for group_name, intents in group_to_intents.items():
+            if slot_group is not None and slot_range is not None and group_name != slot_group:
+                continue
+            for intent in intents:
+                if getattr(intent, "kind", None) != "region":
+                    continue
+                spec = cls._array_spec_for_intent(intent, array_specs_by_path)
+                if getattr(spec, "shards", None) is not None:
+                    raise ValueError(
+                        "Concurrent region writes do not support sharded targets: "
+                        f"group={intent.group!r} array={intent.array!r} declares "
+                        f"shards={tuple(spec.shards)!r}. Set region_write_concurrency=1 "
+                        "or recreate the target unsharded."
+                    )
+                cls._validate_region_selection(
+                    intent,
+                    tuple(getattr(spec, "shape", ())),
+                    source="declared schema",
+                )
+
+    @classmethod
+    def _validate_opened_concurrent_region_targets(
+        cls,
+        *,
+        root: Any,
+        group_name: str,
+        timed_intents: Sequence[Any],
+        array_specs_by_path: Mapping[tuple[str, str], Any],
+    ) -> dict[int, bool]:
+        aligned_by_intent: dict[int, bool] = {}
+        by_slot: dict[int, list[Any]] = {}
+
+        for intent in timed_intents:
+            if getattr(intent, "kind", None) != "region":
+                continue
+            by_slot.setdefault(intent.ts_index, []).append(intent)
+
+        for slot_intents in by_slot.values():
+            chunk_owner: dict[tuple[str, str, tuple[int, ...]], Any] = {}
+            for intent in slot_intents:
+                spec = cls._array_spec_for_intent(intent, array_specs_by_path)
+                arr_path = f"{intent.group}/{intent.array}"
+                try:
+                    arr = root[arr_path]
+                except KeyError as exc:
+                    raise ValueError(
+                        "Concurrent region write target is missing after schema setup: "
+                        f"group={intent.group!r} array={intent.array!r}"
+                    ) from exc
+
+                if getattr(spec, "shards", None) is not None:
+                    raise ValueError(
+                        "Concurrent region writes do not support sharded targets: "
+                        f"group={intent.group!r} array={intent.array!r} declares "
+                        f"shards={tuple(spec.shards)!r}."
+                    )
+
+                existing_shards = getattr(arr, "shards", None)
+                if existing_shards is not None:
+                    raise ValueError(
+                        "Concurrent region writes do not support sharded targets: "
+                        f"group={intent.group!r} array={intent.array!r} is sharded on disk "
+                        f"with shards={tuple(existing_shards)!r}. Set "
+                        "region_write_concurrency=1 or recreate the target unsharded."
+                    )
+
+                shape = tuple(int(axis) for axis in getattr(arr, "shape", ()))
+                chunks = cls._chunks_for_opened_array(arr, arr_path)
+                selection = cls._validate_region_selection(
+                    intent,
+                    shape,
+                    source="opened target array",
+                )
+                keys, aligned = cls._physical_chunk_keys_for_region(
+                    group=group_name,
+                    intent=intent,
+                    shape=shape,
+                    chunks=chunks,
+                    selection=selection,
+                )
+                if not keys:
+                    raise ValueError(
+                        "Concurrent region write selection touches no physical chunks: "
+                        f"group={intent.group!r} array={intent.array!r} "
+                        f"ts_index={intent.ts_index!r} y_slice={intent.y_slice!r}"
+                    )
+                for key in keys:
+                    previous = chunk_owner.get(key)
+                    if previous is not None:
+                        raise ValueError(
+                            "Concurrent region writes overlap one physical chunk: "
+                            f"group={intent.group!r} array={intent.array!r} "
+                            f"chunk={key[2]!r} previous_ts_index={previous.ts_index!r} "
+                            f"current_ts_index={intent.ts_index!r}."
+                        )
+                    chunk_owner[key] = intent
+                aligned_by_intent[id(intent)] = aligned
+
+        return aligned_by_intent
+
+    @classmethod
+    def _dispatch_timed_intents_concurrently(
+        cls,
+        *,
+        writer: RegionZarrWriter,
+        group_name: str,
+        timed_intents: Sequence[Any],
+        claim_for_group: Callable[[str], Any] | None,
+        claim_for_slot: Callable[[str, int], Any] | None,
+        tracker: CoverageTracker,
+        region_write_concurrency: int,
+        aligned_by_intent: Mapping[int, bool],
+        time_coord_name: str,
+    ) -> None:
+        intents_by_slot: dict[int, list[Any]] = {}
+        for intent in timed_intents:
+            intents_by_slot.setdefault(intent.ts_index, []).append(intent)
+
+        has_region_intents = any(
+            getattr(intent, "kind", None) == "region" for intent in timed_intents
+        )
+        executor_ctx: contextlib.AbstractContextManager[ThreadPoolExecutor | None]
+        executor_ctx = (
+            ThreadPoolExecutor(max_workers=region_write_concurrency)
+            if has_region_intents
+            else contextlib.nullcontext(None)
+        )
+
+        with executor_ctx as executor:
             for ts_index, slot_intents in intents_by_slot.items():
                 if claim_for_slot is not None:
                     slot_ctx = claim_for_slot(group_name, ts_index)
@@ -310,50 +583,398 @@ class IndexedRegionStrategy:
                 else:
                     slot_ctx = contextlib.nullcontext()
                 with slot_ctx:
-                    for intent in slot_intents:
-                        self._dispatch_intent(writer, intent)
-                        if intent.kind == "timestamp" and intent.timestamp_val is not None:
-                            tracker.record_write(
-                                group=group_name,
-                                arrays=[self._time_coord_name],
-                                ts_index=intent.ts_index,
-                                time_val=intent.timestamp_val,
-                                aligned=True,
+                    pending: set[Future[None]] = set()
+                    future_meta: dict[Future[None], _RegionFutureMeta] = {}
+                    try:
+                        for intent in slot_intents:
+                            if intent.kind == "region":
+                                if executor is None:
+                                    raise RuntimeError(
+                                        "internal error: missing executor for region write"
+                                    )
+                                cls._wait_for_region_capacity(
+                                    pending=pending,
+                                    future_meta=future_meta,
+                                    tracker=tracker,
+                                    limit=region_write_concurrency,
+                                )
+                                data = cls._resolved_region_data(intent)
+                                future = cast(
+                                    Future[None],
+                                    executor.submit(
+                                        writer.write_region,
+                                        group=intent.group,
+                                        array_name=intent.array,
+                                        ts_index=intent.ts_index,
+                                        y_slice=intent.y_slice,
+                                        data=data,
+                                        channel_index=intent.channel_index,
+                                    ),
+                                )
+                                pending.add(future)
+                                future_meta[future] = _RegionFutureMeta(
+                                    group=group_name,
+                                    array=intent.array,
+                                    ts_index=intent.ts_index,
+                                    aligned=bool(aligned_by_intent.get(id(intent), False)),
+                                )
+                                continue
+
+                            cls._drain_pending_region_writes(
+                                pending=pending,
+                                future_meta=future_meta,
+                                tracker=tracker,
                             )
-                        elif intent.kind == "region":
-                            tracker.record_write(
-                                group=group_name,
-                                arrays=[intent.array],
-                                ts_index=intent.ts_index,
-                                time_val=None,
-                                aligned=True,
-                            )
-                        elif intent.kind == "1d":
-                            # Only advance coverage time bounds when this 1-D write
-                            # targets the declared time-coord array AND carries a real
-                            # timestamp value. Non-time-coord 1-D writes still register
-                            # their index range (for span coverage) but pass
-                            # ``time_val=None`` so they cannot poison ``time_min``/
-                            # ``time_max`` with arbitrary data.
-                            is_time_coord = intent.array == self._time_coord_name
-                            time_val = (
-                                intent.timestamp_val
-                                if is_time_coord and intent.timestamp_val is not None
-                                else None
-                            )
-                            tracker.record_write(
-                                group=group_name,
-                                arrays=[intent.array],
-                                ts_index=intent.ts_index,
-                                time_val=time_val,
-                                aligned=True,
+                            cls._dispatch_intent(writer, intent)
+                            cls._record_timed_non_region_coverage(
+                                tracker=tracker,
+                                group_name=group_name,
+                                intent=intent,
+                                time_coord_name=time_coord_name,
                             )
 
-        coverage = [dataclasses.asdict(c) for c in tracker.build_coverage()]
-        return {
-            "coverage": coverage,
-            "duration_s": time.monotonic() - t0,
-        }
+                        cls._drain_pending_region_writes(
+                            pending=pending,
+                            future_meta=future_meta,
+                            tracker=tracker,
+                        )
+                    except BaseException:
+                        cls._cancel_and_drain_pending(pending)
+                        raise
+
+    @classmethod
+    def _wait_for_region_capacity(
+        cls,
+        *,
+        pending: set[Future[None]],
+        future_meta: dict[Future[None], _RegionFutureMeta],
+        tracker: CoverageTracker,
+        limit: int,
+    ) -> None:
+        if len(pending) < limit:
+            return
+        done, not_done = wait(pending, return_when=FIRST_COMPLETED)
+        pending.clear()
+        pending.update(cast(set[Future[None]], not_done))
+        cls._record_completed_region_futures(done, future_meta, tracker)
+
+    @classmethod
+    def _drain_pending_region_writes(
+        cls,
+        *,
+        pending: set[Future[None]],
+        future_meta: dict[Future[None], _RegionFutureMeta],
+        tracker: CoverageTracker,
+    ) -> None:
+        if not pending:
+            return
+        done, not_done = wait(pending, return_when=ALL_COMPLETED)
+        pending.clear()
+        pending.update(cast(set[Future[None]], not_done))
+        cls._record_completed_region_futures(done, future_meta, tracker)
+
+    @staticmethod
+    def _record_completed_region_futures(
+        done: set[Future[None]],
+        future_meta: dict[Future[None], _RegionFutureMeta],
+        tracker: CoverageTracker,
+    ) -> None:
+        for future in done:
+            future.result()
+            meta = future_meta.pop(future)
+            tracker.record_write(
+                group=meta.group,
+                arrays=[meta.array],
+                ts_index=meta.ts_index,
+                time_val=None,
+                aligned=meta.aligned,
+            )
+
+    @staticmethod
+    def _cancel_and_drain_pending(pending: set[Future[None]]) -> None:
+        if not pending:
+            return
+        for future in pending:
+            future.cancel()
+        wait(pending, return_when=ALL_COMPLETED)
+        for future in pending:
+            try:
+                future.result()
+            except BaseException as exc:
+                log.warning(
+                    "Region write worker failed during cleanup: %s",
+                    exc,
+                    exc_info=True,
+                )
+        pending.clear()
+
+    @staticmethod
+    def _record_timed_non_region_coverage(
+        *,
+        tracker: CoverageTracker,
+        group_name: str,
+        intent: Any,
+        time_coord_name: str,
+    ) -> None:
+        if intent.kind == "timestamp" and intent.timestamp_val is not None:
+            tracker.record_write(
+                group=group_name,
+                arrays=[time_coord_name],
+                ts_index=intent.ts_index,
+                time_val=intent.timestamp_val,
+                aligned=True,
+            )
+        elif intent.kind == "1d":
+            is_time_coord = intent.array == time_coord_name
+            time_val = (
+                intent.timestamp_val if is_time_coord and intent.timestamp_val is not None else None
+            )
+            tracker.record_write(
+                group=group_name,
+                arrays=[intent.array],
+                ts_index=intent.ts_index,
+                time_val=time_val,
+                aligned=True,
+            )
+
+    @staticmethod
+    def _resolved_region_data(intent: Any) -> np.ndarray:
+        return cast(np.ndarray, intent.data() if callable(intent.data) else intent.data)
+
+    @classmethod
+    def _count_declared_aligned_region_writes(
+        cls,
+        timed_intents: Sequence[Any],
+        array_specs_by_path: Mapping[tuple[str, str], Any],
+    ) -> int:
+        count = 0
+        for intent in timed_intents:
+            if getattr(intent, "kind", None) != "region":
+                continue
+            try:
+                spec = cls._array_spec_for_intent(intent, array_specs_by_path)
+                if (
+                    getattr(spec, "shards", None) is not None
+                    or getattr(spec, "chunks", None) is None
+                ):
+                    continue
+                selection = cls._validate_region_selection(
+                    intent,
+                    tuple(getattr(spec, "shape", ())),
+                    source="declared schema",
+                )
+                _, aligned = cls._physical_chunk_keys_for_region(
+                    group=intent.group,
+                    intent=intent,
+                    shape=tuple(int(axis) for axis in spec.shape),
+                    chunks=tuple(int(axis) for axis in spec.chunks),
+                    selection=selection,
+                )
+            except ValueError:
+                continue
+            if aligned:
+                count += 1
+        return count
+
+    @staticmethod
+    def _array_spec_for_intent(
+        intent: Any,
+        array_specs_by_path: Mapping[tuple[str, str], Any],
+    ) -> Any:
+        key = (intent.group, intent.array)
+        try:
+            return array_specs_by_path[key]
+        except KeyError as exc:
+            raise ValueError(
+                "Concurrent region write target is not declared in zarr_schema(): "
+                f"group={intent.group!r} array={intent.array!r}"
+            ) from exc
+
+    @staticmethod
+    def _chunks_for_opened_array(arr: Any, arr_path: str) -> tuple[int, ...]:
+        chunks = getattr(arr, "chunks", None)
+        if chunks is None:
+            raise ValueError(
+                "Concurrent region writes require known chunk metadata for "
+                f"{arr_path!r}; opened array reports chunks=None."
+            )
+        chunk_tuple = tuple(int(axis) for axis in chunks)
+        if len(chunk_tuple) != int(getattr(arr, "ndim", len(getattr(arr, "shape", ())))):
+            raise ValueError(
+                "Concurrent region writes require chunk rank to match array rank for "
+                f"{arr_path!r}; chunks={chunk_tuple!r} shape={tuple(arr.shape)!r}."
+            )
+        if any(axis <= 0 for axis in chunk_tuple):
+            raise ValueError(
+                "Concurrent region writes require positive chunk sizes for "
+                f"{arr_path!r}; chunks={chunk_tuple!r}."
+            )
+        return chunk_tuple
+
+    @staticmethod
+    def _validate_region_selection(
+        intent: Any,
+        shape: tuple[int, ...],
+        *,
+        source: str,
+    ) -> _RegionSelection:
+        rank = len(shape)
+        if rank not in (3, 4):
+            raise ValueError(
+                "Concurrent region writes support rank-3 and rank-4 arrays only: "
+                f"group={intent.group!r} array={intent.array!r} {source} rank={rank}."
+            )
+        if any(axis <= 0 for axis in shape[1:]):
+            raise ValueError(
+                "Concurrent region writes require positive non-time dimensions: "
+                f"group={intent.group!r} array={intent.array!r} {source} shape={shape!r}."
+            )
+
+        ts_index = IndexedRegionStrategy._as_non_negative_int(
+            intent.ts_index,
+            field="ts_index",
+            intent=intent,
+        )
+        y_slice = intent.y_slice
+        if not isinstance(y_slice, slice):
+            raise ValueError(
+                "Concurrent region writes require y_slice to be a slice: "
+                f"group={intent.group!r} array={intent.array!r} y_slice={y_slice!r}."
+            )
+        if y_slice.step not in (None, 1):
+            raise ValueError(
+                "Concurrent region writes require contiguous y slices with step 1: "
+                f"group={intent.group!r} array={intent.array!r} y_slice={y_slice!r}."
+            )
+        y_len = shape[1]
+        y_start = IndexedRegionStrategy._slice_endpoint(
+            y_slice.start,
+            default=0,
+            field="y_slice.start",
+            intent=intent,
+        )
+        y_stop = IndexedRegionStrategy._slice_endpoint(
+            y_slice.stop,
+            default=y_len,
+            field="y_slice.stop",
+            intent=intent,
+        )
+        if y_start < 0 or y_stop < 0 or y_start >= y_stop or y_stop > y_len:
+            raise ValueError(
+                "Concurrent region write y_slice is outside the target array: "
+                f"group={intent.group!r} array={intent.array!r} {source} "
+                f"shape={shape!r} y_slice={y_slice!r}."
+            )
+
+        channel_index = getattr(intent, "channel_index", None)
+        if rank == 3:
+            if channel_index is not None:
+                raise ValueError(
+                    "Concurrent rank-3 region writes must not set channel_index: "
+                    f"group={intent.group!r} array={intent.array!r} "
+                    f"channel_index={channel_index!r}."
+                )
+            return _RegionSelection(ts_index, y_start, y_stop, None)
+
+        if channel_index is None:
+            return _RegionSelection(ts_index, y_start, y_stop, None)
+        channel = IndexedRegionStrategy._as_non_negative_int(
+            channel_index,
+            field="channel_index",
+            intent=intent,
+        )
+        if channel >= shape[3]:
+            raise ValueError(
+                "Concurrent region write channel_index is outside the target array: "
+                f"group={intent.group!r} array={intent.array!r} {source} "
+                f"shape={shape!r} channel_index={channel_index!r}."
+            )
+        return _RegionSelection(ts_index, y_start, y_stop, channel)
+
+    @staticmethod
+    def _as_non_negative_int(value: Any, *, field: str, intent: Any) -> int:
+        try:
+            resolved = operator_index(value)
+        except TypeError as exc:
+            raise ValueError(
+                "Concurrent region writes require integer selection values: "
+                f"group={intent.group!r} array={intent.array!r} {field}={value!r}."
+            ) from exc
+        if resolved < 0:
+            raise ValueError(
+                "Concurrent region writes require non-negative selection values: "
+                f"group={intent.group!r} array={intent.array!r} {field}={value!r}."
+            )
+        return int(resolved)
+
+    @staticmethod
+    def _slice_endpoint(value: Any, *, default: int, field: str, intent: Any) -> int:
+        if value is None:
+            return default
+        return IndexedRegionStrategy._as_non_negative_int(value, field=field, intent=intent)
+
+    @classmethod
+    def _physical_chunk_keys_for_region(
+        cls,
+        *,
+        group: str,
+        intent: Any,
+        shape: tuple[int, ...],
+        chunks: tuple[int, ...],
+        selection: _RegionSelection,
+    ) -> tuple[set[tuple[str, str, tuple[int, ...]]], bool]:
+        rank = len(shape)
+        if selection.ts_index >= shape[0]:
+            raise ValueError(
+                "Concurrent region write ts_index is outside the opened target array: "
+                f"group={intent.group!r} array={intent.array!r} "
+                f"shape={shape!r} ts_index={selection.ts_index!r}."
+            )
+
+        time_chunks = cls._chunk_axis_range(selection.ts_index, selection.ts_index + 1, chunks[0])
+        y_chunks = cls._chunk_axis_range(selection.y_start, selection.y_stop, chunks[1])
+        x_chunks = cls._chunk_axis_range(0, shape[2], chunks[2])
+
+        if rank == 3:
+            coords = itertools.product(time_chunks, y_chunks, x_chunks)
+            keys = {(group, intent.array, tuple(coord)) for coord in coords}
+            aligned = chunks[0] == 1 and cls._axis_selection_is_chunk_aligned(
+                selection.y_start, selection.y_stop, shape[1], chunks[1]
+            )
+            return keys, aligned
+
+        if selection.channel_index is None:
+            channel_start = 0
+            channel_stop = shape[3]
+        else:
+            channel_start = selection.channel_index
+            channel_stop = selection.channel_index + 1
+        channel_chunks = cls._chunk_axis_range(channel_start, channel_stop, chunks[3])
+        coords = itertools.product(time_chunks, y_chunks, x_chunks, channel_chunks)
+        keys = {(group, intent.array, tuple(coord)) for coord in coords}
+        aligned = (
+            chunks[0] == 1
+            and cls._axis_selection_is_chunk_aligned(
+                selection.y_start, selection.y_stop, shape[1], chunks[1]
+            )
+            and cls._axis_selection_is_chunk_aligned(
+                channel_start, channel_stop, shape[3], chunks[3]
+            )
+        )
+        return keys, aligned
+
+    @staticmethod
+    def _chunk_axis_range(start: int, stop: int, chunk_size: int) -> range:
+        return range(start // chunk_size, ((stop - 1) // chunk_size) + 1)
+
+    @staticmethod
+    def _axis_selection_is_chunk_aligned(
+        start: int,
+        stop: int,
+        axis_len: int,
+        chunk_size: int,
+    ) -> bool:
+        return start % chunk_size == 0 and (stop == axis_len or stop % chunk_size == 0)
 
     @classmethod
     def _dispatch_static_intent(cls, writer: RegionZarrWriter, intent: Any) -> None:

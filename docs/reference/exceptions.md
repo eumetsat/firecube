@@ -15,6 +15,7 @@ discovery.
     "MissingIrregularCoordinateError",
     "DuplicateIrregularCoordinateError",
     "NoDiscoveredItemsError",
+    "IndexedWriteCompilationError",
     "SchemaDriftError",
     "SchemaSizeMismatchError",
     "ManifestError",
@@ -57,6 +58,13 @@ All three inherit from `ConfigurationError`.
 
 ::: firecube.ingestor.api.StorageError
 
+## IndexedWrite Compilation Errors
+
+`IndexedWriteCompilationError` is raised when the engine cannot map an
+`IndexedWrite.coordinate` to a slot index at compile time.
+
+::: firecube.ingestor.api.IndexedWriteCompilationError
+
 ## Core API Re-Exports
 
 The core facade re-exports the error types used by plugin code and the engine.
@@ -67,8 +75,11 @@ The core facade re-exports the error types used by plugin code and the engine.
 
 ::: firecube.core.api.NoDiscoveredItemsError
 
+::: firecube.core.api.IndexedWriteCompilationError
+
 ## See Also
 
 - [Templates](templates.md)
 - [Index Specification](parallelism.md)
 - [IrregularTimeAxis Plugin Guide](../guides/plugins/irregular-axis.md)
+- [Implement DirectZarrIngestor](../guides/plugins/direct-zarr.md)

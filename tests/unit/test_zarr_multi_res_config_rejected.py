@@ -14,9 +14,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
+from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.templates.config import ZarrTemplateConfig
+from firecube.ingestor.types.context import OutputPaths, PipelineResult
 
 REMOVED_MESSAGE = (
     "zarr_multi_res during ingest has been removed; "
@@ -58,3 +62,41 @@ def test_append_multires_handler_not_importable() -> None:
         exec(
             "from firecube.ingestor.runtime.zarr.append_services import Append" + "MultiresHandler",
         )
+
+
+def test_zarr_region_write_concurrency_default_is_one() -> None:
+    cfg = ZarrTemplateConfig()
+    assert cfg.zarr_region_write_concurrency == 1
+
+
+def test_zarr_region_write_concurrency_rejects_zero() -> None:
+    with pytest.raises(ValueError, match="zarr_region_write_concurrency must be >= 1"):
+        ZarrTemplateConfig(zarr_region_write_concurrency=0)
+
+
+def test_zarr_region_write_concurrency_rejects_negative() -> None:
+    with pytest.raises(ValueError, match="zarr_region_write_concurrency must be >= 1"):
+        ZarrTemplateConfig(zarr_region_write_concurrency=-1)
+
+
+def test_zarr_region_write_concurrency_accepts_positive() -> None:
+    cfg = ZarrTemplateConfig(zarr_region_write_concurrency=4)
+    assert cfg.zarr_region_write_concurrency == 4
+
+
+def test_show_options_lists_zarr_region_write_concurrency() -> None:
+    class _ZarrConcurrencyProbe(BaseIngestor):
+        PRODUCT_NAME = "zarr_concurrency_probe"
+        name = "zarr_concurrency_probe"
+        template_config_class = ZarrTemplateConfig
+
+        def _process_batch(self, batch: Any, ctx: Any) -> PipelineResult:
+            return PipelineResult(batch=batch, outputs=OutputPaths(primary=""), success=True)
+
+        def _aggregate_metrics(self, ctx: Any, state: Any) -> dict[str, Any]:
+            return {}
+
+    desc = _ZarrConcurrencyProbe.describe_options()
+
+    assert "Template Options" in desc
+    assert "zarr_region_write_concurrency" in desc["Template Options"]

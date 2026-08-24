@@ -44,7 +44,8 @@ from typing import Any
 import numpy as np
 
 from firecube.core.api import IndexSpec, ItemInfo, ResolvedIndex
-from firecube.core.errors import ClaimConflictError
+from firecube.core.errors import ClaimConflictError, IndexedWriteCompilationError
+from firecube.core.indexed_write import IndexedWrite
 from firecube.ingestor.api import (
     BaseIngestor,
     ConfigurationError,
@@ -733,6 +734,67 @@ class WriteIntent:
         return cls(group=group, array=array, ts_index=0, data=data, kind="static")
 
 
+def _compile_indexed_write(iw: IndexedWrite, resolved_index: ResolvedIndex) -> list[WriteIntent]:
+    """Compile an :class:`IndexedWrite` into a :class:`WriteIntent` by resolving its slot.
+
+    Pure function. No I/O, no logging, no state mutation, no caching side
+    effects — the same ``(iw, resolved_index)`` inputs always produce equal
+    outputs. The ``iw.data`` payload passes through unchanged: callable
+    payloads are not invoked, arrays are not copied.
+
+    Args:
+        iw: The coordinate-keyed indexed write to compile.
+        resolved_index: The resolved index used to look up ``iw.coordinate``
+            within ``iw.group``.
+
+    Returns:
+        A single-element ``list[WriteIntent]``. Always a list — never a bare
+        intent, never a generator — so callers can concatenate without
+        special-casing.
+
+    Raises:
+        IndexedWriteCompilationError: If ``iw.coordinate`` cannot be resolved
+            to a slot in ``iw.group`` (unknown group, coordinate not present,
+            out-of-range integer, misaligned timestamp, wrong coordinate
+            type). The original resolver error is chained via ``__cause__``.
+    """
+    try:
+        slot = resolved_index.position(iw.group, iw.coordinate)
+    except (KeyError, ValueError, IndexError, TypeError) as exc:
+        raise IndexedWriteCompilationError(
+            coordinate=iw.coordinate,
+            reason=f"coordinate not in resolved index for group '{iw.group}'",
+            iw_repr=repr(iw)[:200],
+        ) from exc
+
+    if iw._kind == "region":
+        # ``IndexedWrite.region()`` builds always populate ``y_slice``; the
+        # leading-underscore field signals the raw constructor is private.
+        assert iw.y_slice is not None, (
+            "IndexedWrite._kind='region' invariant violated: y_slice is None. "
+            "Use IndexedWrite.region() rather than the raw constructor."
+        )
+        return [
+            WriteIntent.region(
+                group=iw.group,
+                array=iw.array,
+                index=slot,
+                data=iw.data,
+                y_slice=iw.y_slice,
+                channel_index=iw.channel_index,
+            )
+        ]
+    # iw._kind == "slot"
+    return [
+        WriteIntent.slot(
+            group=iw.group,
+            array=iw.array,
+            index=slot,
+            data=iw.data,
+        )
+    ]
+
+
 class DirectZarrIngestor(BaseIngestor):
     """Abstract template for direct-Zarr region-based ingestors.
 
@@ -792,6 +854,66 @@ class DirectZarrIngestor(BaseIngestor):
             f"{type(self).__name__} did not override inspect_item(). "
             "Override this method to enable parallel ingestion; "
             "return None to drop items your plugin cannot map to a slot."
+        )
+
+    def build_indexed_write(
+        self, item: Any, ctx: PluginContext
+    ) -> IndexedWrite | Sequence[IndexedWrite] | None:
+        """Compile a single source item into one or more indexed writes.
+
+        Called once per element of ``batch.items`` by the default
+        :meth:`build_write_intents` implementation. Each returned
+        :class:`IndexedWrite` is compiled against the plugin's resolved
+        :class:`IndexSpec` via :func:`_compile_indexed_write` and appended
+        to the batch's :class:`WriteIntent` list.
+
+        Return options:
+
+        - **``IndexedWrite``** — one write for this item.
+        - **``Sequence[IndexedWrite]``** — fan-out: multiple writes for this
+          item; each is compiled independently and all results are
+          concatenated.
+        - **``None``** — drop this item; no ``WriteIntent`` is emitted.
+
+        Static (non-time-indexed) arrays are *not* emitted through this hook
+        — they carry no slot coordinate to resolve. To emit statics alongside
+        indexed writes, override :meth:`build_write_intents` instead, call
+        ``super().build_write_intents(batch, ctx)`` for the indexed
+        compilation, then append :meth:`WriteIntent.static` items:
+
+        If a plugin overrides both hooks, the engine calls
+        :meth:`build_write_intents` directly and this hook is reached only via
+        the default :meth:`build_write_intents` implementation below.
+
+        .. code-block:: python
+
+            def build_write_intents(self, batch, ctx):
+                intents = super().build_write_intents(batch, ctx)
+                intents.append(WriteIntent.static(
+                    group="grid", array="lat", data=self._lat_grid,
+                ))
+                return intents
+
+        Default raises ``NotImplementedError``. Plugins must override either
+        this hook or :meth:`build_write_intents`; overriding neither raises
+        ``NotImplementedError`` from :meth:`build_write_intents` at first call.
+
+        Args:
+            item: A single element from ``batch.items``.
+            ctx: The plugin context for this run.
+
+        Returns:
+            A single :class:`IndexedWrite`, a sequence of them, or ``None``
+            to drop the item.
+
+        Raises:
+            NotImplementedError: If not overridden and
+                :meth:`build_write_intents` is also not overridden.
+        """
+        _ = item, ctx
+        raise NotImplementedError(
+            f"{type(self).__name__} did not override build_indexed_write(). "
+            "Override this method (or build_write_intents) to emit write intents."
         )
 
     def resolved_index(self, ctx: PluginContext) -> ResolvedIndex:
@@ -888,48 +1010,72 @@ class DirectZarrIngestor(BaseIngestor):
         specs = self._cached_zarr_schema(ctx)
         return sorted({spec.group for spec in specs})
 
-    @abstractmethod
     def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
         """Convert a batch into a list of write operations.
 
-        Each ``WriteIntent`` describes a single region write, 1-D write,
-        or timestamp write.  The template will execute them in order via
-        the configured region write strategy.
+        Default implementation: iterates ``batch.items``, calls
+        :meth:`build_indexed_write` per item, compiles each returned
+        :class:`IndexedWrite` via :func:`_compile_indexed_write` against
+        :meth:`resolved_index`, and returns the concatenated
+        :class:`WriteIntent` list.
 
-        Return an empty list to skip the batch.
+        Plugins have two override options:
 
-        Every intent's ``group`` must exist in ``zarr_schema(ctx)``, and
-        ``ts_index`` must fall inside the worker's slot range when
-        slot-range parallelism is enabled.
+        - **Override :meth:`build_indexed_write`** (recommended for
+          time-indexed writes) — return coordinate-keyed writes per item;
+          the engine resolves slot indices for you.
+        - **Override this method directly** (needed for statics or when
+          the batch requires cross-item state) — return the
+          :class:`WriteIntent` list yourself. Call
+          ``super().build_write_intents(batch, ctx)`` first if you want
+          to keep the indexed-write compilation path and just append
+          statics.
+
+        If a plugin overrides both hooks, this method wins: the engine calls
+        :meth:`build_write_intents` directly. :meth:`build_indexed_write` is
+        reached only through the default implementation here.
+
+        Overriding neither raises ``NotImplementedError``.
+
+        Return an empty list to skip the batch. Every intent's ``group``
+        must exist in ``zarr_schema(ctx)``, and ``ts_index`` must fall
+        inside the worker's slot range when slot-range parallelism is
+        enabled.
 
         Examples:
-            Emit the data write and its timestamp for each item:
+            Emit one region write per item via :meth:`build_indexed_write`
+            (the default fallback compiles them for you):
 
-                def build_write_intents(self, batch, ctx):
-                    intents = []
-                    for item in batch.items:
-                        array, stamp = read_product(ctx.materialize(item))
-                        ts_index = self.resolved_index(ctx).position("FWI", stamp)
-                        intents.append(
-                            WriteIntent(
-                                group="FWI",
-                                array="fire_risk",
-                                ts_index=ts_index,
-                                data=array,
-                            )
-                        )
-                        intents.append(
-                            WriteIntent(
-                                group="FWI",
-                                array="timestamp",
-                                ts_index=ts_index,
-                                data=None,
-                                kind="timestamp",
-                                timestamp_val=stamp,
-                            )
-                        )
-                    return intents
+                def build_indexed_write(self, item, ctx):
+                    array, stamp = read_product(ctx.materialize(item))
+                    return IndexedWrite.region(
+                        group="FWI", array="fire_risk",
+                        coordinate=stamp, data=array,
+                        y_slice=slice(0, array.shape[0]),
+                    )
         """
+        if (
+            type(self).build_indexed_write is DirectZarrIngestor.build_indexed_write
+            and type(self).build_write_intents is DirectZarrIngestor.build_write_intents
+        ):
+            raise NotImplementedError(
+                "Plugin must implement either build_indexed_write or build_write_intents. "
+                "See firecube.ingestor.api.DirectZarrIngestor for hook documentation."
+            )
+        if not batch.items:
+            return []
+        resolved = self.resolved_index(ctx)
+        intents: list[WriteIntent] = []
+        for item in batch.items:
+            result = self.build_indexed_write(item, ctx)
+            if result is None:
+                continue
+            if isinstance(result, IndexedWrite):
+                intents.extend(_compile_indexed_write(result, resolved))
+                continue
+            for iw in result:
+                intents.extend(_compile_indexed_write(iw, resolved))
+        return intents
 
     def _bind_index_at_startup(self, ctx: PluginContext) -> None:
         """Override: bind IndexSpec once at pod startup via base helper.
@@ -1049,12 +1195,20 @@ class DirectZarrIngestor(BaseIngestor):
     def _process_batch(self, batch: PipelineBatch, ctx: PluginContext) -> PipelineResult:
         """Execute direct-Zarr writes for one batch.
 
-        Orchestrates: schema setup → intent generation → strategy execution →
-        coverage and metrics assembly.
+        Orchestrates: ``batch_setup`` → ``prepare_batch_data`` → schema setup →
+        intent generation → strategy execution → coverage and metrics assembly.
+        ``cleanup_batch_data`` and ``batch_teardown`` fire in ``finally`` on
+        success, empty-intents, and failure paths — mirroring
+        :meth:`GenericZarrIngestor._process_batch` verbatim so plugin authors
+        get the same lifecycle contract across both templates.
         """
         from firecube.ingestor.api import IndexedRegionStrategy
 
+        self.batch_setup(ctx)
+
         try:
+            prep_metrics = self.prepare_batch_data(batch, ctx) or {}
+
             write_mode = self.engine_config.write_mode
             store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
             product = _ctx_product_name(ctx, self.name)
@@ -1080,7 +1234,7 @@ class DirectZarrIngestor(BaseIngestor):
                 return PipelineResult(
                     batch=batch,
                     outputs=OutputPaths(primary=str(store_uri)),
-                    metrics={"count": 0},
+                    metrics={**prep_metrics, "count": 0},
                     success=True,
                 )
 
@@ -1174,6 +1328,18 @@ class DirectZarrIngestor(BaseIngestor):
                 # extras_in_global cannot happen: validate_global_expected_subset_of_schema
                 # in the capability gate ensures global_expected.keys() ⊆ zarr_schema() groups at startup.
 
+            ctx_config = getattr(ctx, "config", None)
+            concurrency_template_config = getattr(
+                ctx_config,
+                "template_config",
+                getattr(self, "template_config", None),
+            )
+            region_write_concurrency = getattr(
+                concurrency_template_config,
+                "zarr_region_write_concurrency",
+                1,
+            )
+
             metrics = strategy.write_groups(
                 group_to_intents=group_to_intents,
                 schema=schema,
@@ -1182,9 +1348,13 @@ class DirectZarrIngestor(BaseIngestor):
                 slot_range=slot_range,
                 slot_group=self.engine_config.slot_group,
                 codec_pipelines_by_array=codec_pipelines_by_array,
+                region_write_concurrency=region_write_concurrency,
             )
 
+            # prep_metrics unpacked first so template-owned keys win on collision;
+            # reversing would let plugin prep silently clobber reported metrics.
             final_metrics = {
+                **prep_metrics,
                 "zarr": metrics,
                 "coverage": metrics.get("coverage", []),
                 "count": len(intents),
@@ -1203,6 +1373,13 @@ class DirectZarrIngestor(BaseIngestor):
             return PipelineResult(
                 batch=batch, outputs=OutputPaths(primary=""), success=False, error=str(exc)
             )
+
+        finally:
+            try:
+                self.cleanup_batch_data(batch, ctx)
+            except Exception as exc:
+                self._log.warning("Batch cleanup failed: %s", exc)
+            self.batch_teardown(ctx)
 
 
 __all__ = [
