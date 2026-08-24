@@ -28,7 +28,7 @@ import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -379,6 +379,9 @@ class IndexedRegionStrategy:
           :class:`SchemaDriftError`. Re-writing is skipped on an exact match.
         """
         arr_path = f"{intent.group}/{intent.array}"
+        # callable() is the right duck-type check; typing.Callable would treat
+        # some numpy objects with __call__ descriptors as lazy payloads.
+        data = cast(np.ndarray, intent.data() if callable(intent.data) else intent.data)
         root = writer._open_root()
         try:
             arr = root[arr_path]
@@ -386,25 +389,26 @@ class IndexedRegionStrategy:
             arr = None
         if arr is not None and bool(arr.attrs.get(_STATIC_WRITTEN_ATTR, False)):
             existing = np.asarray(arr[:])
-            if not _arrays_equal_missing_aware(existing, intent.data):
+            if not _arrays_equal_missing_aware(existing, data):
                 raise SchemaDriftError(
                     f"Static array {arr_path!r} diverged from existing data on "
                     "resume. Re-ingest from scratch; static arrays are write-once."
                 )
             return
-        cls._dispatch_intent(writer, intent)
+        writer.write_static(group=intent.group, array_name=intent.array, data=data)
         root[arr_path].attrs[_STATIC_WRITTEN_ATTR] = True
 
     @staticmethod
     def _dispatch_intent(writer: RegionZarrWriter, intent: Any) -> None:
         """Route a single ``WriteIntent`` to the appropriate writer method."""
         if intent.kind == "region":
+            data = cast(np.ndarray, intent.data() if callable(intent.data) else intent.data)
             writer.write_region(
                 group=intent.group,
                 array_name=intent.array,
                 ts_index=intent.ts_index,
                 y_slice=intent.y_slice,
-                data=intent.data,
+                data=data,
                 channel_index=intent.channel_index,
             )
         elif intent.kind == "1d":
@@ -421,10 +425,11 @@ class IndexedRegionStrategy:
                 timestamp_val=intent.timestamp_val,
             )
         elif intent.kind == "static":
+            data = cast(np.ndarray, intent.data() if callable(intent.data) else intent.data)
             writer.write_static(
                 group=intent.group,
                 array_name=intent.array,
-                data=intent.data,
+                data=data,
             )
         else:
             raise ValueError(f"Unknown WriteIntent kind: {intent.kind!r}")

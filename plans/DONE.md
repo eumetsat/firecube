@@ -1,5 +1,38 @@
 # Done
 
+## 2026-08-23 — DirectZarr lazy WriteIntent payload (§F3)
+
+`WriteIntent.data` now accepts `Callable[[], np.ndarray]` in addition to
+`np.ndarray | Any`. The callable is resolved exactly once at dispatch time,
+in dispatch order, immediately before the writer call. Eager payloads remain
+valid; existing plugins run unchanged.
+
+**Baseline peak** (MTG FCI single-slot FDHSI smoke ingest, eager path):
+14.5201 GiB.
+
+**Acceptance measurement**: pending — `firecube-mtg-fci-l1c` plugin adoption
+(WI-3) and measurement to be performed by operator with the adopted build.
+Target: ≤ ~3.13 GiB retained peak.
+
+**P=8 12-slot capacity confirmation**: pending — requires operator-supplied
+adopted plugin build and P=8 fixture.
+
+**Fallback**: not invoked (acceptance measurement pending; fallback decision
+deferred to operator measurement run).
+
+**Lifetime contract**: callables must close over stable inputs (paths,
+configuration, immutable references). Open file handles and per-batch scratch
+objects must not be captured.
+
+**TEST_GAPS P2 §4**: closed — regression harness at
+`tests/benchmarks/lazy_writeintent_harness/`; synthetic quantitative smoke
+(`test_callable_plugin_retained_peak_smoke`) runs in CI using
+`callable_payload_test_plugin`; FCI-scale quantitative lane is operator-run
+with the adopted build.
+
+Supersedes: `plans/TODO.md §F3` (removed).
+References: `plans/TEST_GAPS.md P2 §4` (closed).
+
 ## 2026-08-20 — IntegerAxis + ResolvedIndexRecord + firecube zarr index CLI 
 
 Added `IntegerAxis` as a second concrete `AxisSpec` alongside `RegularTimeAxis`.

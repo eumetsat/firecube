@@ -9,6 +9,11 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- `WriteIntent.data` now accepts `Callable[[], np.ndarray]` in addition to
+  `np.ndarray | Any`. The callable is resolved exactly once at dispatch time,
+  immediately before the writer call. Eager payloads remain valid; existing
+  plugins run unchanged. Supported for `kind="region"` and `kind="static"`;
+  other kinds raise `TypeError` at construction.
 - `IntegerAxis` axis type for `IndexSpec`: declare a zero-based integer axis
   with a fixed `slot_count` when items map to an integer position rather than a
   timestamp. Importable from `firecube.core.api` and `firecube.ingestor.api`.

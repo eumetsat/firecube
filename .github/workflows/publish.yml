@@ -26,6 +26,7 @@ jobs:
           uv pip install -e tests/fixtures/slot_shape_test_plugin
           uv pip install -e tests/fixtures/index_spec_test_plugin
           uv pip install -e tests/fixtures/index_spec_integer_test_plugin
+          uv pip install -e tests/fixtures/callable_payload_test_plugin
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
