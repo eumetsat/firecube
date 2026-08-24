@@ -26,6 +26,7 @@ from firecube.core.controlplane.types import (
 )
 from firecube.core.errors import (
     DuplicateIrregularCoordinateError,
+    IndexedWriteCompilationError,
     MissingIrregularCoordinateError,
     NoDiscoveredItemsError,
 )
@@ -54,6 +55,7 @@ from firecube.core.index_spec import (
     ItemInfo,
     RegularTimeAxis,
 )
+from firecube.core.indexed_write import IndexedWrite
 from firecube.core.intake import CatalogGroupInfo
 from firecube.core.product import ensure_product_uri, resolve_dataset_target
 from firecube.core.slot_index import (
@@ -80,6 +82,8 @@ __all__ = [
     "CatalogGroupInfo",
     "DuplicateIrregularCoordinateError",
     "IndexSpec",
+    "IndexedWrite",
+    "IndexedWriteCompilationError",
     "IntegerAxis",
     "IrregularTimeAxis",
     "ItemInfo",

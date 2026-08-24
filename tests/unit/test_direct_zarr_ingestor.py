@@ -307,6 +307,225 @@ class TestIndexedRegionStrategy:
         assert coverage["time_dim_name"] == "timestamp"
 
 
+class TestDirectZarrLifecycleHooks:
+    """`_process_batch` wraps intent generation with the four lifecycle hooks.
+
+    Contracts protected:
+
+    - ``batch_setup`` → ``prepare_batch_data`` → ``cleanup_batch_data`` →
+      ``batch_teardown`` fire in that order on the success path.
+    - ``cleanup_batch_data`` and ``batch_teardown`` still fire on the
+      empty-intents short-circuit path.
+    - ``cleanup_batch_data`` and ``batch_teardown`` still fire when the
+      strategy raises mid-dispatch; ``PipelineResult.success`` is False.
+    - ``prepare_batch_data``'s returned metrics merge additively into the
+      final metrics dict; template-owned keys are preserved.
+
+    Mirrors ``GenericZarrIngestor._process_batch`` (templates/generic.py:233-303)
+    so plugin authors get one lifecycle contract across both templates.
+    """
+
+    def _build_ctx(self) -> MagicMock:
+        ctx = MagicMock(spec=PluginContext)
+        ctx.output_name = "test_product"
+        ctx.run_id = "run-001"
+        ctx.option = MagicMock(return_value="unknown")
+        ctx.storage = None
+        return ctx
+
+    def _build_engine_config(self) -> MagicMock:
+        return MagicMock(
+            write_mode="direct",
+            slot_start=None,
+            slot_end=None,
+            slot_group=None,
+        )
+
+    def test_lifecycle_hook_order_on_success(self) -> None:
+        calls: list[str] = []
+
+        class _OrderedIngestor(_StubDirectIngestor):
+            def batch_setup(self, ctx: PluginContext) -> None:
+                calls.append("batch_setup")
+                super().batch_setup(ctx)
+
+            def prepare_batch_data(self, batch, ctx):
+                calls.append("prepare_batch_data")
+                return None
+
+            def cleanup_batch_data(self, batch, ctx) -> None:
+                calls.append("cleanup_batch_data")
+
+            def batch_teardown(self, ctx: PluginContext) -> None:
+                calls.append("batch_teardown")
+                super().batch_teardown(ctx)
+
+        ingestor = _OrderedIngestor()
+        ingestor.engine_config = self._build_engine_config()
+        ingestor._index_binding = None
+        ctx = self._build_ctx()
+        batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
+
+        with (
+            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
+        ):
+            MockStrategy.return_value.write_groups.return_value = {
+                "coverage": [],
+                "duration_s": 0.0,
+            }
+            result = ingestor._process_batch(batch, ctx)
+
+        assert result.success is True, f"expected success; got error={result.error}"
+        assert calls == [
+            "batch_setup",
+            "prepare_batch_data",
+            "cleanup_batch_data",
+            "batch_teardown",
+        ], f"hook order regression: {calls}"
+
+    def test_lifecycle_cleanup_on_empty_intents_batch(self) -> None:
+        calls: list[str] = []
+
+        class _EmptyOrderedIngestor(DirectZarrIngestor):
+            PRODUCT_NAME = "empty_ordered"
+            name = "empty_ordered"
+
+            def zarr_schema(self, ctx):
+                return []
+
+            def build_write_intents(self, batch, ctx):
+                return []
+
+            def batch_setup(self, ctx):
+                calls.append("batch_setup")
+                super().batch_setup(ctx)
+
+            def prepare_batch_data(self, batch, ctx):
+                calls.append("prepare_batch_data")
+                return None
+
+            def cleanup_batch_data(self, batch, ctx):
+                calls.append("cleanup_batch_data")
+
+            def batch_teardown(self, ctx):
+                calls.append("batch_teardown")
+                super().batch_teardown(ctx)
+
+        ingestor = _EmptyOrderedIngestor()
+        ingestor.engine_config = self._build_engine_config()
+        ingestor._index_binding = None
+        ctx = self._build_ctx()
+        batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=[])
+
+        with patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"):
+            result = ingestor._process_batch(batch, ctx)
+
+        assert result.success is True
+        assert result.metrics["count"] == 0
+        assert "cleanup_batch_data" in calls, (
+            f"cleanup must fire on empty-intents path; observed hooks={calls}"
+        )
+        assert "batch_teardown" in calls, (
+            f"teardown must fire on empty-intents path; observed hooks={calls}"
+        )
+        assert calls == [
+            "batch_setup",
+            "prepare_batch_data",
+            "cleanup_batch_data",
+            "batch_teardown",
+        ], f"hook order regression on empty-intents path: {calls}"
+
+    def test_lifecycle_cleanup_on_strategy_failure(self) -> None:
+        calls: list[str] = []
+
+        class _FailingIngestor(_StubDirectIngestor):
+            def batch_setup(self, ctx):
+                calls.append("batch_setup")
+                super().batch_setup(ctx)
+
+            def prepare_batch_data(self, batch, ctx):
+                calls.append("prepare_batch_data")
+                return None
+
+            def cleanup_batch_data(self, batch, ctx):
+                calls.append("cleanup_batch_data")
+
+            def batch_teardown(self, ctx):
+                calls.append("batch_teardown")
+                super().batch_teardown(ctx)
+
+        ingestor = _FailingIngestor()
+        ingestor.engine_config = self._build_engine_config()
+        ingestor._index_binding = None
+        ctx = self._build_ctx()
+        batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
+
+        with (
+            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
+        ):
+            MockStrategy.return_value.write_groups.side_effect = RuntimeError(
+                "strategy dispatch boom"
+            )
+            result = ingestor._process_batch(batch, ctx)
+
+        assert result.success is False, "PipelineResult must reflect failure"
+        assert result.error is not None
+        assert "strategy dispatch boom" in result.error, (
+            f"error must propagate the underlying strategy error; got {result.error!r}"
+        )
+        assert "cleanup_batch_data" in calls, (
+            f"cleanup must fire on strategy-failure path; observed hooks={calls}"
+        )
+        assert "batch_teardown" in calls, (
+            f"teardown must fire on strategy-failure path; observed hooks={calls}"
+        )
+        assert calls == [
+            "batch_setup",
+            "prepare_batch_data",
+            "cleanup_batch_data",
+            "batch_teardown",
+        ], f"hook order regression on failure path: {calls}"
+
+    def test_prep_metrics_merged_not_replaced(self) -> None:
+        class _PrepMetricsIngestor(_StubDirectIngestor):
+            def prepare_batch_data(self, batch, ctx):
+                return {"prep_custom": 42}
+
+        ingestor = _PrepMetricsIngestor()
+        ingestor.engine_config = self._build_engine_config()
+        ingestor._index_binding = None
+        ctx = self._build_ctx()
+        batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
+
+        with (
+            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
+        ):
+            MockStrategy.return_value.write_groups.return_value = {
+                "coverage": [{"group": "data_1km"}],
+                "duration_s": 0.0,
+            }
+            result = ingestor._process_batch(batch, ctx)
+
+        assert result.success is True, f"expected success; got error={result.error}"
+        metrics = result.metrics
+        assert metrics["prep_custom"] == 42, (
+            f"prep_metrics key must survive additive merge; got {metrics}"
+        )
+        for template_key in ("zarr", "coverage", "count", "storage_handled"):
+            assert template_key in metrics, (
+                f"template-owned key {template_key!r} missing after merge; got {list(metrics)}"
+            )
+        assert metrics["count"] == 2, (
+            f"template count must not be shadowed by prep merge; got {metrics['count']}"
+        )
+        assert metrics["coverage"] == [{"group": "data_1km"}], (
+            f"template coverage must survive merge; got {metrics['coverage']}"
+        )
+
+
 class TestApiReExports:
     def test_direct_zarr_ingestor_importable(self) -> None:
         from firecube.ingestor.api import DirectZarrIngestor as D

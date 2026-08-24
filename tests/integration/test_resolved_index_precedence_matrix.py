@@ -297,16 +297,25 @@ def test_apply_resolved_index_precedence_never_raises_assertion_error() -> None:
     (which is swallowed under ``python -O`` and reads as a programming bug to
     operators). This source-check test guards against a silent revert.
     """
+    import ast
     import inspect as _inspect
+    import textwrap
 
     from firecube.core.controlplane.manager import ChunkManager
 
-    source = _inspect.getsource(ChunkManager._apply_resolved_index_precedence)
-    assert "raise AssertionError" not in source, (
+    source = textwrap.dedent(_inspect.getsource(ChunkManager._apply_resolved_index_precedence))
+    raised = {
+        node.exc.func.id
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Raise)
+        and isinstance(node.exc, ast.Call)
+        and isinstance(node.exc.func, ast.Name)
+    }
+    assert "AssertionError" not in raised, (
         "ChunkManager._apply_resolved_index_precedence must not raise AssertionError; "
         "use ManifestError so operators receive a documented control-plane error."
     )
-    assert "raise ManifestError" in source, (
+    assert "ManifestError" in raised, (
         "ChunkManager._apply_resolved_index_precedence terminal fall-through must "
         "still surface via ManifestError."
     )

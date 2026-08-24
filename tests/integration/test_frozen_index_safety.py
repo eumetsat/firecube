@@ -23,12 +23,12 @@ Contracts covered:
 
 1. Deterministic ordering -- identical input yields identical ``identity_hash``.
 2. Duplicate rejection -- coordinate collision names BOTH offending items.
-3. Freeze-then-late-arrival refusal (persistence-wired, xfail until A10).
+3. Freeze-then-late-arrival refusal.
 4. Empty discovery refusal -- zero items raises ``NoDiscoveredItemsError``.
 5. Non-monotonic to canonical order -- reverse input sorts to forward manifest.
 6. Path stability contract -- every manifest entry carries a non-empty
    ``source_ref`` that a lazy WriteIntent callable can safely close over.
-7. Identity-hash equality across dry-run vs preallocate (xfail until A8).
+7. Identity-hash equality across dry-run vs preallocate.
 
 All tests exercise the real fixture ingestors from
 ``irregular_axis_test_plugin`` (installed by A6). No mocks fake

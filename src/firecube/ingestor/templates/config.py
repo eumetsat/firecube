@@ -193,6 +193,7 @@ class ZarrTemplateConfig(TemplateConfig):
         zarr_consolidate: Consolidate Zarr metadata after writes.
         zarr_time_encoding: Optional time encoding override.
         zarr_async_concurrency: Async write concurrency used by Zarr.
+        zarr_region_write_concurrency: Region write concurrency used by Zarr.
         dask_scheduler: Optional Dask scheduler override.
         dask_write_threads: Optional write-thread count for Dask-backed writes.
     """
@@ -205,6 +206,7 @@ class ZarrTemplateConfig(TemplateConfig):
     zarr_consolidate: bool = False
     zarr_time_encoding: str | None = None
     zarr_async_concurrency: int = 10
+    zarr_region_write_concurrency: int = 1
     dask_scheduler: str | None = None
     dask_write_threads: int = 0
 
@@ -224,6 +226,9 @@ class ZarrTemplateConfig(TemplateConfig):
                 '  zarr_codecs = [{"name": "...", "configuration": {...}}]\n'
                 "Or remove zarr_codecs for uncompressed output."
             )
+
+        if self.zarr_region_write_concurrency < 1:
+            raise ValueError("zarr_region_write_concurrency must be >= 1")
 
         _validate_zarr_codecs(self.zarr_codecs)
 

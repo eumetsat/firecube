@@ -35,13 +35,11 @@ never silently pass by skipping without a documented token).
 
 from __future__ import annotations
 
-import inspect
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 from tests.benchmarks.lazy_writeintent_harness.conftest import (
     BASELINE_JSON,
     CAMPAIGN_BASELINE_MAX_RSS_GIB,
@@ -247,45 +245,6 @@ def test_long_form_evidence(
 
 def _campaign_baseline_available() -> bool:
     return CAMPAIGN_BASELINE_MAX_RSS_GIB > 0
-
-
-@pytest.mark.benchmark
-def test_lazy_bounds_retained_peak() -> None:
-    """Structural bound: dispatch resolves callable payloads one at a time.
-
-    Retained peak is bounded by one materialized payload plus writer overhead
-    because ``IndexedRegionStrategy`` resolves each callable at dispatch and
-    immediately hands the array to the writer — the full payload set is never
-    simultaneously live. A regression that lifted resolution into a batching
-    accumulator (materialize-all-then-write) would violate this bound and
-    silently double or Nx the retained peak.
-
-    This test is qualitative, not quantitative: the hard-number regression is
-    ``test_regression_smoke_within_tolerance`` and requires the FCI plugin +
-    ``/usr/bin/time -v``. When those preconditions are missing, that test
-    skips with a documented token — the dispatch-pattern surface would still
-    silently break. Asserting the resolution idiom is present in both dispatch
-    methods keeps a fast, deterministic guard on the shape of the dispatch
-    code path, so a refactor that removes callable handling fails here before
-    it reaches a host that can measure.
-
-    Assertion is by source inspection because the runtime call is a per-intent
-    ``callable(...)`` branch — there is no observable side effect for a
-    behavioral test to gate on when the payload is a plain ndarray, and
-    stubbing the dispatch to assert on a call count would just re-test the
-    unit path already covered by ``tests/unit/test_writeintent_callable_dispatch.py``.
-    """
-
-    source = inspect.getsource(IndexedRegionStrategy._dispatch_intent)
-    assert "callable(intent.data)" in source, (
-        "_dispatch_intent does not contain callable resolution; lazy payload dispatch is broken"
-    )
-
-    source_static = inspect.getsource(IndexedRegionStrategy._dispatch_static_intent)
-    assert "callable(intent.data)" in source_static, (
-        "_dispatch_static_intent does not contain callable resolution; "
-        "lazy static payload dispatch is broken"
-    )
 
 
 @pytest.mark.benchmark

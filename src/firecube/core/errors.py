@@ -73,6 +73,18 @@ class NoDiscoveredItemsError(ConfigurationError):
         )
 
 
+class IndexedWriteCompilationError(ValueError):
+    """IndexedWrite compilation failed for a coordinate-bound write intent."""
+
+    def __init__(self, coordinate: Any, reason: str, iw_repr: str) -> None:
+        self.coordinate = coordinate
+        self.reason = reason
+        self.iw_repr = iw_repr
+        super().__init__(
+            f"IndexedWrite compilation failed: {reason} (coordinate={coordinate!r}, iw={iw_repr})"
+        )
+
+
 class SchemaDriftError(FirecubeError):
     """Existing Zarr array metadata drifted from the declared schema.
 

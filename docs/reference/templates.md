@@ -136,6 +136,10 @@ For parallel writes across disjoint slot ranges, see
 
 ::: firecube.ingestor.api.WriteIntent
 
+::: firecube.ingestor.api.IndexedWrite
+
+::: firecube.core.api.IndexedWrite
+
 ## See Also
 
 - [Plugin Development Overview](../guides/plugins/index.md)
@@ -143,5 +147,6 @@ For parallel writes across disjoint slot ranges, see
 - [Implement `GenericZarrIngestor`](../guides/plugins/generic-zarr.md)
 - [Implement `GenericParquetIngestor`](../guides/plugins/generic-parquet.md)
 - [Implement `DirectZarrIngestor`](../guides/plugins/direct-zarr.md)
+- [Implement DirectZarrIngestor](../guides/plugins/direct-zarr.md)
 - [Hooks & Lifecycle](hooks.md)
 - [Context & Results](context.md)

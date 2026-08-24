@@ -125,6 +125,35 @@ class MyPlugin(DirectZarrIngestor):
 
 Use `WriteIntent.static(...)` for arrays that never move with the time axis, such as latitude and longitude grids. Every intent must target a declared group and array.
 
+### Let The Engine Resolve Slots
+
+When each source item maps to one coordinate-keyed write, override
+`build_indexed_write` instead of `build_write_intents` and return an
+`IndexedWrite` keyed by the raw coordinate. The engine resolves the slot index
+against your `IndexSpec` and builds the `WriteIntent` for you:
+
+```python
+from firecube.ingestor.api import IndexedWrite
+
+
+class MyPlugin(DirectZarrIngestor):
+    def build_indexed_write(self, item: object, ctx: PluginContext) -> IndexedWrite | None:
+        stamp, values = read_product_item(ctx.materialize(item))
+        return IndexedWrite.slot(group="data", array="value", coordinate=stamp, data=values)
+```
+
+Return `None` to drop an item. Use `IndexedWrite.region(...)` for 2-D region
+writes; its `data` field also accepts a zero-argument callable resolved once at
+dispatch time (`IndexedWrite.slot` requires an eager array). A coordinate the
+engine cannot map raises `IndexedWriteCompilationError` before any write.
+
+Timestamp-coordinate and static arrays carry no slot coordinate to resolve, so
+they still go through `build_write_intents`: override both hooks, call
+`super().build_write_intents(batch, ctx)` for the indexed compilation, and
+append `WriteIntent.coordinate` / `WriteIntent.static` items. If you override
+`build_write_intents` without calling `super()`, `build_indexed_write` is never
+reached.
+
 ## Verify
 
 Run one ingest against a small input and confirm the store is written:

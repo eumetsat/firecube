@@ -1,5 +1,60 @@
 # Done
 
+## 2026-08-24 — IndexedWrite + build_indexed_write hook + DirectZarr lifecycle parity + bounded region-write concurrency
+
+Added the `IndexedWrite` abstraction with `.region()` and `.slot()` builders
+(`src/firecube/core/indexed_write.py`), the pure-function compiler
+`_compile_indexed_write`, the `build_indexed_write(item, ctx)` hook on
+`DirectZarrIngestor`, and `IndexedWriteCompilationError(ValueError)` with
+structured `coordinate`, `reason`, and `iw_repr` fields. Re-exported from both
+SDK façades. Negative API contract enforced: no `.static()` or `.coordinate()`
+builder methods on `IndexedWrite`.
+
+Lifecycle parity: `DirectZarrIngestor._process_batch` now wraps
+intent-generation and strategy-execution with `batch_setup` →
+`prepare_batch_data` → dispatch → `cleanup_batch_data` → `batch_teardown`,
+matching `GenericZarrIngestor._process_batch` order and exception policy.
+`prep_metrics` merged additively into DirectZarr metrics.
+
+Bounded region-write concurrency: added
+`zarr_region_write_concurrency: int = 1` to `ZarrTemplateConfig` (rejects
+values < 1). Extended `verify_array_spec` to reject `spec.shards=None` when
+the on-disk array is sharded. Rewrote `IndexedRegionStrategy.write_groups` to
+support a `ThreadPoolExecutor` path when `region_write_concurrency > 1`:
+coordinator-owned writer (root opened serially before executor startup),
+physical-chunk disjointness pre-check, serial callable resolution in
+coordinator thread, bounded pending futures, non-region intents as ordering
+barriers, coverage recorded only on future success, drain/cancel before claim
+release. Serial path (`concurrency=1`) preserved byte-for-byte.
+
+Evidence: `uv run pytest -m "not slow and not s3"` 2815 passed, 0 failures;
+`uv run pytest -k "fci or opera or direct_zarr" --maxfail=1 -q` 0 failures;
+`uv run mkdocs build --strict` clean; `uv run pyright` 0 errors;
+`uv run ruff check .` clean; `uv run ruff format --check .` clean.
+
+## 2026-08-24 — IndexedWrite + build_indexed_write hook: documentation
+
+Extended `docs/guides/plugins/direct-zarr.md` with a section on letting the
+engine resolve slots via `build_indexed_write`: when to prefer it over
+`build_write_intents`, the static-emission pattern (override both hooks; call
+`super()` for indexed compilation, append `WriteIntent.static` for statics),
+hook precedence, and the `IndexedWriteCompilationError` failure surface. A
+separate guide page was considered and rejected: the hook exists to reduce
+plugin code, and its details belong in the reference docstrings.
+
+Added `:::` directives for `IndexedWrite` and `IndexedWriteCompilationError` to
+`docs/reference/templates.md` and `docs/reference/exceptions.md` (both
+`firecube.ingestor.api` and `firecube.core.api` facades). Fixes the two
+docs-coverage test failures that blocked `uv run pytest -m "not slow and not s3"`.
+
+Evidence: `uv run mkdocs build --strict` clean; `uv run pytest -k "docs"` 29/29
+passed; `uv run pytest -m "not slow and not s3"` 2792 passed, 0 failures.
+
+Supersedes: `plans/TODO.md §33` "Planned: IndexedWrite high-level abstraction +
+read_item hook" (now Landed).
+
+References: B9 (docs).
+
 ## 2026-08-24 — IrregularTimeAxis + AUTO sentinel + content-addressed item manifest
 
 Added `IrregularTimeAxis` as a third concrete `AxisSpec` alongside

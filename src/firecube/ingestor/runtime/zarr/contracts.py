@@ -55,4 +55,6 @@ class RegionWriteStrategy(Protocol):
         claim_for_slot: Callable[[str, int], Any] | None = None,
         slot_range: tuple[int, int] | None = None,
         slot_group: str | None = None,
+        codec_pipelines_by_array: Mapping[tuple[str, str], tuple[Any, Any, Any]] | None = None,
+        region_write_concurrency: int = 1,
     ) -> dict[str, Any]: ...

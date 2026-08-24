@@ -9,6 +9,13 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- `IndexedWrite` and `IndexedWriteCompilationError` are now documented in the
+  public API reference. `IndexedWrite` appears in `docs/reference/templates.md`
+  under Schema And Write Types (both `firecube.ingestor.api` and
+  `firecube.core.api` facades). `IndexedWriteCompilationError` appears in
+  `docs/reference/exceptions.md`. The DirectZarr plugin guide
+  (`docs/guides/plugins/direct-zarr.md`) gained a section on letting the
+  engine resolve slots via `build_indexed_write`.
 - `IrregularTimeAxis` axis type for `IndexSpec`: declare an irregular time axis
   with an explicit tuple of coordinate values when items are not evenly spaced.
   Importable from `firecube.core.api` and `firecube.ingestor.api`.
@@ -96,10 +103,18 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   `firecube` imports.
 - `firecube zarr slots` now accepts `--option` and resolves typed plugin
   config via `TierConfigurator`, matching `firecube zarr preallocate`.
+- New `zarr_region_write_concurrency` template config option (integer, default
+  1) controls the maximum number of concurrent region writes per slot. Values
+  < 1 are rejected at config validation time.
 
 ### Changed
 
 - `ResolvedIndexConflictError` message now includes a field-level diff (groups symmetric difference, per-group axis changes, top-level name/scalar changes) alongside the two truncated hashes -- no more hash-only conflict messages.
+- `verify_array_spec` now rejects an on-disk sharded array when the declared
+  spec has `shards=None`, even at `zarr_region_write_concurrency=1`. Previously
+  this mismatch was silently accepted. Operators with sharded arrays and a
+  non-sharded spec must either recreate the array with matching shards or update
+  the spec.
 - `docstring_style` pinned to `google` in `mkdocs.yml`; numpy-style docstrings
   converted to match.
 - CI test lanes follow `plans/TESTING_STANDARDS.md`: the `test` job excludes
