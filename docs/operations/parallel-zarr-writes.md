@@ -37,6 +37,22 @@ firecube zarr preallocate <plugin> \
 The command is idempotent when the existing arrays match the declared schema.
 It fails when their shape, data type, or chunk layout differs.
 
+Add `--dry-run` to inspect the resolved index without writing any files or
+control-plane records:
+
+```bash
+firecube zarr preallocate <plugin> \
+  --target file:///data/products/my_product.zarr \
+  --product-name my_product \
+  --storage-type local \
+  --storage-driver fsspec \
+  --write-mode direct \
+  --dry-run
+```
+
+The dry-run output is the same JSON format as `firecube zarr index show --json`.
+No Zarr arrays, claim files, or index records are created.
+
 ## 2. Plan Slot Ranges
 
 Inspect a human-readable plan before launching workers:

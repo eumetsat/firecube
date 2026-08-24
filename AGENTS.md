@@ -24,6 +24,7 @@ uv pip install -e tests/fixtures/index_spec_test_plugin
 uv pip install -e tests/fixtures/index_spec_integer_test_plugin
 uv pip install -e tests/fixtures/slot_shape_test_plugin
 uv pip install -e tests/fixtures/callable_payload_test_plugin
+uv pip install -e tests/fixtures/irregular_axis_test_plugin
 ```
 
 This is required for `tests/integration/test_ingest_command_typed.py` and related CLI tests.

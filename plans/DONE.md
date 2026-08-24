@@ -1,5 +1,53 @@
 # Done
 
+## 2026-08-24 — IrregularTimeAxis + AUTO sentinel + content-addressed item manifest
+
+Added `IrregularTimeAxis` as a third concrete `AxisSpec` alongside
+`RegularTimeAxis` and `IntegerAxis`. Plugins declare
+`IrregularTimeAxis(coordinate=..., values=<tuple>)` when items have timestamps
+that are not evenly spaced. Setting `values=AUTO` tells the engine to discover
+coordinates at planning time by calling `inspect_item` on every source item
+before preallocate.
+
+Added `AUTO`: a module-level singleton sentinel. `IrregularTimeAxis(values=AUTO)`
+opts into engine-owned discovery. The sentinel is re-exported from both
+`firecube.core.api` and `firecube.ingestor.api`.
+
+Added content-addressed item manifest: `ItemManifestEntry` pins one source item
+to one axis coordinate via a content-address (`identity_hash`) and a stable
+`source_ref`. `validate_manifest_entries` checks uniqueness invariants.
+`compute_resolved_index_identity_hash` folds the manifest into the
+`identity_hash` when items are present, making the on-disk record a
+freeze-detection mechanism for irregular-axis cubes.
+
+Added `MissingIrregularCoordinateError` and `NoDiscoveredItemsError`: both
+inherit from `ConfigurationError` and are raised during AUTO discovery when an
+item has no resolvable coordinate or when discovery finds zero items.
+
+Added `--dry-run` flag to `firecube zarr preallocate`: runs discovery and
+resolves the index without writing any Zarr arrays, claim files, or control-plane
+records. Output matches `firecube zarr index show --json`.
+
+Added `--derived` flag to `firecube zarr index show`: computes and prints
+derived coordinate values for `regular_time` groups from the stored epoch,
+cadence, and size. Read-only; no files are written.
+
+All new symbols are exported from `firecube.core.api` and
+`firecube.ingestor.api`. Documentation added: capability reference in
+`docs/reference/parallelism.md`, plugin-authoring guide at
+`docs/guides/plugins/irregular-axis.md`, exceptions reference updated in
+`docs/reference/exceptions.md`, CLI docs updated in
+`docs/operations/parallel-zarr-writes.md` and
+`docs/operations/firecube-index.md`.
+
+Supersedes: `plans/TODO.md §33` "Planned: IrregularTimeAxis + AUTO sentinel +
+content-addressed item manifest" (now Landed).
+
+References: A1 (IrregularTimeAxis + AUTO), A2 (resolver), A3 (errors),
+A4 (manifest types), A5 (AUTO discovery), A6 (fixture plugin), A7 (contracts),
+A8 (--dry-run), A9 (--derived), A10 (coord materialization), A11 (integration
+tests), A12 (docs).
+
 ## 2026-08-23 — DirectZarr lazy WriteIntent payload (§F3)
 
 `WriteIntent.data` now accepts `Callable[[], np.ndarray]` in addition to

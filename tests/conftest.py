@@ -86,6 +86,7 @@ def pytest_sessionstart(session):
         ("index_spec_test_plugin", "index_spec_test_plugin"),
         ("index_spec_integer_test_plugin", "index_spec_integer_test_plugin"),
         ("callable_payload_test_plugin", "callable_payload_test_plugin"),
+        ("irregular_axis_test_plugin", "irregular_axis_test_plugin"),
     )
     missing_plugins = []
 

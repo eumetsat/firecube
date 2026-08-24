@@ -111,6 +111,7 @@ nav:
       - GenericZarrIngestor (Append): guides/plugins/generic-zarr.md
       - GenericParquetIngestor (Tabular): guides/plugins/generic-parquet.md
       - DirectZarrIngestor (Region): guides/plugins/direct-zarr.md
+      - IrregularTimeAxis And AUTO: guides/plugins/irregular-axis.md
     - Develop Further:
       - Configure a Plugin: guides/plugins/cli-and-config.md
       - Add Telemetry: guides/plugins/observability.md

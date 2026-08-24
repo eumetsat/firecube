@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "irregular-axis-test-plugin"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["firecube"]
+
+[project.entry-points."firecube.plugins"]
+irregular_axis_safe = "irregular_axis_test_plugin:IrregularAxisSafeIngestor"
+irregular_axis_reverse_order = "irregular_axis_test_plugin:IrregularAxisReverseOrderIngestor"
+irregular_axis_duplicate = "irregular_axis_test_plugin:IrregularAxisDuplicateIngestor"
+irregular_axis_empty = "irregular_axis_test_plugin:IrregularAxisEmptyIngestor"
+irregular_axis_missing_coord = "irregular_axis_test_plugin:IrregularAxisMissingCoordIngestor"
+irregular_axis_concrete = "irregular_axis_test_plugin:IrregularAxisConcreteIngestor"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/irregular_axis_test_plugin"]

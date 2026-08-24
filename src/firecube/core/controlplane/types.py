@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
@@ -97,6 +98,148 @@ def canonical_index_bytes(index: dict[str, Any]) -> bytes:
     return json.dumps(index, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
         "utf-8"
     )
+
+
+SourceRefKind = Literal["path", "uri", "identifier"]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ItemManifestEntry:
+    """A single entry in a content-addressed item manifest.
+
+    Manifest entries let the engine plan an ``IrregularTimeAxis`` axis once and
+    hand deterministic per-item work to parallel workers without a second
+    discovery pass. Each entry pins one source item to one axis coordinate via
+    a content-address (``identity_hash``) plus a caller-defined stable
+    reference (``source_ref``).
+
+    The manifest is deterministic-planning-and-worker-reuse data only. It is
+    NOT a general provenance system: no timestamps, user metadata, plugin
+    versions, or processing lineage are stored here. Add those to a separate
+    subsystem if they are ever needed.
+
+    Args:
+        identity_hash: Content-address of the item (SHA-256 hex of the item
+            contents, or a caller-defined stable identity string). Must be
+            unique within a manifest.
+        coordinate_value: The resolved axis coordinate for this item. Type
+            depends on the axis kind (ISO string, integer, etc.). Must be
+            JSON-native (``str``, ``int``, ``float``, ``bool``, ``None``);
+            non-native values will fail loudly at
+            :func:`canonical_index_bytes` serialisation.
+        source_ref: A stable reference the caller can dereference to load the
+            item at write time. Interpretation is fixed by ``source_ref_kind``.
+            Must be non-empty.
+        source_ref_kind: Declares how ``source_ref`` is interpreted, and the
+            stability contract the caller promises:
+
+            - ``"path"``: absolute filesystem path guaranteed stable for the
+              cube's lifetime.
+            - ``"uri"``: stable URL (e.g. ``s3://bucket/key``) guaranteed
+              dereferenceable for the cube's lifetime.
+            - ``"identifier"``: plugin-defined stable identifier resolvable by
+              the plugin's own logic for the cube's lifetime.
+
+            Callables that close over ``source_ref`` (e.g. lazy WriteIntent
+            payloads) are safe if and only if the plugin honours the declared
+            stability contract for the whole dispatch window.
+    """
+
+    identity_hash: str
+    coordinate_value: Any
+    source_ref: str
+    source_ref_kind: SourceRefKind
+
+    def to_canonical_dict(self) -> dict[str, Any]:
+        """Return the deterministic JSON-native dict for canonical serialisation."""
+
+        return {
+            "identity_hash": self.identity_hash,
+            "coordinate_value": self.coordinate_value,
+            "source_ref": self.source_ref,
+            "source_ref_kind": self.source_ref_kind,
+        }
+
+
+def validate_manifest_entries(entries: list[ItemManifestEntry]) -> None:
+    """Validate the invariants of a content-addressed item manifest.
+
+    Checks:
+
+    - Every ``source_ref`` is non-empty.
+    - No two entries share the same ``identity_hash``.
+    - No two entries share the same ``coordinate_value`` (pairwise distinct).
+
+    Args:
+        entries: The manifest entries to validate.
+
+    Raises:
+        ValueError: On any invariant violation, with a message naming the
+            duplicated value or the offending entry.
+    """
+
+    seen_hashes: set[str] = set()
+    seen_coords: list[Any] = []
+    for entry in entries:
+        if not entry.source_ref:
+            raise ValueError(
+                "ItemManifestEntry.source_ref must be non-empty "
+                f"(identity_hash={entry.identity_hash!r})"
+            )
+        if entry.identity_hash in seen_hashes:
+            raise ValueError(
+                f"duplicate identity_hash in manifest entries: {entry.identity_hash!r}"
+            )
+        seen_hashes.add(entry.identity_hash)
+        # coordinate_value equality is checked linearly — the values may be
+        # unhashable JSON structures (e.g. list, dict) so a set is unsafe.
+        for existing in seen_coords:
+            if existing == entry.coordinate_value:
+                raise ValueError(
+                    f"duplicate coordinate_value in manifest entries: {entry.coordinate_value!r}"
+                )
+        seen_coords.append(entry.coordinate_value)
+
+
+def compute_resolved_index_identity_hash(
+    index: dict[str, Any],
+    items: Sequence[ItemManifestEntry] | Sequence[dict[str, Any]] | None = None,
+) -> str:
+    """Compute the SHA-256 identity hash for a resolved-index record.
+
+    ASYMMETRIC by design (byte-parity requirement): when ``items`` is ``None``
+    the hash is byte-identical to pre-manifest records
+    (``sha256(canonical_index_bytes(index))``). When ``items`` is present,
+    both ``index`` and the sorted ``items`` list fold into the hash. This
+    preserves the ``identity_hash`` of existing ``RegularTimeAxis`` and
+    ``IntegerAxis`` cubes across the schema addition and lets the manifest
+    act as a freeze-detection mechanism for ``IrregularTimeAxis`` cubes:
+    adding or removing an item changes the recorded hash.
+
+    Items are sorted by ``identity_hash`` before hashing so the resulting
+    value is invariant under input order.
+
+    Args:
+        index: The resolved-index payload dict (as returned by
+            ``ResolvedIndex.canonical_index_payload``).
+        items: Optional manifest entries. Accepts either
+            ``ItemManifestEntry`` instances (canonicalised via
+            ``entry.to_canonical_dict()``) or already-canonicalised dicts
+            (as produced by :meth:`ResolvedIndexRecord.from_json_bytes`).
+
+    Returns:
+        Lowercase-hex SHA-256 digest (64 characters).
+    """
+
+    if items is None:
+        return hashlib.sha256(canonical_index_bytes(index)).hexdigest()
+    items_dicts: list[dict[str, Any]] = [
+        entry.to_canonical_dict() if isinstance(entry, ItemManifestEntry) else entry
+        for entry in items
+    ]
+    sorted_items = sorted(items_dicts, key=lambda entry: entry["identity_hash"])
+    combined = {"index": index, "items": sorted_items}
+    return hashlib.sha256(canonical_index_bytes(combined)).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -422,13 +565,21 @@ class DeletionPlan:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ResolvedIndexRecord:
-    """On-disk record for an engine-resolved index payload."""
+    """On-disk record for an engine-resolved index payload.
+
+    Optional ``items`` carries a content-addressed manifest for
+    ``IrregularTimeAxis`` cubes. It is omitted from the wire format and
+    ``identity_hash`` for regular / integer axes so those cubes stay
+    byte-identical to pre-manifest records (see
+    :func:`compute_resolved_index_identity_hash`).
+    """
 
     schema_version: str = "v1"
     recorded_at: str
     recorded_by_run_id: str
     identity_hash: str
     index: dict[str, Any]
+    items: tuple[ItemManifestEntry, ...] | None = None
 
     def __post_init__(self) -> None:
         if len(self.identity_hash) != 64 or not all(
@@ -438,17 +589,29 @@ class ResolvedIndexRecord:
                 f"identity_hash must be a 64-character lowercase hex string, "
                 f"got {self.identity_hash!r} (length {len(self.identity_hash)})"
             )
+        if self.items is not None and not isinstance(self.items, tuple):
+            object.__setattr__(self, "items", tuple(self.items))
 
     def to_json_bytes(self) -> bytes:
-        """Serialise to the on-disk wire format (deterministic, UTF-8 JSON)."""
+        """Serialise to the on-disk wire format (deterministic, UTF-8 JSON).
 
-        payload = {
+        ASYMMETRIC: the ``items`` key is omitted when
+        :attr:`items` is ``None`` so records for regular / integer axes serialise
+        byte-identically to pre-manifest records.
+        """
+
+        payload: dict[str, Any] = {
             "schema_version": self.schema_version,
             "recorded_at": self.recorded_at,
             "recorded_by_run_id": self.recorded_by_run_id,
             "identity_hash": self.identity_hash,
             "index": self.index,
         }
+        if self.items is not None:
+            payload["items"] = sorted(
+                (entry.to_canonical_dict() for entry in self.items),
+                key=lambda entry: str(entry["coordinate_value"]),
+            )
         return json.dumps(
             payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
         ).encode("utf-8")
@@ -487,7 +650,9 @@ class ResolvedIndexRecord:
             index = parsed["index"]
             if not isinstance(index, dict):
                 raise TypeError(f"expected dict, got {type(index).__name__}")
-            recomputed = hashlib.sha256(canonical_index_bytes(index)).hexdigest()
+            items_raw = parsed.get("items")
+            items_parsed = _parse_manifest_items(items_raw) if items_raw is not None else None
+            recomputed = compute_resolved_index_identity_hash(index, items_parsed)
         except (TypeError, ValueError) as exc:
             raise ManifestError(
                 f"resolved-index record has invalid index structure: {exc}"
@@ -507,7 +672,38 @@ class ResolvedIndexRecord:
             recorded_by_run_id=parsed["recorded_by_run_id"],
             identity_hash=stored_hash,
             index=index,
+            items=tuple(items_parsed) if items_parsed is not None else None,
         )
+
+
+def _parse_manifest_items(raw: Any) -> list[ItemManifestEntry]:
+    """Parse a JSON-decoded ``items`` field back into ``ItemManifestEntry`` instances."""
+
+    if not isinstance(raw, list):
+        raise TypeError(f"items must be a JSON array, got {type(raw).__name__}")
+    parsed: list[ItemManifestEntry] = []
+    for i, entry in enumerate(raw):
+        if not isinstance(entry, dict):
+            raise TypeError(f"items[{i}] must be a JSON object, got {type(entry).__name__}")
+        missing = {"identity_hash", "coordinate_value", "source_ref", "source_ref_kind"} - set(
+            entry
+        )
+        if missing:
+            raise ValueError(f"items[{i}] missing required fields: {sorted(missing)}")
+        kind = entry["source_ref_kind"]
+        if kind not in {"path", "uri", "identifier"}:
+            raise ValueError(
+                f"items[{i}].source_ref_kind must be 'path', 'uri', or 'identifier'; got {kind!r}"
+            )
+        parsed.append(
+            ItemManifestEntry(
+                identity_hash=entry["identity_hash"],
+                coordinate_value=entry["coordinate_value"],
+                source_ref=entry["source_ref"],
+                source_ref_kind=kind,
+            )
+        )
+    return parsed
 
 
 @dataclass(frozen=True, slots=True)

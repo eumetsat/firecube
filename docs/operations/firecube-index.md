@@ -45,6 +45,16 @@ firecube zarr index show \
 | Flag | Description |
 |---|---|
 | `--json` | Emit the raw record as JSON instead of the human-readable summary. |
+| `--derived` | For `regular_time` groups, compute and print the derived coordinate values (timestamps) from the stored epoch, cadence, and size. Emits a note to stderr for `irregular_time` and `integer` groups. Does not write any files. |
+
+Add `--derived` to see the full list of timestamps for a `RegularTimeAxis` group:
+
+```bash
+firecube zarr index show \
+  --target file:///data/products/my_product.zarr \
+  --product-name my_product \
+  --derived
+```
 
 **Exit codes:**
 
@@ -163,6 +173,7 @@ and the identity hash matches the plugin's current `index_spec()` declaration.
 
 ## See Also
 
-- **[Index Specification Reference](../reference/parallelism.md)** - `IndexSpec`, `IntegerAxis`, `RegularTimeAxis`, and `ResolvedIndexRecord` types
+- **[Index Specification Reference](../reference/parallelism.md)** - `IndexSpec`, `IntegerAxis`, `IrregularTimeAxis`, `RegularTimeAxis`, and `ResolvedIndexRecord` types
 - **[Implement DirectZarrIngestor](../guides/plugins/direct-zarr.md)** - declare an `IndexSpec` in a plugin
+- **[IrregularTimeAxis Plugin Guide](../guides/plugins/irregular-axis.md)** - declare and use `IrregularTimeAxis` with `AUTO`
 - **[ChunkManager Operations](chunk-manager/index.md)** - inspect and recover the broader control plane
