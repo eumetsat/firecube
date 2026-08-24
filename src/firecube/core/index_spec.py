@@ -4,16 +4,20 @@ Plugin authors declare an ``IndexSpec`` describing the time-axis structure of
 their product. The engine resolves it once into a ``ResolvedIndex`` (see
 ``firecube.core.index_resolve``) and caches it for the run.
 
-``RegularTimeAxis`` and ``IntegerAxis`` are currently shipped. Additional axis
-types are planned as additive extensions in future releases.
+``RegularTimeAxis``, ``IntegerAxis``, and ``IrregularTimeAxis`` are currently
+shipped. Additional axis types are planned as additive extensions in future
+releases.
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import numbers
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Final, Literal
+
+import numpy as np
 
 from firecube.core.slot_index import (
     epoch_s_to_iso,
@@ -25,11 +29,52 @@ from firecube.core.slot_index import (
 class AxisSpec:
     """Marker base for axis specifications.
 
-    ``RegularTimeAxis`` and ``IntegerAxis`` are the current implementations.
-    Additional axis types are planned as additive extensions in future
-    releases. The resolver in ``index_resolve.py`` dispatches on
-    ``isinstance`` -- no abstract methods are required here.
+    ``RegularTimeAxis``, ``IntegerAxis``, and ``IrregularTimeAxis`` are the
+    current implementations. Additional axis types are planned as additive
+    extensions in future releases. The resolver in ``index_resolve.py``
+    dispatches on ``isinstance`` -- no abstract methods are required here.
     """
+
+
+class _AutoSentinel:
+    """Sentinel type for the ``AUTO`` discovery mode.
+
+    Pass the module-level ``AUTO`` singleton as ``values`` to
+    ``IrregularTimeAxis`` to let the engine discover coordinate values at
+    planning time by calling ``inspect_item`` on every source item before
+    preallocate. Do not construct this class directly; use ``AUTO``.
+    """
+
+    def __repr__(self) -> str:
+        return "AUTO"
+
+
+# Like ``dataclasses.MISSING``. PEP 661 discussed sentinel objects and rejected
+# a heavier enum-style approach for this sort of module-level singleton.
+AUTO: Final[_AutoSentinel] = _AutoSentinel()
+"""Sentinel that tells ``IrregularTimeAxis`` to discover coordinate values at planning time.
+
+Set ``IrregularTimeAxis(coordinate=..., values=AUTO)`` to let the engine call
+``inspect_item`` on every source item before preallocate and build the axis
+from the returned coordinates. The engine sorts discovered coordinates and
+assigns each a slot index in ascending order.
+
+Importable from ``firecube.core.api`` and ``firecube.ingestor.api``.
+"""
+
+
+def _canonical_coordinate_value(value: Any) -> Any:
+    if isinstance(value, np.datetime64):
+        return np.datetime_as_string(value, unit="ns", timezone="UTC")
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, dt.datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=dt.UTC)
+        else:
+            value = value.astimezone(dt.UTC)
+        return value.isoformat().replace("+00:00", "Z")
+    return value
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -164,6 +209,47 @@ class IntegerAxis(AxisSpec):
         object.__setattr__(self, "slot_count", int(self.slot_count))
         if self.slot_count < 1:
             raise ValueError(f"slot_count must be >= 1, got {self.slot_count!r}")
+
+
+@dataclass(frozen=True, kw_only=True)
+class IrregularTimeAxis(AxisSpec):
+    """A time axis with explicit coordinate values.
+
+    Args:
+        coordinate: Name of the time coordinate dimension. Must match
+            ``time_dim_name`` when the axis is resolved.
+        values: Explicit coordinate values for the axis, or ``AUTO`` to
+            discover them later. Accepts any non-empty ``Sequence`` of
+            hashable comparable values, typically ``datetime`` objects,
+            ``numpy.datetime64`` values, or integers. Duplicate values raise
+            ``ValueError``. A non-``Sequence`` raises ``TypeError``. Empty input
+            raises ``ValueError``. The engine sorts concrete values ascending
+            and assigns slot indices in that order.
+
+    Note:
+        ``AUTO`` triggers planning-time discovery: the engine scans the full
+        source set via ``inspect_item`` before preallocate so it can discover
+        coordinates and sort them. That costs a full source pass.
+    """
+
+    coordinate: str
+    """Name of the time coordinate dimension."""
+
+    values: Sequence[Any] | _AutoSentinel
+    """Explicit coordinate values, or ``AUTO`` for planning-time discovery."""
+
+    def __post_init__(self) -> None:
+        if self.values is AUTO:
+            return
+        if isinstance(self.values, (str, bytes)):
+            raise TypeError("values must be a sequence of coordinate values, not a string or bytes")
+        if not isinstance(self.values, Sequence):
+            raise TypeError("values must be AUTO or a non-empty Sequence")
+        if not self.values:
+            raise ValueError("values must be a non-empty Sequence")
+        if len(set(self.values)) != len(self.values):
+            raise ValueError("values must not contain duplicates")
+        object.__setattr__(self, "values", tuple(self.values))
 
 
 @dataclass(frozen=True, kw_only=True)

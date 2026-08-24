@@ -62,7 +62,12 @@ from firecube.core.storage.session import StorageSession
 from firecube.core.zarr.layers import DEFAULT_MULTIRES_RESOLUTIONS
 from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
 from firecube.core.zarr.validation import validate_group_with_fs
-from firecube.ingestor.api import IngestContext, PluginContext, RuntimeIngestContext
+from firecube.ingestor.api import (
+    IngestContext,
+    PluginContext,
+    RuntimeIngestContext,
+    canonical_coordinate_value,
+)
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.registry.loader import discover_ingestors
@@ -742,6 +747,18 @@ See also: firecube zarr slots, firecube zarr validate
     type=TypedOptionsParam(),
     help="Plugin/engine option in key=value form.",
 )
+@click.option(
+    "--dry-run/--no-dry-run",
+    "dry_run",
+    default=False,
+    is_flag=True,
+    help=(
+        "Perform discovery and manifest computation only. "
+        "Prints the resolved-index manifest as JSON to stdout. "
+        "Makes zero filesystem mutations: no arrays are created, "
+        "no index files are written, no claims are acquired."
+    ),
+)
 @click.pass_context
 def preallocate(
     ctx: click.Context,
@@ -753,6 +770,7 @@ def preallocate(
     write_mode: str,
     input_data: str | None,
     option: tuple[tuple[str, object], ...],
+    dry_run: bool,
 ) -> None:
     """Pre-allocate Zarr arrays for parallel ingestion.
 
@@ -765,6 +783,7 @@ def preallocate(
     from firecube.core.controlplane import ChunkManager
     from firecube.core.controlplane.manager import check_legacy_index_record
     from firecube.core.errors import LegacyIndexRecordError
+    from firecube.core.index_spec import AUTO, IrregularTimeAxis
     from firecube.core.uris import storage_uri_from_target
     from firecube.core.zarr.region_writer import RegionZarrWriter
     from firecube.ingestor.api import BaseIngestor, IndexedRegionStrategy
@@ -835,6 +854,14 @@ def preallocate(
             raise click.ClickException(
                 f"Plugin '{plugin}' failed to resolve index_spec: {exc}"
             ) from exc
+
+        if dry_run:
+            record = resolved_index.as_resolved_index_record(
+                run_id="dry-run", recorded_at="dry-run"
+            )
+            click.echo(record.to_json_bytes().decode("utf-8"))
+            return
+
         global_expected = {group: resolved_index.size(group) for group in resolved_index.groups}
 
         record = resolved_index.as_resolved_index_record(run_id="preallocate")
@@ -986,6 +1013,15 @@ def preallocate(
                     )
                     click.echo(f"array {array_path}: created")
 
+                axis = resolved_index.axis_for(group_name)
+                if isinstance(axis, IrregularTimeAxis) and axis.values is not AUTO:
+                    _materialize_irregular_coord_array(
+                        writer=writer,
+                        root=root,
+                        group_name=group_name,
+                        axis=axis,
+                    )
+
         summary = {
             "status": "ok",
             "plugin": plugin,
@@ -1067,6 +1103,69 @@ def _array_schema_mismatches(
             mismatches.append(f"chunks: expected {tuple(expected_chunks)}, found {found_chunks}")
 
     return mismatches
+
+
+def _materialize_irregular_coord_array(
+    *,
+    writer: Any,
+    root: Any,
+    group_name: str,
+    axis: Any,
+) -> None:
+    """Write ``axis.values`` densely at ``{group_name}/{axis.coordinate}``.
+
+    Dtype ``datetime64[ns]``, shape ``(len(axis.values),)``. Idempotent on
+    matching state; a shape/dtype/values divergence raises
+    ``click.ClickException`` so the operator sees the conflict before any
+    downstream write.
+    """
+    values = axis.values
+    slot_count = len(values)
+    coord_data = np.array([_coord_to_datetime64(value) for value in values], dtype="datetime64[ns]")
+    coord_path = f"{group_name}/{axis.coordinate}"
+
+    existing = _existing_array(root, coord_path)
+    if existing is not None:
+        expected_dtype = np.dtype("datetime64[ns]")
+        mismatches = _array_schema_mismatches(
+            existing=existing,
+            expected_shape=(slot_count,),
+            expected_dtype=expected_dtype,
+            expected_chunks=None,
+        )
+        if mismatches:
+            diff = "; ".join(mismatches)
+            raise click.ClickException(
+                f"Existing coord array mismatch: '{coord_path}' has mismatches.\n"
+                f"Mismatch: {diff}\n"
+                "Either delete it or update the plugin's IrregularTimeAxis to match."
+            )
+        existing_values = np.asarray(existing[:])
+        if not np.array_equal(existing_values, coord_data):
+            raise click.ClickException(
+                f"Existing coord array '{coord_path}' has values that differ from the "
+                "resolved IrregularTimeAxis. Delete it or align the plugin's axis values."
+            )
+        click.echo(f"array {coord_path}: existing irregular coord array matches; no-op")
+        return
+
+    coord_arr = writer.ensure_group(
+        coord_path,
+        shape=(slot_count,),
+        dtype=np.dtype("datetime64[ns]"),
+        fill_value=np.datetime64("NaT", "ns"),
+        chunks=(max(1, min(256, slot_count)),),
+        dimension_names=(axis.coordinate,),
+    )
+    coord_arr[...] = coord_data
+    click.echo(f"array {coord_path}: created (irregular coord materialization)")
+
+
+def _coord_to_datetime64(value: Any) -> np.datetime64:
+    canonical = canonical_coordinate_value(value)
+    if isinstance(canonical, str):
+        canonical = canonical.removesuffix("Z")
+    return np.datetime64(canonical, "ns")
 
 
 def _query_slots_coverage(

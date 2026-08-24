@@ -5,9 +5,16 @@ Ingestor-layer errors inherit from `IngestorError`; `ManifestError`,
 `SchemaDriftError`, and `StorageError` are shared error types re-exported
 through the same facade.
 
+`MissingIrregularCoordinateError`, `DuplicateIrregularCoordinateError`, and
+`NoDiscoveredItemsError` are raised during `IrregularTimeAxis(values=AUTO)`
+discovery.
+
 {{ render_api_summary("firecube.ingestor.api", [
     "IngestorError",
     "ConfigurationError",
+    "MissingIrregularCoordinateError",
+    "DuplicateIrregularCoordinateError",
+    "NoDiscoveredItemsError",
     "SchemaDriftError",
     "SchemaSizeMismatchError",
     "ManifestError",
@@ -31,6 +38,17 @@ through the same facade.
 
 ::: firecube.ingestor.api.WriteIntentRangeError
 
+## Irregular Axis Discovery Errors
+
+These errors are raised when `IrregularTimeAxis(values=AUTO)` discovery fails.
+All three inherit from `ConfigurationError`.
+
+::: firecube.ingestor.api.MissingIrregularCoordinateError
+
+::: firecube.ingestor.api.DuplicateIrregularCoordinateError
+
+::: firecube.ingestor.api.NoDiscoveredItemsError
+
 ## Shared Errors
 
 ::: firecube.ingestor.api.ManifestError
@@ -39,7 +57,18 @@ through the same facade.
 
 ::: firecube.ingestor.api.StorageError
 
+## Core API Re-Exports
+
+The core facade re-exports the error types used by plugin code and the engine.
+
+::: firecube.core.api.MissingIrregularCoordinateError
+
+::: firecube.core.api.DuplicateIrregularCoordinateError
+
+::: firecube.core.api.NoDiscoveredItemsError
+
 ## See Also
 
 - [Templates](templates.md)
-- [Slot-Range Parallelism](parallelism.md)
+- [Index Specification](parallelism.md)
+- [IrregularTimeAxis Plugin Guide](../guides/plugins/irregular-axis.md)

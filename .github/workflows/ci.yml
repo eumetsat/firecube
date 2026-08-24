@@ -34,6 +34,7 @@ jobs:
           uv pip install -e tests/fixtures/index_spec_test_plugin
           uv pip install -e tests/fixtures/index_spec_integer_test_plugin
           uv pip install -e tests/fixtures/callable_payload_test_plugin
+          uv pip install -e tests/fixtures/irregular_axis_test_plugin
       - run: uv run pyright
 
   test:
@@ -54,6 +55,7 @@ jobs:
           uv pip install -e tests/fixtures/index_spec_test_plugin
           uv pip install -e tests/fixtures/index_spec_integer_test_plugin
           uv pip install -e tests/fixtures/callable_payload_test_plugin
+          uv pip install -e tests/fixtures/irregular_axis_test_plugin
       - run: uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -n auto --cov=firecube --cov-report=term-missing -q
 
   docs:
@@ -75,6 +77,7 @@ jobs:
           uv pip install -e tests/fixtures/index_spec_test_plugin
           uv pip install -e tests/fixtures/index_spec_integer_test_plugin
           uv pip install -e tests/fixtures/callable_payload_test_plugin
+          uv pip install -e tests/fixtures/irregular_axis_test_plugin
       - name: Documentation and help-text drift checks
         run: uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
 

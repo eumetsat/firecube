@@ -9,6 +9,30 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- `IrregularTimeAxis` axis type for `IndexSpec`: declare an irregular time axis
+  with an explicit tuple of coordinate values when items are not evenly spaced.
+  Importable from `firecube.core.api` and `firecube.ingestor.api`.
+- `AUTO` sentinel: set `IrregularTimeAxis(values=AUTO)` to let the engine
+  discover coordinates at planning time by calling `inspect_item` on every
+  source item before preallocate. Importable from `firecube.core.api` and
+  `firecube.ingestor.api`.
+- `MissingIrregularCoordinateError`: raised during `AUTO` discovery when an
+  item returns `ItemInfo(coordinate=None)` or when two items share the same
+  coordinate. Inherits from `ConfigurationError`. Importable from
+  `firecube.core.api` and `firecube.ingestor.api`.
+- `NoDiscoveredItemsError`: raised during `AUTO` discovery when no items are
+  found for an `IrregularTimeAxis` group. Inherits from `ConfigurationError`.
+  Importable from `firecube.core.api` and `firecube.ingestor.api`.
+- `ItemManifestEntry` and `validate_manifest_entries`: content-addressed item
+  manifest types used by the engine to plan `IrregularTimeAxis` axes and hand
+  deterministic per-item work to parallel workers. Importable from
+  `firecube.core.api` and `firecube.ingestor.api`.
+- `--dry-run` flag for `firecube zarr preallocate`: runs discovery and resolves
+  the index without writing any Zarr arrays, claim files, or control-plane
+  records. Output matches `firecube zarr index show --json`.
+- `--derived` flag for `firecube zarr index show`: computes and prints derived
+  coordinate values for `regular_time` groups from the stored epoch, cadence,
+  and size. Read-only; no files are written.
 - `WriteIntent.data` now accepts `Callable[[], np.ndarray]` in addition to
   `np.ndarray | Any`. The callable is resolved exactly once at dispatch time,
   immediately before the writer call. Eager payloads remain valid; existing

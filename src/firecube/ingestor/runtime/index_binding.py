@@ -7,16 +7,31 @@ with the ingestor runtime. It is the only place that knows about both
 
 from __future__ import annotations
 
+import hashlib
 import logging
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
+from itertools import pairwise
+from pathlib import Path
 from typing import Any
 
+from firecube.core.controlplane.types import (
+    ItemManifestEntry,
+    SourceRefKind,
+    validate_manifest_entries,
+)
+from firecube.core.errors import (
+    DuplicateIrregularCoordinateError,
+    MissingIrregularCoordinateError,
+    NoDiscoveredItemsError,
+)
 from firecube.core.index_resolve import ResolvedIndex, resolve_index_spec
-from firecube.core.index_spec import IndexSpec
+from firecube.core.index_spec import AUTO, IndexSpec, IrregularTimeAxis, _canonical_coordinate_value
 from firecube.ingestor.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
+
+_HASH_PREFIX_BYTES = 64 * 1024
 
 
 @dataclass(frozen=True)
@@ -64,8 +79,129 @@ def resolve_index_spec_for_ingestor(ingestor: Any, ctx: Any) -> IndexBinding | N
         return None
 
     time_dim_name: str = ingestor._resolve_time_dim_name()
-    resolved = resolve_index_spec(spec, time_dim_name=time_dim_name)
-    return IndexBinding(spec=spec, resolved=resolved)
+    resolved_spec = spec
+    manifest: tuple[ItemManifestEntry, ...] | None = None
+    auto_axis = _first_auto_irregular_axis(spec)
+    if auto_axis is not None:
+        discovered_axis, manifest = _discover_auto_irregular_axis(auto_axis, ingestor, ctx)
+        resolved_spec = _replace_auto_irregular_axes(spec, discovered_axis)
+
+    resolved = resolve_index_spec(resolved_spec, time_dim_name=time_dim_name, items=manifest)
+    return IndexBinding(spec=resolved_spec, resolved=resolved)
+
+
+def _first_auto_irregular_axis(spec: IndexSpec) -> IrregularTimeAxis | None:
+    for axis in spec.groups.values():
+        if isinstance(axis, IrregularTimeAxis) and axis.values is AUTO:
+            return axis
+    return None
+
+
+def _replace_auto_irregular_axes(spec: IndexSpec, discovered_axis: IrregularTimeAxis) -> IndexSpec:
+    groups = {
+        group: discovered_axis
+        if isinstance(axis, IrregularTimeAxis) and axis.values is AUTO
+        else axis
+        for group, axis in spec.groups.items()
+    }
+    return IndexSpec(name=spec.name, groups=groups, time_unit=spec.time_unit)
+
+
+def _discover_auto_irregular_axis(
+    axis: IrregularTimeAxis, ingestor: Any, ctx: Any
+) -> tuple[IrregularTimeAxis, tuple[ItemManifestEntry, ...]]:
+    """Discover concrete values and a manifest for ``IrregularTimeAxis(values=AUTO)``."""
+
+    discovered: list[tuple[Any, str, SourceRefKind, str]] = []
+    for item in _iter_runtime_items(ingestor, ctx):
+        source_ref, source_ref_kind = _source_ref(item)
+        try:
+            info = ingestor.inspect_item(item, ctx)
+        except Exception as exc:
+            raise MissingIrregularCoordinateError(axis.coordinate, source_ref) from exc
+        coordinate = getattr(info, "coordinate", info) if info is not None else None
+        if coordinate is None:
+            raise MissingIrregularCoordinateError(axis.coordinate, source_ref)
+        discovered.append((coordinate, source_ref, source_ref_kind, _item_identity_hash(item)))
+
+    if not discovered:
+        raise NoDiscoveredItemsError(axis.coordinate, _source_description(ctx))
+
+    discovered.sort(key=lambda entry: entry[0])
+    for current, next_ in pairwise(discovered):
+        if current[0] == next_[0]:
+            raise DuplicateIrregularCoordinateError(
+                axis.coordinate,
+                current[0],
+                current[1],
+                next_[1],
+            )
+
+    manifest = tuple(
+        ItemManifestEntry(
+            identity_hash=identity_hash,
+            coordinate_value=_canonical_coordinate_value(coordinate),
+            source_ref=source_ref,
+            source_ref_kind=source_ref_kind,
+        )
+        for coordinate, source_ref, source_ref_kind, identity_hash in discovered
+    )
+    validate_manifest_entries(list(manifest))
+    return IrregularTimeAxis(
+        coordinate=axis.coordinate, values=tuple(row[0] for row in discovered)
+    ), manifest
+
+
+def _iter_runtime_items(ingestor: Any, ctx: Any) -> Iterable[Any]:
+    for item in ingestor.discover_source_files(ctx):
+        if ingestor.filter_item(item, ctx):
+            yield item
+
+
+def _source_description(ctx: Any) -> str | None:
+    source = getattr(ctx, "source", None)
+    return str(source) if source is not None else None
+
+
+def _source_ref(item: Any) -> tuple[str, SourceRefKind]:
+    uri = getattr(item, "uri", None)
+    if isinstance(uri, str) and uri:
+        return uri, "uri"
+    local_path = getattr(item, "local_path", None)
+    if callable(local_path):
+        path = local_path()
+        if path is not None:
+            return str(Path(str(path)).resolve()), "path"
+    text = str(item)
+    if "://" in text:
+        return text, "uri"
+    try:
+        path = Path(text).resolve()
+    except TypeError:
+        return text, "identifier"
+    if path.exists():
+        return str(path), "path"
+    return text, "identifier"
+
+
+def _item_identity_hash(item: Any) -> str:
+    source_ref, source_ref_kind = _source_ref(item)
+    if source_ref_kind != "path":
+        return hashlib.sha256(f"{source_ref_kind}\0{source_ref}".encode()).hexdigest()
+    return _path_identity_hash(source_ref)
+
+
+def _path_identity_hash(path: str) -> str:
+    local = Path(path)
+    stat = local.stat()
+    digest = hashlib.sha256()
+    digest.update(str(stat.st_size).encode("ascii"))
+    digest.update(b"\0")
+    digest.update(str(stat.st_mtime_ns).encode("ascii"))
+    digest.update(b"\0")
+    with local.open("rb") as handle:
+        digest.update(hashlib.sha256(handle.read(_HASH_PREFIX_BYTES)).hexdigest().encode("ascii"))
+    return digest.hexdigest()
 
 
 def filter_items_by_index(

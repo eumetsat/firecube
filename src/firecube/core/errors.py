@@ -14,6 +14,8 @@
 
 """Shared exception types for core storage/manifest operations."""
 
+from typing import Any
+
 
 class FirecubeError(Exception):
     """Base exception for Firecube runtime errors."""
@@ -26,6 +28,49 @@ class ConfigurationError(FirecubeError):
     malformed options, missing required inputs, or an existing store whose
     layout conflicts with the plugin's declaration.
     """
+
+
+class MissingIrregularCoordinateError(ConfigurationError):
+    """An irregular time-axis item lacks a resolvable coordinate."""
+
+    def __init__(self, coordinate_name: str, item_id: str | int | None) -> None:
+        self.coordinate_name = coordinate_name
+        self.item_id = item_id
+        super().__init__(
+            f"IrregularTimeAxis discovery: item {item_id} has no resolvable coordinate for '{coordinate_name}'"
+        )
+
+
+class DuplicateIrregularCoordinateError(ConfigurationError):
+    """Two discovered items resolve to the same irregular-axis coordinate."""
+
+    def __init__(
+        self,
+        coordinate_name: str,
+        coordinate_value: Any,
+        first_item: str,
+        second_item: str,
+    ) -> None:
+        self.coordinate_name = coordinate_name
+        self.coordinate_value = coordinate_value
+        self.first_item = first_item
+        self.second_item = second_item
+        super().__init__(
+            f"IrregularTimeAxis discovery for '{coordinate_name}': items "
+            f"{first_item!r} and {second_item!r} both resolve to coordinate "
+            f"{coordinate_value!r}; coordinates must be unique"
+        )
+
+
+class NoDiscoveredItemsError(ConfigurationError):
+    """Discovery found no items for an irregular time axis."""
+
+    def __init__(self, coordinate_name: str, source_ref: str | None) -> None:
+        self.coordinate_name = coordinate_name
+        self.source_ref = source_ref
+        super().__init__(
+            f"IrregularTimeAxis discovery for '{coordinate_name}': no items found in source '{source_ref}'"
+        )
 
 
 class SchemaDriftError(FirecubeError):

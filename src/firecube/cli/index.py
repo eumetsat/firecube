@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import contextlib
+import datetime
 import inspect
 import logging
 import uuid
@@ -125,11 +126,59 @@ def _group_rows(index_payload: dict[str, Any]) -> list[tuple[str, str, str]]:
     return rows
 
 
+def _derived_coordinates_for_group(
+    group_name: str, group_payload: dict[str, Any]
+) -> list[str] | None:
+    kind = group_payload.get("kind")
+    if kind != "regular_time":
+        return None
+
+    params = group_payload.get("params", {})
+    if not isinstance(params, dict):
+        raise click.ClickException(
+            f"Group {group_name!r}: 'params' is missing or not a mapping in the index record."
+        )
+
+    missing = [f for f in ("epoch", "cadence_s") if f not in params]
+    if "size" not in group_payload:
+        missing.append("size")
+    if missing:
+        raise click.ClickException(
+            f"Group {group_name!r}: cannot compute derived coordinates: "
+            f"missing required field(s): {', '.join(sorted(missing))}. "
+            "Re-run ingestion to populate the index record."
+        )
+
+    epoch_str: str = params["epoch"]
+    cadence_s: int = int(params["cadence_s"])
+    slot_count: int = int(group_payload["size"])
+
+    try:
+        epoch_dt = datetime.datetime.fromisoformat(epoch_str.replace("Z", "+00:00"))
+    except (ValueError, TypeError) as exc:
+        raise click.ClickException(
+            f"Group {group_name!r}: cannot parse epoch {epoch_str!r}: {exc}"
+        ) from exc
+
+    delta = datetime.timedelta(seconds=cadence_s)
+    return [(epoch_dt + i * delta).isoformat().replace("+00:00", "Z") for i in range(slot_count)]
+
+
 @index.command("show")
 @click.option("--target", required=True, help="Product Zarr URI to inspect.")
 @click.option("--product-name", required=True, help="Logical product name.")
 @click.option("--json", "as_json", is_flag=True, help="Emit the raw record as JSON.")
-def show_cmd(target: str, product_name: str, as_json: bool) -> None:
+@click.option(
+    "--derived/--no-derived",
+    default=False,
+    is_flag=True,
+    help=(
+        "Compute and display derived coordinates for RegularTimeAxis groups at read time. "
+        "No-op for IrregularTimeAxis and IntegerAxis groups. "
+        "NEVER persists anything."
+    ),
+)
+def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> None:
     """Show the current resolved-index record."""
 
     manager = _manager(target, product_name)
@@ -148,6 +197,31 @@ def show_cmd(target: str, product_name: str, as_json: bool) -> None:
         click.echo("  group kind size")
         for group_name, kind, size in _group_rows(record.index):
             click.echo(f"  {group_name} {kind} {size}")
+        if derived:
+            groups = record.index.get("groups", {})
+            if not isinstance(groups, dict):
+                return
+            any_regular = False
+            for group_name, group_payload in sorted(groups.items()):
+                if not isinstance(group_payload, dict):
+                    continue
+                coords = _derived_coordinates_for_group(group_name, group_payload)
+                if coords is None:
+                    click.echo(
+                        f"  note: group {group_name!r} is not a regular_time axis; "
+                        "--derived is a no-op for this group",
+                        err=True,
+                    )
+                    continue
+                any_regular = True
+                click.echo(f"derived_coordinates[{group_name!r}]:")
+                for coord in coords:
+                    click.echo(f"  {coord}")
+            if not any_regular:
+                click.echo(
+                    "note: no regular_time groups found; --derived produced no output",
+                    err=True,
+                )
     finally:
         manager.close()
 

@@ -19,7 +19,16 @@ Plugins should import from this module rather than accessing core internals dire
 
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane import RunInfo, describe_control_plane
-from firecube.core.controlplane.types import ResolvedIndexRecord
+from firecube.core.controlplane.types import (
+    ItemManifestEntry,
+    ResolvedIndexRecord,
+    validate_manifest_entries,
+)
+from firecube.core.errors import (
+    DuplicateIrregularCoordinateError,
+    MissingIrregularCoordinateError,
+    NoDiscoveredItemsError,
+)
 from firecube.core.filesystem import (
     create_filesystem_for_uri,
     delete_path,
@@ -36,7 +45,15 @@ from firecube.core.formats import (
     rename_time_dim,
 )
 from firecube.core.index_resolve import ResolvedIndex, coerce_to_epoch_s, resolve_index_spec
-from firecube.core.index_spec import AxisSpec, IndexSpec, IntegerAxis, ItemInfo, RegularTimeAxis
+from firecube.core.index_spec import (
+    AUTO,
+    AxisSpec,
+    IndexSpec,
+    IntegerAxis,
+    IrregularTimeAxis,
+    ItemInfo,
+    RegularTimeAxis,
+)
 from firecube.core.intake import CatalogGroupInfo
 from firecube.core.product import ensure_product_uri, resolve_dataset_target
 from firecube.core.slot_index import (
@@ -58,11 +75,17 @@ from firecube.core.zarr.time_decode import decode_time_array
 from firecube.core.zarr.validation import read_chunk_grid_with_shards
 
 __all__ = [
+    "AUTO",
     "AxisSpec",
     "CatalogGroupInfo",
+    "DuplicateIrregularCoordinateError",
     "IndexSpec",
     "IntegerAxis",
+    "IrregularTimeAxis",
     "ItemInfo",
+    "ItemManifestEntry",
+    "MissingIrregularCoordinateError",
+    "NoDiscoveredItemsError",
     "RegionZarrWriterProtocol",
     "RegularTimeAxis",
     "ResolvedIndex",
@@ -97,4 +120,5 @@ __all__ = [
     "require_tensogram",
     "resolve_dataset_target",
     "resolve_index_spec",
+    "validate_manifest_entries",
 ]

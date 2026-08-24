@@ -1,6 +1,6 @@
 # Index Specification
 
-This reference covers the public types used to declare and resolve direct-Zarr index specs. `IndexSpec`, `RegularTimeAxis`, and `IntegerAxis` describe the layout. `inspect_item()` returns `ItemInfo`, and `resolve_index_spec()` turns the declarative spec into a cached `ResolvedIndex` for the run.
+This reference covers the public types used to declare and resolve direct-Zarr index specs. `IndexSpec`, `RegularTimeAxis`, `IntegerAxis`, and `IrregularTimeAxis` describe the layout. `AUTO` is the sentinel that tells the engine to discover coordinates at planning time. `inspect_item()` returns `ItemInfo`, and `resolve_index_spec()` turns the declarative spec into a cached `ResolvedIndex` for the run.
 
 `coerce_to_epoch_s()` normalizes supported timestamp values to Unix epoch seconds.
 
@@ -10,6 +10,8 @@ This reference covers the public types used to declare and resolve direct-Zarr i
     "AxisSpec",
     "IndexSpec",
     "IntegerAxis",
+    "IrregularTimeAxis",
+    "AUTO",
     "RegularTimeAxis",
     "ItemInfo",
     "ResolvedIndex",
@@ -25,6 +27,10 @@ This reference covers the public types used to declare and resolve direct-Zarr i
 ::: firecube.core.api.IndexSpec
 
 ::: firecube.core.api.IntegerAxis
+
+::: firecube.core.api.IrregularTimeAxis
+
+::: firecube.core.api.AUTO
 
 ::: firecube.core.api.RegularTimeAxis
 
@@ -47,6 +53,10 @@ The public ingestor facade re-exports the declarative types used by plugin code.
 ::: firecube.ingestor.api.IndexSpec
 
 ::: firecube.ingestor.api.IntegerAxis
+
+::: firecube.ingestor.api.IrregularTimeAxis
+
+::: firecube.ingestor.api.AUTO
 
 ::: firecube.ingestor.api.RegularTimeAxis
 

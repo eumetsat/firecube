@@ -23,15 +23,25 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 from firecube.core.api import (
+    AUTO,
     AxisSpec,
+    DuplicateIrregularCoordinateError,
     IndexSpec,
     IntegerAxis,
+    IrregularTimeAxis,
     ItemInfo,
+    ItemManifestEntry,
+    MissingIrregularCoordinateError,
+    NoDiscoveredItemsError,
     RegularTimeAxis,
     ResolvedIndex,
     ResolvedIndexRecord,
+    validate_manifest_entries,
 )
 from firecube.core.controlplane import SpanCoverage, WriteDomain
+from firecube.core.index_spec import (
+    _canonical_coordinate_value as canonical_coordinate_value,  # noqa: F401
+)
 from firecube.core.intake import CatalogGroupInfo
 from firecube.ingestor.config.engine import EngineConfig, config_keys
 from firecube.ingestor.contracts.interfaces import (
@@ -107,6 +117,7 @@ if TYPE_CHECKING:
     from firecube.ingestor.templates.generic import GenericParquetIngestor, GenericZarrIngestor
     from firecube.ingestor.templates.generic_tensogram import GenericTensogramIngestor
 __all__ = [
+    "AUTO",
     "AppendStrategy",
     "AppendWriteStrategy",
     "AxisSpec",
@@ -115,6 +126,7 @@ __all__ = [
     "ConfigurationError",
     "DatasetProducer",
     "DirectZarrIngestor",
+    "DuplicateIrregularCoordinateError",
     "EngineConfig",
     "GenericParquetIngestor",
     "GenericTensogramIngestor",
@@ -127,9 +139,13 @@ __all__ = [
     "Ingestor",
     "IngestorError",
     "IntegerAxis",
+    "IrregularTimeAxis",
     "ItemInfo",
+    "ItemManifestEntry",
     "LocalSourceFile",
     "ManifestError",
+    "MissingIrregularCoordinateError",
+    "NoDiscoveredItemsError",
     "OutputPaths",
     "ParquetTemplateConfig",
     "PipelineBatch",
@@ -173,6 +189,7 @@ __all__ = [
     "merge_batch_metrics",
     "register_ingestor",
     "validate_chunk_alignment",
+    "validate_manifest_entries",
     "validate_slot_range",
     "verify_dim_compatibility",
     "warn_if_misaligned",

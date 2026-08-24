@@ -9,15 +9,27 @@ from __future__ import annotations
 
 import datetime as dt
 import functools
-import hashlib
 import numbers
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 import numpy as np
 
-from firecube.core.controlplane.types import ResolvedIndexRecord, canonical_index_bytes
-from firecube.core.index_spec import AxisSpec, IndexSpec, IntegerAxis, RegularTimeAxis
+from firecube.core.controlplane.types import (
+    ItemManifestEntry,
+    ResolvedIndexRecord,
+    compute_resolved_index_identity_hash,
+)
+from firecube.core.index_spec import (
+    AUTO,
+    AxisSpec,
+    IndexSpec,
+    IntegerAxis,
+    IrregularTimeAxis,
+    RegularTimeAxis,
+    _canonical_coordinate_value,
+)
 from firecube.core.slot_index import (
     SlotAxis,
     SlotIndexModel,
@@ -260,6 +272,37 @@ class IntegerResolver:
         return coord
 
 
+@dataclass(frozen=True)
+class IrregularTimeResolver:
+    """Resolver for an ``IrregularTimeAxis``.
+
+    Coordinates map to explicit axis values.
+    """
+
+    axis: IrregularTimeAxis
+
+    def _values(self) -> tuple[Any, ...]:
+        values = self.axis.values
+        if values is AUTO:
+            raise ExtentUnknownError("irregular axis has no explicit values")
+        return tuple(cast(Sequence[Any], values))
+
+    @property
+    def size(self) -> int:
+        return len(self._values())
+
+    def position(self, coordinate: Any) -> int:
+        # O(n) scan; acceptable for hundreds of items. For tens of thousands,
+        # replace with a cached dict[value, index] lookup.
+        try:
+            return self._values().index(coordinate)
+        except ValueError as exc:
+            raise ValueError(f"coordinate {coordinate!r} is not present in axis values") from exc
+
+    def coordinate(self, index: int) -> Any:
+        return self._values()[index]
+
+
 def _resolver_for(axis: AxisSpec) -> AxisResolver:
     """Dispatch an axis specification to its resolver.
 
@@ -277,6 +320,8 @@ def _resolver_for(axis: AxisSpec) -> AxisResolver:
     """
     if isinstance(axis, RegularTimeAxis):
         return RegularTimeResolver(axis=axis)
+    if isinstance(axis, IrregularTimeAxis):
+        return IrregularTimeResolver(axis=axis)
     if isinstance(axis, IntegerAxis):
         return IntegerResolver(axis=axis)
     raise NotImplementedError(
@@ -301,10 +346,15 @@ class ResolvedIndex:
         self,
         spec: IndexSpec,
         resolvers: dict[str, AxisResolver],
+        *,
+        items: Sequence[ItemManifestEntry] | None = None,
     ) -> None:
         self._spec = spec
         self._resolvers = resolvers
         self._groups: tuple[str, ...] = tuple(sorted(resolvers))
+        self.items: tuple[ItemManifestEntry, ...] | None = (
+            tuple(items) if items is not None else None
+        )
 
     @property
     def groups(self) -> tuple[str, ...]:
@@ -335,6 +385,22 @@ class ResolvedIndex:
             if isinstance(axis, IntegerAxis):
                 groups[group] = {"kind": "integer", "size": resolver.size, "params": {}}
                 continue
+            if isinstance(axis, IrregularTimeAxis):
+                values = axis.values
+                if values is AUTO:
+                    raise ExtentUnknownError("irregular axis has no explicit values")
+                groups[group] = {
+                    "kind": "irregular_time",
+                    "size": resolver.size,
+                    "params": {
+                        "coordinate": axis.coordinate,
+                        "values": [
+                            _canonical_coordinate_value(value)
+                            for value in cast(Sequence[Any], values)
+                        ],
+                    },
+                }
+                continue
             raise NotImplementedError(
                 f"No canonical resolved-index payload for axis type {type(axis).__name__!r}"
             )
@@ -353,20 +419,21 @@ class ResolvedIndex:
         if recorded_at is None:
             recorded_at = dt.datetime.now(dt.UTC).isoformat().replace("+00:00", "Z")
         index = self.canonical_index_payload()
-        identity_hash = hashlib.sha256(canonical_index_bytes(index)).hexdigest()
+        identity_hash = compute_resolved_index_identity_hash(index, self.items)
         return ResolvedIndexRecord(
             schema_version="v1",
             recorded_at=recorded_at,
             recorded_by_run_id=run_id,
             identity_hash=identity_hash,
             index=index,
+            items=self.items,
         )
 
     @functools.cached_property
     def identity_hash(self) -> str:
         """Content-addressed hash of the canonical resolved-index payload."""
 
-        return hashlib.sha256(canonical_index_bytes(self.canonical_index_payload())).hexdigest()
+        return compute_resolved_index_identity_hash(self.canonical_index_payload(), self.items)
 
     def size(self, group: str) -> int:
         """Total number of slots for the given group.
@@ -407,6 +474,11 @@ class ResolvedIndex:
         """
         return self._resolvers[group].coordinate(index)
 
+    def axis_for(self, group: str) -> AxisSpec | None:
+        """Return the axis spec for the named group, or None if not present."""
+
+        return self._spec.groups.get(group)
+
     def as_legacy_slot_index_model(self) -> SlotIndexModel | None:
         """Build a ``SlotIndexModel`` for byte-parity with existing cubes.
 
@@ -438,7 +510,12 @@ class ResolvedIndex:
         )
 
 
-def resolve_index_spec(spec: IndexSpec, *, time_dim_name: str) -> ResolvedIndex:
+def resolve_index_spec(
+    spec: IndexSpec,
+    *,
+    time_dim_name: str,
+    items: Sequence[ItemManifestEntry] | None = None,
+) -> ResolvedIndex:
     """Resolve an ``IndexSpec`` into a ``ResolvedIndex``.
 
     Validates that each ``RegularTimeAxis.coordinate`` matches
@@ -461,12 +538,15 @@ def resolve_index_spec(spec: IndexSpec, *, time_dim_name: str) -> ResolvedIndex:
 
     resolvers: dict[str, AxisResolver] = {}
     for group, axis in spec.groups.items():
-        if isinstance(axis, RegularTimeAxis) and axis.coordinate != time_dim_name:
+        if (
+            isinstance(axis, (RegularTimeAxis, IrregularTimeAxis))
+            and axis.coordinate != time_dim_name
+        ):
             raise ConfigurationError(
-                f"Group {group!r}: RegularTimeAxis.coordinate={axis.coordinate!r} "
+                f"Group {group!r}: {type(axis).__name__}.coordinate={axis.coordinate!r} "
                 f"does not match time_dim_name={time_dim_name!r}. "
                 "Set coordinate to match the plugin's time dimension name."
             )
         resolvers[group] = _resolver_for(axis)
 
-    return ResolvedIndex(spec=spec, resolvers=resolvers)
+    return ResolvedIndex(spec=spec, resolvers=resolvers, items=items)

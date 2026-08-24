@@ -11,7 +11,7 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 - **Landed:** `IndexSpec` + `RegularTimeAxis` + `ResolvedIndex`; byte parity for FCI and OPERA; recursion defect fixed.
 - **Landed:** `IntegerAxis` + engine-owned `.firecube/index/current.json` record (`ResolvedIndexRecord`); `firecube zarr index show/verify/rebuild` CLI; atomic reader migration path documented.
-- **Planned:** `IrregularTimeAxis` + `AUTO` sentinel + content-addressed item manifest; closes #27 spirit.
+- **Landed:** `IrregularTimeAxis` + `AUTO` sentinel + content-addressed item manifest; `--dry-run` for preallocate; `--derived` for index show; closes #27 spirit. See DONE.md 2026-08-24.
 - **Planned:** `IndexedWrite` high-level abstraction + `read_item` hook.
 - **Future deprecation pass:** `SlotIndexModel`, `SlotAxis`, and `as_legacy_slot_index_model()` are kept for byte-parity compatibility with cubes written before the new index model. Schedule a deprecation pass once all known production cubes have been migrated via `firecube zarr index rebuild`. The deprecation should add `DeprecationWarning` on construction, update the allowlist in `test_api_docs_coverage.py`, and remove the symbols in a subsequent major version.
 

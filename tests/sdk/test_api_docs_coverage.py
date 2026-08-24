@@ -54,6 +54,11 @@ PUBLIC_MODULES = (
 # a reason; remove the entry when the name gains a reference page.
 INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
     "firecube.ingestor.api": {
+        # Content-addressed manifest types: public re-exports used by the engine
+        # for IrregularTimeAxis AUTO planning. Plugin authors do not construct
+        # these directly; they are engine-internal planning data.
+        "ItemManifestEntry": "engine-internal planning type; plugin authors do not construct this",
+        "validate_manifest_entries": "engine-internal manifest validation helper",
         # Engine write-strategy implementations, not an authoring surface.
         "AppendStrategy": "engine write strategy",
         "AppendWriteStrategy": "engine write strategy",
@@ -89,6 +94,11 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "warn_if_misaligned": "engine-internal; not part of the plugin-authoring surface",
     },
     "firecube.core.api": {
+        # Content-addressed manifest types: public re-exports used by the engine
+        # for IrregularTimeAxis AUTO planning. Plugin authors do not construct
+        # these directly; they are engine-internal planning data.
+        "ItemManifestEntry": "engine-internal planning type; plugin authors do not construct this",
+        "validate_manifest_entries": "engine-internal manifest validation helper",
         # Control-plane, archive, and host-integration helpers.
         "CatalogGroupInfo": "host integration type",
         "RegionZarrWriterProtocol": "engine writer protocol",
