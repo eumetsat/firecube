@@ -1079,6 +1079,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/irregular-axis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IrregularTimeAxis And AUTO
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4658,8 +4686,18 @@ kind and size.</p>
 <td><code>--json</code></td>
 <td>Emit the raw record as JSON instead of the human-readable summary.</td>
 </tr>
+<tr>
+<td><code>--derived</code></td>
+<td>For <code>regular_time</code> groups, compute and print the derived coordinate values (timestamps) from the stored epoch, cadence, and size. Emits a note to stderr for <code>irregular_time</code> and <code>integer</code> groups. Does not write any files.</td>
+</tr>
 </tbody>
 </table>
+<p>Add <code>--derived</code> to see the full list of timestamps for a <code>RegularTimeAxis</code> group:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>show<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--derived
+</code></pre></div>
 <p><strong>Exit codes:</strong></p>
 <table>
 <thead>
@@ -4686,17 +4724,17 @@ kind and size.</p>
 <h3 id="firecube-zarr-index-verify"><code>firecube zarr index verify</code></h3>
 <p>Check that the current resolved-index record can be read and is not a legacy
 format that requires migration.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
 </code></pre></div>
 <p>Pass <code>--plugin</code> to name the plugin that owns the product. The command uses the
 plugin name to check for legacy slot-index records that predate the current
 <code>IndexSpec</code> format.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin
 </code></pre></div>
 <p><strong>Required flags:</strong></p>
 <table>
@@ -4759,10 +4797,10 @@ plugin name to check for legacy slot-index records that predate the current
 <p>Rebuild the resolved-index record from a plugin's <code>index_spec()</code> declaration.
 Use this command when the record is missing, corrupted, or was written by an
 older Firecube version that used a different format.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
 </code></pre></div>
 <p>The command loads the named plugin, calls <code>index_spec()</code>, resolves the spec,
 and writes the resulting record to <code>.firecube/index/current.json</code>. If a record
@@ -4842,22 +4880,23 @@ with code <code>1</code> and prints the conflict.</p>
 <p>Cubes written by Firecube v0.1.4.post1 and earlier used a legacy slot-index
 format. Run <code>firecube zarr index verify</code> to detect the legacy format, then
 <code>firecube zarr index rebuild</code> to write the current record:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
 </code></pre></div>
 <p>After rebuilding, run <code>firecube zarr index show</code> to confirm the record is present
 and the identity hash matches the plugin's current <code>index_spec()</code> declaration.</p>
 <h2 id="see-also">See Also</h2>
 <ul>
-<li><strong><a href="../../reference/parallelism/">Index Specification Reference</a></strong> - <code>IndexSpec</code>, <code>IntegerAxis</code>, <code>RegularTimeAxis</code>, and <code>ResolvedIndexRecord</code> types</li>
+<li><strong><a href="../../reference/parallelism/">Index Specification Reference</a></strong> - <code>IndexSpec</code>, <code>IntegerAxis</code>, <code>IrregularTimeAxis</code>, <code>RegularTimeAxis</code>, and <code>ResolvedIndexRecord</code> types</li>
 <li><strong><a href="../../guides/plugins/direct-zarr/">Implement DirectZarrIngestor</a></strong> - declare an <code>IndexSpec</code> in a plugin</li>
+<li><strong><a href="../../guides/plugins/irregular-axis/">IrregularTimeAxis Plugin Guide</a></strong> - declare and use <code>IrregularTimeAxis</code> with <code>AUTO</code></li>
 <li><strong><a href="../chunk-manager/">ChunkManager Operations</a></strong> - inspect and recover the broader control plane</li>
 </ul>
 
