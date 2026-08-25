@@ -179,6 +179,11 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Fixed
 
+- `firecube zarr compare` and `compare_zarr_stores` no longer crash with an
+  IndexError on stores containing a zero-dimensional array (for example a CF
+  grid-mapping scalar such as `spatial_ref`); scalar values are now compared
+  like any other array.
+
 - `include_patterns` is documented as additive to the built-in `.zip`/`.h5`/
   `.nc` selection; the reference previously stated that it replaced them.
 - `SlotAxis.__post_init__` now rejects `bool` and non-integral `cadence_s`

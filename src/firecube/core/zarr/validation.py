@@ -175,8 +175,10 @@ def _static_marker(array: Any) -> Any:
 
 
 def _values_equal(left: Any, right: Any) -> bool:
-    left_values = np.asarray(left[:])
-    right_values = np.asarray(right[:])
+    # Ellipsis indexing works for every rank; `[:]` raises on 0-d arrays
+    # (e.g. a CF grid-mapping scalar such as spatial_ref).
+    left_values = np.asarray(left[...])
+    right_values = np.asarray(right[...])
     if left_values.dtype.kind == "f" and right_values.dtype.kind == "f":
         return bool(np.array_equal(left_values, right_values, equal_nan=True))
     return bool(np.array_equal(left_values, right_values))
