@@ -33,7 +33,7 @@ you activated earlier stays active regardless of your current directory.
 Install the cloned project into the active environment in editable mode:
 
 ```bash
-firecube plugins install --editable .
+firecube plugins install .
 ```
 
 Expected output ends with:
@@ -42,35 +42,15 @@ Expected output ends with:
 Detected plugins: quickstart_plugin
 ```
 
-Editable installation means later changes to the plugin source take effect
-without reinstalling it.
 
 ### Validate The Installation
 
 ```bash
-firecube plugins list
 firecube plugins describe quickstart_plugin
-firecube ingest quickstart_plugin --show-options
+
 ```
 
-`plugins list` should contain `quickstart_plugin`. `plugins describe` should
-show `quickstart_plugin` as both the plugin and product name, and
-`--show-options` should list the engine, storage, and Zarr options accepted by
-the plugin.
 
-## Verify
-
-Run the three commands above. They should complete without an import error,
-and `plugins describe` should return plugin metadata instead of a "not found"
-error.
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| Plugin is missing from `plugins list` | The package was installed into a different environment. | Run `source .venv/bin/activate`, then repeat the editable install. |
-| `plugins describe quickstart_plugin` reports "not found" | The editable install did not complete, or ran against a different Python. | Repeat `firecube plugins install --editable .` from inside `firecube-quickstart-plugin/` with the quickstart environment active. |
-| `firecube` or `uv` commands fail with no environment found | The quickstart environment is not active. | Run `source .venv/bin/activate` from `firecube-quickstart/`. |
 
 ## Next Steps
 
