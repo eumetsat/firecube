@@ -27,6 +27,25 @@ class IngestorError(FirecubeError):
     """Base exception for all ingestor-layer errors."""
 
 
+class UnboundedAxisError(ConfigurationError):
+    """Raised when a regular axis has no fixed extent but one is required.
+
+    Set ``RegularTimeAxis(end_date=...)`` or ``slot_count=...`` in the
+    declared ``IndexSpec`` to give the axis a fixed extent.
+
+    Args:
+        group: Name of the index group whose axis lacks a fixed extent.
+    """
+
+    def __init__(self, group: str) -> None:
+        super().__init__(
+            f"group {group!r}: axis has no fixed extent — set "
+            "RegularTimeAxis(end_date=...) or slot_count=... "
+            "to enable parallel ingestion"
+        )
+        self.group = group
+
+
 class SchemaSizeMismatchError(IngestorError):
     """Raised when an existing Zarr array's shape is smaller than the global expected size.
 
@@ -77,5 +96,6 @@ __all__ = [
     "SchemaSizeMismatchError",
     "StagedMetadataError",
     "StorageError",
+    "UnboundedAxisError",
     "WriteIntentRangeError",
 ]

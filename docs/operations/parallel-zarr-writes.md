@@ -76,6 +76,29 @@ Planning is resume-aware by default: completed ranges are excluded. Use
 `--no-resume` only when the scheduler must deliberately ignore recorded
 coverage and emit the full range.
 
+The JSON plan also names one range per group as the static owner. Read it with:
+
+```bash
+firecube zarr slots <plugin> \
+  --target file:///data/products/my_product.zarr \
+  --product-name my_product \
+  --storage-type local \
+  --storage-driver fsspec \
+  --write-mode direct \
+  --slot-size 144 \
+  --format json | jq '.groups[0].static_owner'
+```
+
+```json
+{
+  "slot_start": 0,
+  "slot_end": 144
+}
+```
+
+Use this value in step 3 so exactly one worker writes static arrays such as
+latitude and longitude grids.
+
 ## 3. Start One Worker Per Range
 
 Scale this workflow by starting more slot-assigned processes. Keep
@@ -100,6 +123,34 @@ firecube ingest <plugin> \
 
 A worker assigned `[0, 144)` owns indexes `0` through `143`. For a single-group
 plugin, `--slot-group` can be omitted.
+
+### Write Static Arrays Once
+
+Static arrays do not move with the time axis, so by default every worker
+rewrites them. To restrict them to one worker, add two flags to every worker
+command, using the `static_owner` value from the plan in step 2:
+
+```bash
+firecube ingest <plugin> \
+  --input-data /data/source \
+  --target file:///data/products/my_product.zarr \
+  --product-name my_product \
+  --storage-type local \
+  --storage-driver fsspec \
+  --output-format zarr \
+  --write-mode direct \
+  --option pipeline_workers=1 \
+  --slot-start 144 \
+  --slot-end 288 \
+  --suppress-static-emission-for-non-owner \
+  --static-owner-slot-start 0
+```
+
+The worker whose `--slot-start` equals `--static-owner-slot-start` writes the
+static arrays and stamps their markers. Every other worker skips them and logs
+one warning per skipped write. `static_owner` holds one value per group, so
+give each worker run a single `--slot-group` when owners differ between
+groups.
 
 ### Derive Ranges From A Scheduler Index
 

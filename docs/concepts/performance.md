@@ -107,6 +107,13 @@ uv run firecube zarr validate \
 Use `--on-timeout fail` for CI or post-ingest gates that must fail when the
 validation budget is exceeded.
 
+The JSON report includes `static_marker_failures`. An empty list means the
+validated array either moves with the time axis or carries the
+`firecube_static_written` marker. A non-empty list after a parallel run means
+the static-owner worker did not finish its static writes: re-run the owner's
+slot range, then validate again. Arrays whose first dimension is `timestamp`,
+`time`, or `firecube_timestamp_state` never require the marker.
+
 ## If Memory Is Tight
 
 Memory pressure usually comes from batch size, worker count, source decoding, or

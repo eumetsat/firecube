@@ -54,10 +54,15 @@ from firecube.core.slot_index import (
 
 
 class ExtentUnknownError(ValueError):
-    """Raised when a regular axis has no fixed extent (end and size are both None).
+    """Raised when a regular axis has no fixed extent.
 
-    The parallel gate catches this and re-raises as ``ConfigurationError``
-    naming the group and the missing field.
+    Examples:
+        >>> raise ExtentUnknownError(
+        ...     "regular axis has no fixed extent: set either end_date or slot_count"
+        ... )
+        Traceback (most recent call last):
+        ...
+        ExtentUnknownError: regular axis has no fixed extent: set either end_date or slot_count
     """
 
 
@@ -155,7 +160,7 @@ class RegularTimeResolver:
     Satisfies the ``AxisResolver`` Protocol. Cached properties avoid
     repeated epoch parsing.
 
-    Args:
+    Attributes:
         axis: The ``RegularTimeAxis`` specification to resolve.
     """
 
@@ -232,7 +237,7 @@ class IntegerResolver:
     Satisfies the ``AxisResolver`` Protocol. Coordinates and indexes are the
     same zero-based integral values.
 
-    Args:
+    Attributes:
         axis: The ``IntegerAxis`` specification to resolve.
     """
 
@@ -547,6 +552,19 @@ def resolve_index_spec(
         ConfigurationError: If any axis coordinate does not match
             ``time_dim_name``.
         NotImplementedError: If any axis kind is not supported.
+
+    Examples:
+        >>> from firecube.core.index_spec import IndexSpec, RegularTimeAxis
+        >>> axis = RegularTimeAxis(
+        ...     coordinate="timestamp",
+        ...     epoch="2024-01-01T00:00:00Z",
+        ...     cadence_s=600,
+        ...     slot_count=2,
+        ... )
+        >>> spec = IndexSpec(name="demo", groups={"data": axis})
+        >>> resolved = resolve_index_spec(spec, time_dim_name="timestamp")
+        >>> resolved.spec.name
+        'demo'
     """
     from firecube.core.errors import ConfigurationError
 

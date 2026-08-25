@@ -26,6 +26,7 @@ from firecube.core.formats.netcdf import (
     rename_time_dim,
 )
 from firecube.core.formats.zip import (
+    extract_all_from_zip,
     extract_hdf5_from_zip,
     extract_zip_files_parallel,
     stream_hdf5_from_zip,
@@ -35,6 +36,7 @@ __all__ = [
     "KNOWN_EXTENSIONS",
     "clean_netcdf_encoding",
     "discover_input_files",
+    "extract_all_from_zip",
     "extract_hdf5_from_zip",
     "extract_zip_files_parallel",
     "materialize_hdf5_path",

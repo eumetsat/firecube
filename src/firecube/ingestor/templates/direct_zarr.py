@@ -43,7 +43,7 @@ from typing import Any
 
 import numpy as np
 
-from firecube.core.api import IndexSpec, ItemInfo, ResolvedIndex
+from firecube.core.api import ExtentUnknownError, IndexSpec, ItemInfo, ResolvedIndex
 from firecube.core.errors import ClaimConflictError, IndexedWriteCompilationError
 from firecube.core.indexed_write import IndexedWrite
 from firecube.ingestor.api import (
@@ -57,6 +57,7 @@ from firecube.ingestor.api import (
     RuntimeIngestContext,
     SchemaDriftError,
     SchemaSizeMismatchError,
+    UnboundedAxisError,
     WriteDomain,
     ZarrTemplateConfig,
     merge_batch_metrics,
@@ -1297,7 +1298,14 @@ class DirectZarrIngestor(BaseIngestor):
 
             binding = self._index_binding
             if slot_range is not None and binding is not None:
-                global_expected = {g: binding.resolved.size(g) for g in binding.resolved.groups}
+                # Defense in depth: serial-mode plugins should already be gated upstream,
+                # but this keeps the failure a ConfigurationError if the gate is bypassed.
+                global_expected: dict[str, int] = {}
+                for group in binding.resolved.groups:
+                    try:
+                        global_expected[group] = binding.resolved.size(group)
+                    except ExtentUnknownError as exc:
+                        raise UnboundedAxisError(group) from exc
 
                 # Strict coverage: every group receiving WriteIntents MUST be declared
                 # in index_spec(ctx). Without this, a group could be written to by
@@ -1339,16 +1347,31 @@ class DirectZarrIngestor(BaseIngestor):
                 "zarr_region_write_concurrency",
                 1,
             )
-
+            zarr_write_empty_chunks = getattr(
+                concurrency_template_config,
+                "zarr_write_empty_chunks",
+                False,
+            )
             metrics = strategy.write_groups(
                 group_to_intents=group_to_intents,
                 schema=schema,
                 claim_for_group=claim_for_group,
                 claim_for_slot=claim_for_slot,
                 slot_range=slot_range,
-                slot_group=self.engine_config.slot_group,
+                slot_group=getattr(self.engine_config, "slot_group", None),
                 codec_pipelines_by_array=codec_pipelines_by_array,
                 region_write_concurrency=region_write_concurrency,
+                suppress_static_emission_for_non_owner=getattr(
+                    self.engine_config,
+                    "suppress_static_emission_for_non_owner",
+                    False,
+                ),
+                static_owner_slot_start=getattr(
+                    self.engine_config,
+                    "static_owner_slot_start",
+                    None,
+                ),
+                zarr_write_empty_chunks=zarr_write_empty_chunks,
             )
 
             # prep_metrics unpacked first so template-owned keys win on collision;
@@ -1368,6 +1391,8 @@ class DirectZarrIngestor(BaseIngestor):
                 success=True,
             )
 
+        except ConfigurationError:
+            raise
         except Exception as exc:
             self._log.exception("Direct Zarr batch processing failed")
             return PipelineResult(

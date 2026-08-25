@@ -54,6 +54,7 @@ from firecube.cli._uri_policy import (
 )
 from firecube.cli.index import index as index_group
 from firecube.core import observability
+from firecube.core.api import FIRECUBE_STATIC_WRITTEN_ATTR, compare_zarr_stores
 from firecube.core.controlplane import ChunkManager, WriteDomain
 from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
 from firecube.core.storage.binding import StorageBinding
@@ -398,6 +399,10 @@ def slots(
             remaining, group_slot_size, total
         )
         partitioned = _partition_remaining(aligned_remaining, group_slot_size)
+        static_owner = None
+        if partitioned:
+            owner_start, owner_end = min(partitioned, key=lambda item: item[0])
+            static_owner = {"slot_start": owner_start, "slot_end": owner_end}
 
         for slot_start, slot_end in partitioned:
             ranges_out.append(
@@ -429,6 +434,7 @@ def slots(
                 "covered_ranges": [[s, e] for s, e in covered],
                 "remaining_ranges": [[s, e] for s, e in remaining],
                 "blocked_ranges": [[s, e] for s, e in blocked_for_group],
+                "static_owner": static_owner,
             }
         )
 
@@ -563,7 +569,55 @@ def validate(
             on_timeout=on_timeout,
             original_error=exc,
         )
-    click.echo(json.dumps(report.to_dict(), indent=2))
+    output = report.to_dict()
+    output["static_marker_failures"] = _static_marker_failures(
+        fs, identity.product_uri, report.group
+    )
+    click.echo(json.dumps(output, indent=2))
+
+
+@zarr.command(
+    "compare",
+    context_settings={"help_option_names": ["-h", "--help"]},
+    epilog="""\b
+Examples:
+  firecube zarr compare file:///data/a.zarr file:///data/b.zarr \\
+      --storage-type local --storage-driver fsspec
+""",
+)
+@click.argument("a_uri")
+@click.argument("b_uri")
+@click.option(
+    "--storage-type",
+    "storage_type",
+    required=True,
+    type=click.Choice(["local", "s3"], case_sensitive=False),
+    help="Storage locality for both store URIs.",
+)
+@click.option(
+    "--storage-driver",
+    "storage_driver",
+    required=True,
+    type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
+    help="Storage driver for both store URIs.",
+)
+@wrap_user_facing_errors
+def compare(a_uri: str, b_uri: str, storage_type: str, storage_driver: str) -> None:
+    """Compare two Zarr stores and exit 3 when they differ."""
+    for uri in (a_uri, b_uri):
+        require_full_uri(uri, option_name="store URI")
+        validate_uri_storage_coherence(parse_product_uri(uri), storage_type)
+    report = compare_zarr_stores(
+        a_uri,
+        b_uri,
+        storage_type=storage_type.lower(),
+        storage_driver=storage_driver.lower(),
+    )
+    if report.equivalent:
+        return
+    for mismatch in report.mismatches:
+        click.echo(mismatch, err=True)
+    raise click.exceptions.Exit(3)
 
 
 def _validate_first_array_child(
@@ -599,6 +653,28 @@ def _validate_first_array_child(
             on_timeout=on_timeout,
         )
     raise click.ClickException(str(original_error)) from original_error
+
+
+def _static_marker_failures(fs: Any, store_uri: Any, array_path: str) -> list[dict[str, str]]:
+    """Return static-array marker failures for the validated array, read-only."""
+    meta_uri = store_uri.join(array_path).join("zarr.json")
+    try:
+        with fs.open(meta_uri, "r") as handle:  # pyright: ignore[reportArgumentType]
+            metadata = json.load(handle)
+    except (AttributeError, FileNotFoundError):
+        return []
+
+    dimension_names = metadata.get("dimension_names")
+    if not dimension_names:
+        return []
+    first_dimension = str(dimension_names[0])
+    if first_dimension in {"timestamp", "time", "firecube_timestamp_state"}:
+        return []
+
+    attrs = metadata.get("attributes") or {}
+    if attrs.get(FIRECUBE_STATIC_WRITTEN_ATTR):
+        return []
+    return [{"array": array_path, "reason": "missing_or_false_static_marker"}]
 
 
 @zarr.command(

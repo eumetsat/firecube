@@ -21,7 +21,10 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from firecube.core.index_resolve import ExtentUnknownError
-from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.errors import (
+    ConfigurationError,
+    UnboundedAxisError,
+)
 from firecube.ingestor.runtime.index_binding import IndexBinding
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 
@@ -136,11 +139,7 @@ def validate_parallel_capability(
         try:
             binding.resolved.size(group)
         except ExtentUnknownError as exc:
-            raise ConfigurationError(
-                f"group {group!r}: axis has no fixed extent — set "
-                "RegularTimeAxis(end_date=...) or slot_count=... "
-                "to enable parallel ingestion"
-            ) from exc
+            raise UnboundedAxisError(group) from exc
 
     if type(ingestor).inspect_item is DirectZarrIngestor.inspect_item:
         raise ConfigurationError("--slot-start/--slot-end require inspect_item() override")

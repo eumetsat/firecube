@@ -27,6 +27,7 @@ coordinate axes and should be skipped by :meth:`ensure_timestamp_slot`.
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -38,7 +39,7 @@ from zarr.storage import LocalStore
 
 from firecube.core.errors import SchemaDriftError
 from firecube.core.uris import is_remote_target, local_path_from_target
-from firecube.core.zarr._reserved_attrs import assert_attrs_safe
+from firecube.core.zarr._reserved_attrs import _FILL_VALUE_ATTR, assert_attrs_safe
 
 log = logging.getLogger("firecube.core.zarr.region_writer")
 
@@ -107,6 +108,26 @@ def _array_is_all_fill(arr: np.ndarray, fill_value: Any) -> bool:
         if kind in ("M", "m"):
             return bool(np.all(np.isnat(arr)))
     return bool(np.all(arr == fill_value))
+
+
+def _fill_value_attr_value(fill_value: Any) -> Any:
+    """Return a JSON-safe scalar for use as a ``_FillValue`` attr, or ``None``.
+
+    Args:
+        fill_value: The fill value declared in ``ZarrArraySpec.fill_value``.
+
+    Returns:
+        A JSON-finite scalar (bool, int, str, or finite float) suitable for
+        writing into Zarr array attrs, or ``None`` if the value cannot be
+        represented safely (NaT, NaN, datetime objects, etc.).
+    """
+    if isinstance(fill_value, np.generic):
+        fill_value = fill_value.item()
+    if isinstance(fill_value, bool | int | str):
+        return fill_value
+    if isinstance(fill_value, float) and math.isfinite(fill_value):
+        return fill_value
+    return None
 
 
 _ARRAY_EQUAL_NAN_UNSAFE_KINDS = frozenset({"U", "S", "O", "V"})
@@ -396,6 +417,9 @@ class RegionZarrWriter:
                         f"existing={tuple(existing_dimnames)!r} spec={tuple(dimension_names)!r}. "
                         "Re-ingest from scratch; no in-place migration is provided."
                     )
+            _fv_attr = _fill_value_attr_value(fill_value)
+            if _fv_attr is not None and _FILL_VALUE_ATTR not in dict(arr.attrs):
+                arr.attrs[_FILL_VALUE_ATTR] = _fv_attr
             return arr
 
         kwargs: dict[str, Any] = {
@@ -418,7 +442,11 @@ class RegionZarrWriter:
             kwargs["serializer"] = serializer
         if compressors is not None:
             kwargs["compressors"] = list(compressors)
-        return target_group.create_array(**kwargs)
+        arr = target_group.create_array(**kwargs)
+        _fv_attr = _fill_value_attr_value(fill_value)
+        if _fv_attr is not None and _FILL_VALUE_ATTR not in dict(arr.attrs):
+            arr.attrs[_FILL_VALUE_ATTR] = _fv_attr
+        return arr
 
     def set_group_attrs(self, group: str, attrs: Mapping[str, Any] | None) -> None:
         """Stamp convention-agnostic group-level attributes onto the group metadata.

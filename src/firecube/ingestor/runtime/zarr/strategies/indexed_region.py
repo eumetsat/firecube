@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
-import itertools
 import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -37,6 +36,7 @@ import numpy as np
 
 from firecube.core.errors import SchemaDriftError
 from firecube.core.uris import storage_uri_from_target
+from firecube.core.zarr.chunk_geometry import physical_chunk_keys_for_region
 from firecube.core.zarr.region_writer import (
     RegionZarrWriter,
     _arrays_equal_missing_aware,
@@ -65,6 +65,15 @@ def _session_for_store(store_uri: str, storage_config: StorageConfig) -> Storage
 
 
 log = logging.getLogger("firecube.runtime.zarr.strategies.indexed_region")
+
+
+@contextlib.contextmanager
+def _array_write_empty_chunks_config(write_empty_chunks: bool):
+    import zarr as _zarr
+
+    with _zarr.config.set({"array.write_empty_chunks": write_empty_chunks}):
+        yield
+
 
 # Reserved array attr stamped once a static (write-once) array's data has been
 # committed. Its presence — not the array contents — is the authoritative
@@ -136,6 +145,39 @@ class IndexedRegionStrategy:
         slot_group: str | None = None,
         codec_pipelines_by_array: Mapping[tuple[str, str], tuple[Any, Any, Any]] | None = None,
         region_write_concurrency: int = 1,
+        suppress_static_emission_for_non_owner: bool = False,
+        static_owner_slot_start: int | None = None,
+        zarr_write_empty_chunks: bool = False,
+    ) -> dict[str, Any]:
+        with _array_write_empty_chunks_config(zarr_write_empty_chunks):
+            result = self._write_groups_unscoped(
+                group_to_intents=group_to_intents,
+                schema=schema,
+                claim_for_group=claim_for_group,
+                claim_for_slot=claim_for_slot,
+                slot_range=slot_range,
+                slot_group=slot_group,
+                codec_pipelines_by_array=codec_pipelines_by_array,
+                region_write_concurrency=region_write_concurrency,
+                suppress_static_emission_for_non_owner=suppress_static_emission_for_non_owner,
+                static_owner_slot_start=static_owner_slot_start,
+            )
+        result["zarr_write_empty_chunks_effective"] = zarr_write_empty_chunks
+        return result
+
+    def _write_groups_unscoped(
+        self,
+        *,
+        group_to_intents: dict[str, list[Any]],
+        schema: Sequence[Any] | None = None,
+        claim_for_group: Callable[[str], Any] | None = None,
+        claim_for_slot: Callable[[str, int], Any] | None = None,
+        slot_range: tuple[int, int] | None = None,
+        slot_group: str | None = None,
+        codec_pipelines_by_array: Mapping[tuple[str, str], tuple[Any, Any, Any]] | None = None,
+        region_write_concurrency: int = 1,
+        suppress_static_emission_for_non_owner: bool = False,
+        static_owner_slot_start: int | None = None,
     ) -> dict[str, Any]:
         """Execute write intents grouped by Zarr group and return metrics.
 
@@ -161,6 +203,11 @@ class IndexedRegionStrategy:
             region_write_concurrency: Maximum concurrent region writes per
                 claimed timestamp slot. ``1`` uses the historical serial
                 dispatch path.
+            suppress_static_emission_for_non_owner: When true, static intents
+                are emitted only by the worker whose slot start matches
+                ``static_owner_slot_start``.
+            static_owner_slot_start: V1 scalar owner ``slot_start`` for one
+                group per run.
 
         Returns:
             dict with ``"coverage"`` list and ``"duration_s"`` float.
@@ -352,6 +399,13 @@ class IndexedRegionStrategy:
 
             if region_write_concurrency == 1:
                 for intent in static_intents:
+                    if self._should_suppress_static_intent(
+                        intent,
+                        slot_range=slot_range,
+                        suppress_static_emission_for_non_owner=suppress_static_emission_for_non_owner,
+                        static_owner_slot_start=static_owner_slot_start,
+                    ):
+                        continue
                     self._dispatch_static_intent(writer, intent)
 
                 intents_by_slot: dict[int, list[Any]] = {}
@@ -414,6 +468,13 @@ class IndexedRegionStrategy:
                 )
 
                 for intent in static_intents:
+                    if self._should_suppress_static_intent(
+                        intent,
+                        slot_range=slot_range,
+                        suppress_static_emission_for_non_owner=suppress_static_emission_for_non_owner,
+                        static_owner_slot_start=static_owner_slot_start,
+                    ):
+                        continue
                     self._dispatch_static_intent(writer, intent)
 
                 self._dispatch_timed_intents_concurrently(
@@ -436,6 +497,31 @@ class IndexedRegionStrategy:
             "region_writes_aligned_count": region_writes_aligned_count,
             "region_writes_total_count": region_writes_total_count,
         }
+
+    @staticmethod
+    def _should_suppress_static_intent(
+        intent: Any,
+        *,
+        slot_range: tuple[int, int] | None,
+        suppress_static_emission_for_non_owner: bool,
+        static_owner_slot_start: int | None,
+    ) -> bool:
+        if slot_range is None:
+            # Serial mode: no non-owner concept, always write statics locally.
+            return False
+        if not suppress_static_emission_for_non_owner:
+            return False
+        slot_start = slot_range[0]
+        if slot_start == static_owner_slot_start:
+            return False
+        log.warning(
+            "static write suppressed as non-owner: group=%s array=%s slot_start=%s owner=%s",
+            intent.group,
+            intent.array,
+            slot_start,
+            static_owner_slot_start,
+        )
+        return True
 
     @classmethod
     def _validate_declared_concurrent_region_intents(
@@ -519,7 +605,7 @@ class IndexedRegionStrategy:
                     shape,
                     source="opened target array",
                 )
-                keys, aligned = cls._physical_chunk_keys_for_region(
+                keys, aligned = physical_chunk_keys_for_region(
                     group=group_name,
                     intent=intent,
                     shape=shape,
@@ -763,7 +849,7 @@ class IndexedRegionStrategy:
                     tuple(getattr(spec, "shape", ())),
                     source="declared schema",
                 )
-                _, aligned = cls._physical_chunk_keys_for_region(
+                _, aligned = physical_chunk_keys_for_region(
                     group=intent.group,
                     intent=intent,
                     shape=tuple(int(axis) for axis in spec.shape),
@@ -912,69 +998,6 @@ class IndexedRegionStrategy:
         if value is None:
             return default
         return IndexedRegionStrategy._as_non_negative_int(value, field=field, intent=intent)
-
-    @classmethod
-    def _physical_chunk_keys_for_region(
-        cls,
-        *,
-        group: str,
-        intent: Any,
-        shape: tuple[int, ...],
-        chunks: tuple[int, ...],
-        selection: _RegionSelection,
-    ) -> tuple[set[tuple[str, str, tuple[int, ...]]], bool]:
-        rank = len(shape)
-        if selection.ts_index >= shape[0]:
-            raise ValueError(
-                "Concurrent region write ts_index is outside the opened target array: "
-                f"group={intent.group!r} array={intent.array!r} "
-                f"shape={shape!r} ts_index={selection.ts_index!r}."
-            )
-
-        time_chunks = cls._chunk_axis_range(selection.ts_index, selection.ts_index + 1, chunks[0])
-        y_chunks = cls._chunk_axis_range(selection.y_start, selection.y_stop, chunks[1])
-        x_chunks = cls._chunk_axis_range(0, shape[2], chunks[2])
-
-        if rank == 3:
-            coords = itertools.product(time_chunks, y_chunks, x_chunks)
-            keys = {(group, intent.array, tuple(coord)) for coord in coords}
-            aligned = chunks[0] == 1 and cls._axis_selection_is_chunk_aligned(
-                selection.y_start, selection.y_stop, shape[1], chunks[1]
-            )
-            return keys, aligned
-
-        if selection.channel_index is None:
-            channel_start = 0
-            channel_stop = shape[3]
-        else:
-            channel_start = selection.channel_index
-            channel_stop = selection.channel_index + 1
-        channel_chunks = cls._chunk_axis_range(channel_start, channel_stop, chunks[3])
-        coords = itertools.product(time_chunks, y_chunks, x_chunks, channel_chunks)
-        keys = {(group, intent.array, tuple(coord)) for coord in coords}
-        aligned = (
-            chunks[0] == 1
-            and cls._axis_selection_is_chunk_aligned(
-                selection.y_start, selection.y_stop, shape[1], chunks[1]
-            )
-            and cls._axis_selection_is_chunk_aligned(
-                channel_start, channel_stop, shape[3], chunks[3]
-            )
-        )
-        return keys, aligned
-
-    @staticmethod
-    def _chunk_axis_range(start: int, stop: int, chunk_size: int) -> range:
-        return range(start // chunk_size, ((stop - 1) // chunk_size) + 1)
-
-    @staticmethod
-    def _axis_selection_is_chunk_aligned(
-        start: int,
-        stop: int,
-        axis_len: int,
-        chunk_size: int,
-    ) -> bool:
-        return start % chunk_size == 0 and (stop == axis_len or stop % chunk_size == 0)
 
     @classmethod
     def _dispatch_static_intent(cls, writer: RegionZarrWriter, intent: Any) -> None:

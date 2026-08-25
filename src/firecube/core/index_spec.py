@@ -95,7 +95,7 @@ def _canonical_coordinate_value(value: Any) -> Any:
 class RegularTimeAxis(AxisSpec):
     """A regularly-spaced time axis with a fixed epoch and cadence.
 
-    Args:
+    Attributes:
         coordinate: Name of the time coordinate dimension (e.g. ``"time"``).
         epoch: UTC-explicit ISO 8601 string for the axis origin (e.g.
             ``"2024-01-01T00:00:00Z"``). Naive strings are rejected.
@@ -203,7 +203,7 @@ class RegularTimeAxis(AxisSpec):
 class IntegerAxis(AxisSpec):
     """A zero-based integer axis with a fixed slot count.
 
-    Args:
+    Attributes:
         slot_count: Total number of integer positions on the axis
             (positive integer). Sets the shape of the axis dimension
             in the preallocated Zarr store: arrays indexed by this
@@ -229,7 +229,7 @@ class IntegerAxis(AxisSpec):
 class IrregularTimeAxis(AxisSpec):
     """A time axis with explicit coordinate values.
 
-    Args:
+    Attributes:
         coordinate: Name of the time coordinate dimension. Must match
             ``time_dim_name`` when the axis is resolved.
         values: Explicit coordinate values for the axis, or ``AUTO`` to
@@ -270,7 +270,7 @@ class IrregularTimeAxis(AxisSpec):
 class IndexSpec:
     """Declarative index specification for a multi-group DirectZarr product.
 
-    Args:
+    Attributes:
         name: Stable identifier for this index configuration. Used as the
             ``SlotIndexModel.name`` for byte-identity checks.
         groups: Mapping from group name to axis specification. Must be non-empty.
@@ -328,7 +328,7 @@ class ItemInfo:
     The engine uses ``coordinate`` to map the item to a position on its
     assigned axis.
 
-    Args:
+    Attributes:
         coordinate: The item's coordinate value. For ``RegularTimeAxis`` this
             is a UTC-explicit timestamp. For ``IntegerAxis`` this is an integer
             coordinate.

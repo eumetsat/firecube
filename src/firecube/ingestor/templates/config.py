@@ -194,6 +194,8 @@ class ZarrTemplateConfig(TemplateConfig):
         zarr_time_encoding: Optional time encoding override.
         zarr_async_concurrency: Async write concurrency used by Zarr.
         zarr_region_write_concurrency: Region write concurrency used by Zarr.
+        zarr_write_empty_chunks: Pass through Zarr's array write-empty-chunks
+            policy for scoped write phases. Defaults to ``False``.
         dask_scheduler: Optional Dask scheduler override.
         dask_write_threads: Optional write-thread count for Dask-backed writes.
     """
@@ -207,6 +209,7 @@ class ZarrTemplateConfig(TemplateConfig):
     zarr_time_encoding: str | None = None
     zarr_async_concurrency: int = 10
     zarr_region_write_concurrency: int = 1
+    zarr_write_empty_chunks: bool = False
     dask_scheduler: str | None = None
     dask_write_threads: int = 0
 

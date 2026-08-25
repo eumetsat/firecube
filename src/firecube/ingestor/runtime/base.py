@@ -33,6 +33,7 @@ from firecube.core.controlplane.metrics import collect_wal_metrics
 from firecube.core.controlplane.types import IndexEnsuredOutcome
 from firecube.core.filesystem import collect_filesystem_metrics
 from firecube.core.formats import discover_input_files
+from firecube.core.index_resolve import ExtentUnknownError
 from firecube.core.intake import CatalogGroupInfo
 from firecube.core.observability import create_ingestion_telemetry
 from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
@@ -778,6 +779,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
                 binding = getattr(self, "_index_binding", None)
                 if binding is not None:
+                    from firecube.ingestor.errors import UnboundedAxisError
                     from firecube.ingestor.runtime.parallel_gate import (
                         validate_global_expected_subset_of_schema,
                         warn_on_chunk_alignment,
@@ -786,9 +788,12 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
                     ingestor_self: Any = self
                     if isinstance(ingestor_self, DirectZarrIngestor):
-                        global_expected = {
-                            group: binding.resolved.size(group) for group in binding.resolved.groups
-                        }
+                        global_expected: dict[str, int] = {}
+                        for group in binding.resolved.groups:
+                            try:
+                                global_expected[group] = binding.resolved.size(group)
+                            except ExtentUnknownError as exc:
+                                raise UnboundedAxisError(group) from exc
                         schema = ingestor_self.zarr_schema(runtime_plugin_ctx)
                         if schema:
                             validate_global_expected_subset_of_schema(global_expected, schema)

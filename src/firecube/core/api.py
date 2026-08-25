@@ -17,6 +17,7 @@
 Plugins should import from this module rather than accessing core internals directly.
 """
 
+from firecube.core.batch_registry import BatchResourceRegistry
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane import RunInfo, describe_control_plane
 from firecube.core.controlplane.types import (
@@ -39,13 +40,19 @@ from firecube.core.filesystem import (
 from firecube.core.formats import (
     clean_netcdf_encoding,
     discover_input_files,
+    extract_all_from_zip,
     materialize_hdf5_path,
     normalize_string_vars,
     prepare_netcdf_for_zarr,
     read_hdf5_array,
     rename_time_dim,
 )
-from firecube.core.index_resolve import ResolvedIndex, coerce_to_epoch_s, resolve_index_spec
+from firecube.core.index_resolve import (
+    ExtentUnknownError,
+    ResolvedIndex,
+    coerce_to_epoch_s,
+    resolve_index_spec,
+)
 from firecube.core.index_spec import (
     AUTO,
     AxisSpec,
@@ -72,15 +79,33 @@ from firecube.core.uris import (
     local_path_from_target,
     parse_uri,
 )
+from firecube.core.zarr._reserved_attrs import (
+    FIRECUBE_STATIC_WRITTEN_ATTR,
+    RESERVED_ARRAY_ATTRS,
+    assert_attrs_safe,
+)
+from firecube.core.zarr.chunk_geometry import (
+    axis_selection_is_chunk_aligned,
+    chunk_axis_range,
+    physical_chunk_keys_for_region,
+)
 from firecube.core.zarr.region_writer import RegionZarrWriterProtocol
 from firecube.core.zarr.time_decode import decode_time_array
-from firecube.core.zarr.validation import read_chunk_grid_with_shards
+from firecube.core.zarr.validation import (
+    ZarrCompareReport,
+    compare_zarr_stores,
+    read_chunk_grid_with_shards,
+)
 
 __all__ = [
     "AUTO",
+    "FIRECUBE_STATIC_WRITTEN_ATTR",
+    "RESERVED_ARRAY_ATTRS",
     "AxisSpec",
+    "BatchResourceRegistry",
     "CatalogGroupInfo",
     "DuplicateIrregularCoordinateError",
+    "ExtentUnknownError",
     "IndexSpec",
     "IndexedWrite",
     "IndexedWriteCompilationError",
@@ -98,8 +123,13 @@ __all__ = [
     "SlotAxis",
     "SlotIndexModel",
     "StorageConfig",
+    "ZarrCompareReport",
+    "assert_attrs_safe",
+    "axis_selection_is_chunk_aligned",
+    "chunk_axis_range",
     "clean_netcdf_encoding",
     "coerce_to_epoch_s",
+    "compare_zarr_stores",
     "create_filesystem_for_uri",
     "decode_time_array",
     "delete_path",
@@ -108,6 +138,7 @@ __all__ = [
     "ensure_directory",
     "ensure_product_uri",
     "epoch_s_to_iso",
+    "extract_all_from_zip",
     "infer_target_protocol",
     "is_remote_target",
     "iso_to_epoch_s",
@@ -117,6 +148,7 @@ __all__ = [
     "normalize_string_vars",
     "parse_uri",
     "path_stats",
+    "physical_chunk_keys_for_region",
     "prepare_netcdf_for_zarr",
     "read_chunk_grid_with_shards",
     "read_hdf5_array",

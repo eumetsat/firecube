@@ -31,8 +31,15 @@ import time
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any, cast
 
-from firecube.core.filesystem.ops import _open_fsspec_url  # type: ignore
+import numpy as np
+
+from firecube.core.config import StorageConfig
+from firecube.core.filesystem.ops import (
+    _open_fsspec_url,  # type: ignore
+    create_filesystem_for_uri,
+)
 from firecube.core.filesystem.protocol import StorageFilesystem
+from firecube.core.filesystem.store_factory import create_zarr_store
 from firecube.core.storage.uri import StorageUri
 
 if TYPE_CHECKING:
@@ -57,6 +64,29 @@ class ZarrValidationReport:
     chunks_processed: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ZarrCompareReport:
+    """Summary of a read-only comparison between two Zarr stores.
+
+    Attributes:
+        equivalent: Whether every compared array path, schema field, selected
+            attribute, static marker, and value payload matched.
+        mismatches: Terse mismatch descriptions grouped by array path and
+            category.
+
+    Examples:
+        >>> ZarrCompareReport(equivalent=True, mismatches=[]).equivalent
+        True
+    """
+
+    equivalent: bool
+    mismatches: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation of the report."""
         return asdict(self)
 
 
@@ -89,6 +119,175 @@ def _load_array_metadata_with_fs(fs: StorageFilesystem, group_uri: StorageUri) -
             return json.load(handle)
     except FileNotFoundError:
         raise FileNotFoundError(f"Missing zarr.json at {meta_uri.to_str()}") from None
+
+
+def _load_root_metadata_with_fs(fs: StorageFilesystem, store_uri: StorageUri) -> dict[str, Any]:
+    meta_uri = store_uri.join("zarr.json")
+    try:
+        with fs.open(meta_uri, "r") as handle:  # pyright: ignore[reportArgumentType]
+            return json.load(handle)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Missing Zarr store metadata at {meta_uri.to_str()}") from None
+
+
+def _discover_arrays_with_fs(fs: StorageFilesystem, store_uri: StorageUri) -> list[str]:
+    arrays: list[str] = []
+    for entry in fs.find(store_uri):  # pyright: ignore[reportArgumentType]
+        if not isinstance(entry, StorageUri):
+            continue
+        if entry.path.rsplit("/", 1)[-1] != "zarr.json":
+            continue
+        with fs.open(entry, "r") as handle:
+            meta = json.load(handle)
+        if meta.get("node_type") != "array":
+            continue
+        parent = entry.parent()
+        rel = parent.path.removeprefix(store_uri.path.rstrip("/")).strip("/")
+        if rel:
+            arrays.append(rel)
+    return sorted(set(arrays))
+
+
+def _public_attrs(attrs: Any) -> dict[str, Any]:
+    from firecube.core.api import RESERVED_ARRAY_ATTRS, assert_attrs_safe
+
+    filtered = {
+        str(key): value
+        for key, value in dict(attrs or {}).items()
+        if key not in RESERVED_ARRAY_ATTRS
+    }
+    assert_attrs_safe(filtered)
+    return filtered
+
+
+def _dimension_names(array: Any) -> tuple[str, ...] | None:
+    metadata = getattr(array, "metadata", None)
+    names = getattr(metadata, "dimension_names", None)
+    if names is None:
+        return None
+    return tuple(str(name) for name in names)
+
+
+def _static_marker(array: Any) -> Any:
+    from firecube.core.api import FIRECUBE_STATIC_WRITTEN_ATTR
+
+    return dict(getattr(array, "attrs", {}) or {}).get(FIRECUBE_STATIC_WRITTEN_ATTR)
+
+
+def _values_equal(left: Any, right: Any) -> bool:
+    left_values = np.asarray(left[:])
+    right_values = np.asarray(right[:])
+    if left_values.dtype.kind == "f" and right_values.dtype.kind == "f":
+        return bool(np.array_equal(left_values, right_values, equal_nan=True))
+    return bool(np.array_equal(left_values, right_values))
+
+
+def compare_zarr_stores(
+    a_uri: str,
+    b_uri: str,
+    *,
+    storage_type: str,
+    storage_driver: str,
+) -> ZarrCompareReport:
+    """Compare two Zarr stores through the configured storage abstraction.
+
+    The comparison is read-only and checks array paths, shape, dtype, chunks,
+    native Zarr dimension names, public attrs, the Firecube static-array marker,
+    and full array values. Runtime-managed attrs such as ``firecube_run_id`` and
+    ``firecube_span_id`` are ignored.
+
+    Args:
+        a_uri: First Zarr store URI.
+        b_uri: Second Zarr store URI.
+        storage_type: Storage locality, either ``"local"`` or ``"s3"``.
+        storage_driver: Storage driver, either ``"fsspec"`` or ``"obstore"``.
+
+    Returns:
+        ZarrCompareReport: ``equivalent=True`` when no mismatches were found;
+        otherwise ``equivalent=False`` with one terse message per mismatch.
+
+    Raises:
+        FileNotFoundError: If either store or a discovered array is missing.
+        ValueError: If the storage configuration is invalid.
+
+    Examples:
+        >>> report = compare_zarr_stores(
+        ...     "file:///tmp/a.zarr",
+        ...     "file:///tmp/b.zarr",
+        ...     storage_type="local",
+        ...     storage_driver="fsspec",
+        ... )
+        >>> isinstance(report.equivalent, bool)
+        True
+    """
+    import zarr
+
+    storage_config = StorageConfig(storage_type=storage_type, storage_driver=storage_driver)
+    storage_config.validate()
+    a_fs, a_store_uri = create_filesystem_for_uri(a_uri, storage_config, format="zarr")
+    b_fs, b_store_uri = create_filesystem_for_uri(b_uri, storage_config, format="zarr")
+    _load_root_metadata_with_fs(a_fs, a_store_uri)
+    _load_root_metadata_with_fs(b_fs, b_store_uri)
+
+    a_paths = set(_discover_arrays_with_fs(a_fs, a_store_uri))
+    b_paths = set(_discover_arrays_with_fs(b_fs, b_store_uri))
+    mismatches = [f"array {path}: missing from second store" for path in sorted(a_paths - b_paths)]
+    mismatches.extend(
+        f"array {path}: missing from first store" for path in sorted(b_paths - a_paths)
+    )
+
+    a_handle = create_zarr_store(uri=a_uri, storage_config=storage_config, mode="r")
+    b_handle = create_zarr_store(uri=b_uri, storage_config=storage_config, mode="r")
+    a_root = zarr.open_group(**a_handle.zarr_kwargs(), mode="r")
+    b_root = zarr.open_group(**b_handle.zarr_kwargs(), mode="r")
+
+    for path in sorted(a_paths & b_paths):
+        left = cast(Any, a_root[path])
+        right = cast(Any, b_root[path])
+        path_prefix = f"array {path}"
+
+        left_shape = tuple(int(size) for size in left.shape)
+        right_shape = tuple(int(size) for size in right.shape)
+        if left_shape != right_shape:
+            mismatches.append(f"{path_prefix}: shape {left_shape} != {right_shape}")
+
+        left_dtype = np.dtype(left.dtype)
+        right_dtype = np.dtype(right.dtype)
+        if left_dtype != right_dtype:
+            mismatches.append(f"{path_prefix}: dtype {left_dtype} != {right_dtype}")
+
+        left_chunks = tuple(int(size) for size in left.chunks)
+        right_chunks = tuple(int(size) for size in right.chunks)
+        if left_chunks != right_chunks:
+            mismatches.append(f"{path_prefix}: chunks {left_chunks} != {right_chunks}")
+
+        left_dimension_names = _dimension_names(left)
+        right_dimension_names = _dimension_names(right)
+        if left_dimension_names != right_dimension_names:
+            mismatches.append(
+                f"{path_prefix}: dimension_names {left_dimension_names} != {right_dimension_names}"
+            )
+
+        left_attrs = _public_attrs(getattr(left, "attrs", {}))
+        right_attrs = _public_attrs(getattr(right, "attrs", {}))
+        if left_attrs != right_attrs:
+            mismatches.append(f"{path_prefix}: attrs differ")
+
+        left_marker = _static_marker(left)
+        right_marker = _static_marker(right)
+        if left_marker != right_marker:
+            mismatches.append(
+                f"{path_prefix}: firecube_static_written {left_marker!r} != {right_marker!r}"
+            )
+
+        if (
+            left_shape == right_shape
+            and left_dtype == right_dtype
+            and not _values_equal(left, right)
+        ):
+            mismatches.append(f"{path_prefix}: values differ")
+
+    return ZarrCompareReport(equivalent=not mismatches, mismatches=mismatches)
 
 
 def _chunk_entry_path(entry: StorageUri | str) -> str:

@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import DirectZarrIngestor
+from firecube.ingestor.api import ConfigurationError, DirectZarrIngestor
 from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
 from firecube.ingestor.templates.direct_zarr import WriteIntent, ZarrArraySpec, ZarrGroupSpec
 
@@ -199,16 +199,14 @@ def test_intent_group_missing_from_schema_fails(
         intents=[_intent("G_unknown")],
     )
 
-    result, _ = _run_process_batch(
-        tmp_path=tmp_path,
-        monkeypatch=monkeypatch,
-        ingestor=ingestor,
-        global_schema={"A": 1000, "B": 1000, "G_unknown": 1000},
-        setup_stub=lambda **kwargs: None,
-    )
-
-    assert result.success is False
-    assert "G_unknown" in cast(str, result.error)
+    with pytest.raises(ConfigurationError, match="G_unknown"):
+        _run_process_batch(
+            tmp_path=tmp_path,
+            monkeypatch=monkeypatch,
+            ingestor=ingestor,
+            global_schema={"A": 1000, "B": 1000, "G_unknown": 1000},
+            setup_stub=lambda **kwargs: None,
+        )
 
 
 def test_extra_groups_in_global_allowed(

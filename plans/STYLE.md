@@ -39,6 +39,8 @@ These apply to all new code in `src/` and to plugin implementations.
 - **No side effects at import time**: Especially in `firecube.ingestor`. Keep optional deps lazy. Don't trigger I/O, registration, or network calls on import.
 - **Fail fast on bad config**: Validate config at construction time, not at first use. A `ValueError` at startup is better than a silent wrong result halfway through a multi-hour ingest.
 - **Google-style docstrings**: `mkdocs.yml` pins `docstring_style: google`. Numpy-style sections (`Parameters` / `Returns` underlined with `---`) render as flat text and no build check catches it. Use `Args:`, `Returns:`, `Raises:`, `Examples:`.
+- **Exact Google section names only**: the recognized headers are `Args:`, `Returns:`, `Yields:`, `Raises:`, `Attributes:`, `Examples:`, `Note:`, `Warning:`. Singular or invented variants (`Arg:`, `Return:`, `Raise:`, `Error:`, `Errors:`, `Attribute:`) are not parsed by griffe and render as flat prose. This is the same Google format xarray and numpy render with.
+- **Dataclasses document fields under `Attributes:`, never `Args:`**: a dataclass docstring describes the record's fields, so the section is `Attributes:`. Reserve `Args:` for functions, methods, and a non-dataclass class docstring that documents its `__init__` parameters.
 
 ## Docstrings On Public Surfaces
 

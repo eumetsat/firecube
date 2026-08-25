@@ -590,6 +590,28 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
         "non-parallel mode)."
     ),
 )
+@click.option(
+    "--suppress-static-emission-for-non-owner",
+    "suppress_static_emission_for_non_owner",
+    is_flag=True,
+    help=(
+        "skip writes of static (non-time-indexed) arrays on this worker unless its "
+        "--slot-start equals --static-owner-slot-start; pass to every fan-out worker "
+        "so exactly one of them writes shared arrays such as latitude and longitude"
+    ),
+)
+@click.option(
+    "--static-owner-slot-start",
+    "static_owner_slot_start",
+    type=int,
+    default=None,
+    help=(
+        "slot-start of the worker that writes static arrays; take the value from the "
+        "static_owner field in the 'firecube zarr slots --format json' plan and pass "
+        "the same value to every worker together with "
+        "--suppress-static-emission-for-non-owner"
+    ),
+)
 @click.option("--in-memory", is_flag=True, help="use in-memory DuckDB")
 @click.option(
     "--option",
@@ -619,6 +641,8 @@ def ingest(
     slot_end: int | None,
     slot_size: int | None,
     slot_group: str | None,
+    suppress_static_emission_for_non_owner: bool,
+    static_owner_slot_start: int | None,
     in_memory: bool,
     extra_options,
     show_options: bool,
@@ -715,6 +739,10 @@ def ingest(
             options["slot_end"] = resolved_slot_end
             options["slot_size"] = slot_size
             options["slot_group"] = resolved_slot_group
+            options["suppress_static_emission_for_non_owner"] = (
+                suppress_static_emission_for_non_owner
+            )
+            options["static_owner_slot_start"] = static_owner_slot_start
             resolved_product_name = (
                 ingest_cfg.product_name
                 or get_plugin_defaults(cfg, plugin).get("default_product_name")
