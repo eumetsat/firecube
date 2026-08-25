@@ -96,7 +96,7 @@ nav:
   - Quickstart:
     - Overview: quickstart/index.md
     - Installation: quickstart/installation.md
-    - Create and Install the Example Plugin: quickstart/plugins.md
+    - Install the Example Plugin: quickstart/plugins.md
     - Prepare Source Data: quickstart/source-data.md
     - Run Ingestion: quickstart/ingestion.md
   - Plugin Development:

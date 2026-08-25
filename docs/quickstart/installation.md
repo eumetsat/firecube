@@ -45,7 +45,7 @@ To change Firecube itself, use the source setup in
 
 ## Next Steps
 
-Continue to **[Create and Install the Example Plugin](plugins.md)**. Firecube
-provides the ingestion engine, but it does not know how to read every dataset
-by itself. The next page creates the dataset-specific Python package used by
-the rest of this quickstart.
+Continue to **[Install the Example Plugin](plugins.md)**. Firecube provides
+the ingestion engine, but it does not know how to read every dataset by
+itself. The next page installs the dataset-specific Python package used by the
+rest of this quickstart.
