@@ -114,7 +114,6 @@ def _prepare_bt3_ingest(
         output_format="zarr",
         options={
             "write_mode": "staged",
-            "pipeline_parallel": False,
             "pipeline_batch_size": 1,
             "no_progress": True,
         },

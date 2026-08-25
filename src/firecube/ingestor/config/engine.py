@@ -59,9 +59,16 @@ class EngineConfig:
     These options control HOW the ingestion runs, not WHAT product logic is applied.
 
     Attributes:
-        pipeline_parallel: Enable parallel batch preprocessing.
-        pipeline_workers: Number of pipeline worker threads.
-        pipeline_batch_size: Number of source items per batch.
+        pipeline_workers: Number of pipeline worker threads. A value of 2 or
+            more selects parallel pipeline execution; 1 (the default) runs
+            batches sequentially. Must be at least 1.
+        pipeline_batch_size: Number of source items per batch. Must be at
+            least 1.
+        extract_workers: Number of parallel archive-extraction workers used
+            by plugins that extract a batch of source archives (for example
+            ZIPs) to disk before decoding. Extraction is disk-bound and
+            claims no slots, so this is independent of ``pipeline_workers``;
+            when both are above 1 the two multiply. Must be at least 1.
         cleanup_workspace: Delete temporary workspace files after the run.
         workspace: Optional workspace directory override.
         include_patterns: Optional file patterns for source discovery.
@@ -90,9 +97,9 @@ class EngineConfig:
     """
 
     # Execution (Pipeline)
-    pipeline_parallel: bool = False
     pipeline_workers: int = 1
     pipeline_batch_size: int = 10
+    extract_workers: int = 4
 
     # Workspace & Resources
     cleanup_workspace: bool = False
@@ -136,6 +143,12 @@ class EngineConfig:
     static_owner_slot_start: int | None = None
 
     def __post_init__(self) -> None:
+        if self.pipeline_workers < 1:
+            raise ValueError(f"pipeline_workers must be >= 1, got {self.pipeline_workers}")
+        if self.pipeline_batch_size < 1:
+            raise ValueError(f"pipeline_batch_size must be >= 1, got {self.pipeline_batch_size}")
+        if self.extract_workers < 1:
+            raise ValueError(f"extract_workers must be >= 1, got {self.extract_workers}")
         if self.suppress_static_emission_for_non_owner and self.static_owner_slot_start is None:
             raise ConfigurationError(
                 "suppress_static_emission_for_non_owner=True requires static_owner_slot_start"

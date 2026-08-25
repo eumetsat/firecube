@@ -304,8 +304,6 @@ def test_callable_plugin_retained_peak_smoke(
         "direct",
         "--option",
         "no_progress=true",
-        "--option",
-        "pipeline_parallel=false",
     ]
     completed = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     assert completed.returncode == 0, (

@@ -203,7 +203,7 @@ Product:     sentinel3_frp
 
 Options Sections:
   [ENGINE]
-      pipeline_parallel [boolean] (default: False)
+      pipeline_workers [integer] (default: 1)
       ...
 ```
 

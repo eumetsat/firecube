@@ -140,10 +140,13 @@ class TierConfigurator:
 
 
 def determine_execution_mode(engine_config: EngineConfig) -> ExecutionMode:
-    pipeline_requested = (
-        bool(engine_config.pipeline_parallel) or int(engine_config.pipeline_workers) > 1
-    )
-    if pipeline_requested:
+    """Select the execution mode from ``pipeline_workers`` alone.
+
+    ``pipeline_workers >= 2`` selects parallel pipeline execution; 1 runs
+    batches sequentially. ``EngineConfig`` rejects values below 1 at
+    construction, so no other state exists.
+    """
+    if engine_config.pipeline_workers >= 2:
         return ExecutionMode.PIPELINE
     return ExecutionMode.SEQUENTIAL
 

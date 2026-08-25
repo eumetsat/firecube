@@ -63,8 +63,8 @@ class MockIngestor(BaseIngestor):
 def test_engine_config_strictness():
     """Verify EngineConfig rejects unknown keys."""
     # Valid
-    cfg = EngineConfig.from_options({"pipeline_parallel": True})
-    assert cfg.pipeline_parallel is True
+    cfg = EngineConfig.from_options({"pipeline_workers": 2})
+    assert cfg.pipeline_workers == 2
 
     # Invalid
     with pytest.raises(ValueError, match="Unknown Engine options"):
@@ -77,7 +77,7 @@ def test_option_split_logic():
 
     options = {
         # Engine
-        "pipeline_parallel": "true",
+        "pipeline_workers": "2",
         "cleanup_workspace": "false",
         # Template
         "template_param": "custom_template",
@@ -95,7 +95,7 @@ def test_option_split_logic():
     ingestor.plugin_config = plugin_cfg
 
     # Verify Engine
-    assert ingestor.engine_config.pipeline_parallel is True
+    assert ingestor.engine_config.pipeline_workers == 2
     assert ingestor.engine_config.cleanup_workspace is False
 
     # Verify Template
@@ -112,7 +112,7 @@ def test_union_validator_rejects_typos():
     ingestor = MockIngestor()
 
     options = {
-        "pipeline_parallel": "true",
+        "pipeline_workers": "2",
         "typo_param": "foo",  # Unknown
     }
 
@@ -144,7 +144,7 @@ def test_collision_with_engine():
 
         @dataclass
         class EngineOverridePlugin(PluginConfig):
-            pipeline_parallel: bool = False
+            pipeline_workers: int = 1
 
         class EngineBadIngestor(BaseIngestor):
             PRODUCT_NAME = "engine_bad"
@@ -157,7 +157,7 @@ def test_describe_options_structure():
     desc = MockIngestor.describe_options()
 
     assert "Engine Options" in desc
-    assert "pipeline_parallel" in desc["Engine Options"]
+    assert "pipeline_workers" in desc["Engine Options"]
 
     assert "Template Options" in desc
     assert "template_param" in desc["Template Options"]

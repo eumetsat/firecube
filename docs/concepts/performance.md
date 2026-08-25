@@ -36,9 +36,11 @@ and shaping batches before the write step.
 Use pipeline workers when this phase dominates:
 
 ```bash
---option pipeline_parallel=true \
 --option pipeline_workers=4
 ```
+
+`pipeline_workers` alone decides the mode: 2 or more runs the parallel
+pipeline, 1 (the default) runs batches sequentially.
 
 Increase workers gradually. If CPU usage is already high, more workers may add
 contention without improving throughput. If memory grows too much, reduce
@@ -142,7 +144,6 @@ For a large gridded Zarr product on S3 with scratch space:
 For CPU-heavy source parsing:
 
 ```bash
---option pipeline_parallel=true \
 --option pipeline_workers=4 \
 --option pipeline_batch_size=40
 ```
@@ -151,7 +152,6 @@ For tabular Parquet output:
 
 ```bash
 --output-format parquet \
---option pipeline_parallel=true \
 --option pipeline_workers=4 \
 --option pipeline_batch_size=50
 ```

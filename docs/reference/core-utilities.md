@@ -27,7 +27,7 @@ Zarr stores and returns `ZarrCompareReport`.
     "rename_time_dim",
     "read_hdf5_array",
     "materialize_hdf5_path",
-    "extract_all_from_zip",
+    "extract_all_from_zips",
     "epoch_s_to_iso",
     "iso_to_epoch_s",
     "coerce_to_epoch_s",
@@ -81,7 +81,7 @@ Zarr stores and returns `ZarrCompareReport`.
 
 ## ZIP Extraction
 
-::: firecube.core.api.extract_all_from_zip
+::: firecube.core.api.extract_all_from_zips
 
 ## Time Conversion
 

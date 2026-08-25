@@ -135,7 +135,7 @@ def _base_args(target_path: Path) -> list[str]:
         "--option",
         "no_progress=true",
         "--option",
-        "pipeline_parallel=true",
+        "pipeline_workers=2",
         "--option",
         "pipeline_batch_size=100",
     ]

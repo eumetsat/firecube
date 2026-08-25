@@ -76,8 +76,6 @@ def _ingest_args(target_path: Path, *, force_reingest: bool = False) -> list[str
         "direct",
         "--option",
         "no_progress=true",
-        "--option",
-        "pipeline_parallel=false",
     ]
     if force_reingest:
         args += ["--option", "force_reingest=true"]

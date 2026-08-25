@@ -87,8 +87,6 @@ def _ingest_args(target_path: Path) -> list[str]:
         "resume_existing=true",
         "--option",
         "no_progress=true",
-        "--option",
-        "pipeline_parallel=false",
     ]
 
 
