@@ -44,6 +44,14 @@ _VALID_SCHEDULERS: frozenset[str] = frozenset(
 )
 
 
+@contextlib.contextmanager
+def _array_write_empty_chunks_config(write_empty_chunks: bool):
+    import zarr as _zarr
+
+    with _zarr.config.set({"array.write_empty_chunks": write_empty_chunks}):
+        yield
+
+
 class ZarrWriteContext:
     """Context manager for Zarr write sessions.
 
@@ -62,6 +70,8 @@ class ZarrWriteContext:
         async_concurrency: Zarr async pipeline concurrency.  ``10`` is the
             default sentinel value; setting both *write_threads > 0* **and** a
             non-default concurrency raises ``ConfigurationError``.
+        write_empty_chunks: Scoped Zarr ``array.write_empty_chunks`` setting
+            used only while this write context is active.
     """
 
     def __init__(
@@ -71,11 +81,13 @@ class ZarrWriteContext:
         configured_scheduler: str | None = None,
         write_threads: int = 0,
         async_concurrency: int = 10,
+        write_empty_chunks: bool = False,
     ) -> None:
         self._write_lock = write_lock
         self._configured_scheduler = configured_scheduler
         self._write_threads = write_threads
         self._async_concurrency = async_concurrency
+        self._write_empty_chunks = write_empty_chunks
 
         self._exit_stack: contextlib.ExitStack | None = None
 
@@ -122,6 +134,7 @@ class ZarrWriteContext:
         try:
             stack.enter_context(self._write_lock)  # type: ignore[arg-type]
             stack.enter_context(dask_ctx)
+            stack.enter_context(_array_write_empty_chunks_config(self._write_empty_chunks))
         except BaseException:
             stack.close()
             self._exit_stack = None

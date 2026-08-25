@@ -129,7 +129,8 @@ class TestZarrWriteContextZarrConfig:
             )
             with ctx:
                 pass
-            mock_zarr_set.assert_called_with({"async.concurrency": 1})
+            mock_zarr_set.assert_any_call({"async.concurrency": 1})
+            mock_zarr_set.assert_any_call({"array.write_empty_chunks": False})
 
     def test_write_threads_forces_async_concurrency_1(self):
         with patch("zarr.config.set") as mock_zarr_set:
@@ -139,7 +140,8 @@ class TestZarrWriteContextZarrConfig:
             )
             with ctx:
                 pass
-            mock_zarr_set.assert_called_with({"async.concurrency": 1})
+            mock_zarr_set.assert_any_call({"async.concurrency": 1})
+            mock_zarr_set.assert_any_call({"array.write_empty_chunks": False})
 
     def test_default_uses_configured_async_concurrency(self):
         with patch("zarr.config.set") as mock_zarr_set:
@@ -149,4 +151,5 @@ class TestZarrWriteContextZarrConfig:
             )
             with ctx:
                 pass
-            mock_zarr_set.assert_called_with({"async.concurrency": 32})
+            mock_zarr_set.assert_any_call({"async.concurrency": 32})
+            mock_zarr_set.assert_any_call({"array.write_empty_chunks": False})

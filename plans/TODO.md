@@ -7,6 +7,20 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 ---
 
+### §36 `ZarrWriteContext` async-concurrency leak — convert to scoped config
+
+**Status**: OPEN
+**Scope**: Zarr write configuration hygiene
+**Priority**: medium
+
+`src/firecube/ingestor/runtime/zarr/write_context.py` still calls
+`zarr.config.set({"async.concurrency": ...})` bare during `ZarrWriteContext.__enter__`.
+This pre-existing setting is outside the Wave C2 `zarr_write_empty_chunks` work,
+but it should be converted to a scoped context manager so async concurrency is
+restored when the write context exits.
+
+---
+
 ### §33 DirectZarr slot-range parallelism - roadmap
 
 - **Landed:** `IndexSpec` + `RegularTimeAxis` + `ResolvedIndex`; byte parity for FCI and OPERA; recursion defect fixed.
@@ -149,6 +163,38 @@ power in the default test loop.
     **Builds on:** §4a (DONE.md) — `IndexedRegionStrategy` is the missing primitive that enables disjoint-region writes. §21, §23, §23-AUTO, §7-DIRECT, §7-sub, and Phase 3.1 are all DONE as of 2026-05-28. Safe within-group parallelism is fully delivered for `DirectZarrIngestor` plugins.
 
 ---
+
+### §37 `compare_zarr_stores` chunk-wise value comparison (post-2026-08-24)
+
+`src/firecube/core/zarr/validation.py::_values_equal` currently loads whole arrays into memory via `left[:]`. For production-size cubes this will OOM. If `firecube zarr compare` is to be used as a promotion gate on real cubes, replace the full-array load with chunk-wise comparison that iterates over chunk indices and compares one chunk at a time.
+
+**Scope**:
+- Modify `_values_equal` to iterate chunks (use `zarr.Array.chunks` and `numpy.ndindex` over chunk coordinates).
+- Preserve NaN-aware equality semantics per dtype kind.
+- Preserve the terse per-category mismatch message format (do NOT list individual chunks).
+- Add a test with a large synthetic array that would OOM with `[:]` but passes with chunk-wise comparison.
+
+**Deferred from**: Milestone C review, 2026-08-25. V1 boolean-only compare is fine for small stores.
+
+---
+
+### §38 `zarr validate` static-marker check: configurable time-dimension names (post-2026-08-25)
+
+`src/firecube/cli/zarr.py::_static_marker_failures` classifies an array as
+time-indexed when its first dimension is named `timestamp`, `time`, or
+`firecube_timestamp_state`; any other first-dimension name is treated as
+static and must carry the `firecube_static_written` marker. A plugin using a
+custom `time_dim_name` outside that set gets false
+`missing_or_false_static_marker` reports on genuinely time-indexed arrays.
+
+**Scope**:
+- Add a way to extend or override the recognized names (a `--time-dim` option
+  on `firecube zarr validate`, or read the dimension name from the resolved
+  index record).
+- Keep the default set unchanged.
+
+**Deferred from**: Wave C2 review, 2026-08-25. The recognized set is
+documented in `docs/concepts/performance.md`.
 
 ### §9 Span planning (optional pre-declared spans)
 

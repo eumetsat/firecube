@@ -123,6 +123,14 @@ CLI_COMMAND_CONTRACTS: Mapping[tuple[str, ...], ContractEntry] = {
         smart_default_eligible=True,
         expected_failures=[],
     ),
+    ("zarr", "compare"): ContractEntry(
+        path=("zarr", "compare"),
+        tier="inspect",
+        uri_roles={"A_URI": "product-input", "B_URI": "product-input"},
+        required_storage_flags=["--storage-type", "--storage-driver"],
+        smart_default_eligible=False,
+        expected_failures=[],
+    ),
     ("parquet", "validate"): ContractEntry(
         path=("parquet", "validate"),
         tier="inspect",

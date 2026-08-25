@@ -1,5 +1,148 @@
 # Done
 
+## 2026-08-24 — Milestone D — Optional cleanup
+
+### What
+
+Two capabilities shipped on branch `feat/plugin-to-core-migration` (commit `c2ec4ab`):
+
+1. Chunk-geometry helpers (`chunk_range_for_slot`, `chunk_ranges_for_slots`, `ChunkRange`) extracted from `src/firecube/ingestor/runtime/zarr/indexed_region.py` to `src/firecube/core/zarr/chunk_geometry.py`; exported from `firecube.core.api`; `indexed_region.py` now imports them from the new module. Behavior is bit-identical to the pre-extraction implementation.
+
+2. `BatchResourceRegistry` added to `src/firecube/core/batch_registry.py`; exported from `firecube.core.api`. Provides idempotent teardown and fail-loud-but-close-all semantics: all registered resources are closed even when earlier closures raise, and all exceptions are collected and re-raised together. `_IdentityRef` is an internal implementation detail and is not exported.
+
+### Consequences
+
+The chunk-geometry helpers were promoted to `firecube.core` to enable cross-plugin deduplication of identical chunk-range math. Any plugin or operator code that needs to compute chunk ranges for a given slot can now import from `firecube.core.api` rather than reaching into the ingestor runtime internals.
+
+`BatchResourceRegistry` provides a convenience over the lifecycle hooks for managing closable resources within a batch run. Registering a resource guarantees it will be closed on teardown regardless of earlier failures, removing the need for nested try/finally chains in plugin code.
+
+### Verification
+
+```bash
+uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -q --tb=short
+uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
+uv run pytest --strict-deps -q --tb=short -W error::DeprecationWarning
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run mkdocs build --strict --site-dir /tmp/firecube-mkdocs-check
+```
+
+All seven commands exit 0 on branch `feat/plugin-to-core-migration`, commit `c2ec4ab`.
+
+## 2026-08-24 — Milestone C — Bounded operational tooling
+
+### What
+
+Five capabilities shipped on branch `feat/plugin-to-core-migration` (commit `8d79dd8`):
+
+1. `compare_zarr_stores()` helper and `ZarrCompareReport` dataclass added to `src/firecube/core/zarr/validation.py`; exported from `firecube.core.api`; `firecube zarr compare` CLI subcommand added; operator documentation at `docs/operations/zarr-compare.md`.
+
+2. `static_owner` field added to `firecube zarr slots` JSON output. The owner is the pod whose planned `slot_start` is smallest within each group (deterministic, plan-input only). Documentation updated in `docs/operations/parallel-zarr-writes.md`.
+
+3. `firecube zarr validate` static-marker check: the validate command now reports a failure for any static (`time_indexed=False`) array that is missing the `firecube_static_written` marker attribute, without mutating the store.
+
+4. `EngineConfig.suppress_static_emission_for_non_owner` (bool, default `False`) and `EngineConfig.static_owner_slot_start` (int, default `0`) fields added; corresponding CLI flags `--suppress-static-emission-for-non-owner` and `--static-owner-slot-start` added. `IndexedRegionStrategy._dispatch_static_intent` suppresses static writes on non-owner pods and emits a structured log line at `DEBUG` level. Scope limitation: `static_owner_slot_start` is compared against the single slot-start value for the current run; multi-group ownership resolution is deferred (see `plans/TODO.md` §36).
+
+5. `ZarrTemplateConfig.zarr_write_empty_chunks: bool = False` typed option added. A scoped `zarr.config.set({"write_empty_chunks": ...})` is applied around `IndexedRegionStrategy.write_groups` (DirectZarr path) and inside `ZarrWriteContext` (Generic path). The effective value is recorded as the `zarr_write_empty_chunks_effective` metric. A follow-up entry for the pre-existing bare `zarr.config.set({"async.concurrency": ...})` in `ZarrWriteContext` is tracked in `plans/TODO.md` §36.
+
+### Consequences
+
+Operators can now diff two Zarr stores programmatically or via CLI and get a structured report of shape, dtype, chunk, attribute, and data mismatches. The `firecube zarr compare` exit code is 3 on semantic mismatch, 0 on match, non-zero on error.
+
+The `static_owner` field in the fan-out plan gives each pod a deterministic, plan-derived signal for which pod owns static writes. Combined with `--suppress-static-emission-for-non-owner`, non-owner pods skip static write intents entirely, preventing redundant writes and potential race conditions in parallel ingestion.
+
+The validate marker check catches stores where a static array was never committed (e.g. a failed or interrupted ingest), surfacing the gap before a downstream consumer reads stale fill values.
+
+`zarr_write_empty_chunks=False` (the default) prevents Zarr from writing chunks that contain only fill values, reducing storage footprint for sparse arrays. The scoped config ensures the setting is applied only during the write window and does not leak into other Zarr operations in the same process.
+
+The `static_owner_slot_start` v1 implementation compares a single integer against the run's slot-start. Multi-group scenarios where different groups have different owners in the same run are not handled; each group's owner must be resolved by the operator and passed as a separate run. Multi-group deferred to `plans/TODO.md`.
+
+### Verification
+
+```bash
+uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -q --tb=short
+uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
+uv run pytest --strict-deps -q --tb=short -W error::DeprecationWarning
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run mkdocs build --strict --site-dir /tmp/firecube-mkdocs-check
+```
+
+All seven commands exit 0 on branch `feat/plugin-to-core-migration`, commit `8d79dd8`. One ruff format issue in `src/firecube/core/zarr/validation.py` and `tests/unit/test_compare_zarr_stores.py` was fixed as part of this gate run before the final pass.
+
+### References
+
+`plans/TODO.md` §36 — `ZarrWriteContext` async-concurrency bare call, deferred from Wave C2.
+
+## 2026-08-24 — Milestone B — Data integrity and archive safety
+
+### What
+
+Two fixes shipped on branch `feat/plugin-to-core-migration` (commit `5490ce8`):
+
+1. `read_hdf5_array` (`src/firecube/core/formats/hdf5.py`) now preserves the source array's dtype by default. Previously the function always returned `float64`, silently coercing integer, boolean, and other numeric dtypes and discarding precision. A new optional `dtype=` parameter lets callers request an explicit cast; omitting it keeps the on-disk dtype. Both the h5py direct-read path and the xarray fallback path honour this contract. Tests cover dtype preservation for `int16`, `uint8`, `bool`, `float32`, and `float64`, plus explicit cast via `dtype=`, plus the xarray fallback path.
+
+2. `extract_hdf5_from_zip` and `stream_hdf5_from_zip` (`src/firecube/core/formats/zip.py`) now reject unsafe ZIP member paths before any extraction or streaming begins. Rejected patterns: dotdot components (`../`), absolute paths (`/tmp/...`), Windows-style traversal (`..\\`, `\\server\`, `C:/`), and any path that resolves outside the destination directory. Archives containing multiple HDF5 candidates are also rejected unless the caller passes an explicit `member=` parameter. Tests cover all four traversal patterns, the zero-candidate and multi-candidate rejection cases, the explicit-member acceptance path, safe nested paths, and the shared-validation invariant between the extract and stream entry points.
+
+### Consequences
+
+`read_hdf5_array` dtype coercion was a silent data-integrity defect: plugins reading integer or boolean HDF5 arrays received `float64` values without any error or warning, making downstream comparisons and schema checks unreliable. The fix makes the function's output match the on-disk representation by default.
+
+The ZIP extraction guards close a zip-slip vulnerability class. An attacker or malformed archive could previously supply a member path such as `../../etc/cron.d/evil` or `/etc/passwd` and have `extract_hdf5_from_zip` write outside the declared destination directory. The new path-safety check raises `ValueError` before any bytes are written, so no partial extraction occurs. The multi-candidate guard prevents silent selection of the wrong HDF5 file when an archive contains more than one candidate.
+
+### Verification
+
+```bash
+uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -q --tb=short
+uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
+uv run pytest --strict-deps -q --tb=short -W error::DeprecationWarning
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run mkdocs build --strict --site-dir /tmp/firecube-mkdocs-check
+```
+
+All seven commands exit 0 on branch `feat/plugin-to-core-migration`, commit `5490ce8`. Two pyright errors in `tests/unit/test_zip_extract_safety.py` (missing `assert extracted is not None` before `.read_bytes()` calls) and one ruff format issue in `src/firecube/core/formats/zip.py` were fixed as part of this gate run.
+
+### References
+
+External plugin migration (Milestone B).
+
+## 2026-08-24 — Milestone A — Migration unblockers
+
+### What
+
+Four changes that unblock external plugin migration to the current public API:
+
+1. `runtime/base.py` + `templates/direct_zarr.py` — serial-mode `ExtentUnknownError` now raises `ConfigurationError` naming the group; `direct_zarr.py` adds defense-in-depth for the parallel path so the same error surfaces if the upstream gate is bypassed.
+2. `firecube.core.api` — exports `ExtentUnknownError`, `RESERVED_ARRAY_ATTRS`, `assert_attrs_safe`, and `FIRECUBE_STATIC_WRITTEN_ATTR`.
+3. `firecube.ingestor.api` — re-exports all four of the above plus `resolve_index_spec`.
+4. Docs: `:::` directives added in `docs/reference/exceptions.md` and `docs/reference/core-utilities.md` for both facade paths; `docs/reference/parallelism.md` gains the `resolve_index_spec` ingestor-facade directive.
+
+### Consequences
+
+External plugins can now import `ExtentUnknownError`, `RESERVED_ARRAY_ATTRS`, `assert_attrs_safe`, `FIRECUBE_STATIC_WRITTEN_ATTR`, and `resolve_index_spec` from either `firecube.core.api` or `firecube.ingestor.api` without reaching into private submodules. Serial-mode plugins with an unbounded axis receive a `ConfigurationError` with a clear group name instead of a bare `ExtentUnknownError`. The architecture boundary test (`test_import_boundaries`) now passes because `direct_zarr.py` no longer imports from `firecube.core.index_resolve` or `firecube.ingestor.runtime.parallel_gate`.
+
+### Verification
+
+```bash
+uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -q --tb=short
+uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
+uv run pytest --strict-deps -q --tb=short -W error::DeprecationWarning
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run mkdocs build --strict --site-dir /tmp/firecube-mkdocs-check
+```
+
+All seven commands exit 0 on branch `feat/plugin-to-core-migration`.
+
+### References
+
+External plugin migration (Milestone A).
+
 ## 2026-08-24 — IndexedWrite + build_indexed_write hook + DirectZarr lifecycle parity + bounded region-write concurrency
 
 Added the `IndexedWrite` abstraction with `.region()` and `.slot()` builders

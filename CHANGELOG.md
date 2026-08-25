@@ -106,6 +106,34 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - New `zarr_region_write_concurrency` template config option (integer, default
   1) controls the maximum number of concurrent region writes per slot. Values
   < 1 are rejected at config validation time.
+- `firecube zarr compare` subcommand and `compare_zarr_stores()` /
+  `ZarrCompareReport` in `firecube.core.api`: read-only equivalence check of
+  two Zarr stores (paths, shape, dtype, chunks, dimension names, public attrs,
+  static marker, values). Exit `3` on mismatch, one stderr line per
+  difference.
+- `static_owner` field in the `firecube zarr slots` JSON plan: the range with
+  the smallest `slot_start` per group, for schedulers that route static-array
+  writes to one worker. Additive to the existing plan schema.
+- `--suppress-static-emission-for-non-owner` and `--static-owner-slot-start`
+  flags for `firecube ingest` (and the matching `EngineConfig` fields): a
+  slot-range worker skips static-array writes unless its `--slot-start`
+  equals the owner value from the plan. Requires `slot_start`; serial runs
+  reject the flag and always write statics.
+- `zarr_write_empty_chunks` typed template option (boolean, default `False`):
+  passes Zarr's `array.write_empty_chunks` setting through as a scoped config
+  for the write phase only. The effective value is reported in batch metrics
+  as `zarr_write_empty_chunks_effective`.
+- `firecube zarr validate` reports `static_marker_failures` for the validated
+  array when a static array lacks the `firecube_static_written` marker.
+- New public exports on `firecube.core.api` (and `firecube.ingestor.api`
+  where applicable): `ExtentUnknownError`, `UnboundedAxisError`,
+  `RESERVED_ARRAY_ATTRS`, `assert_attrs_safe`, `FIRECUBE_STATIC_WRITTEN_ATTR`,
+  `resolve_index_spec`, `extract_all_from_zip`, `BatchResourceRegistry`,
+  `physical_chunk_keys_for_region`, `chunk_axis_range`, and
+  `axis_selection_is_chunk_aligned`.
+- `extract_hdf5_from_zip` and `stream_hdf5_from_zip` accept an explicit
+  `member=` argument; archives with several HDF5 candidates are now rejected
+  with the candidate list instead of silently picking the first.
 
 ### Changed
 
@@ -133,6 +161,12 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - README SBOM dependency tables synced with `uv.lock`; added `mike` to the
   docs dependency group and its SBOM table entry.
 - Reorganized plugin documentation and plugin author examples.
+- `read_hdf5_array` preserves the source dtype instead of casting everything
+  to `float32`; pass `dtype=` for an explicit cast. Callers relying on the
+  implicit `float32` cast must now request it.
+- A `DirectZarrIngestor` run whose declared regular axis has no fixed extent
+  fails with `UnboundedAxisError` (a `ConfigurationError`) naming the group,
+  instead of a raw `ExtentUnknownError`, in serial and parallel modes alike.
 
 ### Fixed
 
@@ -142,6 +176,19 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   values that previously slipped through Python's `int` subclass semantics;
   accepted types are Python `int` and `numpy.integer` subclasses
   (e.g. `np.int64`).
+- DirectZarr arrays declaring a `fill_value` now carry the matching
+  `_FillValue` attribute, so xarray masks unwritten cells when reading with
+  `mask_and_scale=True` (#49). Only JSON-safe scalars are stamped: NaN, NaT,
+  and datetime fills are skipped to keep array metadata valid strict JSON and
+  the stores openable by xarray. Resuming into an existing store backfills the
+  attribute once.
+
+### Security
+
+- ZIP extraction helpers (`extract_hdf5_from_zip`, `stream_hdf5_from_zip`,
+  `extract_all_from_zip`) reject member names that could escape the
+  extraction root (`..` segments, absolute paths, Windows drive prefixes)
+  with `ValueError` instead of extracting them.
 
 ### Removed
 
@@ -394,3 +441,8 @@ the migration procedure including `firecube zarr index rebuild`.
 - `uv run mkdocs build --strict --site-dir /tmp/firecube-mkdocs-check`: passed.
 - `uv build`: built `firecube-0.1.1.tar.gz` and `firecube-0.1.1-py3-none-any.whl`.
 - `uv run --with twine twine check dist/*`: passed.
+
+[Unreleased]: https://github.com/eumetsat/firecube/compare/v0.1.4.post1...HEAD
+[0.1.4.post1]: https://github.com/eumetsat/firecube/compare/v0.1.4.post0...v0.1.4.post1
+[0.1.4.post0]: https://github.com/eumetsat/firecube/compare/v0.1.4...v0.1.4.post0
+[0.1.4]: https://github.com/eumetsat/firecube/releases/tag/v0.1.4

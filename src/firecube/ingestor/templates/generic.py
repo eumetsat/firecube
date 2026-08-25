@@ -224,6 +224,7 @@ class GenericZarrIngestor(BaseIngestor):
             "consolidate": cfg.zarr_consolidate,
             "time_encoding": cfg.zarr_time_encoding,
             "async_concurrency": cfg.zarr_async_concurrency,
+            "write_empty_chunks": cfg.zarr_write_empty_chunks,
             "dask_scheduler": cfg.dask_scheduler,
             "write_threads": cfg.dask_write_threads,
             "shard_shape": cfg.zarr_shard_shape,

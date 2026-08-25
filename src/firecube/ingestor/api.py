@@ -24,8 +24,11 @@ from typing import TYPE_CHECKING, Any
 
 from firecube.core.api import (
     AUTO,
+    FIRECUBE_STATIC_WRITTEN_ATTR,
+    RESERVED_ARRAY_ATTRS,
     AxisSpec,
     DuplicateIrregularCoordinateError,
+    ExtentUnknownError,
     IndexedWrite,
     IndexedWriteCompilationError,
     IndexSpec,
@@ -38,6 +41,8 @@ from firecube.core.api import (
     RegularTimeAxis,
     ResolvedIndex,
     ResolvedIndexRecord,
+    assert_attrs_safe,
+    resolve_index_spec,
     validate_manifest_entries,
 )
 from firecube.core.controlplane import SpanCoverage, WriteDomain
@@ -62,6 +67,7 @@ from firecube.ingestor.errors import (
     SchemaDriftError,
     SchemaSizeMismatchError,
     StorageError,
+    UnboundedAxisError,
     WriteIntentRangeError,
 )
 from firecube.ingestor.registry.loader import (
@@ -120,6 +126,8 @@ if TYPE_CHECKING:
     from firecube.ingestor.templates.generic_tensogram import GenericTensogramIngestor
 __all__ = [
     "AUTO",
+    "FIRECUBE_STATIC_WRITTEN_ATTR",
+    "RESERVED_ARRAY_ATTRS",
     "AppendStrategy",
     "AppendWriteStrategy",
     "AxisSpec",
@@ -130,6 +138,7 @@ __all__ = [
     "DirectZarrIngestor",
     "DuplicateIrregularCoordinateError",
     "EngineConfig",
+    "ExtentUnknownError",
     "GenericParquetIngestor",
     "GenericTensogramIngestor",
     "GenericZarrIngestor",
@@ -179,12 +188,14 @@ __all__ = [
     "TemplateConfig",
     "TensogramTemplateConfig",
     "TensogramWriteStrategy",
+    "UnboundedAxisError",
     "WriteDomain",
     "WriteIntent",
     "WriteIntentRangeError",
     "ZarrArraySpec",
     "ZarrGroupSpec",
     "ZarrTemplateConfig",
+    "assert_attrs_safe",
     "chunk_align_ranges",
     "compute_covered_ranges",
     "config_keys",
@@ -192,6 +203,7 @@ __all__ = [
     "is_dataset_producer",
     "merge_batch_metrics",
     "register_ingestor",
+    "resolve_index_spec",
     "validate_chunk_alignment",
     "validate_manifest_entries",
     "validate_slot_range",

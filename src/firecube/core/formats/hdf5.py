@@ -26,6 +26,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from firecube.core.formats.zip import extract_hdf5_from_zip
 
 log = logging.getLogger("firecube.core.formats")
@@ -45,27 +47,39 @@ def read_hdf5_array(
     hdf5_path: Path,
     *,
     variable: str,
+    dtype: np.dtype[Any] | str | None = None,
     logger: logging.Logger | None = None,
-) -> Any:
+) -> np.ndarray[Any, Any]:
     """Read a named array from a local HDF5(-like) file, with xarray fallback.
 
     Args:
         hdf5_path: Path to the HDF5 file.
         variable: Name of the variable/dataset to read.
+        dtype: Optional dtype to cast to. If omitted, the source dtype is preserved.
         logger: Optional logger for debug messages.
 
     Returns:
-        Numpy array of the data (float32).
+        Numpy array containing the requested dataset.
 
     Raises:
         KeyError: If the variable is not found.
         RuntimeError: If dependencies are missing or read fails.
+
+    Examples:
+        Read a dataset without changing its dtype:
+
+        >>> read_hdf5_array(Path("product.h5"), variable="counts")
+
+        Cast explicitly when the caller needs a different dtype:
+
+        >>> read_hdf5_array(Path("product.h5"), variable="counts", dtype="float32")
     """
     logger = logger or log
-    try:
-        import numpy as np
-    except Exception as exc:
-        raise RuntimeError("numpy is required to read HDF5 inputs") from exc
+
+    def _array_with_requested_dtype(data: Any) -> np.ndarray[Any, Any]:
+        if dtype is None:
+            return np.asarray(data)
+        return np.asarray(data, dtype=np.dtype(dtype))
 
     try:
         import h5py
@@ -76,17 +90,22 @@ def read_hdf5_array(
         with h5py.File(hdf5_path, "r") as handle:
             if variable not in handle:
                 raise KeyError(f"{variable} dataset not found in HDF5 file")
-            return np.asarray(handle[variable], dtype=np.float32)
+            return _array_with_requested_dtype(handle[variable])
+    except KeyError:
+        raise
     except Exception as h5_exc:
         try:
             import xarray as xr
 
-            ds = xr.open_dataset(hdf5_path, phony_dims="sort")
-            if variable not in ds:
-                raise KeyError(f"{variable} variable not found in dataset")
-            arr = ds[variable].values.astype(np.float32, copy=False)
-            ds.close()
-            return arr
+            ds = xr.open_dataset(hdf5_path, engine="h5netcdf", phony_dims="sort")
+            try:
+                if variable not in ds:
+                    raise KeyError(f"{variable} variable not found in dataset")
+                return _array_with_requested_dtype(ds[variable].values)
+            finally:
+                ds.close()
+        except KeyError:
+            raise
         except Exception as xr_exc:
             raise RuntimeError(
                 f"Failed to read {variable} from {hdf5_path.name}: {h5_exc}"

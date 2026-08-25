@@ -118,7 +118,7 @@ class ItemManifestEntry:
     versions, or processing lineage are stored here. Add those to a separate
     subsystem if they are ever needed.
 
-    Args:
+    Attributes:
         identity_hash: Content-address of the item (SHA-256 hex of the item
             contents, or a caller-defined stable identity string). Must be
             unique within a manifest.

@@ -26,6 +26,8 @@ import warnings
 from dataclasses import dataclass, fields
 from typing import Any, TypeVar, get_type_hints
 
+from firecube.ingestor.errors import ConfigurationError
+
 T = TypeVar("T", bound="EngineConfig")
 
 SYSTEM_KEYS = {
@@ -81,6 +83,10 @@ class EngineConfig:
         slot_end: One-past-last slot index for orchestrated parallel ingestion.
         slot_size: Slot width used when deriving slot ranges from the environment.
         slot_group: Zarr group owned by this worker in multi-group slot runs.
+        suppress_static_emission_for_non_owner: Skip static writes in slot-range
+            workers whose ``slot_start`` does not match ``static_owner_slot_start``.
+        static_owner_slot_start: V1 scalar static-owner slot start for one group
+            per run; required when static suppression is enabled.
     """
 
     # Execution (Pipeline)
@@ -126,8 +132,20 @@ class EngineConfig:
     slot_end: int | None = None
     slot_size: int | None = None
     slot_group: str | None = None
+    suppress_static_emission_for_non_owner: bool = False
+    static_owner_slot_start: int | None = None
 
     def __post_init__(self) -> None:
+        if self.suppress_static_emission_for_non_owner and self.static_owner_slot_start is None:
+            raise ConfigurationError(
+                "suppress_static_emission_for_non_owner=True requires static_owner_slot_start"
+            )
+        if self.suppress_static_emission_for_non_owner and self.slot_start is None:
+            raise ConfigurationError(
+                "suppress_static_emission_for_non_owner=True requires slot_start to be set "
+                "(serial runs would silently skip all static writes without a slot boundary)"
+            )
+
         if self.slot_group is not None and not self.slot_group.strip():
             raise ValueError(
                 "slot_group must be a non-empty string when set; got empty or whitespace string."

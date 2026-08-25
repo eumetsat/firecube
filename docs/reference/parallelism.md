@@ -66,6 +66,8 @@ The public ingestor facade re-exports the declarative types used by plugin code.
 
 ::: firecube.ingestor.api.ResolvedIndexRecord
 
+::: firecube.ingestor.api.resolve_index_spec
+
 ## Resolved Index Behavior
 
 `ResolvedIndex` is the object plugin code uses after resolution. The key methods are `size(group)`, `position(group, coordinate)`, and `coordinate(group, index)`.

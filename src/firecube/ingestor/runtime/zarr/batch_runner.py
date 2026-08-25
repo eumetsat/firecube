@@ -118,6 +118,7 @@ def build_zarr_write_context(
         configured_scheduler=zarr_config.get("dask_scheduler"),
         write_threads=int(zarr_config.get("write_threads", 0)),
         async_concurrency=int(zarr_config.get("async_concurrency", 10)),
+        write_empty_chunks=bool(zarr_config.get("write_empty_chunks", False)),
     )
 
 

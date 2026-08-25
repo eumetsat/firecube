@@ -5,6 +5,12 @@ Ingestor-layer errors inherit from `IngestorError`; `ManifestError`,
 `SchemaDriftError`, and `StorageError` are shared error types re-exported
 through the same facade.
 
+`ExtentUnknownError` is the core resolver error raised when a regular axis has
+no fixed extent.
+
+`UnboundedAxisError` is the `ConfigurationError` subclass the engine raises for
+the same unbounded-axis case.
+
 `MissingIrregularCoordinateError`, `DuplicateIrregularCoordinateError`, and
 `NoDiscoveredItemsError` are raised during `IrregularTimeAxis(values=AUTO)`
 discovery.
@@ -12,6 +18,8 @@ discovery.
 {{ render_api_summary("firecube.ingestor.api", [
     "IngestorError",
     "ConfigurationError",
+    "ExtentUnknownError",
+    "UnboundedAxisError",
     "MissingIrregularCoordinateError",
     "DuplicateIrregularCoordinateError",
     "NoDiscoveredItemsError",
@@ -30,6 +38,10 @@ discovery.
 ::: firecube.ingestor.api.IngestorError
 
 ::: firecube.ingestor.api.ConfigurationError
+
+::: firecube.ingestor.api.ExtentUnknownError
+
+::: firecube.ingestor.api.UnboundedAxisError
 
 ::: firecube.ingestor.api.SchemaSizeMismatchError
 
@@ -68,6 +80,8 @@ All three inherit from `ConfigurationError`.
 ## Core API Re-Exports
 
 The core facade re-exports the error types used by plugin code and the engine.
+
+::: firecube.core.api.ExtentUnknownError
 
 ::: firecube.core.api.MissingIrregularCoordinateError
 

@@ -55,7 +55,7 @@ class IndexBinding:
     Holds the spec, the resolved index, and the context identity so the
     ``DirectZarrIngestor`` can cache it per ``(id(ctx._ctx), spec)``.
 
-    Args:
+    Attributes:
         spec: The ``IndexSpec`` that was resolved.
         resolved: The resolved index ready for slot-index computation.
     """

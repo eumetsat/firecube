@@ -21,24 +21,62 @@ conflict with firecube's own internal bookkeeping.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Final
 
-__all__ = ["RESERVED_ARRAY_ATTRS", "assert_attrs_safe"]
+__all__ = ["FIRECUBE_STATIC_WRITTEN_ATTR", "RESERVED_ARRAY_ATTRS", "assert_attrs_safe"]
+
+_ARRAY_DIMENSIONS_ATTR: Final[str] = "_ARRAY_DIMENSIONS"
+_FILL_VALUE_ATTR: Final[str] = "_FillValue"
+_FIRECUBE_RUN_ID_ATTR: Final[str] = "firecube_run_id"
+_FIRECUBE_SPAN_ID_ATTR: Final[str] = "firecube_span_id"
+_FIRECUBE_INTERNAL_ATTR: Final[str] = "firecube_internal"
+FIRECUBE_STATIC_WRITTEN_ATTR: Final[str] = "firecube_static_written"
+"""Zarr array attr Firecube stamps after a static array commit.
+
+Examples:
+    >>> FIRECUBE_STATIC_WRITTEN_ATTR
+    'firecube_static_written'
+"""
 
 RESERVED_ARRAY_ATTRS: frozenset[str] = frozenset(
     {
-        "_ARRAY_DIMENSIONS",
-        "_FillValue",
-        "firecube_run_id",
-        "firecube_span_id",
-        "firecube_internal",
-        "firecube_static_written",
+        _ARRAY_DIMENSIONS_ATTR,
+        _FILL_VALUE_ATTR,
+        _FIRECUBE_RUN_ID_ATTR,
+        _FIRECUBE_SPAN_ID_ATTR,
+        _FIRECUBE_INTERNAL_ATTR,
+        FIRECUBE_STATIC_WRITTEN_ATTR,
     }
 )
+"""Reserved Zarr array attribute keys managed by Firecube.
+
+Examples:
+    >>> "firecube_static_written" in RESERVED_ARRAY_ATTRS
+    True
+    >>> "my_custom_attr" in RESERVED_ARRAY_ATTRS
+    False
+"""
 
 
 def assert_attrs_safe(attrs: Mapping[str, Any]) -> None:
-    """Raise ValueError if *attrs* contains any reserved key."""
+    """Raise ValueError if *attrs* contains any reserved key.
+
+    Args:
+        attrs: Candidate attribute mapping for ``ZarrArraySpec.attrs``.
+
+    Returns:
+        None: The function returns nothing.
+
+    Raises:
+        ValueError: If any key is reserved for Firecube bookkeeping.
+
+    Examples:
+        >>> assert_attrs_safe({"my_custom_attr": 42})
+        >>> assert_attrs_safe({"firecube_static_written": True})
+        Traceback (most recent call last):
+        ...
+        ValueError: Reserved attr 'firecube_static_written' is managed by firecube, not the plugin. Remove it from ZarrArraySpec.attrs.
+    """
     for key in attrs:
         if key in RESERVED_ARRAY_ATTRS:
             raise ValueError(
