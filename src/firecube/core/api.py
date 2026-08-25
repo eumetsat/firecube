@@ -40,7 +40,7 @@ from firecube.core.filesystem import (
 from firecube.core.formats import (
     clean_netcdf_encoding,
     discover_input_files,
-    extract_all_from_zip,
+    extract_all_from_zips,
     materialize_hdf5_path,
     normalize_string_vars,
     prepare_netcdf_for_zarr,
@@ -138,7 +138,7 @@ __all__ = [
     "ensure_directory",
     "ensure_product_uri",
     "epoch_s_to_iso",
-    "extract_all_from_zip",
+    "extract_all_from_zips",
     "infer_target_protocol",
     "is_remote_target",
     "iso_to_epoch_s",

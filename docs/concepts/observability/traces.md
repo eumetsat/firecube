@@ -41,7 +41,7 @@ Template spans add detail where the engine owns the work. For example,
 `GenericZarrIngestor` emits preparation and Zarr write spans around each batch.
 Plugins can add product-specific spans for work the engine cannot describe.
 
-When `pipeline_parallel=true`, Firecube preserves trace parentage across worker
+When `pipeline_workers` is 2 or more, Firecube preserves trace parentage across worker
 threads. Batch spans still appear under the run trace instead of becoming
 disconnected root spans.
 

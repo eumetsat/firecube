@@ -100,8 +100,6 @@ def _ingest_args(plugin: str, product_name: str, target_path: Path) -> list[str]
         "no_progress=true",
         "--option",
         "pipeline_batch_size=300",
-        "--option",
-        "pipeline_parallel=false",
     ]
 
 

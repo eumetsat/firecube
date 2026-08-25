@@ -132,7 +132,6 @@ def test_cf_time_dim_plugin_run_summary_reports_year_2000(tmp_path: Path) -> Non
         options={
             "write_mode": "direct",
             "pipeline_batch_size": 1,
-            "pipeline_parallel": False,
             "pipeline_workers": 1,
             "no_progress": True,
             "cleanup_workspace": True,

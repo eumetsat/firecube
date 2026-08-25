@@ -128,7 +128,7 @@ Core design rules for this batch ingestor, including control-plane model and obs
 ## Gotchas / debugging
 
 - If JSON logs are required, disable progress logging (`--option no_progress=true`) to keep stdout machine-readable.
-- If ingestion "hangs" at 0% with parallel execution, try `--option pipeline_parallel=false` or reduce `pipeline_workers` to isolate locking/IO contention (DuckDB, HDF5).
+- If ingestion "hangs" at 0% with parallel execution, set `--option pipeline_workers=1` to isolate locking/IO contention (DuckDB, HDF5).
 
 ## Style guide
 

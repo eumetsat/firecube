@@ -218,8 +218,6 @@ def _ingest_args(plugin: str, product: str, target_path: Path) -> list[str]:
         "direct",
         "--option",
         "no_progress=true",
-        "--option",
-        "pipeline_parallel=false",
     ]
 
 

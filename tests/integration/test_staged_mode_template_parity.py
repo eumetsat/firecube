@@ -283,7 +283,6 @@ def _run_staged_ingest(
             "write_mode": write_mode,
             "resume_existing": resume_existing,
             "pipeline_batch_size": 1,
-            "pipeline_parallel": False,
             "pipeline_workers": 1,
             "no_progress": True,
             "cleanup_workspace": True,
@@ -501,7 +500,6 @@ def test_staged_hook_does_not_fire_for_non_zarr_outputs(tmp_path: Path) -> None:
         options={
             "write_mode": "staged",
             "pipeline_batch_size": 1,
-            "pipeline_parallel": False,
             "pipeline_workers": 1,
             "no_progress": True,
             "cleanup_workspace": True,

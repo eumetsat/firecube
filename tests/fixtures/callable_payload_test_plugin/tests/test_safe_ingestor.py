@@ -70,8 +70,6 @@ def _ingest_args(target_path: Path) -> list[str]:
         "direct",
         "--option",
         "no_progress=true",
-        "--option",
-        "pipeline_parallel=false",
     ]
 
 

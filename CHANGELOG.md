@@ -9,6 +9,13 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- `extract_all_from_zips` extracts a batch of ZIP archives, serially by
+  default or concurrently via `workers=`, returning an `(extracted, failures)`
+  pair in which every input archive appears exactly once; a failed archive is
+  reported instead of aborting the batch and its partial output is removed.
+- New engine option `extract_workers` (default 4): number of parallel
+  archive-extraction workers for plugins that extract source-archive batches.
+  Independent of `pipeline_workers`; set with `--option extract_workers=N`.
 - `IndexedWrite` and `IndexedWriteCompilationError` are now documented in the
   public API reference. `IndexedWrite` appears in `docs/reference/templates.md`
   under Schema And Write Types (both `firecube.ingestor.api` and
@@ -128,7 +135,7 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - New public exports on `firecube.core.api` (and `firecube.ingestor.api`
   where applicable): `ExtentUnknownError`, `UnboundedAxisError`,
   `RESERVED_ARRAY_ATTRS`, `assert_attrs_safe`, `FIRECUBE_STATIC_WRITTEN_ATTR`,
-  `resolve_index_spec`, `extract_all_from_zip`, `BatchResourceRegistry`,
+  `resolve_index_spec`, `extract_all_from_zips`, `BatchResourceRegistry`,
   `physical_chunk_keys_for_region`, `chunk_axis_range`, and
   `axis_selection_is_chunk_aligned`.
 - `extract_hdf5_from_zip` and `stream_hdf5_from_zip` accept an explicit
@@ -137,6 +144,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Changed
 
+- `EngineConfig` rejects `pipeline_workers < 1` and `pipeline_batch_size < 1`
+  at construction instead of accepting them silently.
 - `ResolvedIndexConflictError` message now includes a field-level diff (groups symmetric difference, per-group axis changes, top-level name/scalar changes) alongside the two truncated hashes -- no more hash-only conflict messages.
 - `verify_array_spec` now rejects an on-disk sharded array when the declared
   spec has `shards=None`, even at `zarr_region_write_concurrency=1`. Previously
@@ -186,12 +195,19 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 ### Security
 
 - ZIP extraction helpers (`extract_hdf5_from_zip`, `stream_hdf5_from_zip`,
-  `extract_all_from_zip`) reject member names that could escape the
+  `extract_all_from_zips`) reject member names that could escape the
   extraction root (`..` segments, absolute paths, Windows drive prefixes)
   with `ValueError` instead of extracting them.
 
 ### Removed
 
+- Engine option `pipeline_parallel`. Execution mode is now decided solely by
+  `pipeline_workers`: 2 or more runs the parallel pipeline, 1 runs
+  sequentially. Migration: replace `pipeline_parallel=true` with
+  `pipeline_workers=2` (or more) and delete `pipeline_parallel=false`;
+  leftover keys in `--option` flags or config files now fail loudly at
+  option validation. Previously `pipeline_parallel=false` was silently
+  ignored whenever `pipeline_workers` was above 1.
 - Removed unused `ItemInfo.key` and `ItemInfo.group` fields. These were placeholders.
 - `docs/reference/api.md` and `docs/reference/advanced-plugin-api.md`, replaced
   by the per-topic pages; deep links to their headings no longer resolve.

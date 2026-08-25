@@ -26,15 +26,30 @@ worker owns a disjoint, chunk-aligned slot range.
 Staged upload parallelism is separate. `upload_workers` controls the upload
 phase after staged pipeline writes have completed.
 
+## Which Worker Option Is Which
+
+Every worker option is an engine option, follows the same `<stage>_workers`
+naming, and controls exactly one pipeline stage:
+
+| Option | Stage it parallelizes | Default |
+|---|---|---|
+| `pipeline_workers` | Whole batches preprocessing concurrently inside one process. 2 or more runs the parallel pipeline; 1 runs sequentially. | 1 |
+| `extract_workers` | Source archives (for example ZIPs) unpacking concurrently inside one batch, before decoding. Independent of `pipeline_workers`; when both are above 1 they multiply. | 4 |
+| `upload_workers` | Staged output files uploading concurrently after the pipeline completes. | 4 |
+
+All three are passed the same way: `--option <name>=N`.
+
 ## Supported Models
 
 **Pipeline workers** run inside one `firecube ingest` process. Use them for
 source parsing, decoding, transformation, and batch preparation.
 
 ```bash
---option pipeline_parallel=true \
 --option pipeline_workers=4
 ```
+
+`pipeline_workers` alone decides the mode: 2 or more runs the parallel
+pipeline, 1 (the default) runs batches sequentially.
 
 **Parquet file parallelism** uses pipeline workers to write independent files.
 This is the simplest parallel write model.

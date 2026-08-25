@@ -87,8 +87,6 @@ def _ingest_args(target_path: Path, *options: str) -> list[str]:
         "direct",
         "--option",
         "no_progress=true",
-        "--option",
-        "pipeline_parallel=false",
     ]
     for option in options:
         args.extend(["--option", option])
