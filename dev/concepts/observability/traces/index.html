@@ -4631,7 +4631,7 @@ when S3 staged writes are used.</p>
 <p>Template spans add detail where the engine owns the work. For example,
 <code>GenericZarrIngestor</code> emits preparation and Zarr write spans around each batch.
 Plugins can add product-specific spans for work the engine cannot describe.</p>
-<p>When <code>pipeline_parallel=true</code>, Firecube preserves trace parentage across worker
+<p>When <code>pipeline_workers</code> is 2 or more, Firecube preserves trace parentage across worker
 threads. Batch spans still appear under the run trace instead of becoming
 disconnected root spans.</p>
 <h2 id="plugin-spans">Plugin Spans</h2>

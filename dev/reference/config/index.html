@@ -4996,10 +4996,9 @@ default unless overridden.</p>
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">zarr_chunk_shape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;{&quot;timestamp&quot;:1,&quot;ny&quot;:550,&quot;nx&quot;:475}&#39;</span>
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">zarr_compression</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">zarr_consolidate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">pipeline_parallel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">pipeline_workers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">pipeline_batch_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">40</span>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">resume_existing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">pipeline_workers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">pipeline_batch_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">40</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">resume_existing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 </code></pre></div>
 <p><code>[storage].type</code> and <code>FIRECUBE_STORAGE_TYPE</code> apply only to commands that do not
 take a product URI (e.g. <code>chunks/*</code>); for URI-bearing commands the storage type
@@ -5190,24 +5189,15 @@ defaults under <code>[plugins.&lt;name&gt;]</code>.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.ingestor.api.EngineConfig.pipeline_parallel">pipeline_parallel</span></code></td>
-            <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Enable parallel batch preprocessing.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
             <td><code><span title="firecube.ingestor.api.EngineConfig.pipeline_workers">pipeline_workers</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of pipeline worker threads.</p>
+                <p>Number of pipeline worker threads. A value of 2 or
+more selects parallel pipeline execution; 1 (the default) runs
+batches sequentially. Must be at least 1.</p>
               </div>
             </td>
           </tr>
@@ -5218,7 +5208,23 @@ defaults under <code>[plugins.&lt;name&gt;]</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of source items per batch.</p>
+                <p>Number of source items per batch. Must be at
+least 1.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.EngineConfig.extract_workers">extract_workers</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of parallel archive-extraction workers used
+by plugins that extract a batch of source archives (for example
+ZIPs) to disk before decoding. Extraction is disk-bound and
+claims no slots, so this is independent of <code>pipeline_workers</code>;
+when both are above 1 the two multiply. Must be at least 1.</p>
               </div>
             </td>
           </tr>

@@ -2662,6 +2662,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#which-worker-option-is-which" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which Worker Option Is Which
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#supported-models" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4543,6 +4554,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#which-worker-option-is-which" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which Worker Option Is Which
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#supported-models" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4627,12 +4649,43 @@ Slot workers can write the same Zarr group only when the plugin opts in and each
 worker owns a disjoint, chunk-aligned slot range.</p>
 <p>Staged upload parallelism is separate. <code>upload_workers</code> controls the upload
 phase after staged pipeline writes have completed.</p>
+<h2 id="which-worker-option-is-which">Which Worker Option Is Which</h2>
+<p>Every worker option is an engine option, follows the same <code>&lt;stage&gt;_workers</code>
+naming, and controls exactly one pipeline stage:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Stage it parallelizes</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pipeline_workers</code></td>
+<td>Whole batches preprocessing concurrently inside one process. 2 or more runs the parallel pipeline; 1 runs sequentially.</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>extract_workers</code></td>
+<td>Source archives (for example ZIPs) unpacking concurrently inside one batch, before decoding. Independent of <code>pipeline_workers</code>; when both are above 1 they multiply.</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>upload_workers</code></td>
+<td>Staged output files uploading concurrently after the pipeline completes.</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>All three are passed the same way: <code>--option &lt;name&gt;=N</code>.</p>
 <h2 id="supported-models">Supported Models</h2>
 <p><strong>Pipeline workers</strong> run inside one <code>firecube ingest</code> process. Use them for
 source parsing, decoding, transformation, and batch preparation.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>--option<span class="w"> </span><span class="nv">pipeline_parallel</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span>
 </code></pre></div>
+<p><code>pipeline_workers</code> alone decides the mode: 2 or more runs the parallel
+pipeline, 1 (the default) runs batches sequentially.</p>
 <p><strong>Parquet file parallelism</strong> uses pipeline workers to write independent files.
 This is the simplest parallel write model.</p>
 <p><strong>Append-Zarr group fan-out</strong> runs separate jobs for separate Zarr groups or

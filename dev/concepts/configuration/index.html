@@ -4781,10 +4781,9 @@ overrides still win.</p>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">pushgateway_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http://localhost:9091&quot;</span>
 <a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">[plugins.my_plugin]</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">pipeline_parallel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">pipeline_workers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="n">pipeline_batch_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">40</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">custom_option</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;value&quot;</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">pipeline_workers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">pipeline_batch_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">40</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="n">custom_option</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;value&quot;</span>
 </code></pre></div>
 <p>If you store credentials in this file, keep it private.</p>
 <p><code>[plugins.&lt;name&gt;]</code> applies only when that plugin is installed in the same Python
@@ -4807,7 +4806,7 @@ silently ignored.</p>
 <tbody>
 <tr>
 <td>Engine options</td>
-<td><code>pipeline_parallel</code>, <code>pipeline_workers</code>, <code>pipeline_batch_size</code>, <code>include_patterns</code>, <code>resume_existing</code></td>
+<td><code>pipeline_workers</code>, <code>pipeline_batch_size</code>, <code>extract_workers</code>, <code>include_patterns</code>, <code>resume_existing</code></td>
 <td>Runtime behavior shared by plugins.</td>
 </tr>
 <tr>

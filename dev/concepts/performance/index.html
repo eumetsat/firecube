@@ -4723,9 +4723,10 @@ workload examples, see <a href="../benchmarks/">Benchmarks</a>.</p>
 <p>Preprocessing includes source discovery, parsing, decompression, transformation,
 and shaping batches before the write step.</p>
 <p>Use pipeline workers when this phase dominates:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>--option<span class="w"> </span><span class="nv">pipeline_parallel</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span>
 </code></pre></div>
+<p><code>pipeline_workers</code> alone decides the mode: 2 or more runs the parallel
+pipeline, 1 (the default) runs batches sequentially.</p>
 <p>Increase workers gradually. If CPU usage is already high, more workers may add
 contention without improving throughput. If memory grows too much, reduce
 <code>pipeline_batch_size</code> or worker count.</p>
@@ -4802,15 +4803,13 @@ at a time.</p>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>--option<span class="w"> </span><span class="nv">upload_workers</span><span class="o">=</span><span class="m">4</span>
 </code></pre></div>
 <p>For CPU-heavy source parsing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>--option<span class="w"> </span><span class="nv">pipeline_parallel</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">40</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">40</span>
 </code></pre></div>
 <p>For tabular Parquet output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>--output-format<span class="w"> </span>parquet<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>--option<span class="w"> </span><span class="nv">pipeline_parallel</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">50</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">50</span>
 </code></pre></div>
 <h2 id="next-steps">Next Steps</h2>
 <ul>

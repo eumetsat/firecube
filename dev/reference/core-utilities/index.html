@@ -4520,10 +4520,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.extract_all_from_zip" class="md-nav__link">
+  <a href="#firecube.core.api.extract_all_from_zips" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;extract_all_from_zip
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;extract_all_from_zips
       
     </span>
   </a>
@@ -5215,10 +5215,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.extract_all_from_zip" class="md-nav__link">
+  <a href="#firecube.core.api.extract_all_from_zips" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;extract_all_from_zip
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;extract_all_from_zips
       
     </span>
   </a>
@@ -5644,8 +5644,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <td>Return a local HDF5 path for a source path (ZIP or direct HDF5-like file).</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.extract_all_from_zip" href="#firecube.core.api.extract_all_from_zip"><code>extract_all_from_zip</code></a></td>
-<td>Extract every member of <code>zip_path</code> into <code>dest</code>, rejecting unsafe names.</td>
+<td><a class="autorefs autorefs-internal" title="            firecube.core.api.extract_all_from_zips" href="#firecube.core.api.extract_all_from_zips"><code>extract_all_from_zips</code></a></td>
+<td>Extract every member of each ZIP archive, optionally in parallel.</td>
 </tr>
 <tr>
 <td><a class="autorefs autorefs-internal" title="            firecube.core.api.epoch_s_to_iso" href="#firecube.core.api.epoch_s_to_iso"><code>epoch_s_to_iso</code></a></td>
@@ -6844,17 +6844,33 @@ If it is already an HDF5-like file, it is returned as-is.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.extract_all_from_zip" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.extract_all_from_zip</span>
+<h2 id="firecube.core.api.extract_all_from_zips" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.extract_all_from_zips</span>
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">extract_all_from_zip</span><span class="p">(</span><span class="n">zip_path</span><span class="p">,</span> <span class="n">dest</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">extract_all_from_zips</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">zip_paths</span><span class="p">,</span> <span class="n">dest_dir_for</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="mi">1</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
 
-        <p>Extract every member of <code>zip_path</code> into <code>dest</code>, rejecting unsafe names.</p>
+        <p>Extract every member of each ZIP archive, optionally in parallel.</p>
+<p>Destination directories are resolved by calling <code>dest_dir_for</code> once per
+archive, serially and in input order, before any extraction starts, so the
+callable needs no locking. Each archive is then fully extracted into its
+directory; member names that could escape it (<code>..</code> segments, absolute
+paths, Windows drive prefixes) are rejected before anything is written.</p>
+<p>A failing archive never raises and never aborts the batch: its partially
+extracted directory is removed and the failure is reported in the result.
+Callers MUST check the returned failures mapping — an unsafe member name
+or a corrupt archive is reported there, not as an exception. <code>workers=1</code>
+extracts serially; higher values extract concurrently with identical
+failure semantics. Extraction is disk-bound, so <code>workers</code> composes with,
+and is independent of, the engine's <code>pipeline_workers</code> option; a plugin
+running several pipeline workers multiplies the two, so keep <code>workers</code>
+modest.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -6870,14 +6886,14 @@ If it is already an HDF5-like file, it is returned as-is.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                <code>zip_path</code>
+                <code>zip_paths</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Sequence" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Path to the zip archive to extract.</p>
+                <p>Archives to extract.</p>
               </div>
             </td>
             <td>
@@ -6886,18 +6902,38 @@ If it is already an HDF5-like file, it is returned as-is.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>dest</code>
+                <code>dest_dir_for</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Callable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable">Callable</a>[[<a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>], <a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Destination directory. Created if it does not exist.</p>
+                <p>Callable mapping each archive path to its destination
+directory. Called once per archive before extraction begins.</p>
               </div>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>workers</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Upper bound on concurrent extractions, capped at the number
+of archives. Defaults to serial extraction. Ingestion plugins
+conventionally pass the engine's <code>extract_workers</code> option here
+so operators control it with <code>--option extract_workers=N</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1</code>
             </td>
           </tr>
       </tbody>
@@ -6908,18 +6944,48 @@ If it is already an HDF5-like file, it is returned as-is.</p>
     <table>
       <thead>
         <tr>
-<th>Name</th>          <th>Type</th>
+          <th>Type</th>
           <th>Description</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-<td><code>None</code></td>            <td>
-                  <code>None</code>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>, <a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The function returns nothing.</p>
+                <p>An <code>(extracted, failures)</code> pair: <code>extracted</code> maps each</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>successfully extracted archive to its destination directory, and</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>, <a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>], <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>failures</code> maps each failed archive to its error message. Every</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>, <a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>], <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>input path appears in exactly one of the two mappings.</p>
               </div>
             </td>
           </tr>
@@ -6942,17 +7008,7 @@ If it is already an HDF5-like file, it is returned as-is.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If any member name would escape <code>dest</code>.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-external" title="zipfile.BadZipFile" href="https://docs.python.org/3/library/zipfile.html#zipfile.BadZipFile">BadZipFile</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If <code>zip_path</code> is not a valid zip archive.</p>
+                <p>If <code>workers</code> is less than 1.</p>
               </div>
             </td>
           </tr>
@@ -6961,9 +7017,15 @@ If it is already an HDF5-like file, it is returned as-is.</p>
 
 
 <p><span class="doc-section-title">Examples:</span></p>
-    <p>Extract every member of a small archive:</p>
+    <p>Extract a batch of archives next to each archive:</p>
 <div class="highlight"><pre><span></span><code>&gt;&gt;&gt; from pathlib import Path
-&gt;&gt;&gt; extract_all_from_zip(Path(&quot;archive.zip&quot;), Path(&quot;dest_dir&quot;))
+&gt;&gt;&gt; extracted, failures = extract_all_from_zips(
+...     [Path(&quot;a.zip&quot;), Path(&quot;b.zip&quot;)],
+...     lambda zip_path: zip_path.parent / zip_path.stem,
+...     workers=4,
+... )
+&gt;&gt;&gt; if failures:
+...     raise RuntimeError(f&quot;failed archives: {failures}&quot;)
 </code></pre></div>
 
 
