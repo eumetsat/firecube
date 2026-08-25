@@ -2926,6 +2926,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/zarr-compare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compare Zarr Stores
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/firecube-index/" class="md-nav__link">
         
   
@@ -5425,6 +5453,30 @@ defaults under <code>[plugins.&lt;name&gt;]</code>.</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.EngineConfig.suppress_static_emission_for_non_owner">suppress_static_emission_for_non_owner</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Skip static writes in slot-range
+workers whose <code>slot_start</code> does not match <code>static_owner_slot_start</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.EngineConfig.static_owner_slot_start">static_owner_slot_start</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>V1 scalar static-owner slot start for one group
+per run; required when static suppression is enabled.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -5638,6 +5690,18 @@ codec-specific resolution happens later.</p>
             <td>
               <div class="doc-md-description">
                 <p>Region write concurrency used by Zarr.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_write_empty_chunks">zarr_write_empty_chunks</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pass through Zarr's array write-empty-chunks
+policy for scoped write phases. Defaults to <code>False</code>.</p>
               </div>
             </td>
           </tr>

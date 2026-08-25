@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/operations/archive/inspect/">
+        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/operations/zarr-compare/">
       
       
-        <link rel="prev" href="../create/">
+        <link rel="prev" href="../parallel-zarr-writes/">
       
       
-        <link rel="next" href="../restore/">
+        <link rel="next" href="../firecube-index/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/firecube-favicon.png">
+      <link rel="icon" href="../../assets/firecube-favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Inspect And Validate - Firecube</title>
+        <title>Compare Zarr Stores - Firecube</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#inspect-and-validate-archives" class="md-skip">
+        <a href="#compare-zarr-stores" class="md-skip">
           Skip to content
         </a>
       
@@ -98,9 +98,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href="../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Inspect And Validate
+              Compare Zarr Stores
             
           </span>
         </div>
@@ -230,7 +230,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -251,7 +251,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../quickstart/" class="md-tabs__link">
+        <a href="../../quickstart/" class="md-tabs__link">
           
   
   
@@ -271,7 +271,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../guides/plugins/" class="md-tabs__link">
+        <a href="../../guides/plugins/" class="md-tabs__link">
           
   
   
@@ -291,7 +291,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../concepts/" class="md-tabs__link">
+        <a href="../../concepts/" class="md-tabs__link">
           
   
   
@@ -313,7 +313,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -333,7 +333,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../tutorials/" class="md-tabs__link">
+        <a href="../../tutorials/" class="md-tabs__link">
           
   
   
@@ -353,7 +353,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../contributing/" class="md-tabs__link">
+        <a href="../../contributing/" class="md-tabs__link">
           
   
   
@@ -373,7 +373,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/" class="md-tabs__link">
+        <a href="../../reference/" class="md-tabs__link">
           
   
   
@@ -407,9 +407,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href="../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     Firecube
@@ -436,7 +436,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -517,7 +517,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../quickstart/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   
@@ -545,7 +545,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../quickstart/installation/" class="md-nav__link">
+      <a href="../../quickstart/installation/" class="md-nav__link">
         
   
   
@@ -573,7 +573,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../quickstart/plugins/" class="md-nav__link">
+      <a href="../../quickstart/plugins/" class="md-nav__link">
         
   
   
@@ -601,7 +601,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../quickstart/source-data/" class="md-nav__link">
+      <a href="../../quickstart/source-data/" class="md-nav__link">
         
   
   
@@ -629,7 +629,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../quickstart/ingestion/" class="md-nav__link">
+      <a href="../../quickstart/ingestion/" class="md-nav__link">
         
   
   
@@ -718,7 +718,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/" class="md-nav__link">
+      <a href="../../guides/plugins/" class="md-nav__link">
         
   
   
@@ -746,7 +746,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/create-a-plugin/" class="md-nav__link">
+      <a href="../../guides/plugins/create-a-plugin/" class="md-nav__link">
         
   
   
@@ -774,7 +774,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/install-a-plugin/" class="md-nav__link">
+      <a href="../../guides/plugins/install-a-plugin/" class="md-nav__link">
         
   
   
@@ -856,7 +856,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/source-discovery/" class="md-nav__link">
+      <a href="../../guides/plugins/source-discovery/" class="md-nav__link">
         
   
   
@@ -884,7 +884,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/customize-source-discovery/" class="md-nav__link">
+      <a href="../../guides/plugins/customize-source-discovery/" class="md-nav__link">
         
   
   
@@ -912,7 +912,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/multi-group-writes/" class="md-nav__link">
+      <a href="../../guides/plugins/multi-group-writes/" class="md-nav__link">
         
   
   
@@ -1002,7 +1002,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/generic-zarr/" class="md-nav__link">
+      <a href="../../guides/plugins/generic-zarr/" class="md-nav__link">
         
   
   
@@ -1030,7 +1030,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/generic-parquet/" class="md-nav__link">
+      <a href="../../guides/plugins/generic-parquet/" class="md-nav__link">
         
   
   
@@ -1058,7 +1058,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/direct-zarr/" class="md-nav__link">
+      <a href="../../guides/plugins/direct-zarr/" class="md-nav__link">
         
   
   
@@ -1086,7 +1086,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../../guides/plugins/irregular-axis/" class="md-nav__link">
         
   
   
@@ -1176,7 +1176,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../../guides/plugins/cli-and-config/" class="md-nav__link">
         
   
   
@@ -1204,7 +1204,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/observability/" class="md-nav__link">
+      <a href="../../guides/plugins/observability/" class="md-nav__link">
         
   
   
@@ -1294,7 +1294,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/extensions/" class="md-nav__link">
+      <a href="../../guides/plugins/extensions/" class="md-nav__link">
         
   
   
@@ -1322,7 +1322,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/base-ingestor/" class="md-nav__link">
+      <a href="../../guides/plugins/base-ingestor/" class="md-nav__link">
         
   
   
@@ -1412,7 +1412,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../guides/plugins/contract/" class="md-nav__link">
+      <a href="../../guides/plugins/contract/" class="md-nav__link">
         
   
   
@@ -1509,7 +1509,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/" class="md-nav__link">
+      <a href="../../concepts/" class="md-nav__link">
         
   
   
@@ -1537,7 +1537,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/glossary/" class="md-nav__link">
+      <a href="../../concepts/glossary/" class="md-nav__link">
         
   
   
@@ -1565,7 +1565,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/configuration/" class="md-nav__link">
+      <a href="../../concepts/configuration/" class="md-nav__link">
         
   
   
@@ -1647,7 +1647,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/output-formats/" class="md-nav__link">
+      <a href="../../concepts/output-formats/" class="md-nav__link">
         
   
   
@@ -1729,7 +1729,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/output-formats/zarr/" class="md-nav__link">
+      <a href="../../concepts/output-formats/zarr/" class="md-nav__link">
         
   
   
@@ -1757,7 +1757,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
+      <a href="../../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
         
   
   
@@ -1785,7 +1785,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
+      <a href="../../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
         
   
   
@@ -1813,7 +1813,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
+      <a href="../../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
         
   
   
@@ -1849,7 +1849,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/output-formats/parquet/" class="md-nav__link">
+      <a href="../../concepts/output-formats/parquet/" class="md-nav__link">
         
   
   
@@ -1877,7 +1877,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/output-formats/archive/" class="md-nav__link">
+      <a href="../../concepts/output-formats/archive/" class="md-nav__link">
         
   
   
@@ -1967,7 +1967,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/chunkmanager/" class="md-nav__link">
+      <a href="../../concepts/chunkmanager/" class="md-nav__link">
         
   
   
@@ -1995,7 +1995,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/storage/" class="md-nav__link">
+      <a href="../../concepts/storage/" class="md-nav__link">
         
   
   
@@ -2023,7 +2023,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/chunk-management/" class="md-nav__link">
+      <a href="../../concepts/chunk-management/" class="md-nav__link">
         
   
   
@@ -2113,7 +2113,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/orchestration/" class="md-nav__link">
+      <a href="../../concepts/orchestration/" class="md-nav__link">
         
   
   
@@ -2141,7 +2141,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/orchestration/external-orchestrator/" class="md-nav__link">
+      <a href="../../concepts/orchestration/external-orchestrator/" class="md-nav__link">
         
   
   
@@ -2169,7 +2169,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/orchestration/execution-shapes/" class="md-nav__link">
+      <a href="../../concepts/orchestration/execution-shapes/" class="md-nav__link">
         
   
   
@@ -2197,7 +2197,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/orchestration/write-safety/" class="md-nav__link">
+      <a href="../../concepts/orchestration/write-safety/" class="md-nav__link">
         
   
   
@@ -2225,7 +2225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/orchestration/retries/" class="md-nav__link">
+      <a href="../../concepts/orchestration/retries/" class="md-nav__link">
         
   
   
@@ -2315,7 +2315,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/observability/" class="md-nav__link">
+      <a href="../../concepts/observability/" class="md-nav__link">
         
   
   
@@ -2343,7 +2343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/observability/metrics/" class="md-nav__link">
+      <a href="../../concepts/observability/metrics/" class="md-nav__link">
         
   
   
@@ -2371,7 +2371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/observability/logs/" class="md-nav__link">
+      <a href="../../concepts/observability/logs/" class="md-nav__link">
         
   
   
@@ -2399,7 +2399,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/observability/traces/" class="md-nav__link">
+      <a href="../../concepts/observability/traces/" class="md-nav__link">
         
   
   
@@ -2489,7 +2489,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/best-practices/" class="md-nav__link">
+      <a href="../../concepts/best-practices/" class="md-nav__link">
         
   
   
@@ -2517,7 +2517,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/production-guide/" class="md-nav__link">
+      <a href="../../concepts/production-guide/" class="md-nav__link">
         
   
   
@@ -2545,7 +2545,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/performance/" class="md-nav__link">
+      <a href="../../concepts/performance/" class="md-nav__link">
         
   
   
@@ -2573,7 +2573,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/parallelism/" class="md-nav__link">
+      <a href="../../concepts/parallelism/" class="md-nav__link">
         
   
   
@@ -2601,7 +2601,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/benchmarks/" class="md-nav__link">
+      <a href="../../concepts/benchmarks/" class="md-nav__link">
         
   
   
@@ -2701,7 +2701,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -2786,7 +2786,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../s3-access/" class="md-nav__link">
+      <a href="../s3-access/" class="md-nav__link">
         
   
   
@@ -2814,7 +2814,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../intake-catalog/" class="md-nav__link">
+      <a href="../intake-catalog/" class="md-nav__link">
         
   
   
@@ -2847,8 +2847,10 @@
                 
   
   
+    
   
   
+  
     
     
     
@@ -2862,13 +2864,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" checked>
         
           
           <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="">
@@ -2889,7 +2889,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2907,7 +2907,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../parallel-zarr-writes/" class="md-nav__link">
+      <a href="../parallel-zarr-writes/" class="md-nav__link">
         
   
   
@@ -2932,10 +2932,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../zarr-compare/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compare Zarr Stores
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -2951,6 +2978,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#procedure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Procedure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure Recovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2963,7 +3076,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../firecube-index/" class="md-nav__link">
+      <a href="../firecube-index/" class="md-nav__link">
         
   
   
@@ -3056,7 +3169,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../chunk-manager/" class="md-nav__link">
+      <a href="../chunk-manager/" class="md-nav__link">
         
   
   
@@ -3084,7 +3197,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../chunk-manager/inspect/" class="md-nav__link">
+      <a href="../chunk-manager/inspect/" class="md-nav__link">
         
   
   
@@ -3112,7 +3225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../chunk-manager/recover/" class="md-nav__link">
+      <a href="../chunk-manager/recover/" class="md-nav__link">
         
   
   
@@ -3140,7 +3253,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../chunk-manager/post-crash-recovery/" class="md-nav__link">
+      <a href="../chunk-manager/post-crash-recovery/" class="md-nav__link">
         
   
   
@@ -3168,7 +3281,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../chunk-manager/delete/" class="md-nav__link">
+      <a href="../chunk-manager/delete/" class="md-nav__link">
         
   
   
@@ -3196,7 +3309,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../chunk-manager/snapshots/" class="md-nav__link">
+      <a href="../chunk-manager/snapshots/" class="md-nav__link">
         
   
   
@@ -3229,8 +3342,6 @@
                 
   
   
-    
-  
   
   
     
@@ -3246,11 +3357,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_5" >
         
           
           <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="">
@@ -3271,7 +3384,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -3289,7 +3402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../archive/" class="md-nav__link">
         
   
   
@@ -3317,7 +3430,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../create/" class="md-nav__link">
+      <a href="../archive/create/" class="md-nav__link">
         
   
   
@@ -3342,37 +3455,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Inspect And Validate
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../archive/inspect/" class="md-nav__link">
         
   
   
@@ -3388,81 +3474,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#show-metadata" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Show Metadata
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#list-contents" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        List Contents
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#validate-integrity" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validate Integrity
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#failure-recovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Failure Recovery
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -3475,7 +3486,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../restore/" class="md-nav__link">
+      <a href="../archive/restore/" class="md-nav__link">
         
   
   
@@ -3572,7 +3583,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/" class="md-nav__link">
+      <a href="../../tutorials/" class="md-nav__link">
         
   
   
@@ -3654,7 +3665,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/weather-netcdf/" class="md-nav__link">
+      <a href="../../tutorials/weather-netcdf/" class="md-nav__link">
         
   
   
@@ -3682,7 +3693,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/source-discovery/" class="md-nav__link">
+      <a href="../../tutorials/source-discovery/" class="md-nav__link">
         
   
   
@@ -3710,7 +3721,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/observability/" class="md-nav__link">
+      <a href="../../tutorials/observability/" class="md-nav__link">
         
   
   
@@ -3800,7 +3811,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/sentinel3-frp/" class="md-nav__link">
+      <a href="../../tutorials/sentinel3-frp/" class="md-nav__link">
         
   
   
@@ -3890,7 +3901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/direct-zarr-parallel/" class="md-nav__link">
+      <a href="../../tutorials/direct-zarr-parallel/" class="md-nav__link">
         
   
   
@@ -3987,7 +3998,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   
@@ -4015,7 +4026,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../contributing/firecube-contributors/" class="md-nav__link">
+      <a href="../../contributing/firecube-contributors/" class="md-nav__link">
         
   
   
@@ -4104,7 +4115,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/" class="md-nav__link">
+      <a href="../../reference/" class="md-nav__link">
         
   
   
@@ -4186,7 +4197,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/templates/" class="md-nav__link">
+      <a href="../../reference/templates/" class="md-nav__link">
         
   
   
@@ -4214,7 +4225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/hooks/" class="md-nav__link">
+      <a href="../../reference/hooks/" class="md-nav__link">
         
   
   
@@ -4242,7 +4253,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/context/" class="md-nav__link">
+      <a href="../../reference/context/" class="md-nav__link">
         
   
   
@@ -4270,7 +4281,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/exceptions/" class="md-nav__link">
+      <a href="../../reference/exceptions/" class="md-nav__link">
         
   
   
@@ -4298,7 +4309,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/parallelism/" class="md-nav__link">
+      <a href="../../reference/parallelism/" class="md-nav__link">
         
   
   
@@ -4326,7 +4337,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/extensions/" class="md-nav__link">
+      <a href="../../reference/extensions/" class="md-nav__link">
         
   
   
@@ -4362,7 +4373,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/core-utilities/" class="md-nav__link">
+      <a href="../../reference/core-utilities/" class="md-nav__link">
         
   
   
@@ -4390,7 +4401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -4418,7 +4429,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/config/" class="md-nav__link">
+      <a href="../../reference/config/" class="md-nav__link">
         
   
   
@@ -4446,7 +4457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/observability/" class="md-nav__link">
+      <a href="../../reference/observability/" class="md-nav__link">
         
   
   
@@ -4474,7 +4485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/storage-drivers/" class="md-nav__link">
+      <a href="../../reference/storage-drivers/" class="md-nav__link">
         
   
   
@@ -4529,10 +4540,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#show-metadata" class="md-nav__link">
+  <a href="#purpose" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Show Metadata
+        Purpose
       
     </span>
   </a>
@@ -4540,10 +4551,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#list-contents" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        List Contents
+        Prerequisites
       
     </span>
   </a>
@@ -4551,10 +4562,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#validate-integrity" class="md-nav__link">
+  <a href="#procedure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Validate Integrity
+        Procedure
       
     </span>
   </a>
@@ -4573,10 +4584,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#operational-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Next Steps
+        Operational Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
       
     </span>
   </a>
@@ -4603,66 +4625,44 @@
   
 
 
-<h1 id="inspect-and-validate-archives">Inspect And Validate Archives</h1>
-<p>Use archive inspection commands before transferring, publishing, or restoring a
-<code>.tgm</code> file.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">ARCHIVE_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.tgm&quot;</span>
+<h1 id="compare-zarr-stores">Compare Zarr Stores</h1>
+<h2 id="purpose">Purpose</h2>
+<p>Check whether two Zarr stores are operationally equivalent after migration,
+re-ingestion, staging promotion, or a storage-driver change. The command is
+read-only and boolean: it either confirms equivalence or lists mismatches and
+exits nonzero, so it can gate a promotion step in a pipeline.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Both inputs are complete Zarr store URIs (<code>file://</code> or <code>s3://</code>).</li>
+<li>One storage type and one storage driver apply to both stores:
+  <code>--storage-type local</code> for <code>file://</code> stores, <code>--storage-type s3</code> for
+  <code>s3://</code> stores, and <code>--storage-driver fsspec</code> or <code>--storage-driver obstore</code>.</li>
+<li>For <code>s3://</code> stores, credentials are configured as in
+  <a href="../s3-access/">Configure S3 Access</a>.</li>
+</ul>
+<h2 id="procedure">Procedure</h2>
+<ol>
+<li>Run the comparison with both required flags:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>zarr<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>file:///data/products/before.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>file:///data/products/after.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec
 </code></pre></div>
-<h2 id="show-metadata">Show Metadata</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>info<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span>
+<ol>
+<li>Check the result. No output and exit status <code>0</code> mean the stores matched.
+   On mismatch, the command writes one line per difference to stderr and
+   exits with status <code>3</code>:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>array data/values: shape (2, 2) != (3, 2)
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>array data/lat: firecube_static_written True != None
 </code></pre></div>
-<p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Path:           /data/archives/MY_PRODUCT.tgm
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Format:         v1 (multi-group)
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Size:           0.00 MB
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>Groups:         data
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>Control-plane:  present
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>Group: data
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  Source:    file:///data/products/MY_PRODUCT.zarr
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  Codec:     zstd
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  Variables:
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    data: shape=[1000, 10] dtype=float32 chunks=[100, 10]
-</code></pre></div>
-<p>Use JSON for scripts:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>info<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span>--format<span class="w"> </span>json
-</code></pre></div>
-<p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/data/archives/MY_PRODUCT.tgm&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;v1&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&quot;size_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4432</span><span class="p">,</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">&quot;groups&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">&quot;has_controlplane&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
-</code></pre></div>
-<h2 id="list-contents">List Contents</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>list<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span>
-</code></pre></div>
-<p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Messages: 2
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>Group: data
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  Source:  file:///data/products/MY_PRODUCT.zarr
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  Codec:   zstd
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  Objects: 1
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    [0] data: shape=[1000, 10] dtype=float32 compression=zstd
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>[control-plane]
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>  Product: product.zarr
-</code></pre></div>
-<h2 id="validate-integrity">Validate Integrity</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>validate<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span>
-</code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
-</code></pre></div>
-<p>Use <code>--quick</code> for a structure-only check:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>validate<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span>--quick
-</code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
-</code></pre></div>
+<p>The comparison covers array paths, shape, dtype, chunks, dimension names,
+public attrs, Firecube's static-array marker, and values. Runtime trace attrs
+are ignored. Any other nonzero exit status means the command could not run,
+for example because a URI is missing, a store has no Zarr metadata, or the
+storage flags do not match the URI scheme.</p>
 <h2 id="failure-recovery">Failure Recovery</h2>
 <table>
 <thead>
@@ -4674,26 +4674,39 @@
 </thead>
 <tbody>
 <tr>
-<td><code>Path ... does not exist</code></td>
-<td>The archive path is wrong or create failed.</td>
-<td>Check <code>ARCHIVE_PATH</code> and rerun <code>archive create</code>.</td>
+<td><code>Missing Zarr store metadata</code></td>
+<td>One input does not point at a Zarr store root.</td>
+<td>Check the URI and rerun with the store directory, not a parent directory or array path.</td>
 </tr>
 <tr>
-<td><code>requires the tensogram extras</code></td>
-<td>Archive support is not installed.</td>
-<td>Install <code>firecube[tensogram]</code> in the active environment.</td>
+<td><code>shape</code>, <code>dtype</code>, <code>chunks</code>, or <code>dimension_names</code> mismatch</td>
+<td>The stores use different array schemas.</td>
+<td>Compare the ingestion configuration and plugin schema before copying or promoting either store.</td>
 </tr>
 <tr>
-<td>Validation fails</td>
-<td>The archive is incomplete or corrupt.</td>
-<td>Recreate the archive from the source product.</td>
+<td><code>attrs differ</code></td>
+<td>User-visible array attrs differ after Firecube-managed attrs were removed.</td>
+<td>Inspect the array metadata and decide which store owns the intended metadata.</td>
+</tr>
+<tr>
+<td><code>values differ</code></td>
+<td>Array payloads differ.</td>
+<td>Re-run the source verification or re-ingest the affected product before promotion.</td>
+</tr>
+<tr>
+<td><code>firecube_static_written</code> mismatch</td>
+<td>A static array has different write-once marker state.</td>
+<td>Treat this as a resume-safety difference. Recreate or repair the affected store instead of ignoring the marker.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="next-steps">Next Steps</h2>
+<h2 id="operational-notes">Operational Notes</h2>
+<p>The check is strict equivalence: no tolerances, no repair, no JSON output. Use
+it where a mismatch must stop the workflow, not as a diff tool.</p>
+<h2 id="see-also">See Also</h2>
 <ul>
-<li><strong><a href="../create/">Create Archives</a></strong> — rebuild or replace an archive</li>
-<li><strong><a href="../restore/">Restore Archives</a></strong> — restore a validated archive to a Zarr product</li>
+<li><a href="../parallel-zarr-writes/">Run Parallel Zarr Writes</a></li>
+<li><a href="../firecube-index/">Inspect And Manage The Resolved Index</a></li>
 </ul>
 
 
@@ -4750,10 +4763,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

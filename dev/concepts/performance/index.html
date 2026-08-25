@@ -3090,6 +3090,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/zarr-compare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compare Zarr Stores
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/firecube-index/" class="md-nav__link">
         
   
@@ -4748,6 +4776,12 @@ budget when you need a bounded check:</p>
 </code></pre></div>
 <p>Use <code>--on-timeout fail</code> for CI or post-ingest gates that must fail when the
 validation budget is exceeded.</p>
+<p>The JSON report includes <code>static_marker_failures</code>. An empty list means the
+validated array either moves with the time axis or carries the
+<code>firecube_static_written</code> marker. A non-empty list after a parallel run means
+the static-owner worker did not finish its static writes: re-run the owner's
+slot range, then validate again. Arrays whose first dimension is <code>timestamp</code>,
+<code>time</code>, or <code>firecube_timestamp_state</code> never require the marker.</p>
 <h2 id="if-memory-is-tight">If Memory Is Tight</h2>
 <p>Memory pressure usually comes from batch size, worker count, source decoding, or
 compression. Reduce the shape of in-flight work first:</p>

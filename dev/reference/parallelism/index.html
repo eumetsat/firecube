@@ -2926,6 +2926,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/zarr-compare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compare Zarr Stores
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/firecube-index/" class="md-nav__link">
         
   
@@ -5345,6 +5373,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.resolve_index_spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;resolve_index_spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#resolved-index-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6761,6 +6800,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.resolve_index_spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;resolve_index_spec
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#resolved-index-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7003,21 +7053,23 @@ dispatches on <code>isinstance</code> -- no abstract methods are required here.<
         <p>Declarative index specification for a multi-group DirectZarr product.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>name</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            name
+
+
+  
+      instance-attribute
+   (firecube.core.api.IndexSpec.name)" href="#firecube.core.api.IndexSpec.name">name</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
@@ -7027,14 +7079,14 @@ dispatches on <code>isinstance</code> -- no abstract methods are required here.<
 <code>SlotIndexModel.name</code> for byte-identity checks.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>groups</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            groups
+
+
+  
+      instance-attribute
+   (firecube.core.api.IndexSpec.groups)" href="#firecube.core.api.IndexSpec.groups">groups</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="collections.abc.Mapping" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping">Mapping</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="            firecube.core.api.AxisSpec (firecube.core.index_spec.AxisSpec)" href="#firecube.core.api.AxisSpec">AxisSpec</a>]</code>
             </td>
@@ -7044,14 +7096,15 @@ dispatches on <code>isinstance</code> -- no abstract methods are required here.<
 Normalized to a sorted tuple internally for hashability.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>time_unit</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            time_unit
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.core.api.IndexSpec.time_unit)" href="#firecube.core.api.IndexSpec.time_unit">time_unit</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -7060,9 +7113,6 @@ Normalized to a sorted tuple internally for hashability.</p>
                 <p>Optional time unit string forwarded to the legacy
 <code>SlotIndexModel</code> unchanged (e.g. <code>None</code> for the default).</p>
               </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -7205,21 +7255,23 @@ Normalized to a sorted tuple internally for hashability.</p>
         <p>A zero-based integer axis with a fixed slot count.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>slot_count</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            slot_count
+
+
+  
+      instance-attribute
+   (firecube.core.api.IntegerAxis.slot_count)" href="#firecube.core.api.IntegerAxis.slot_count">slot_count</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
             </td>
@@ -7230,9 +7282,6 @@ Normalized to a sorted tuple internally for hashability.</p>
 in the preallocated Zarr store: arrays indexed by this
 axis are created with shape <code>(slot_count, ...)</code>.</p>
               </div>
-            </td>
-            <td>
-                <em>required</em>
             </td>
           </tr>
       </tbody>
@@ -7315,21 +7364,23 @@ axis are created with shape <code>(slot_count, ...)</code>.</p>
         <p>A time axis with explicit coordinate values.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>coordinate</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            coordinate
+
+
+  
+      instance-attribute
+   (firecube.core.api.IrregularTimeAxis.coordinate)" href="#firecube.core.api.IrregularTimeAxis.coordinate">coordinate</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
@@ -7339,14 +7390,14 @@ axis are created with shape <code>(slot_count, ...)</code>.</p>
 <code>time_dim_name</code> when the axis is resolved.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>values</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            values
+
+
+  
+      instance-attribute
+   (firecube.core.api.IrregularTimeAxis.values)" href="#firecube.core.api.IrregularTimeAxis.values">values</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="collections.abc.Sequence" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>] | <span title="firecube.core.index_spec._AutoSentinel">_AutoSentinel</span></code>
             </td>
@@ -7360,9 +7411,6 @@ hashable comparable values, typically <code>datetime</code> objects,
 raises <code>ValueError</code>. The engine sorts concrete values ascending
 and assigns slot indices in that order.</p>
               </div>
-            </td>
-            <td>
-                <em>required</em>
             </td>
           </tr>
       </tbody>
@@ -7505,21 +7553,23 @@ assigns each a slot index in ascending order.</p>
         <p>A regularly-spaced time axis with a fixed epoch and cadence.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>coordinate</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            coordinate
+
+
+  
+      instance-attribute
+   (firecube.core.api.RegularTimeAxis.coordinate)" href="#firecube.core.api.RegularTimeAxis.coordinate">coordinate</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
@@ -7528,14 +7578,14 @@ assigns each a slot index in ascending order.</p>
                 <p>Name of the time coordinate dimension (e.g. <code>"time"</code>).</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>epoch</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            epoch
+
+
+  
+      instance-attribute
+   (firecube.core.api.RegularTimeAxis.epoch)" href="#firecube.core.api.RegularTimeAxis.epoch">epoch</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
@@ -7545,14 +7595,14 @@ assigns each a slot index in ascending order.</p>
 <code>"2024-01-01T00:00:00Z"</code>). Naive strings are rejected.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>cadence_s</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            cadence_s
+
+
+  
+      instance-attribute
+   (firecube.core.api.RegularTimeAxis.cadence_s)" href="#firecube.core.api.RegularTimeAxis.cadence_s">cadence_s</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
             </td>
@@ -7561,14 +7611,15 @@ assigns each a slot index in ascending order.</p>
                 <p>Slot cadence in seconds. Must be a positive integer.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>mode</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            mode
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.core.api.RegularTimeAxis.mode)" href="#firecube.core.api.RegularTimeAxis.mode">mode</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="typing.Literal" href="https://docs.python.org/3/library/typing.html#typing.Literal">Literal</a>[&#39;exact&#39;, &#39;floor&#39;]</code>
             </td>
@@ -7579,14 +7630,15 @@ on slot boundaries; <code>"floor"</code> maps each timestamp to the nearest
 preceding boundary.</p>
               </div>
             </td>
-            <td>
-                  <code>&#39;exact&#39;</code>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>end_date</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            end_date
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.core.api.RegularTimeAxis.end_date)" href="#firecube.core.api.RegularTimeAxis.end_date">end_date</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -7598,14 +7650,15 @@ preceding boundary.</p>
 be set.</p>
               </div>
             </td>
-            <td>
-                  <code>None</code>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>slot_count</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            slot_count
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.core.api.RegularTimeAxis.slot_count)" href="#firecube.core.api.RegularTimeAxis.slot_count">slot_count</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
             </td>
@@ -7614,9 +7667,6 @@ be set.</p>
                 <p>Optional total number of slots. Must be positive.
 At most one of <code>end_date</code> and <code>slot_count</code> may be set.</p>
               </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -7844,21 +7894,24 @@ serial-mode plugins without a fixed horizon.</p>
 assigned axis.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>coordinate</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            coordinate
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.core.api.ItemInfo.coordinate)" href="#firecube.core.api.ItemInfo.coordinate">coordinate</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>
             </td>
@@ -7868,9 +7921,6 @@ assigned axis.</p>
 is a UTC-explicit timestamp. For <code>IntegerAxis</code> this is an integer
 coordinate.</p>
               </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -8153,7 +8203,7 @@ slot-index model hash.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="firecube.core.index_resolve.ExtentUnknownError">ExtentUnknownError</span></code>
+                  <code><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.ExtentUnknownError (firecube.core.index_resolve.ExtentUnknownError)" href="../exceptions/#firecube.ingestor.api.ExtentUnknownError">ExtentUnknownError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -8795,6 +8845,21 @@ fractional seconds raise <code>ValueError</code>.</p>
     </table>
 
 
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.core.index_spec</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexSpec</span><span class="p">,</span> <span class="n">RegularTimeAxis</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">axis</span> <span class="o">=</span> <span class="n">RegularTimeAxis</span><span class="p">(</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">... </span>    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">... </span>    <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>    <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span>    <span class="n">slot_count</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span> <span class="o">=</span> <span class="n">IndexSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;demo&quot;</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">})</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">resolved</span> <span class="o">=</span> <span class="n">resolve_index_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">time_dim_name</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">resolved</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="go">&#39;demo&#39;</span>
+</code></pre></div>
+
+
     </div>
 
 </div><h2 id="ingestor-re-exports">Ingestor Re-Exports</h2>
@@ -8856,21 +8921,23 @@ dispatches on <code>isinstance</code> -- no abstract methods are required here.<
         <p>Declarative index specification for a multi-group DirectZarr product.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>name</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            name
+
+
+  
+      instance-attribute
+   (firecube.ingestor.api.IndexSpec.name)" href="#firecube.ingestor.api.IndexSpec.name">name</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
@@ -8880,14 +8947,14 @@ dispatches on <code>isinstance</code> -- no abstract methods are required here.<
 <code>SlotIndexModel.name</code> for byte-identity checks.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>groups</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            groups
+
+
+  
+      instance-attribute
+   (firecube.ingestor.api.IndexSpec.groups)" href="#firecube.ingestor.api.IndexSpec.groups">groups</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="collections.abc.Mapping" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping">Mapping</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-internal" title="            firecube.core.api.AxisSpec (firecube.core.index_spec.AxisSpec)" href="#firecube.core.api.AxisSpec">AxisSpec</a>]</code>
             </td>
@@ -8897,14 +8964,15 @@ dispatches on <code>isinstance</code> -- no abstract methods are required here.<
 Normalized to a sorted tuple internally for hashability.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>time_unit</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            time_unit
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.ingestor.api.IndexSpec.time_unit)" href="#firecube.ingestor.api.IndexSpec.time_unit">time_unit</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -8913,9 +8981,6 @@ Normalized to a sorted tuple internally for hashability.</p>
                 <p>Optional time unit string forwarded to the legacy
 <code>SlotIndexModel</code> unchanged (e.g. <code>None</code> for the default).</p>
               </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -9058,21 +9123,23 @@ Normalized to a sorted tuple internally for hashability.</p>
         <p>A zero-based integer axis with a fixed slot count.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>slot_count</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            slot_count
+
+
+  
+      instance-attribute
+   (firecube.ingestor.api.IntegerAxis.slot_count)" href="#firecube.ingestor.api.IntegerAxis.slot_count">slot_count</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
             </td>
@@ -9083,9 +9150,6 @@ Normalized to a sorted tuple internally for hashability.</p>
 in the preallocated Zarr store: arrays indexed by this
 axis are created with shape <code>(slot_count, ...)</code>.</p>
               </div>
-            </td>
-            <td>
-                <em>required</em>
             </td>
           </tr>
       </tbody>
@@ -9168,21 +9232,23 @@ axis are created with shape <code>(slot_count, ...)</code>.</p>
         <p>A time axis with explicit coordinate values.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>coordinate</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            coordinate
+
+
+  
+      instance-attribute
+   (firecube.ingestor.api.IrregularTimeAxis.coordinate)" href="#firecube.ingestor.api.IrregularTimeAxis.coordinate">coordinate</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
@@ -9192,14 +9258,14 @@ axis are created with shape <code>(slot_count, ...)</code>.</p>
 <code>time_dim_name</code> when the axis is resolved.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>values</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            values
+
+
+  
+      instance-attribute
+   (firecube.ingestor.api.IrregularTimeAxis.values)" href="#firecube.ingestor.api.IrregularTimeAxis.values">values</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="collections.abc.Sequence" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>] | <span title="firecube.core.index_spec._AutoSentinel">_AutoSentinel</span></code>
             </td>
@@ -9213,9 +9279,6 @@ hashable comparable values, typically <code>datetime</code> objects,
 raises <code>ValueError</code>. The engine sorts concrete values ascending
 and assigns slot indices in that order.</p>
               </div>
-            </td>
-            <td>
-                <em>required</em>
             </td>
           </tr>
       </tbody>
@@ -9358,21 +9421,23 @@ assigns each a slot index in ascending order.</p>
         <p>A regularly-spaced time axis with a fixed epoch and cadence.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>coordinate</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            coordinate
+
+
+  
+      instance-attribute
+   (firecube.ingestor.api.RegularTimeAxis.coordinate)" href="#firecube.ingestor.api.RegularTimeAxis.coordinate">coordinate</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
@@ -9381,14 +9446,14 @@ assigns each a slot index in ascending order.</p>
                 <p>Name of the time coordinate dimension (e.g. <code>"time"</code>).</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>epoch</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            epoch
+
+
+  
+      instance-attribute
+   (firecube.ingestor.api.RegularTimeAxis.epoch)" href="#firecube.ingestor.api.RegularTimeAxis.epoch">epoch</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
             </td>
@@ -9398,14 +9463,14 @@ assigns each a slot index in ascending order.</p>
 <code>"2024-01-01T00:00:00Z"</code>). Naive strings are rejected.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>cadence_s</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            cadence_s
+
+
+  
+      instance-attribute
+   (firecube.ingestor.api.RegularTimeAxis.cadence_s)" href="#firecube.ingestor.api.RegularTimeAxis.cadence_s">cadence_s</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
             </td>
@@ -9414,14 +9479,15 @@ assigns each a slot index in ascending order.</p>
                 <p>Slot cadence in seconds. Must be a positive integer.</p>
               </div>
             </td>
-            <td>
-                <em>required</em>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>mode</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            mode
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.ingestor.api.RegularTimeAxis.mode)" href="#firecube.ingestor.api.RegularTimeAxis.mode">mode</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="typing.Literal" href="https://docs.python.org/3/library/typing.html#typing.Literal">Literal</a>[&#39;exact&#39;, &#39;floor&#39;]</code>
             </td>
@@ -9432,14 +9498,15 @@ on slot boundaries; <code>"floor"</code> maps each timestamp to the nearest
 preceding boundary.</p>
               </div>
             </td>
-            <td>
-                  <code>&#39;exact&#39;</code>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>end_date</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            end_date
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.ingestor.api.RegularTimeAxis.end_date)" href="#firecube.ingestor.api.RegularTimeAxis.end_date">end_date</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -9451,14 +9518,15 @@ preceding boundary.</p>
 be set.</p>
               </div>
             </td>
-            <td>
-                  <code>None</code>
-            </td>
           </tr>
           <tr class="doc-section-item">
-            <td>
-                <code>slot_count</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            slot_count
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.ingestor.api.RegularTimeAxis.slot_count)" href="#firecube.ingestor.api.RegularTimeAxis.slot_count">slot_count</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
             </td>
@@ -9467,9 +9535,6 @@ be set.</p>
                 <p>Optional total number of slots. Must be positive.
 At most one of <code>end_date</code> and <code>slot_count</code> may be set.</p>
               </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -9697,21 +9762,24 @@ serial-mode plugins without a fixed horizon.</p>
 assigned axis.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Attributes:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
-          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td>
-                <code>coordinate</code>
-            </td>
+            <td><code><a class="autorefs autorefs-internal" title="            coordinate
+
+
+  
+      class-attribute
+      instance-attribute
+   (firecube.ingestor.api.ItemInfo.coordinate)" href="#firecube.ingestor.api.ItemInfo.coordinate">coordinate</a></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>
             </td>
@@ -9721,9 +9789,6 @@ assigned axis.</p>
 is a UTC-explicit timestamp. For <code>IntegerAxis</code> this is an integer
 coordinate.</p>
               </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -10006,7 +10071,7 @@ slot-index model hash.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="firecube.core.index_resolve.ExtentUnknownError">ExtentUnknownError</span></code>
+                  <code><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.ExtentUnknownError (firecube.core.index_resolve.ExtentUnknownError)" href="../exceptions/#firecube.ingestor.api.ExtentUnknownError">ExtentUnknownError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -10383,6 +10448,153 @@ byte-identically to pre-manifest records.</p>
 
 
   </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="firecube.ingestor.api.resolve_index_spec" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.resolve_index_spec</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">resolve_index_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">time_dim_name</span><span class="p">,</span> <span class="n">items</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Resolve an <code>IndexSpec</code> into a <code>ResolvedIndex</code>.</p>
+<p>Validates that each <code>RegularTimeAxis.coordinate</code> matches
+<code>time_dim_name</code>. Builds per-group resolvers via <code>_resolver_for</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>spec</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            firecube.core.api.IndexSpec
+
+
+  
+      dataclass
+   (firecube.core.index_spec.IndexSpec)" href="#firecube.core.api.IndexSpec">IndexSpec</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The index specification to resolve.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>time_dim_name</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The expected time-coordinate dimension name
+(e.g. <code>"time"</code> or <code>"timestamp"</code>).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            firecube.core.api.ResolvedIndex (firecube.core.index_resolve.ResolvedIndex)" href="#firecube.core.api.ResolvedIndex">ResolvedIndex</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A <code>ResolvedIndex</code> ready for slot-index computation.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ConfigurationError">ConfigurationError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If any axis coordinate does not match
+<code>time_dim_name</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/exceptions.html#NotImplementedError">NotImplementedError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If any axis kind is not supported.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.core.index_spec</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexSpec</span><span class="p">,</span> <span class="n">RegularTimeAxis</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">axis</span> <span class="o">=</span> <span class="n">RegularTimeAxis</span><span class="p">(</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">... </span>    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">... </span>    <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>    <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span>    <span class="n">slot_count</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span> <span class="o">=</span> <span class="n">IndexSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;demo&quot;</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">})</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">resolved</span> <span class="o">=</span> <span class="n">resolve_index_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">time_dim_name</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">resolved</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="go">&#39;demo&#39;</span>
+</code></pre></div>
+
 
     </div>
 
