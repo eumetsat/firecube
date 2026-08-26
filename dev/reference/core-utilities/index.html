@@ -4797,50 +4797,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ingestor-re-exports" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ingestor Re-Exports
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RESERVED_ARRAY_ATTRS" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;RESERVED_ARRAY_ATTRS
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.assert_attrs_safe" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;assert_attrs_safe
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.FIRECUBE_STATIC_WRITTEN_ATTR" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;FIRECUBE_STATIC_WRITTEN_ATTR
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5485,50 +5441,6 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compare_zarr_stores
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ingestor-re-exports" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ingestor Re-Exports
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.RESERVED_ARRAY_ATTRS" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;RESERVED_ARRAY_ATTRS
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.assert_attrs_safe" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;assert_attrs_safe
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.ingestor.api.FIRECUBE_STATIC_WRITTEN_ATTR" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;FIRECUBE_STATIC_WRITTEN_ATTR
       
     </span>
   </a>
@@ -7070,7 +6982,7 @@ so operators control it with <code>--option extract_workers=N</code>.</p>
         <p>Convert an ISO-8601 UTC timestamp to whole seconds since Unix epoch.</p>
 <p>Only UTC inputs are accepted. The trailing <code>"Z"</code> or the explicit
 <code>"+00:00"</code> offset are both honoured; any other offset raises
-:class:<code>ValueError</code>. Numpy is imported lazily so that <code>slot_index</code> stays
+<code>ValueError</code>. Numpy is imported lazily so that <code>slot_index</code> stays
 cheap to import for code paths that never touch the epoch helpers.</p>
 
 
@@ -7093,12 +7005,14 @@ cheap to import for code paths that never touch the epoch helpers.</p>
 
         <p>Round-trip an ISO-8601 UTC string through <code>epoch_s</code> and back to <code>"...Z"</code>.</p>
 <p>Equivalent to <code>epoch_s_to_iso(iso_to_epoch_s(iso))</code>; raises
-:class:<code>ValueError</code> for non-UTC inputs via :func:<code>iso_to_epoch_s</code>.</p>
+<code>ValueError</code> for non-UTC inputs via <code>iso_to_epoch_s</code>.</p>
 
 
     </div>
 
-</div><h2 id="reserved-array-attributes">Reserved Array Attributes</h2>
+</div><p><code>coerce_to_epoch_s()</code> is documented with the direct-Zarr index types in
+<a href="../parallelism/">Index Specification</a>.</p>
+<h2 id="reserved-array-attributes">Reserved Array Attributes</h2>
 
 
 <div class="doc doc-object doc-attribute">
@@ -8424,193 +8338,7 @@ and full array values. Runtime-managed attrs such as <code>firecube_run_id</code
 
     </div>
 
-</div><h2 id="ingestor-re-exports">Ingestor Re-Exports</h2>
-<p>The ingestor facade re-exports the same attribute guards for plugin code.</p>
-
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h2 id="firecube.ingestor.api.RESERVED_ARRAY_ATTRS" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.ingestor.api.RESERVED_ARRAY_ATTRS</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
-  </span>
-
-</h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">RESERVED_ARRAY_ATTRS</span> <span class="o">=</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#frozenset">frozenset</a></span><span class="p">(</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="p">{</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs._ARRAY_DIMENSIONS_ATTR">_ARRAY_DIMENSIONS_ATTR</span></span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs._FILL_VALUE_ATTR">_FILL_VALUE_ATTR</span></span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs._FIRECUBE_RUN_ID_ATTR">_FIRECUBE_RUN_ID_ATTR</span></span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs._FIRECUBE_SPAN_ID_ATTR">_FIRECUBE_SPAN_ID_ATTR</span></span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs._FIRECUBE_INTERNAL_ATTR">_FIRECUBE_INTERNAL_ATTR</span></span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="n"><a class="autorefs autorefs-internal" title="            firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR
-
-
-  
-      module-attribute
-   (firecube.core.zarr._reserved_attrs.FIRECUBE_STATIC_WRITTEN_ATTR)" href="#firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR">FIRECUBE_STATIC_WRITTEN_ATTR</a></span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="p">}</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
-</code></pre></div>
-
-    <div class="doc doc-contents first">
-
-        <p>Reserved Zarr array attribute keys managed by Firecube.</p>
-
-
-<p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="s2">&quot;firecube_static_written&quot;</span> <span class="ow">in</span> <span class="n">RESERVED_ARRAY_ATTRS</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="go">True</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="s2">&quot;my_custom_attr&quot;</span> <span class="ow">in</span> <span class="n">RESERVED_ARRAY_ATTRS</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="go">False</span>
-</code></pre></div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="firecube.ingestor.api.assert_attrs_safe" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.ingestor.api.assert_attrs_safe</span>
-
-
-</h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">assert_attrs_safe</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
-</code></pre></div>
-
-    <div class="doc doc-contents first">
-
-        <p>Raise ValueError if <em>attrs</em> contains any reserved key.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>attrs</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="collections.abc.Mapping" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping">Mapping</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Candidate attribute mapping for <code>ZarrArraySpec.attrs</code>.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-<th>Name</th>          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-<td><code>None</code></td>            <td>
-                  <code>None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The function returns nothing.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If any key is reserved for Firecube bookkeeping.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">assert_attrs_safe</span><span class="p">({</span><span class="s2">&quot;my_custom_attr&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">})</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">assert_attrs_safe</span><span class="p">({</span><span class="s2">&quot;firecube_static_written&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gt">Traceback (most recent call last):</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c">...</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gr">ValueError</span>: <span class="n">Reserved attr &#39;firecube_static_written&#39; is managed by firecube, not the plugin. Remove it from ZarrArraySpec.attrs.</span>
-</code></pre></div>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h2 id="firecube.ingestor.api.FIRECUBE_STATIC_WRITTEN_ATTR" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.ingestor.api.FIRECUBE_STATIC_WRITTEN_ATTR</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
-  </span>
-
-</h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">FIRECUBE_STATIC_WRITTEN_ATTR</span> <span class="o">=</span> <span class="s1">&#39;firecube_static_written&#39;</span>
-</code></pre></div>
-
-    <div class="doc doc-contents first">
-
-        <p>Zarr array attr Firecube stamps after a static array commit.</p>
-
-
-<p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">FIRECUBE_STATIC_WRITTEN_ATTR</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="go">&#39;firecube_static_written&#39;</span>
-</code></pre></div>
-
-    </div>
-
-</div><p><code>coerce_to_epoch_s()</code> is documented with the direct-Zarr index types in
-<a href="../parallelism/">Index Specification</a>.</p>
-<h2 id="see-also">See Also</h2>
+</div><h2 id="see-also">See Also</h2>
 <ul>
 <li><a href="../parallelism/">Slot-Range Parallelism</a></li>
 <li><a href="../storage-drivers/">Storage Drivers</a></li>

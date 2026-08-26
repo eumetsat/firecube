@@ -6115,10 +6115,10 @@ all symbols from <code>firecube.ingestor.api</code>.</p>
 
         <p>Read-only per-run context handed to every plugin-facing hook.</p>
 <p>The engine builds one instance per run from the caller's
-:class:<code>IngestContext</code> plus its own runtime state, and passes it to
+<code>IngestContext</code> plus its own runtime state, and passes it to
 plugin hooks such as <code>discover_source_files</code>, <code>get_batch_groups</code>,
 and <code>build_dataset</code>. Plugin authors never construct it themselves.</p>
-<p>All members are read-only. In particular, :attr:<code>options</code> is a detached
+<p>All members are read-only. In particular, <code>options</code> is a detached
 immutable copy taken when the context is created, and attribute access
 outside the documented surface raises <code>AttributeError</code>.</p>
 
@@ -6186,7 +6186,7 @@ input files; plugins with custom discovery may interpret it freely.</p>
     <div class="doc doc-contents ">
 
         <p>Output target URI for this run, or <code>None</code> when not provided.</p>
-<p>Taken from the caller's :attr:<code>IngestContext.target</code>. The engine
+<p>Taken from the caller's <code>IngestContext.target</code>. The engine
 resolves the actual store location from it together with the
 configured write mode, so plugins should treat it as declarative
 rather than writing to it directly.</p>
@@ -6216,7 +6216,7 @@ rather than writing to it directly.</p>
         <p>Whether intermediate processing should stay in memory.</p>
 <p>Set by the caller (e.g. the <code>--in-memory</code> CLI flag). When true,
 plugins that stage data (such as DuckDB-backed plugins) should use
-in-memory state instead of files under :attr:<code>temp_root</code>.</p>
+in-memory state instead of files under <code>temp_root</code>.</p>
 
     </div>
 
@@ -6268,7 +6268,7 @@ built-in templates; the CLI defaults it to <code>"zarr"</code>.</p>
 
         <p>Storage sessions bound to this run, keyed by role, or <code>None</code>.</p>
 <p>When output storage is bound, <code>storage.output</code> is the session for
-the run's output target. See :class:<code>StorageContext</code>.</p>
+the run's output target. See <code>StorageContext</code>.</p>
 
     </div>
 
@@ -6428,7 +6428,7 @@ backend directly.</p>
 
         <p>Plugin options for this run as an immutable mapping.</p>
 <p>A detached copy of the caller's options (including <code>--option</code>
-CLI overrides) wrapped in :class:<code>types.MappingProxyType</code> when the
+CLI overrides) wrapped in <code>types.MappingProxyType</code> when the
 context is created: it cannot be mutated, and later changes to
 engine state are not reflected in it.</p>
 
@@ -6541,7 +6541,7 @@ engine state are not reflected in it.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The value from :attr:<code>options</code>, or <code>default</code> when missing.</p>
+                <p>The value from <code>options</code>, or <code>default</code> when missing.</p>
               </div>
             </td>
           </tr>
@@ -6568,7 +6568,7 @@ engine state are not reflected in it.</p>
 
         <p>Ensure a source file is available locally and return its path.</p>
 <p>Remote sources (e.g. S3 URIs) are downloaded into the per-run cache
-under :attr:<code>temp_root</code>; already-local paths are returned directly.</p>
+under <code>temp_root</code>; already-local paths are returned directly.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -6693,7 +6693,7 @@ only accepts local paths:</p>
         <p>Storage sessions for an ingestion run, keyed by role.</p>
 <p>Each field binds one storage role to a session that the engine creates
 from the resolved target and selected storage driver. Plugins reach it
-through :attr:<code>PluginContext.storage</code> and should treat the bound
+through <code>PluginContext.storage</code> and should treat the bound
 sessions as engine-owned handles: use them to inspect the product
 identity and perform storage operations, but do not replace or close
 them.</p>
@@ -7225,7 +7225,7 @@ the caller.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Render typed fields as a public dict (no private <code>_compat</code> leak).</p>
+        <p>Render the typed fields as a plain dict, excluding internal state.</p>
 
 
     </div>
