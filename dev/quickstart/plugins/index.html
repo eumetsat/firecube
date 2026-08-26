@@ -27,7 +27,7 @@
     
     
       
-        <title>Create and Install the Example Plugin - Firecube</title>
+        <title>Install the Example Plugin - Firecube</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#create-and-install-the-example-plugin" class="md-skip">
+        <a href="#install-the-example-plugin" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Create and Install the Example Plugin
+              Install the Example Plugin
             
           </span>
         </div>
@@ -592,7 +592,7 @@
   <span class="md-ellipsis">
     
   
-    Create and Install the Example Plugin
+    Install the Example Plugin
   
 
     
@@ -610,7 +610,7 @@
   <span class="md-ellipsis">
     
   
-    Create and Install the Example Plugin
+    Install the Example Plugin
   
 
     
@@ -670,21 +670,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#create-the-plugin" class="md-nav__link">
+  <a href="#clone-the-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Create The Plugin
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#implement-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implement The Plugin
+        Clone The Plugin
       
     </span>
   </a>
@@ -702,30 +691,19 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#validate-the-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validate The Installation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
-      
-    </span>
-  </a>
   
 </li>
       
@@ -4601,21 +4579,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#create-the-plugin" class="md-nav__link">
+  <a href="#clone-the-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Create The Plugin
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#implement-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implement The Plugin
+        Clone The Plugin
       
     </span>
   </a>
@@ -4633,30 +4600,19 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#validate-the-installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validate The Installation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
-      
-    </span>
-  </a>
   
 </li>
       
@@ -4691,115 +4647,43 @@
   
 
 
-<h1 id="create-and-install-the-example-plugin">Create and Install the Example Plugin</h1>
+<h1 id="install-the-example-plugin">Install the Example Plugin</h1>
 <h2 id="when-to-use-this">When To Use This</h2>
 <p>A Firecube plugin is a separately installed Python package that tells Firecube
 how to discover, read, and convert a particular dataset. Firecube runs the
 ingestion workflow and manages the output product.</p>
-<p>This page creates a local <code>weather_netcdf</code> plugin for the quickstart. It reads
-the example NetCDF files and returns one ordered <code>xarray.Dataset</code>; Firecube
-writes that dataset to Zarr.</p>
+<p>This page installs the published <code>firecube-quickstart-plugin</code> example. It
+already implements dataset conversion for a small set of time-indexed NetCDF
+files, so this quickstart does not require you to write any plugin code.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
 <li>Firecube installed in a Python environment.</li>
 <li>The environment activated with <code>source .venv/bin/activate</code>.</li>
-<li>The current directory is <code>firecube-quickstart/</code>.</li>
+<li><code>git</code> installed.</li>
 </ul>
 <h2 id="steps">Steps</h2>
-<h3 id="create-the-plugin">Create The Plugin</h3>
-<p>Create a plugin project from Firecube's Zarr template:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>plugins_dev
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>create<span class="w"> </span>weather-netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--template<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--target-dir<span class="w"> </span>plugins_dev<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--non-interactive
+<h3 id="clone-the-plugin">Clone The Plugin</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/eumetsat/firecube-quickstart-plugin.git
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>firecube-quickstart-plugin
 </code></pre></div>
-<p>Expected output starts with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>✨ Created plugin project: plugins_dev/firecube-weather-netcdf
-</code></pre></div>
-<p>The generated package registers the plugin as <code>weather_netcdf</code>. Its Zarr
-template handles discovery, batching, and output writes, but its dataset
-conversion deliberately fails until you implement it.</p>
-<h3 id="implement-the-plugin">Implement The Plugin</h3>
-<p>Open
-<code>plugins_dev/firecube-weather-netcdf/src/firecube_weather_netcdf/ingestor.py</code>.
-Replace the generated <code>build_dataset</code> method with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_dataset</span><span class="p">(</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">,</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="n">_</span> <span class="o">=</span> <span class="n">group</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>            <span class="k">return</span> <span class="kc">None</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="n">datasets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>            <span class="n">path</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>            <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>                <span class="n">datasets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">load</span><span class="p">())</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>        <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)</span>
-</code></pre></div>
-<p><code>ctx.materialize(item)</code> gives <code>xarray</code> a local path for each source item.
-<code>source.load()</code> keeps the values available after each NetCDF file closes. The
-final line combines the files and orders them by timestamp.</p>
+<p>Stay in this directory for the rest of the quickstart. The virtual environment
+you activated earlier stays active regardless of your current directory.</p>
 <h3 id="install-the-plugin">Install The Plugin</h3>
-<p>Install the generated project into the active environment in editable mode:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>install<span class="w"> </span>--editable<span class="w"> </span>plugins_dev/firecube-weather-netcdf
+<p>Install the cloned project into the active environment in editable mode:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>install<span class="w"> </span>.
 </code></pre></div>
-<p>Editable installation means later changes to the plugin source take effect
-without reinstalling it.</p>
-<p>Inspect the registered plugin and its options:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>list
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>weather_netcdf
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>weather_netcdf<span class="w"> </span>--show-options
+<p>Expected output ends with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Detected plugins: quickstart_plugin
 </code></pre></div>
-<p><code>plugins list</code> should contain <code>weather_netcdf</code>. <code>plugins describe</code> should show
-<code>weather_netcdf</code> as both the plugin and product name.</p>
-<h2 id="verify">Verify</h2>
-<p>Run the plugin inspection commands above. They should complete without an
-import error, and <code>--show-options</code> should list the engine, storage, and Zarr
-options accepted by the plugin.</p>
-<h2 id="troubleshooting">Troubleshooting</h2>
-<table>
-<thead>
-<tr>
-<th>Symptom</th>
-<th>Cause</th>
-<th>Fix</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Plugin is missing from <code>plugins list</code></td>
-<td>The package was installed in a different environment.</td>
-<td>Run <code>source .venv/bin/activate</code>, then repeat the editable install.</td>
-</tr>
-<tr>
-<td><code>build_dataset</code> raises <code>NotImplementedError</code></td>
-<td>The generated stub is still present.</td>
-<td>Replace the method with the implementation above, then run the command again.</td>
-</tr>
-<tr>
-<td>Plugin import fails</td>
-<td>The method was pasted outside <code>WeatherNetcdfIngestor</code> or has invalid indentation.</td>
-<td>Put the method inside the generated class and keep its four-space class indentation.</td>
-</tr>
-<tr>
-<td><code>uv</code> cannot find a Python environment</td>
-<td>The quickstart environment is not active.</td>
-<td>Run <code>source .venv/bin/activate</code> from <code>firecube-quickstart/</code>.</td>
-</tr>
-</tbody>
-</table>
+<h3 id="validate-the-installation">Validate The Installation</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>quickstart_plugin
+</code></pre></div>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../source-data/">Prepare Source Data</a></strong>: create the NetCDF files used by the
-  local ingestion example.</li>
-<li><strong><a href="../../guides/plugins/">Plugin Development</a></strong>: choose a template and
-  develop a plugin for your own dataset after completing the quickstart.</li>
+<li><strong><a href="../source-data/">Prepare Source Data</a></strong>: generate the NetCDF files this
+  plugin expects.</li>
+<li><strong><a href="../../guides/plugins/">Plugin Development</a></strong>: build a plugin for
+  your own dataset instead of the example.</li>
 </ul>
 
 

@@ -663,7 +663,7 @@
   <span class="md-ellipsis">
     
   
-    Create and Install the Example Plugin
+    Install the Example Plugin
   
 
     
@@ -4548,29 +4548,29 @@
 
 
 <h1 id="quickstart-overview">Quickstart Overview</h1>
-<p>This quickstart walks you through installing Firecube, creating a small dataset
-plugin, generating NetCDF source files, and writing one Zarr product to local
-storage.</p>
+<p>This quickstart walks you through installing Firecube, installing the example
+<code>firecube-quickstart-plugin</code>, generating NetCDF source files, and writing one
+Zarr product to local storage.</p>
 <p>Firecube provides the ingestion engine. A plugin provides the dataset-specific
 code that discovers, reads, and converts source files.</p>
 <h2 id="before-you-start">Before You Start</h2>
 <p>You need:</p>
 <ul>
-<li><code>Python 3.12+</code> and <code>uv</code> installed</li>
+<li><code>Python 3.12+</code>, <code>uv</code>, and <code>git</code> installed</li>
 </ul>
 <p>The installation step creates a working directory with a <code>.venv</code> and installs
-Firecube from PyPI. Keep the virtual environment active and run the remaining
-commands from that directory.</p>
+Firecube from PyPI. Keep the virtual environment active for the rest of the
+quickstart.</p>
 <h2 id="quickstart-path">Quickstart Path</h2>
 <ol>
 <li><strong><a href="installation/">Installation</a></strong>: Create <code>.venv</code>, install Firecube from
    PyPI, and verify the CLI.</li>
-<li><strong><a href="plugins/">Create and Install the Example Plugin</a></strong>: Create the local
-   <code>weather_netcdf</code> plugin, implement its dataset conversion, and install it.</li>
-<li><strong><a href="source-data/">Prepare Source Data</a></strong>: Create four deterministic NetCDF
-   files for the example ingestion.</li>
-<li><strong><a href="ingestion/">Run Ingestion</a></strong>: Write one local Zarr product and inspect
-   its ChunkManager record.</li>
+<li><strong><a href="plugins/">Install the Example Plugin</a></strong>: Clone and install the
+   <code>firecube-quickstart-plugin</code> example.</li>
+<li><strong><a href="source-data/">Prepare Source Data</a></strong>: Generate four deterministic
+   NetCDF files for the example ingestion.</li>
+<li><strong><a href="ingestion/">Run Ingestion</a></strong>: Write one local Zarr product and open it
+   with <code>xarray</code>.</li>
 </ol>
 <h2 id="next-steps">Next Steps</h2>
 <ul>

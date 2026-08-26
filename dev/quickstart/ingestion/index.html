@@ -583,7 +583,7 @@
   <span class="md-ellipsis">
     
   
-    Create and Install the Example Plugin
+    Install the Example Plugin
   
 
     
@@ -703,21 +703,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#inspect-the-plugin" class="md-nav__link">
+  <a href="#run-the-ingestion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inspect The Plugin
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-the-local-ingestion" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run The Local Ingestion
+        Run The Ingestion
       
     </span>
   </a>
@@ -729,6 +718,17 @@
     <span class="md-ellipsis">
       
         Verify The Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-and-inspect-the-cube" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open And Inspect The Cube
       
     </span>
   </a>
@@ -4528,21 +4528,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#inspect-the-plugin" class="md-nav__link">
+  <a href="#run-the-ingestion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inspect The Plugin
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-the-local-ingestion" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run The Local Ingestion
+        Run The Ingestion
       
     </span>
   </a>
@@ -4554,6 +4543,17 @@
     <span class="md-ellipsis">
       
         Verify The Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-and-inspect-the-cube" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open And Inspect The Cube
       
     </span>
   </a>
@@ -4592,58 +4592,79 @@
 
 
 <h1 id="run-ingestion">Run Ingestion</h1>
-<p>Run the installed plugin once to write a local Zarr product and record the run
-in the product's <code>.firecube/</code> control plane.</p>
+<p>Run the installed plugin once to write a local Zarr product, then open it to
+confirm the data cube looks the way you expect.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
 <li>The quickstart virtual environment is active.</li>
-<li>The <code>weather_netcdf</code> plugin from
-  <a href="../plugins/">Create and Install the Example Plugin</a> is installed.</li>
-<li>The four files from <a href="../source-data/">Prepare Source Data</a> exist.</li>
+<li>The <code>quickstart_plugin</code> plugin from
+  <a href="../plugins/">Install the Example Plugin</a> is installed.</li>
+<li>The four files from <a href="../source-data/">Prepare Source Data</a> exist under
+  <code>sample_data/</code>.</li>
+<li>Commands run from the <code>firecube-quickstart-plugin/</code> directory.</li>
 </ul>
-<h2 id="inspect-the-plugin">Inspect The Plugin</h2>
-<p>Confirm the plugin name and options before writing data:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>weather_netcdf
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>weather_netcdf<span class="w"> </span>--show-options
+<h2 id="run-the-ingestion">Run The Ingestion</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>quickstart_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--input-data<span class="w"> </span>sample_data<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="si">${</span><span class="nv">PWD</span><span class="si">}</span><span class="s2">/sample_data/quickstart_plugin_out.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--product-name<span class="w"> </span>quickstart_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged
 </code></pre></div>
-<h2 id="run-the-local-ingestion">Run The Local Ingestion</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>quickstart-output
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>weather_netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--input-data<span class="w"> </span>quickstart-data/weather-netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="si">${</span><span class="nv">PWD</span><span class="si">}</span><span class="s2">/quickstart-output/weather.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--product-name<span class="w"> </span>quickstart_weather<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
-</code></pre></div>
-<p>The final summary should identify the selected plugin, the
-<code>quickstart_weather</code> product, four processed files, and the local <code>stored_at</code>
-path.</p>
+<p>The final summary should identify the selected plugin, the <code>quickstart_plugin</code>
+product, four processed files, and the local <code>stored_at</code> path.</p>
 <h2 id="verify-the-run">Verify The Run</h2>
 <p>Confirm that the Zarr directory exists:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">test</span><span class="w"> </span>-d<span class="w"> </span>quickstart-output/weather.zarr<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Zarr product created&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">test</span><span class="w"> </span>-d<span class="w"> </span>sample_data/quickstart_plugin_out.zarr<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Zarr product created&quot;</span>
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Zarr product created
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Zarr product created
 </code></pre></div>
 <p>Inspect the product's control-plane records using the full product URI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file://</span><span class="si">${</span><span class="nv">PWD</span><span class="si">}</span><span class="s2">/quickstart-output/weather.zarr&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file://</span><span class="si">${</span><span class="nv">PWD</span><span class="si">}</span><span class="s2">/sample_data/quickstart_plugin_out.zarr&quot;</span>
 </code></pre></div>
 <p>The result should contain at least one <code>span</code> record for the completed run.
 These are logical Firecube records, not physical Zarr array chunks.</p>
+<h2 id="open-and-inspect-the-cube">Open And Inspect The Cube</h2>
+<p>Firecube writes the plugin's data into a <code>default</code> group inside the Zarr
+store:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="s">import xarray as xr</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="s">ds = xr.open_zarr(</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="s">    &quot;sample_data/quickstart_plugin_out.zarr&quot;,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="s">    group=&quot;default&quot;,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="s">    consolidated=False,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="s">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="s">print(ds)</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="s">print(ds[&quot;temperature_c&quot;].isel(latitude=0, longitude=0).values.tolist())</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="s">PY</span>
+</code></pre></div>
+<p>Expected output includes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Dimensions:  (timestamp: 4, latitude: 2, longitude: 3)
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>[19.4, 22.8, 27.3, 24.1]
+</code></pre></div>
+<p>The <code>timestamp</code> dimension has length 4, <code>latitude</code> has length 2, and
+<code>longitude</code> has length 3. The four temperature values keep the timestamp order
+defined in the source files. The result also contains <code>humidity_pct</code> and
+Firecube's timestamp-state array.</p>
+<p>This completes the quickstart: you installed Firecube, installed a plugin,
+staged source data, and produced a Zarr cube you can open with <code>xarray</code>.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../operations/s3-access/">Configure S3 Access</a></strong>: repeat the workflow
+<li><strong><a href="../../operations/s3-access/">Configure S3 Access</a></strong>: repeat this workflow
   against S3 or an S3-compatible service.</li>
-<li><strong><a href="../../operations/intake-catalog/">Create an Intake Catalog</a></strong>: make an
-  existing Zarr or Parquet product discoverable through Intake.</li>
-<li><strong><a href="../../tutorials/weather-netcdf/">NetCDF To Zarr tutorial</a></strong>: inspect how the
-  quickstart plugin transforms the source files and verify the stored values.</li>
-<li><strong><a href="../../operations/">Operations</a></strong>: inspect, recover, archive, or manage
-  completed products.</li>
+<li><strong><a href="../../reference/storage-drivers/">Storage Drivers</a></strong>: choose a different
+  storage backend for the product.</li>
+<li><strong><a href="../../operations/intake-catalog/">Create an Intake Catalog</a></strong>: make this
+  product discoverable through Intake.</li>
+<li><strong><a href="../../guides/plugins/">Plugin Development</a></strong>: build a plugin for
+  your own dataset.</li>
+<li><strong><a href="../../operations/">Operations</a></strong>: inspect, recover, archive, or
+  manage completed products.</li>
 </ul>
 
 

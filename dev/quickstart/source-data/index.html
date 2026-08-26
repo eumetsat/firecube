@@ -583,7 +583,7 @@
   <span class="md-ellipsis">
     
   
-    Create and Install the Example Plugin
+    Install the Example Plugin
   
 
     
@@ -4548,71 +4548,34 @@
 
 
 <h1 id="prepare-source-data">Prepare Source Data</h1>
-<p>Firecube expects you to provide source datasets. In normal use, these files may
-come from a data provider, an existing local sources,
-or object storage. Download or stage the source files before ingestion, then
-pass their directory or storage prefix to <code>--input-data</code>.</p>
-<p>The installed plugin decides which formats, filenames, and dataset structure it
-accepts. The <code>weather_netcdf</code> plugin from the previous page expects
-time-indexed NetCDF files. The example below creates four files it can read.</p>
+<p>Firecube expects you to provide source datasets. In normal use, these files
+may come from a data provider, an existing local source, or object storage.
+You are responsible for staging source files that match what your installed
+plugin accepts, then passing their directory or storage prefix to
+<code>--input-data</code>. The installed plugin decides which formats, filenames, and
+dataset structure it accepts; nothing about that is generic.</p>
+<p>The <code>quickstart_plugin</code> plugin from the previous page expects time-indexed
+NetCDF files. It ships a script that generates four matching example files, so
+this quickstart does not require you to source real data.</p>
 <h2 id="create-the-example-files">Create The Example Files</h2>
-<p>Run this command from the <code>firecube-quickstart/</code> directory with the virtual
-environment active:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">from pathlib import Path</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="s">import numpy as np</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">import xarray as xr</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">output = Path(&quot;quickstart-data/weather-netcdf&quot;)</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">output.mkdir(parents=True, exist_ok=True)</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="s">observations = [</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="s">    (&quot;2024-07-01T00:00:00&quot;, 19.4, 68.0),</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="s">    (&quot;2024-07-01T06:00:00&quot;, 22.8, 61.0),</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s">    (&quot;2024-07-01T12:00:00&quot;, 27.3, 47.0),</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="s">    (&quot;2024-07-01T18:00:00&quot;, 24.1, 55.0),</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="s">]</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="s">for index, (timestamp, temperature, humidity) in enumerate(observations, start=1):</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="s">    dataset = xr.Dataset(</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="s">        data_vars={</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="s">            &quot;temperature_c&quot;: (</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="s">                (&quot;timestamp&quot;, &quot;latitude&quot;, &quot;longitude&quot;),</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="s">                np.full((1, 2, 3), temperature, dtype=&quot;float64&quot;),</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="s">            ),</span>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="s">            &quot;humidity_pct&quot;: (</span>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="s">                (&quot;timestamp&quot;, &quot;latitude&quot;, &quot;longitude&quot;),</span>
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="s">                np.full((1, 2, 3), humidity, dtype=&quot;float64&quot;),</span>
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="s">            ),</span>
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="s">        },</span>
-<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="s">        coords={</span>
-<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="s">            &quot;timestamp&quot;: [np.datetime64(timestamp, &quot;ns&quot;)],</span>
-<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="s">            &quot;latitude&quot;: [50.0, 51.0],</span>
-<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="s">            &quot;longitude&quot;: [7.0, 8.0, 9.0],</span>
-<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="s">        },</span>
-<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="s">        attrs={&quot;title&quot;: &quot;Weather observations&quot;},</span>
-<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="s">    )</span>
-<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="s">    dataset.to_netcdf(output / f&quot;weather_{index:02d}.nc&quot;)</span>
-<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="s">PY</span>
+<p>Run this command from the <code>firecube-quickstart-plugin/</code> directory, with the
+quickstart virtual environment active:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>scripts/generate_sample_data.py
 </code></pre></div>
-<p>Firecube's installation includes NumPy, xarray, and NetCDF support used by this
-script.</p>
 <h2 id="verify-the-source-data">Verify The Source Data</h2>
 <p>List the generated files:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ls<span class="w"> </span>quickstart-data/weather-netcdf
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ls<span class="w"> </span>sample_data
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>weather_01.nc  weather_02.nc  weather_03.nc  weather_04.nc
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sample01.nc  sample02.nc  sample03.nc  sample04.nc
 </code></pre></div>
-<p>Each file contains one timestamp on the same 2 by 3 latitude-longitude grid.
-The ingestion command passes their parent directory to the plugin.</p>
+<p>Each file contains one timestamp of <code>temperature_c</code> and <code>humidity_pct</code> on the
+same 2 by 3 latitude-longitude grid. The ingestion command passes their parent
+directory to the plugin.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../ingestion/">Run Ingestion</a></strong>: convert the four NetCDF files into one
-  local Zarr product.</li>
-<li><strong><a href="../../tutorials/weather-netcdf/">NetCDF To Zarr tutorial</a></strong>: inspect the
-  matching plugin implementation and dataset transformation.</li>
+  local Zarr product and inspect it.</li>
 </ul>
 
 
