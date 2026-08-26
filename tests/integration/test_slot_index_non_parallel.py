@@ -74,8 +74,6 @@ def _ingest_args(
         "no_progress=true",
         "--option",
         "pipeline_batch_size=300",
-        "--option",
-        "pipeline_parallel=false",
     ]
     if resume_existing:
         args.extend(["--option", "resume_existing=true"])

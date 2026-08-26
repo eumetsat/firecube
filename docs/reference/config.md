@@ -38,7 +38,6 @@ label_allowlist = ["frp_variant"]
 zarr_chunk_shape = '{"timestamp":1,"ny":550,"nx":475}'
 zarr_compression = false
 zarr_consolidate = false
-pipeline_parallel = true
 pipeline_workers = 2
 pipeline_batch_size = 40
 resume_existing = true

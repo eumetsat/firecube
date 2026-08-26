@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from firecube.core.formats.zip import (
-    extract_all_from_zip,
+    extract_all_from_zips,
     extract_hdf5_from_zip,
     stream_hdf5_from_zip,
 )
@@ -119,19 +119,60 @@ def test_stream_path_and_extract_path_share_validation(tmp_path: Path) -> None:
         stream_hdf5_from_zip(archive)
 
 
-def test_extract_all_from_zip_extracts_every_member(tmp_path: Path) -> None:
+def test_extract_all_from_zips_extracts_every_member(tmp_path: Path) -> None:
     archive = tmp_path / "nested.zip"
     _write_zip(archive, {"payload/a.txt": b"A", "payload/b.txt": b"B"})
 
-    extract_all_from_zip(archive, tmp_path / "out")
+    extracted, failures = extract_all_from_zips([archive], lambda p: tmp_path / "out" / p.stem)
 
-    assert (tmp_path / "out" / "payload" / "a.txt").read_bytes() == b"A"
-    assert (tmp_path / "out" / "payload" / "b.txt").read_bytes() == b"B"
+    assert failures == {}
+    out = extracted[archive]
+    assert (out / "payload" / "a.txt").read_bytes() == b"A"
+    assert (out / "payload" / "b.txt").read_bytes() == b"B"
 
 
-def test_extract_all_from_zip_rejects_unsafe_member(tmp_path: Path) -> None:
+def test_extract_all_from_zips_reports_unsafe_member_as_failure(tmp_path: Path) -> None:
     archive = tmp_path / "unsafe.zip"
     _write_zip(archive, {"../escape.txt": b"evil"})
 
-    with pytest.raises(ValueError, match="Unsafe ZIP member"):
-        extract_all_from_zip(archive, tmp_path / "out")
+    extracted, failures = extract_all_from_zips([archive], lambda p: tmp_path / "out" / p.stem)
+
+    assert extracted == {}
+    assert "Unsafe ZIP member" in failures[archive]
+    assert not (tmp_path / "escape.txt").exists()
+    # Partial output of a failed archive is removed.
+    assert not (tmp_path / "out" / "unsafe").exists()
+
+
+@pytest.mark.parametrize("workers", [1, 4])
+def test_extract_all_from_zips_every_input_lands_in_one_mapping(
+    tmp_path: Path, workers: int
+) -> None:
+    good = []
+    for index in range(3):
+        archive = tmp_path / f"good-{index}.zip"
+        _write_zip(archive, {f"member-{index}.txt": bytes([index]) * 4})
+        good.append(archive)
+    corrupt = tmp_path / "corrupt.zip"
+    corrupt.write_bytes(b"this is not a zip archive")
+    evil = tmp_path / "evil.zip"
+    _write_zip(evil, {"../escape.txt": b"evil"})
+
+    extracted, failures = extract_all_from_zips(
+        [*good, corrupt, evil],
+        lambda p: tmp_path / "out" / p.stem,
+        workers=workers,
+    )
+
+    assert sorted(extracted) == sorted(good)
+    assert set(failures) == {corrupt, evil}
+    dirs = list(extracted.values())
+    assert len(set(dirs)) == len(dirs)
+    for index, archive in enumerate(good):
+        member = extracted[archive] / f"member-{index}.txt"
+        assert member.read_bytes() == bytes([index]) * 4
+
+
+def test_extract_all_from_zips_rejects_invalid_workers(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="workers must be >= 1"):
+        extract_all_from_zips([], lambda p: tmp_path, workers=0)

@@ -105,7 +105,6 @@ driver = "fsspec"
 pushgateway_url = "http://localhost:9091"
 
 [plugins.my_plugin]
-pipeline_parallel = true
 pipeline_workers = 4
 pipeline_batch_size = 40
 custom_option = "value"
@@ -129,7 +128,7 @@ silently ignored.
 
 | Tier | Examples | Applies to |
 |---|---|---|
-| Engine options | `pipeline_parallel`, `pipeline_workers`, `pipeline_batch_size`, `include_patterns`, `resume_existing` | Runtime behavior shared by plugins. |
+| Engine options | `pipeline_workers`, `pipeline_batch_size`, `extract_workers`, `include_patterns`, `resume_existing` | Runtime behavior shared by plugins. |
 | Output options | `zarr_chunk_shape`, `zarr_compression`, `zarr_consolidate` | Zarr template behavior. |
 | Plugin options | `region`, thresholds, filters, product-specific switches | Options declared by the installed plugin. |
 

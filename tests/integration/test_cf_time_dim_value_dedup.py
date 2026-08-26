@@ -63,7 +63,6 @@ def _run_staged_ingest(
             "write_mode": write_mode,
             "resume_existing": resume_existing,
             "pipeline_batch_size": 1,
-            "pipeline_parallel": False,
             "pipeline_workers": 1,
             "no_progress": True,
             "cleanup_workspace": True,

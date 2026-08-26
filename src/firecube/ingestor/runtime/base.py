@@ -862,8 +862,8 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
                 # 6. Planning
                 mode = determine_execution_mode(self.engine_config)
-                # Sequential falls back to pipeline with 0/1 workers pattern or distinct loop?
-                # Using BatchPlanner for both ensuring consistency.
+                # pipeline_workers >= 2 selects the threaded pipeline runner;
+                # otherwise the sequential runner. Both plan via BatchPlanner.
 
                 if self._firecube_engine is None:
                     from firecube.ingestor.runtime.engine import PipelineExecutor

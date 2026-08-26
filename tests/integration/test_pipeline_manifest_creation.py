@@ -45,8 +45,8 @@ class PipelineIngestorForTesting(GenericZarrIngestor):
         )
 
 
-@pytest.mark.parametrize("parallel", [True, False])
-def test_pipeline_manifest_creation(tmp_path, parallel):
+@pytest.mark.parametrize("pipeline_workers", [2, 1])
+def test_pipeline_manifest_creation(tmp_path, pipeline_workers):
     """Execution creates WAL immediately and snapshots only on explicit rebuild."""
     source_dir = tmp_path / "source"
     source_dir.mkdir()
@@ -59,8 +59,7 @@ def test_pipeline_manifest_creation(tmp_path, parallel):
         source=str(source_dir),
         product=target_dir.name,
         options={
-            "pipeline_parallel": parallel,
-            "pipeline_workers": 1,
+            "pipeline_workers": pipeline_workers,
             "pipeline_batch_size": 1,
             "include_patterns": ["*.nc"],
             "write_mode": "direct",

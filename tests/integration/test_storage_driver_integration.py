@@ -247,7 +247,6 @@ class TestPipelineWithBothDrivers:
                 )
             ),
             options={
-                "pipeline_parallel": False,
                 "pipeline_workers": 1,
                 "pipeline_batch_size": 1,
                 "include_patterns": ["*.nc"],

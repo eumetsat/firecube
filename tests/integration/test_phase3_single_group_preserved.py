@@ -70,7 +70,7 @@ def _base_args(target_path: Path) -> list[str]:
         "--option",
         "pipeline_batch_size=300",
         "--option",
-        "pipeline_parallel=true",
+        "pipeline_workers=2",
     ]
 
 

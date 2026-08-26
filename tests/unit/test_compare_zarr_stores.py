@@ -78,6 +78,33 @@ def test_identical_stores_are_equivalent(tmp_path: Path) -> None:
     assert report.mismatches == []
 
 
+def _add_scalar_array(path: Path, value: int) -> None:
+    root = zarr.open_group(store=str(path), mode="r+")
+    scalar = root.require_group("data").create_array(
+        "spatial_ref", shape=(), dtype="int32", chunks=()
+    )
+    scalar[...] = value
+
+
+def test_zero_dimensional_arrays_compare(tmp_path: Path) -> None:
+    # A CF grid-mapping scalar (shape ()) must compare, not crash on indexing.
+    a = _make_store(tmp_path / "a.zarr")
+    b = _make_store(tmp_path / "b.zarr")
+    _add_scalar_array(a, 0)
+    _add_scalar_array(b, 0)
+
+    report = _compare(a, b)
+
+    assert report.equivalent is True
+
+    c = _make_store(tmp_path / "c.zarr")
+    _add_scalar_array(c, 7)
+    report = _compare(a, c)
+
+    assert report.equivalent is False
+    assert any("values differ" in m for m in report.mismatches)
+
+
 def test_shape_mismatch_detected(tmp_path: Path) -> None:
     a = _make_store(tmp_path / "a.zarr", shape=(2, 2), chunks=(1, 2))
     b = _make_store(tmp_path / "b.zarr", shape=(3, 2), chunks=(1, 2))

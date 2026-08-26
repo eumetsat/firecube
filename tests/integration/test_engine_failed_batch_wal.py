@@ -80,7 +80,6 @@ def test_mixed_batches_yield_failed_status(tmp_path: Path) -> None:
         target=session.product.product_uri.to_str(),
         output_format="zarr",
         options={
-            "pipeline_parallel": False,
             "pipeline_batch_size": 1,
             "write_mode": "direct",
             "no_progress": True,
