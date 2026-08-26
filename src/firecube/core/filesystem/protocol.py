@@ -70,6 +70,17 @@ class AtomicWriter(Protocol):
         """
         ...
 
+    def replace_atomic(self, uri: StorageUri, data: bytes) -> None:
+        """Atomic overwrite-or-create. A concurrent reader MUST observe either
+        the previous content or the new content in full — never a truncated,
+        empty, or partially-written object.
+
+        Implementations MUST use backend-native atomicity primitives (e.g. a
+        temp file published via rename locally, a single whole-body PUT on
+        object stores). They MUST NOT truncate the destination in place.
+        """
+        ...
+
 
 @runtime_checkable
 class MultipartUploader(Protocol):

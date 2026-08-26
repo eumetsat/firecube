@@ -72,6 +72,13 @@ class DuckDbMixin:
 
     @property
     def con(self) -> duckdb.DuckDBPyConnection:
+        """This thread's DuckDB connection.
+
+        Raises:
+            RuntimeError: If accessed outside a batch, i.e. before
+                ``batch_setup`` has opened a connection on this thread or
+                after ``batch_teardown`` has closed it.
+        """
         if not hasattr(self._db_local, "con"):
             raise RuntimeError("DuckDB connection not initialized for this thread")
         return self._db_local.con
@@ -112,6 +119,22 @@ class DuckDbMixin:
             del self._db_local.con
 
     def batch_setup(self, ctx: PluginContext) -> None:
+        """Open this thread's connection and prepare its schema.
+
+        Uses an in-memory database unless the run opts into
+        ``duckdb_persist_batches``, in which case each worker gets its own
+        file under the run's temp workspace. Calls the
+        ``prepare_duckdb_schema`` hook, then cooperates with the MRO so
+        stacked mixins keep their own setup.
+
+        Args:
+            ctx: Plugin-facing run context supplying the effective options.
+
+        Raises:
+            Exception: Whatever ``prepare_duckdb_schema`` raises, after
+                logging. Schema failure aborts the batch rather than leaving a
+                half-prepared connection in use.
+        """
         # Memory vs persist decision:
         #   ctx.in_memory=True  → always use in-memory (test mode or explicit flag).
         #   ctx.in_memory=False → default to in-memory unless duckdb_persist_batches=true,
@@ -142,6 +165,13 @@ class DuckDbMixin:
             super_setup(ctx)
 
     def batch_teardown(self, ctx: PluginContext) -> None:
+        """Close and discard this thread's connection.
+
+        Cooperates with the MRO so stacked mixins keep their own teardown.
+
+        Args:
+            ctx: Plugin-facing run context, passed on to the next teardown.
+        """
         self.teardown_duckdb()
         # Optional by design: if no parent hook exists in the MRO, this is a no-op.
         super_teardown = getattr(super(), "batch_teardown", None)

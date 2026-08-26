@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from firecube.core.config import StorageConfig
+from firecube.core.controlplane._paths import run_dir_for
 from firecube.core.controlplane.deletion import DeletionEngine
 from firecube.core.controlplane.repo import ManifestRepository
 from firecube.core.controlplane.types import (
@@ -547,7 +548,7 @@ class ChunkManager:
         Used by ``ResumeGuard`` for overlap detection and by operators for
         coverage diagnostics.
 
-        Inherits the active-span dedupe from :meth:`list_chunks`: during a
+        Inherits the active-span dedupe from `list_chunks`: during a
         force-reingest in-flight window, only the highest-``run_id`` active
         span per slice contributes to the per-group totals, so coverage is
         not double-counted.
@@ -724,23 +725,25 @@ class ChunkManager:
 
         Between preview (``list_stale_claims``) and mutation (``clear_claim``),
         a live pod could refresh a previously stale claim or another operator
-        could delete it. Each mutation re-reads the current state via
-        ``list_claims`` and only clears domains that remain stale AND present;
-        live claims are never forcibly overridden. Errors are collected
-        per-claim, and the sweep continues past any single-claim race.
+        could delete it. Each mutation re-reads the current domain directly and
+        only clears domains that remain stale AND present; live claims are never
+        forcibly overridden. Errors are collected per-claim, and the sweep
+        continues past any single-claim race.
         """
         result = ClearSweepResult()
         stale = self.list_stale_claims(product=product)
         result.previewed = [claim.domain for claim in stale]
         if dry_run:
             return result
+        if self.repo.claims is None:
+            self.repo._ensure_bound()
+        assert self.repo.claims is not None
         for claim in stale:
-            fresh = self.list_claims(product=product)
-            current = next((c for c in fresh if c.domain == claim.domain), None)
+            current = self.repo.claims.read_claim_by_domain(product=product, domain=claim.domain)
             if current is None:
                 result.skipped_missing.append(claim.domain)
                 continue
-            if not current.stale:
+            if current.last_heartbeat_at != claim.last_heartbeat_at or not current.stale:
                 result.skipped_fresh.append(claim.domain)
                 continue
             try:
@@ -926,8 +929,8 @@ class ChunkManager:
 
         Between preview (``list_stale_runs``) and mutation (``abandon_run``), a
         live pod could refresh the run's heartbeat or the run could reach a
-        terminal status. Each mutation re-reads the current state via
-        ``list_runs`` and only abandons runs that remain stale AND non-terminal.
+        terminal status. Each mutation re-reads the current run entry and only
+        abandons runs that remain stale AND non-terminal.
         Runs already terminal are recorded as ``skipped_already_terminal``;
         runs whose heartbeat refreshed are recorded as ``skipped_fresh``. The
         sweep continues past any single-run race so one live pod cannot block
@@ -938,10 +941,22 @@ class ChunkManager:
         result.previewed = [run.run_id for run in stale]
         if dry_run:
             return result
+        self.repo._ensure_bound()
+        assert self.repo._resolver is not None
+        assert self.repo._wal_reader is not None
         for run in stale:
-            fresh = self.list_runs(product=product)
-            current = next((r for r in fresh if r.run_id == run.run_id), None)
-            if current is None or current.is_terminal:
+            run_dir, run_uri = run_dir_for(self.repo._resolver, product, run.run_id)
+            current_entry = self.repo._wal_reader.read_run_entry(
+                product=product,
+                run_dir=run_dir,
+                run_uri=run_uri,
+                run_id=run.run_id,
+            )
+            if current_entry is None:
+                result.skipped_already_terminal.append(run.run_id)
+                continue
+            current = self.repo._run_info_from_entry(product, current_entry)
+            if current.is_terminal:
                 result.skipped_already_terminal.append(run.run_id)
                 continue
             if not current.stale:
@@ -968,7 +983,7 @@ class ChunkManager:
         Returns ``None`` when the on-disk ``current.json`` is missing. Other
         I/O errors propagate. ``ManifestError`` propagates on corruption (the
         on-disk record's identity-hash cross-check is enforced by
-        :meth:`SlotIndexModelRecord.from_json_bytes`).
+        `SlotIndexModelRecord.from_json_bytes`).
         """
         control_root_uri = self.repo.get_control_root_uri(product)
         _fs, control_root = self.repo._get_fs(control_root_uri)
@@ -992,7 +1007,7 @@ class ChunkManager:
         """Negotiate the slot-index model for ``product``, returning the persisted record.
 
         Acquires the ``slot_index_model:current`` write claim and dispatches into
-        :meth:`_apply_slot_model_precedence`. Loser threads (``ClaimConflictError``)
+        `_apply_slot_model_precedence`. Loser threads (``ClaimConflictError``)
         inspect full convergence: ``current.json`` AND the zarr root identity-hash
         attribute must both match the declared model before the loser emits
         ``EVENT_SLOT_INDEX_MODEL_VERIFIED`` and returns. CP-only match is the race
@@ -1328,7 +1343,7 @@ def check_legacy_index_record(
     carries ``.firecube/slot_index/current.json`` but has not yet produced the
     ``.firecube/index/current.json`` resolved-index record. Called at ``DirectZarrIngestor``
     pod startup and by ``firecube zarr preallocate`` BEFORE any
-    :meth:`ChunkManager.ensure_resolved_index` call so a legacy cube cannot be
+    `ChunkManager.ensure_resolved_index` call so a legacy cube cannot be
     silently overwritten by a fresh resolved-index stamp.
 
     Presence check only: the legacy payload is never trusted for policy. Fresh

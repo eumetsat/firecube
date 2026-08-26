@@ -106,7 +106,7 @@ class ResultMetrics:
             self._compat["storage_handled"] = self.storage_handled
 
     def to_dict(self) -> dict[str, Any]:
-        """Render typed fields as a public dict (no private ``_compat`` leak)."""
+        """Render the typed fields as a plain dict, excluding internal state."""
         rendered: dict[str, Any] = {}
         if self.write_mode is not None:
             rendered["write_mode"] = self.write_mode

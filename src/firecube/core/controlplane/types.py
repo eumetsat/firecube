@@ -126,7 +126,7 @@ class ItemManifestEntry:
             depends on the axis kind (ISO string, integer, etc.). Must be
             JSON-native (``str``, ``int``, ``float``, ``bool``, ``None``);
             non-native values will fail loudly at
-            :func:`canonical_index_bytes` serialisation.
+            `canonical_index_bytes` serialisation.
         source_ref: A stable reference the caller can dereference to load the
             item at write time. Interpretation is fixed by ``source_ref_kind``.
             Must be non-empty.
@@ -225,7 +225,7 @@ def compute_resolved_index_identity_hash(
         items: Optional manifest entries. Accepts either
             ``ItemManifestEntry`` instances (canonicalised via
             ``entry.to_canonical_dict()``) or already-canonicalised dicts
-            (as produced by :meth:`ResolvedIndexRecord.from_json_bytes`).
+            (as produced by `ResolvedIndexRecord.from_json_bytes`).
 
     Returns:
         Lowercase-hex SHA-256 digest (64 characters).
@@ -570,8 +570,8 @@ class ResolvedIndexRecord:
     Optional ``items`` carries a content-addressed manifest for
     ``IrregularTimeAxis`` cubes. It is omitted from the wire format and
     ``identity_hash`` for regular / integer axes so those cubes stay
-    byte-identical to pre-manifest records (see
-    :func:`compute_resolved_index_identity_hash`).
+    byte-identical to pre-manifest records
+    (see `compute_resolved_index_identity_hash`).
     """
 
     schema_version: str = "v1"
@@ -596,7 +596,7 @@ class ResolvedIndexRecord:
         """Serialise to the on-disk wire format (deterministic, UTF-8 JSON).
 
         ASYMMETRIC: the ``items`` key is omitted when
-        :attr:`items` is ``None`` so records for regular / integer axes serialise
+        `items` is ``None`` so records for regular / integer axes serialise
         byte-identically to pre-manifest records.
         """
 
@@ -748,7 +748,7 @@ class SlotIndexModelRecord:
 
         After parsing, this recomputes ``model.identity_hash`` from the embedded
         model payload and asserts it equals the stored ``identity_hash`` field.
-        On mismatch it raises :class:`ManifestError` with a message containing
+        On mismatch it raises `ManifestError` with a message containing
         ``"identity-hash mismatch"`` and both the stored and recomputed values.
 
         The cross-check ensures corrupt or tampered records are rejected before

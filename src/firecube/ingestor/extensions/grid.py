@@ -29,8 +29,8 @@ Design notes
   half-cell edges around centers, so all centers correspond to a real cell.
   This fixes the common off-by-one and "extra empty last row/col" issues that
   arise when treating centers as edges.
-- The binning/aggregation core is shared with :mod:`.healpix` via
-  :mod:`._binning`. Performance: mean/min/max/first/last/any are vectorized;
+- The binning/aggregation core is shared with `healpix` via
+  `_binning`. Performance: mean/min/max/first/last/any are vectorized;
   median is supported but may be expensive on large grids.
 """
 

@@ -134,9 +134,33 @@ class SourceFile(Protocol):
 class Ingestor(Protocol):
     """Protocol defining the core contract for an ingestor."""
 
-    def run(self, ctx: IngestContext) -> IngestResult: ...
+    def run(self, ctx: IngestContext) -> IngestResult:
+        """Execute a full ingest run and return its result.
 
-    def ingest(self, ctx: IngestContext) -> IngestResult: ...
+        This is the top-level orchestration entry point: it opens the run in
+        the control plane, drives batching and writes, and closes the run in a
+        terminal state. Framework-owned — plugin authors implement the hooks
+        it calls, not this method.
+
+        Args:
+            ctx: Resolved run context: source, target, storage binding, and
+                effective options.
+
+        Returns:
+            The run outcome, including output paths and run-level metrics.
+        """
+        ...
+
+    def ingest(self, ctx: IngestContext) -> IngestResult:
+        """Perform the ingest work for *ctx* without run-level orchestration.
+
+        Args:
+            ctx: Resolved run context.
+
+        Returns:
+            The ingest outcome.
+        """
+        ...
 
 
 class PipelineHost(Protocol):
@@ -157,24 +181,77 @@ class PipelineHost(Protocol):
     ) -> Mapping[str, Any]: ...
 
     # Lifecycle hooks called by PipelineRunner
-    def on_pipeline_start(self, ctx: PluginContext, state: PipelineRunState) -> None: ...
+    def on_pipeline_start(self, ctx: PluginContext, state: PipelineRunState) -> None:
+        """Called once on the main thread before any batch runs.
+
+        The place for shared resource setup that must happen before the first
+        write (a persistent database schema, a warmed cache). Raising here
+        aborts the run before any batch is attempted.
+
+        Args:
+            ctx: Plugin-facing run context.
+            state: Snapshot of run state at start, including the effective
+                worker count and batch size.
+        """
+        ...
+
     def on_batch_success(
         self,
         ctx: PluginContext,
         state: PipelineRunState,
         batch: PipelineBatch,
         result: PipelineResult,
-    ) -> None: ...
+    ) -> None:
+        """Called on the main thread after each successful batch.
+
+        Never called from a worker thread, so implementations may touch
+        non-thread-safe state. The engine records the batch's control-plane
+        span here; a hook failure is logged as a bookkeeping error and does
+        not demote the batch to a failure.
+
+        Args:
+            ctx: Plugin-facing run context.
+            state: Run state as of this batch.
+            batch: The batch that completed.
+            result: The batch outcome, including its metrics and outputs.
+        """
+        ...
+
     def on_batch_failure(
         self,
         ctx: PluginContext,
         state: PipelineRunState,
         batch: PipelineBatch,
         result: PipelineResult,
-    ) -> None: ...
-    def finalize_pipeline(
-        self, ctx: RuntimeIngestContext, state: PipelineRunState
-    ) -> IngestResult: ...
+    ) -> None:
+        """Called on the main thread after each failed batch.
+
+        The engine records the failure against the batch's control-plane span
+        here. A hook failure is logged and does not mask the original error.
+
+        Args:
+            ctx: Plugin-facing run context.
+            state: Run state as of this batch.
+            batch: The batch that failed.
+            result: The batch outcome; ``result.error`` carries the cause.
+        """
+        ...
+
+    def finalize_pipeline(self, ctx: RuntimeIngestContext, state: PipelineRunState) -> IngestResult:
+        """Assemble the run result after the last batch has been processed.
+
+        Framework-owned — it delegates to the pipeline executor. Plugins
+        aggregate their own numbers through the metrics hooks instead.
+
+        Args:
+            ctx: Runtime run context.
+            state: Final accumulated run state.
+
+        Returns:
+            The run outcome reported to the caller.
+        """
+        ...
+
     def _process_batch(self, batch: PipelineBatch, ctx: PluginContext) -> PipelineResult: ...
     def _resolve_time_dim_name(self) -> str:
         """Resolve the firecube time-dim coordinate name for this ingestor.

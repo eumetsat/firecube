@@ -16,8 +16,8 @@
 
 Extracted from the MTG FCI plugin as a generic runtime utility.
 Accumulates per-group writes, tracks time bounds, merges contiguous
-index ranges, and produces :class:`SpanCoverage` objects compatible
-with :meth:`SpanRecorder.record_batch_success`.
+index ranges, and produces `SpanCoverage` objects compatible
+with `SpanRecorder.record_batch_success`.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from firecube.core.controlplane.types import SpanCoverage
 class CoverageTracker:
     """Collect per-group write coverage entries for span recording.
 
-    Coverage entries emitted by :meth:`build_coverage` follow the schema
+    Coverage entries emitted by `build_coverage` follow the schema
     expected by ingestion runtime span extraction.
     """
 
@@ -155,7 +155,7 @@ class CoverageTracker:
                 entry; falls back to the tracker's constructor value.
 
         Returns:
-            List of :class:`SpanCoverage` objects, one per recorded group.
+            List of `SpanCoverage` objects, one per recorded group.
         """
         effective_dim = time_dim_name or self._time_dim_name
         coverage: list[SpanCoverage] = []

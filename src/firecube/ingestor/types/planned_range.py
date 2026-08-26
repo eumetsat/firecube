@@ -32,7 +32,7 @@ SlotRange = tuple[int, int]
 
 ``slot_start`` is inclusive and ``slot_end`` is exclusive, matching Python
 slicing and engine array indexing. Used for the ``--slot-start`` /
-``--slot-end`` worker assignment; see :class:`PlannedRange` for the
+``--slot-end`` worker assignment; see `PlannedRange` for the
 per-group form.
 """
 

@@ -138,8 +138,6 @@ For parallel writes across disjoint slot ranges, see
 
 ::: firecube.ingestor.api.IndexedWrite
 
-::: firecube.core.api.IndexedWrite
-
 ## See Also
 
 - [Plugin Development Overview](../guides/plugins/index.md)

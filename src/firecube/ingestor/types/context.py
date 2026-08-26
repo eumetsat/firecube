@@ -46,7 +46,7 @@ class StorageContext:
 
     Each field binds one storage role to a session that the engine creates
     from the resolved target and selected storage driver. Plugins reach it
-    through :attr:`PluginContext.storage` and should treat the bound
+    through `PluginContext.storage` and should treat the bound
     sessions as engine-owned handles: use them to inspect the product
     identity and perform storage operations, but do not replace or close
     them.
@@ -224,11 +224,11 @@ class PluginContext:
     """Read-only per-run context handed to every plugin-facing hook.
 
     The engine builds one instance per run from the caller's
-    :class:`IngestContext` plus its own runtime state, and passes it to
+    `IngestContext` plus its own runtime state, and passes it to
     plugin hooks such as ``discover_source_files``, ``get_batch_groups``,
     and ``build_dataset``. Plugin authors never construct it themselves.
 
-    All members are read-only. In particular, :attr:`options` is a detached
+    All members are read-only. In particular, `options` is a detached
     immutable copy taken when the context is created, and attribute access
     outside the documented surface raises ``AttributeError``.
     """
@@ -257,7 +257,7 @@ class PluginContext:
     def target(self) -> str | None:
         """Output target URI for this run, or ``None`` when not provided.
 
-        Taken from the caller's :attr:`IngestContext.target`. The engine
+        Taken from the caller's `IngestContext.target`. The engine
         resolves the actual store location from it together with the
         configured write mode, so plugins should treat it as declarative
         rather than writing to it directly.
@@ -270,7 +270,7 @@ class PluginContext:
 
         Set by the caller (e.g. the ``--in-memory`` CLI flag). When true,
         plugins that stage data (such as DuckDB-backed plugins) should use
-        in-memory state instead of files under :attr:`temp_root`.
+        in-memory state instead of files under `temp_root`.
         """
         return self._ctx.in_memory
 
@@ -288,7 +288,7 @@ class PluginContext:
         """Storage sessions bound to this run, keyed by role, or ``None``.
 
         When output storage is bound, ``storage.output`` is the session for
-        the run's output target. See :class:`StorageContext`.
+        the run's output target. See `StorageContext`.
         """
         return self._ctx.storage
 
@@ -346,7 +346,7 @@ class PluginContext:
         """Plugin options for this run as an immutable mapping.
 
         A detached copy of the caller's options (including ``--option``
-        CLI overrides) wrapped in :class:`types.MappingProxyType` when the
+        CLI overrides) wrapped in `types.MappingProxyType` when the
         context is created: it cannot be mutated, and later changes to
         engine state are not reflected in it.
         """
@@ -365,7 +365,7 @@ class PluginContext:
             default: Value returned when the option is not set.
 
         Returns:
-            The value from :attr:`options`, or ``default`` when missing.
+            The value from `options`, or ``default`` when missing.
         """
         return self._options.get(key, default)
 
@@ -373,7 +373,7 @@ class PluginContext:
         """Ensure a source file is available locally and return its path.
 
         Remote sources (e.g. S3 URIs) are downloaded into the per-run cache
-        under :attr:`temp_root`; already-local paths are returned directly.
+        under `temp_root`; already-local paths are returned directly.
 
         Args:
             source: A local path, URI string, or source-file object.

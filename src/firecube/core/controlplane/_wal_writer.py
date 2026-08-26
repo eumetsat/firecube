@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""WAL write collaborator for :mod:`firecube.core.controlplane.repo`."""
+"""WAL write collaborator for `ManifestRepository`."""
 
 from __future__ import annotations
 

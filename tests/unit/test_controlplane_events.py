@@ -124,3 +124,34 @@ def test_replacement_committed_idempotent(temp_workspace):
     ]
 
     assert len(replacement_events) == 1
+
+
+def test_run_meta_rewritten_atomically_across_run_lifecycle(temp_workspace):
+    """run.json is written at run start and rewritten at terminal state. Both
+    writes must go through the atomic-replace path: a create-only write would
+    raise FileExistsError on the rewrite, and a plain open("w") would expose a
+    0-byte window to concurrent resume guards listing runs."""
+    product = "product"
+    run_id = "run-001"
+    repo = ManifestRepository(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
+    _record_run_started(repo, product=product, run_id=run_id)
+
+    run_dir = temp_workspace / product / ".firecube" / "runs" / run_id
+    meta_path = run_dir / "run.json"
+    started = json.loads(meta_path.read_text(encoding="utf-8"))
+    assert started["run_id"] == run_id
+
+    repo.record_run_terminal(
+        product=product,
+        run_id=run_id,
+        output_path=str(temp_workspace / product),
+        output_format="zarr",
+        size=0,
+        meta={"plugin": "test"},
+        status="complete",
+    )
+
+    completed = json.loads(meta_path.read_text(encoding="utf-8"))
+    assert completed["status"] == "complete"
+    leftovers = [p.name for p in run_dir.iterdir() if p.name.endswith(".tmp")]
+    assert leftovers == [], f"atomic-replace temp file leaked: {leftovers!r}"

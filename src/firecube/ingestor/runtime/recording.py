@@ -347,8 +347,8 @@ def _coverage_from_nested_mapping(metrics: Any) -> Any | None:
 
     Checks the batch-level top-level ``coverage`` key first, then the run-level
     ``zarr.coverage`` / ``pipeline.coverage`` nested locations that
-    :func:`merge_batch_metrics` and the pipeline summary populate. Works for
-    both plain dicts and the mapping-compatible :class:`ResultMetrics`.
+    `merge_batch_metrics` and the pipeline summary populate. Works for
+    both plain dicts and the mapping-compatible `ResultMetrics`.
     """
     coverage = metrics.get("coverage")
     if coverage:

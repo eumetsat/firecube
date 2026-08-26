@@ -179,6 +179,15 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Fixed
 
+- Concurrent multi-process ingests no longer crash at startup with
+  `ControlPlaneCorruptionError` ("Expecting value: line 1 column 1") when one
+  process's resume guard lists runs while a peer is writing its `run.json`:
+  run metadata is now published through a new atomic-replace filesystem
+  primitive (`AtomicWriter.replace_atomic`; temp file + rename locally, a
+  single whole-body PUT on object stores), and the WAL reader skips a
+  zero-byte `run.json` with no segments as an in-flight peer write instead of
+  raising.
+
 - `firecube zarr compare` and `compare_zarr_stores` no longer crash with an
   IndexError on stores containing a zero-dimensional array (for example a CF
   grid-mapping scalar such as `spatial_ref`); scalar values are now compared
@@ -196,6 +205,14 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   and datetime fills are skipped to keep array metadata valid strict JSON and
   the stores openable by xarray. Resuming into an existing store backfills the
   attribute once.
+
+- Bulk stale-sweep operations (`abandon_stale_runs`, `clear_stale_claims`)
+  no longer re-list the full runs/ or claims/ directory once per stale item.
+  Each mutation-time re-check is now a targeted per-item read. On S3, the
+  cost of a sweep with `S` stale items over a product with `N` total items
+  drops from `O(N × S)` object reads to `O(N + S)`. Behavior is unchanged
+  (race semantics, orphan-handling, and partial-abandon crash recovery are
+  all preserved). Fixes #26.
 
 ### Security
 

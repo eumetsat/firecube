@@ -52,12 +52,12 @@ def _session_for_store(store_uri: str, storage_config: StorageConfig) -> Storage
 class AppendStrategy:
     """Xarray-append write strategy for Zarr stores.
 
-    Wraps :func:`~firecube.ingestor.runtime.zarr.append.append_time_groups`
+    Wraps `append_time_groups`
     behind the ``AppendWriteStrategy`` Protocol so that
     ``GenericZarrIngestor`` can treat append and region writes uniformly.
 
     All static configuration is captured at construction time; only
-    per-batch dynamic inputs are passed to :meth:`write_groups`.
+    per-batch dynamic inputs are passed to `write_groups`.
     """
 
     def __init__(

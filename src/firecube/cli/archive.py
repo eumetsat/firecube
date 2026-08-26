@@ -16,12 +16,11 @@
 
 Archive subcommands distinguish two URI categories:
 
-* **Source/target Zarr products** are resolved via
-  :class:`firecube.core.product.resolver.ProductResolver` and feed a
-  :class:`firecube.core.storage.session.StorageSession` so that driver,
-  endpoint, and credential resolution happen at the CLI boundary.
+* **Source/target Zarr products** are resolved via `ProductResolver` and feed
+  a `StorageSession` so that driver, endpoint, and credential resolution
+  happen at the CLI boundary.
 * **`.tgm` artifact files** are *not* products. They are external archive
-  files and use raw :class:`firecube.core.storage.uri.StorageUri` only —
+  files and use raw `StorageUri` only —
   product resolvers MUST NOT be used for them. ``info``/``validate``/``list``
   operate on artifacts only and never construct a session.
 """

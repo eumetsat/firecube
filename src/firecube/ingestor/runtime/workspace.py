@@ -46,12 +46,23 @@ class LocalSourceFile:
 
     @property
     def uri(self) -> str:
+        """The file's absolute ``file://`` URI."""
         return self._path.as_uri()
 
     def open(self) -> IO[bytes]:
+        """Open the file for seekable binary reading.
+
+        Returns:
+            An open binary handle the caller is responsible for closing.
+        """
         return self._path.open("rb")
 
     def local_path(self) -> Path | None:
+        """Return the resolved local path.
+
+        Always a path for this implementation; the protocol allows ``None``
+        for sources that are not cheaply available on local disk.
+        """
         return self._path
 
 

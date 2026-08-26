@@ -186,18 +186,54 @@ def test_every_export_documented_or_allowlisted(module_name: str, documented: se
         f"{module_name}: allowlist names no longer exported: {sorted(stale_allowlist)}"
     )
 
-    documented_exports = {name for name in exports if f"{module_name}.{name}" in documented}
+    # A symbol re-exported by more than one facade is the *same object* (see
+    # test_reexports_are_identical_objects). It is documented once, on the page
+    # whose audience it serves, under that page's facade: plugin-authoring
+    # pages carry the ingestor path, core pages the core path. So a directive
+    # under any facade documents the symbol for all of them — requiring one per
+    # facade would render the identical entry two or three times.
+    documented_exports = {
+        name
+        for name in exports
+        if any(f"{module}.{name}" in documented for module in PUBLIC_MODULES)
+    }
     missing = exports - documented_exports - set(allowlist)
     assert not missing, (
         f"{module_name}: exports missing from docs/reference and not "
-        f"allowlisted: {sorted(missing)}. Add a `::: {module_name}.<name>` "
-        "directive or an INTENTIONALLY_UNDOCUMENTED entry with a reason."
+        f"allowlisted: {sorted(missing)}. Add a `::: <facade>.<name>` directive "
+        "on the page serving that symbol's audience, or an "
+        "INTENTIONALLY_UNDOCUMENTED entry with a reason."
     )
 
-    over_allowlisted = documented_exports & set(allowlist)
+    over_allowlisted = {name for name in allowlist if f"{module_name}.{name}" in documented}
     assert not over_allowlisted, (
         f"{module_name}: names both documented and allowlisted (remove the "
         f"stale allowlist entries): {sorted(over_allowlisted)}"
+    )
+
+
+def test_reexports_are_identical_objects() -> None:
+    """A name shared by two facades must resolve to one object, not two.
+
+    ``test_every_export_documented_or_allowlisted`` accepts a directive under
+    any facade as documenting the symbol for all of them. That is only sound
+    while the facades re-export the same object: two distinct types sharing a
+    name would leave one of them silently undocumented.
+    """
+    modules = {name: import_module(name) for name in PUBLIC_MODULES}
+    divergent: list[str] = []
+    for i, left in enumerate(PUBLIC_MODULES):
+        for right in PUBLIC_MODULES[i + 1 :]:
+            shared = set(modules[left].__all__) & set(modules[right].__all__)
+            divergent.extend(
+                f"{name}: {left} and {right} export different objects"
+                for name in sorted(shared)
+                if getattr(modules[left], name) is not getattr(modules[right], name)
+            )
+
+    assert not divergent, (
+        "facades re-export the same name as different objects, so a single "
+        f"reference entry cannot cover both: {divergent}"
     )
 
 

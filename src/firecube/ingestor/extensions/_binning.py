@@ -17,8 +17,8 @@
 A *binner* maps irregular ``(lat, lon)`` input samples onto a 1-D **target
 axis** of cells, recording for each usable input point the integer position of
 its target cell. Aggregation then scatters values onto that axis. This pattern
-is grid-agnostic: a regular lat/lon grid (:mod:`.grid`) and a HEALPix grid
-(:mod:`.healpix`) differ only in how the axis and the point->position mapping
+is grid-agnostic: a regular lat/lon grid (`grid`) and a HEALPix grid
+(`healpix`) differ only in how the axis and the point->position mapping
 are computed, not in how values are aggregated.
 
 The target axis can be **derived from the data** or **supplied explicitly** by
@@ -80,7 +80,7 @@ def aggregate_by_position(
         position: For each kept point, the target-axis index in
             ``[0, n_targets)``.
         n_targets: Length of the output axis.
-        aggregation: One of :data:`AGGREGATIONS`. ``any`` returns a ``uint8``
+        aggregation: One of `AGGREGATIONS`. ``any`` returns a ``uint8``
             presence mask; all others return ``float32`` with ``NaN`` in empty
             cells.
     """

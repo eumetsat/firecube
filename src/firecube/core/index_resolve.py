@@ -353,8 +353,9 @@ def _resolver_for(axis: AxisSpec) -> AxisResolver:
 class ResolvedIndex:
     """A resolved, immutable index for a multi-group DirectZarr product.
 
-    Built by ``resolve_index_spec``; cached per ``(id(ctx._ctx), spec)``
-    on the ``DirectZarrIngestor`` instance.
+    Built by ``resolve_index_spec`` and cached per run context and spec on
+    the ``DirectZarrIngestor`` instance, so repeated lookups within a run
+    return the same object.
 
     The ``identity_hash`` is content-addressed from the canonical
     resolved-index payload. It intentionally does not track the legacy
@@ -538,7 +539,7 @@ def resolve_index_spec(
     """Resolve an ``IndexSpec`` into a ``ResolvedIndex``.
 
     Validates that each ``RegularTimeAxis.coordinate`` matches
-    ``time_dim_name``. Builds per-group resolvers via ``_resolver_for``.
+    ``time_dim_name``, then builds one resolver per group.
 
     Args:
         spec: The index specification to resolve.
@@ -554,7 +555,7 @@ def resolve_index_spec(
         NotImplementedError: If any axis kind is not supported.
 
     Examples:
-        >>> from firecube.core.index_spec import IndexSpec, RegularTimeAxis
+        >>> from firecube.core.api import IndexSpec, RegularTimeAxis
         >>> axis = RegularTimeAxis(
         ...     coordinate="timestamp",
         ...     epoch="2024-01-01T00:00:00Z",

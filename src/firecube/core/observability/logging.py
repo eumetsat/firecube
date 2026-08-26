@@ -22,7 +22,7 @@ from opentelemetry import trace
 
 
 class JsonFormatter(logging.Formatter):
-    """Emit log records as a single JSON line via :func:`json.dumps`.
+    """Emit log records as a single JSON line via `json.dumps`.
 
     Replaces the previous hand-formatted JSON template which interpolated
     record fields directly into a format string and therefore failed to

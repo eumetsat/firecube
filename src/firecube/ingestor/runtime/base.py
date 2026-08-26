@@ -360,6 +360,11 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
     @property
     def batch_id_prefix(self) -> str:
+        """Prefix applied to every batch ID this ingestor produces.
+
+        Derived from the ingestor's ``name`` so batch IDs stay attributable to
+        their plugin in logs, metrics, and control-plane records.
+        """
         return f"{self.name}_"
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:

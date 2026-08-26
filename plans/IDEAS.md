@@ -230,6 +230,13 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
   - Wave 1 memoization foundation: commit `7847254` (`perf(resume-guard): memoize run-entry scan`).
   - DESIGN.md §27 (derived read-model doctrine).
 
+- **Related work**: Issue #26 Wave 1.5 (DONE.md 2026-08-25) reduced sweep-time
+  enumeration cost in `abandon_stale_runs`, `clear_stale_claims`, and
+  `_get_run_entry` via targeted per-run/per-claim reads. The
+  `_snapshot.py:136` bullet above and the `resume_guard.py:405-410`
+  bitmap remain OPEN — the full remedy for the snapshot cost still
+  belongs to this Wave 2 design.
+
 ### §17 — Wave 3: terminal run pruning + auto-rebuild triggers
 
 - UNDECIDED / DEFERRED (until Wave 2 lands)

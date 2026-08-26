@@ -202,11 +202,21 @@ class WalReader:
         segment_paths = self.list_run_segment_paths(run_dir)
 
         if self._fs.exists(meta_uri):
+            raw: str | None = None
             try:
                 with self._fs.open(meta_uri, "r") as handle:
-                    payload = json.load(handle)
+                    raw = str(handle.read())
+                payload = json.loads(raw)
             except Exception:
                 if not segment_paths:
+                    if raw is not None and not raw.strip():
+                        # A zero-byte run.json with no WAL segments is a peer's
+                        # first meta write still in flight (stores written
+                        # before meta writes became atomic), not corruption: an
+                        # instant earlier the file did not exist and this
+                        # reader would have returned None.
+                        self.log.debug("Skipping pending run meta at %s", meta_uri.to_str())
+                        return None
                     raise
                 return self.build_orphan_run_entry(
                     product=product,

@@ -149,6 +149,38 @@ class IndexedRegionStrategy:
         static_owner_slot_start: int | None = None,
         zarr_write_empty_chunks: bool = False,
     ) -> dict[str, Any]:
+        """Dispatch write intents into the store under a scoped Zarr config.
+
+        Implements `RegionWriteStrategy.write_groups` and adds the DirectZarr
+        knobs: static-write ownership and the ``write_empty_chunks`` setting,
+        which is applied only for the duration of this call so it cannot leak
+        into other Zarr operations in the same process.
+
+        Args:
+            group_to_intents: Write intents to dispatch, keyed by group path.
+            schema: Array specs used for schema setup and drift checks.
+            claim_for_group: Called as ``(group)`` to obtain a write claim
+                guarding schema setup.
+            claim_for_slot: Called as ``(group, ts_index)`` to obtain a
+                per-slot write claim guarding intent dispatch.
+            slot_range: Half-open ``(start, stop)`` slot window this caller
+                owns. ``None`` accepts every slot the intents address.
+            slot_group: Group whose slots *slot_range* applies to.
+            codec_pipelines_by_array: Per-array ``(filters, serializer,
+                compressors)`` overrides, keyed by ``(group, array_name)``.
+            region_write_concurrency: Maximum region writes in flight at once.
+            suppress_static_emission_for_non_owner: Skip static write intents
+                unless this caller owns them, so parallel pods do not all
+                rewrite the same static arrays.
+            static_owner_slot_start: Slot start of the pod that owns static
+                writes, compared against this run's own slot start.
+            zarr_write_empty_chunks: Whether to persist chunks holding only
+                fill values. ``False`` keeps sparse arrays compact.
+
+        Returns:
+            Write metrics for the call, including
+            ``zarr_write_empty_chunks_effective``.
+        """
         with _array_write_empty_chunks_config(zarr_write_empty_chunks):
             result = self._write_groups_unscoped(
                 group_to_intents=group_to_intents,
@@ -1020,7 +1052,7 @@ class IndexedRegionStrategy:
           read, so first writes stay O(1) in store reads.
         - marker present → committed previously: the incoming data must replay
           the identical bytes (NaN/NaT-aware via ``equal_nan=True``), else
-          :class:`SchemaDriftError`. Re-writing is skipped on an exact match.
+          `SchemaDriftError`. Re-writing is skipped on an exact match.
         """
         arr_path = f"{intent.group}/{intent.array}"
         # callable() is the right duck-type check; typing.Callable would treat
