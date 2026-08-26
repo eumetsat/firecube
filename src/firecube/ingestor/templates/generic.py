@@ -125,7 +125,7 @@ def _build_zarr_batch_runtime(
 
 
 class GenericZarrIngestor(BaseIngestor):
-    """Thin facade over :class:`AppendStrategy` for Zarr-based batch ingestion.
+    """Thin facade over `AppendStrategy` for Zarr-based batch ingestion.
 
     Resolves URIs/storage, acquires write claims, then delegates all append
     logic to ``AppendStrategy.write_groups()``.

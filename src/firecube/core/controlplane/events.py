@@ -214,6 +214,9 @@ class RunEventWriter:
         if self._slot_group is not None:
             payload["slot_group"] = self._slot_group
 
-        with self._fs.open(self._run_meta_uri, "w") as handle:
-            json.dump(payload, handle, separators=(",", ":"))
+        # Atomic replace: peer pods list runs (resume guard) while this run is
+        # live, and a plain open("w") exposes a 0-byte run.json between
+        # truncate and json.dump.
+        run_meta_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        self._fs.atomic_writer.replace_atomic(self._run_meta_uri, run_meta_bytes)
         self._last_meta_write = time.time()

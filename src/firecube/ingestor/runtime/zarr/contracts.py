@@ -33,7 +33,22 @@ class AppendWriteStrategy(Protocol):
         dataset_for_batch: Callable[[str, Sequence[Any]], xr.Dataset | None],
         batch_size: int,
         claim_for_group: Callable[[str], Any] | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Append each group's timestamps to the store and report metrics.
+
+        Args:
+            group_to_timestamps: Timestamps to append, keyed by group path.
+                Order within a group is the order they are appended in.
+            dataset_for_batch: Called as ``(group, timestamps)`` to build the
+                dataset for one append. Returning ``None`` skips that batch.
+            batch_size: Maximum number of timestamps per append call.
+            claim_for_group: Called as ``(group)`` to obtain a write claim
+                guarding that group. ``None`` writes without coordination.
+
+        Returns:
+            Write metrics for the call, merged across all groups.
+        """
+        ...
 
 
 @runtime_checkable
@@ -57,4 +72,27 @@ class RegionWriteStrategy(Protocol):
         slot_group: str | None = None,
         codec_pipelines_by_array: Mapping[tuple[str, str], tuple[Any, Any, Any]] | None = None,
         region_write_concurrency: int = 1,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Dispatch each group's write intents into the store and report metrics.
+
+        Args:
+            group_to_intents: Write intents to dispatch, keyed by group path.
+            schema: Array specs used for schema setup and drift checks.
+                ``None`` writes against the store as it already stands.
+            claim_for_group: Called as ``(group)`` to obtain a write claim. It
+                guards schema setup when *claim_for_slot* is also given, and
+                the whole dispatch otherwise.
+            claim_for_slot: Called as ``(group, ts_index)`` to obtain a
+                per-slot write claim guarding intent dispatch.
+            slot_range: Half-open ``(start, stop)`` slot window this caller
+                owns. ``None`` accepts every slot the intents address.
+            slot_group: Group whose slots *slot_range* applies to.
+            codec_pipelines_by_array: Per-array ``(filters, serializer,
+                compressors)`` overrides, keyed by ``(group, array_name)``.
+            region_write_concurrency: Maximum region writes in flight at once;
+                ``1`` writes serially.
+
+        Returns:
+            Write metrics for the call, merged across all groups.
+        """
+        ...

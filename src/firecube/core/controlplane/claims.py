@@ -217,27 +217,42 @@ class FilesystemClaimService:
         """List stale claims for one product."""
         return [claim for claim in self.list_claims(product=product) if claim.stale]
 
-    def clear_claim(self, *, product: str, domain_id: str, force: bool = False) -> bool:
-        """Delete a claim file; refuses non-stale claims unless force=True."""
+    def read_claim_by_domain(self, *, product: str, domain: str) -> ClaimInfo | None:
+        """Return the claim for a canonical write-domain identifier, if present.
+
+        Uses targeted claim-name derivation to avoid listing the claims directory.
+        Raises ControlPlaneCorruptionError on malformed JSON.
+        """
+        domain_product, category, name = domain.split(":", 2)
+        if domain_product != product:
+            msg = f"claim domain {domain!r} does not belong to product {product!r}"
+            raise ValueError(msg)
         control_path, _control_uri = self._control_root_resolver(product)
         claims_dir = control_path.join(CLAIMS_DIRNAME)
-        try:
-            entries = self._fs.ls(claims_dir, detail=False)  # type: ignore[attr-defined]
-        except Exception:
+        claim_name = WriteDomain(product=domain_product, category=category, name=name).claim_name
+        return self._read_claim(product=product, claim_path=claims_dir.join(claim_name))
+
+    def clear_claim(self, *, product: str, domain_id: str, force: bool = False) -> bool:
+        """Delete a claim file; refuses non-stale claims unless force=True."""
+        domain_product, category, name = domain_id.split(":", 2)
+        if domain_product != product:
+            msg = f"claim domain {domain_id!r} does not belong to product {product!r}"
+            raise ValueError(msg)
+        control_path, _control_uri = self._control_root_resolver(product)
+        claims_dir = control_path.join(CLAIMS_DIRNAME)
+        claim_path = claims_dir.join(
+            WriteDomain(product=domain_product, category=category, name=name).claim_name
+        )
+        info = self._read_claim(product=product, claim_path=claim_path)
+        if info is None:
             return False
-        for entry in entries:
-            claim_path = _entry_to_uri(entry, claims_dir)
-            info = self._read_claim(product=product, claim_path=claim_path)
-            if info is None or info.domain != domain_id:
-                continue
-            if not force and not info.stale:
-                raise ClaimConflictError(
-                    f"Refusing to clear active claim {domain_id}; rerun with --force to override."
-                )
-            with suppress(FileNotFoundError):
-                self._fs.rm(claim_path, recursive=False)
-            return True
-        return False
+        if not force and not info.stale:
+            raise ClaimConflictError(
+                f"Refusing to clear active claim {domain_id}; rerun with --force to override."
+            )
+        with suppress(FileNotFoundError):
+            self._fs.rm(claim_path, recursive=False)
+        return True
 
     def _list_products(self) -> set[str]:
         products: set[str] = set()

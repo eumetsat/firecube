@@ -251,7 +251,7 @@ class TelemetryService:
     ) -> None:
         """Emit the ``index_ensured`` telemetry event.
 
-        Fires once per :meth:`ChunkManager.ensure_resolved_index` call from
+        Fires once per `ChunkManager.ensure_resolved_index` call from
         DirectZarr startup or ``firecube zarr index rebuild``. The counter value is
         always 1; the interesting content is the ``meta`` payload. Multi-value
         ``axis_kinds`` and ``groups`` are joined with commas so Prometheus labels

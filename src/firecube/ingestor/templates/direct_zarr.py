@@ -580,13 +580,13 @@ class WriteIntent:
         Use this for 1-D arrays that grow along the time axis — per-slot
         scalars, per-slot vectors, or any array where each slot contributes
         one row. The array must be declared with ``time_indexed=True`` in
-        :class:`ZarrArraySpec`.
+        `ZarrArraySpec`.
 
         ``data`` must be an eager ``np.ndarray``; callable payloads are not
         supported for ``kind="1d"`` and raise ``TypeError`` at construction.
 
         Args:
-            group: Zarr group name matching a :class:`ZarrGroupSpec` in the schema.
+            group: Zarr group name matching a `ZarrGroupSpec` in the schema.
             array: Array name within the group.
             index: Time-slot index for this write.
             data: Array data to write at this slot.
@@ -619,13 +619,13 @@ class WriteIntent:
 
         Use this for the main image arrays — counts, radiances, quality flags,
         pixel times — where each slot contributes a spatial tile. The array
-        must be declared with ``time_indexed=True`` in :class:`ZarrArraySpec`.
+        must be declared with ``time_indexed=True`` in `ZarrArraySpec`.
 
         ``data`` may be an eager ``np.ndarray`` or a zero-arg callable
         ``Callable[[], np.ndarray]``; the callable is resolved at dispatch time.
 
         Args:
-            group: Zarr group name matching a :class:`ZarrGroupSpec` in the schema.
+            group: Zarr group name matching a `ZarrGroupSpec` in the schema.
             array: Array name within the group.
             index: Time-slot index for this write.
             data: 2-D array data, or a callable that returns it.
@@ -665,7 +665,7 @@ class WriteIntent:
         coordinate array so the output cube is self-describing.
 
         Args:
-            group: Zarr group name matching a :class:`ZarrGroupSpec` in the schema.
+            group: Zarr group name matching a `ZarrGroupSpec` in the schema.
             index: Time-slot index for this coordinate.
             value: The coordinate value for this slot — typically a
                 ``datetime``, ``numpy.datetime64``, or integer. Must not be
@@ -704,20 +704,20 @@ class WriteIntent:
         Use this for arrays that are the same across every time slot: latitude/
         longitude grids, channel names, calibration tables, spatial references.
         The array must be declared with ``time_indexed=False`` in
-        :class:`ZarrArraySpec`; the engine pre-creates it at its declared shape
+        `ZarrArraySpec`; the engine pre-creates it at its declared shape
         during schema setup.
 
         **Write-once contract**: the engine writes the array on the first ingest
         run and stamps a marker attribute. On any subsequent run (resume or
         re-ingest) the incoming data must be byte-identical to what was already
-        written, or the ingest fails with :class:`SchemaDriftError`. There is no
+        written, or the ingest fails with `SchemaDriftError`. There is no
         partial-update path for static arrays.
 
         ``data`` may be an eager ``np.ndarray`` or a zero-arg callable
         ``Callable[[], np.ndarray]``; the callable is resolved at dispatch time.
 
         Args:
-            group: Zarr group name matching a :class:`ZarrGroupSpec` in the schema.
+            group: Zarr group name matching a `ZarrGroupSpec` in the schema.
             array: Array name declared with ``time_indexed=False`` in that group.
             data: Data to write, or a callable that returns it.
 
@@ -736,7 +736,7 @@ class WriteIntent:
 
 
 def _compile_indexed_write(iw: IndexedWrite, resolved_index: ResolvedIndex) -> list[WriteIntent]:
-    """Compile an :class:`IndexedWrite` into a :class:`WriteIntent` by resolving its slot.
+    """Compile an `IndexedWrite` into a `WriteIntent` by resolving its slot.
 
     Pure function. No I/O, no logging, no state mutation, no caching side
     effects — the same ``(iw, resolved_index)`` inputs always produce equal
@@ -802,8 +802,8 @@ class DirectZarrIngestor(BaseIngestor):
     Plugins that write directly to Zarr (bypassing xarray) should subclass
     this template and implement:
 
-    - :meth:`zarr_schema` — declare groups and arrays.
-    - :meth:`build_write_intents` — convert a batch into write operations.
+    - `zarr_schema` — declare groups and arrays.
+    - `build_write_intents` — convert a batch into write operations.
 
     The template orchestrates store setup, write execution via a region write
     strategy, coverage tracking, and metrics aggregation.
@@ -863,10 +863,9 @@ class DirectZarrIngestor(BaseIngestor):
         """Compile a single source item into one or more indexed writes.
 
         Called once per element of ``batch.items`` by the default
-        :meth:`build_write_intents` implementation. Each returned
-        :class:`IndexedWrite` is compiled against the plugin's resolved
-        :class:`IndexSpec` via :func:`_compile_indexed_write` and appended
-        to the batch's :class:`WriteIntent` list.
+        `build_write_intents` implementation. Each returned `IndexedWrite` is
+        compiled against the plugin's resolved `IndexSpec` and appended to the
+        batch's `WriteIntent` list.
 
         Return options:
 
@@ -878,13 +877,13 @@ class DirectZarrIngestor(BaseIngestor):
 
         Static (non-time-indexed) arrays are *not* emitted through this hook
         — they carry no slot coordinate to resolve. To emit statics alongside
-        indexed writes, override :meth:`build_write_intents` instead, call
+        indexed writes, override `build_write_intents` instead, call
         ``super().build_write_intents(batch, ctx)`` for the indexed
-        compilation, then append :meth:`WriteIntent.static` items:
+        compilation, then append `WriteIntent.static` items:
 
         If a plugin overrides both hooks, the engine calls
-        :meth:`build_write_intents` directly and this hook is reached only via
-        the default :meth:`build_write_intents` implementation below.
+        `build_write_intents` directly and this hook is reached only via
+        the default `build_write_intents` implementation below.
 
         .. code-block:: python
 
@@ -896,20 +895,20 @@ class DirectZarrIngestor(BaseIngestor):
                 return intents
 
         Default raises ``NotImplementedError``. Plugins must override either
-        this hook or :meth:`build_write_intents`; overriding neither raises
-        ``NotImplementedError`` from :meth:`build_write_intents` at first call.
+        this hook or `build_write_intents`; overriding neither raises
+        ``NotImplementedError`` from `build_write_intents` at first call.
 
         Args:
             item: A single element from ``batch.items``.
             ctx: The plugin context for this run.
 
         Returns:
-            A single :class:`IndexedWrite`, a sequence of them, or ``None``
+            A single `IndexedWrite`, a sequence of them, or ``None``
             to drop the item.
 
         Raises:
             NotImplementedError: If not overridden and
-                :meth:`build_write_intents` is also not overridden.
+                `build_write_intents` is also not overridden.
         """
         _ = item, ctx
         raise NotImplementedError(
@@ -1015,25 +1014,24 @@ class DirectZarrIngestor(BaseIngestor):
         """Convert a batch into a list of write operations.
 
         Default implementation: iterates ``batch.items``, calls
-        :meth:`build_indexed_write` per item, compiles each returned
-        :class:`IndexedWrite` via :func:`_compile_indexed_write` against
-        :meth:`resolved_index`, and returns the concatenated
-        :class:`WriteIntent` list.
+        `build_indexed_write` per item, compiles each returned `IndexedWrite`
+        against `resolved_index`, and returns the concatenated `WriteIntent`
+        list.
 
         Plugins have two override options:
 
-        - **Override :meth:`build_indexed_write`** (recommended for
+        - **Override `build_indexed_write`** (recommended for
           time-indexed writes) — return coordinate-keyed writes per item;
           the engine resolves slot indices for you.
         - **Override this method directly** (needed for statics or when
           the batch requires cross-item state) — return the
-          :class:`WriteIntent` list yourself. Call
+          `WriteIntent` list yourself. Call
           ``super().build_write_intents(batch, ctx)`` first if you want
           to keep the indexed-write compilation path and just append
           statics.
 
         If a plugin overrides both hooks, this method wins: the engine calls
-        :meth:`build_write_intents` directly. :meth:`build_indexed_write` is
+        `build_write_intents` directly. `build_indexed_write` is
         reached only through the default implementation here.
 
         Overriding neither raises ``NotImplementedError``.
@@ -1044,7 +1042,7 @@ class DirectZarrIngestor(BaseIngestor):
         enabled.
 
         Examples:
-            Emit one region write per item via :meth:`build_indexed_write`
+            Emit one region write per item via `build_indexed_write`
             (the default fallback compiles them for you):
 
                 def build_indexed_write(self, item, ctx):
@@ -1200,7 +1198,7 @@ class DirectZarrIngestor(BaseIngestor):
         intent generation → strategy execution → coverage and metrics assembly.
         ``cleanup_batch_data`` and ``batch_teardown`` fire in ``finally`` on
         success, empty-intents, and failure paths — mirroring
-        :meth:`GenericZarrIngestor._process_batch` verbatim so plugin authors
+        `GenericZarrIngestor._process_batch` verbatim so plugin authors
         get the same lifecycle contract across both templates.
         """
         from firecube.ingestor.api import IndexedRegionStrategy

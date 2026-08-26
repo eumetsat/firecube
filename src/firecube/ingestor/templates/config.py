@@ -133,7 +133,7 @@ class TemplateConfig:
     ``ZarrTemplateConfig`` for ``GenericZarrIngestor``); the dataclass
     fields of that class become the validated, typed options accepted for
     the template. Instances are built from raw caller options via
-    :meth:`from_options`, which rejects unknown keys and coerces values to
+    `from_options`, which rejects unknown keys and coerces values to
     the annotated field types.
     """
 

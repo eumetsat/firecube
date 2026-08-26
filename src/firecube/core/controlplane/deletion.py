@@ -440,9 +440,8 @@ class DeletionEngine:
         """Delete Zarr concrete chunks from spans.
 
         ``time_dim_name`` is an explicit operator-supplied time dimension; see
-        :func:`firecube.core.controlplane.time_dim.resolve_span_time_dims` for
-        how it combines with the dim name recorded in span specs and
-        discovered from the timestamp-state array.
+        `resolve_span_time_dims` for how it combines with the dim name
+        recorded in span specs and discovered from the timestamp-state array.
         """
         from firecube.core.zarr.validation import read_chunk_grid
 

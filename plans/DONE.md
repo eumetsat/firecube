@@ -1,5 +1,60 @@
 # Done
 
+## 2026-08-25 — Stale-sweep fan-out fix (Issue #26)
+
+`abandon_stale_runs` and `clear_stale_claims` each re-enumerated the full runs or claims directory once per candidate found during the sweep. With N candidates and S stale entries, the re-check loop cost O(N × S) directory listings. Under a 4900-run product with 20 stale entries, that meant 20 extra full-directory scans per sweep call. This wave replaces every re-enumeration with a targeted single-file read, reducing the total listing cost to O(N + S).
+
+A secondary fan-out existed in `_get_run_entry`: it called `_list_run_entries` (O(N)) to locate a single run directory. A new `run_dir_for` helper derives the path directly from the run ID, cutting that call to O(1).
+
+`clear_claim` internals also enumerated the claims directory to find the claim file before deleting it. Targeted path derivation via `read_claim_by_domain` eliminates that listing too.
+
+### What
+
+**T1 — pin read_run_entry semantics** (`f422ee2`): Added `tests/unit/test_wal_reader_read_run_entry.py` to characterize `WalReader.read_run_entry` behavior for missing, malformed, and orphan run directories. Establishes the contract the targeted-read helpers depend on.
+
+**T2 — add run_dir_for helper** (`c8e99e5`): Added `run_dir_for(product_uri, run_id)` pure function to `src/firecube/core/controlplane/repo.py`. Derives the run directory path directly from the run ID without listing the parent directory. Used by `_get_run_entry` (T8) and the re-check paths (T9, T10).
+
+**T3 — add read_claim_by_domain** (`1c80955`): Added `ManifestRepository.read_claim_by_domain(domain)` wrapping the existing `_read_claim` helper. Returns the claim record for a single domain without enumerating the claims directory. Used by the `clear_stale_claims` re-check (T10).
+
+**T4 — bound abandon_stale_runs enumeration (RED)** (`b0531be`): Added `CountingFilesystem`-based bound test for `abandon_stale_runs` asserting runs-dir list calls stay at O(N + S). Fails until T9 lands.
+
+**T5 — bound clear_stale_claims enumeration (RED)** (`d7a860b`): Added `CountingFilesystem`-based bound test for `clear_stale_claims` asserting claims-dir list calls stay at O(N + S). Fails until T10 lands.
+
+**T7 — orphan run-directory behavior lock** (`94b6792`): Added `tests/unit/test_bulk_abandon_stale_runs.py` characterization tests for orphan run directories (directory present, `run.json` absent). Confirms sweep behavior is preserved through the targeted-read refactor.
+
+**T8 — _get_run_entry targeted read** (`2ec3e46`): Rewired `ManifestRepository._get_run_entry` to call `run_dir_for` + `read_run_entry` instead of `_list_run_entries`. Eliminates the O(N) scan per single-run lookup.
+
+**T9 — abandon_stale_runs re-check** (`726cc6f`): Replaced the `_list_run_entries` re-enumeration inside `abandon_stale_runs` with a `read_run_entry` call via `run_dir_for`. The re-check now reads one file. Fixes #26 for the runs sweep path. T4 bound test turns green.
+
+**T10 — clear_stale_claims re-check + clear_claim fix** (`ab4b97b`): Replaced the claims-directory re-enumeration inside `clear_stale_claims` with `read_claim_by_domain`. Also replaced the per-claim directory listing inside `clear_claim` with targeted path derivation + `fs.rm`. Fixes #26 for the claims sweep path. T5 bound test turns green.
+
+**T12 — concurrent operators idempotent** (`7edbc8d`): Added `tests/unit/test_bulk_abandon_stale_runs.py` concurrency test confirming two simultaneous `--all-stale` operators produce no errors and leave the store consistent. Heartbeat refresh, terminal transition, and deletion-by-other-operator are all covered.
+
+**T13 — partial-abandon crash recovery** (`08533f0`): Added test confirming that a crash mid-sweep leaves the store in a state where a re-run completes cleanly. No batch semantics were introduced; each record is processed independently.
+
+Note: the snapshot path was excluded from this scope after code inspection confirmed `_snapshot.py` has only one enumeration call, not two. The full remedy for the snapshot cost belongs to the LSM active-run index tracked under IDEAS.md §16.
+
+### Guardrails preserved
+
+- **DESIGN §11** (one container == one run): unchanged.
+- **DESIGN §27** (derived read models): upheld. `_RunEntriesCache` lifetime unchanged; no new persistent state in `.firecube/`.
+- **Public API stability**: no changes to `list_runs`, `list_claims`, `abandon_stale_runs`, `clear_stale_claims`, or `_get_run_entry` signatures. `AbandonSweepResult` and `ClearSweepResult` dataclass fields unchanged.
+- **Race semantics**: heartbeat refresh, terminal transition, and deletion-by-other-operator all still caught (T9/T10 with updated monkeypatch targets, T12).
+- **Orphan run-directory behavior**: preserved (T7 characterization + T8 preservation).
+- **Partial-abandon crash recovery**: preserved. No batch semantics introduced (T13).
+- **Snapshot path untouched**: `git diff --stat src/firecube/core/controlplane/_snapshot.py` shows no changes.
+
+### Verification
+
+- `uv run pytest --strict-deps tests/unit/test_bulk_abandon_stale_runs.py tests/unit/test_bulk_clear_stale_claims.py tests/unit/test_wal_reader_read_run_entry.py tests/unit/test_filesystem_claim_service_read_by_domain.py tests/unit/test_run_dir_for.py -q` — 33 passed.
+- `uv run ruff check .` clean; `uv run ruff format --check .` clean; `uv run pyright` 0 errors on changed files.
+- **Cost reduction**: `CountingFilesystem` bound tests confirm enumeration bounded by O(N + S), down from O(N × S). With N=20, S=10: runs-dir list calls dropped from 21 to at most 2; claims-dir list calls dropped from 21 to at most 2.
+
+### Follow-up
+
+- **IDEAS.md §16** — Wave 2 (LSM active-run marker + completed-slots bitmap) still UNDECIDED. The `_snapshot.py` single-enumeration bullet and `resume_guard.py` bitmap remain OPEN.
+- **IDEAS.md §17** — Wave 3 (terminal run pruning + auto-rebuild) still UNDECIDED, blocked on Wave 2.
+
 ## 2026-08-24 — Milestone D — Optional cleanup
 
 ### What
@@ -1883,3 +1938,4 @@ commit ef771cc). This entry closes the §19 remainder.
   principle). Ref: internal plan `normalize-string-vars-cf-attrs-refinement`.
 
 **Confidence:** HIGH
+

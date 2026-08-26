@@ -27,7 +27,7 @@ Stability rules:
   is always serialised as ``"time_unit":null``.
  ``identity_hash`` is never embedded inside the hashed payload.
  Epoch normalisation is the explicit responsibility of
-  :func:`normalize_epoch_iso`; ``canonical_bytes()`` does NOT silently mutate
+  `normalize_epoch_iso`; ``canonical_bytes()`` does NOT silently mutate
   the stored epoch string. ``"Z"`` and ``"+00:00"`` therefore deliberately
   produce different hashes -- callers that want them to converge must
   normalise the epoch before constructing the model.
@@ -83,7 +83,7 @@ class SlotIndexModel:
         name: Human-readable identifier for the model (e.g. ``"opera_v1"``).
         epoch: ISO-8601 UTC anchor (e.g. ``"2026-01-01T00:00:00Z"``); used as
             the origin from which slot indices are counted.
-        groups: Per-group :class:`SlotAxis` mapping; at least one entry.
+        groups: Per-group `SlotAxis` mapping; at least one entry.
         time_unit: Optional storage-precision hint
             (e.g. ``"seconds"``, ``"milliseconds"``); ``None`` is permitted
             and is serialised as JSON ``null``.
@@ -114,7 +114,7 @@ class SlotIndexModel:
         * ``json.dumps(..., sort_keys=True, separators=(",", ":"))`` is used so
           that whitespace and key order are stable across runs and platforms.
         * ``time_unit=None`` is serialised as JSON ``null``.
-        * The output does NOT contain :attr:`identity_hash` -- the hash is
+        * The output does NOT contain `identity_hash` -- the hash is
           computed over the canonical bytes, not stored inside them.
         """
 
@@ -134,9 +134,9 @@ class SlotIndexModel:
 
     @property
     def identity_hash(self) -> str:
-        """SHA-256 hex digest of :meth:`canonical_bytes`.
+        """SHA-256 hex digest of `canonical_bytes`.
 
-        Two :class:`SlotIndexModel` instances are considered equivalent
+        Two `SlotIndexModel` instances are considered equivalent
         partitioning schemes iff their ``identity_hash`` values match.
         """
 
@@ -148,7 +148,7 @@ def iso_to_epoch_s(iso: str) -> int:
 
     Only UTC inputs are accepted. The trailing ``"Z"`` or the explicit
     ``"+00:00"`` offset are both honoured; any other offset raises
-    :class:`ValueError`. Numpy is imported lazily so that ``slot_index`` stays
+    `ValueError`. Numpy is imported lazily so that ``slot_index`` stays
     cheap to import for code paths that never touch the epoch helpers.
     """
 
@@ -195,7 +195,7 @@ def normalize_epoch_iso(iso: str) -> str:
     """Round-trip an ISO-8601 UTC string through ``epoch_s`` and back to ``"...Z"``.
 
     Equivalent to ``epoch_s_to_iso(iso_to_epoch_s(iso))``; raises
-    :class:`ValueError` for non-UTC inputs via :func:`iso_to_epoch_s`.
+    `ValueError` for non-UTC inputs via `iso_to_epoch_s`.
     """
 
     return epoch_s_to_iso(iso_to_epoch_s(iso))

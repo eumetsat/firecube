@@ -91,6 +91,9 @@ Zarr stores and returns `ZarrCompareReport`.
 
 ::: firecube.core.api.normalize_epoch_iso
 
+`coerce_to_epoch_s()` is documented with the direct-Zarr index types in
+[Index Specification](parallelism.md).
+
 ## Reserved Array Attributes
 
 ::: firecube.core.api.RESERVED_ARRAY_ATTRS
@@ -116,19 +119,6 @@ Zarr stores and returns `ZarrCompareReport`.
 ::: firecube.core.api.ZarrCompareReport
 
 ::: firecube.core.api.compare_zarr_stores
-
-## Ingestor Re-Exports
-
-The ingestor facade re-exports the same attribute guards for plugin code.
-
-::: firecube.ingestor.api.RESERVED_ARRAY_ATTRS
-
-::: firecube.ingestor.api.assert_attrs_safe
-
-::: firecube.ingestor.api.FIRECUBE_STATIC_WRITTEN_ATTR
-
-`coerce_to_epoch_s()` is documented with the direct-Zarr index types in
-[Index Specification](parallelism.md).
 
 ## See Also
 

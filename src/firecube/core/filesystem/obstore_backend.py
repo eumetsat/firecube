@@ -320,6 +320,16 @@ class ObstoreAtomicWriter:
         except _obstore_compat.AlreadyExistsError as exc:
             raise FileExistsError(uri.to_str()) from exc
 
+    def replace_atomic(self, uri: StorageUri, data: bytes) -> None:
+        """Atomic overwrite-or-create (see `AtomicWriter`).
+
+        Default-mode ``put`` is atomic on every obstore backend: object stores
+        publish a whole-body PUT all-or-nothing, and the local backend stages
+        to a temp file and renames it into place.
+        """
+        rel_path = ObstoreFilesystem._test_resolve_path(uri, self._store_prefix)
+        self._store.put(rel_path, data)
+
 
 def _store_prefix_for(binding: StorageBinding) -> str:
     uri = binding.identity.product_uri

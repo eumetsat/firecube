@@ -157,9 +157,9 @@ class GenericTensogramIngestor(BaseIngestor):
     """Template for plugins that write directly to Tensogram ``.tgm`` archives.
 
     Subclasses implement ``build_dataset(group, items, ctx)`` returning an
-    :class:`xarray.Dataset` (or ``None`` to skip); the template writes each
+    `xarray.Dataset` (or ``None`` to skip); the template writes each
     group's dataset to the local ``.tgm`` target using the options declared
-    in :class:`TensogramTemplateConfig`. Remote targets are not supported.
+    in `TensogramTemplateConfig`. Remote targets are not supported.
     """
 
     template_config_class = TensogramTemplateConfig

@@ -14,7 +14,7 @@
 
 """Unit tests for fsspec atomic create-if-not-exists conflict normalization.
 
-The :class:`AtomicWriter` contract (``protocol.py``) requires ``write_atomic`` to
+The `AtomicWriter` contract (``protocol.py``) requires ``write_atomic`` to
 raise ``FileExistsError`` on an exclusive-create conflict, regardless of backend.
 Local fs signals the conflict with ``errno EEXIST``; s3fs implements ``"xb"`` as a
 conditional ``PutObject`` and signals a lost race with an HTTP 412
@@ -25,7 +25,13 @@ claim layer and crashing concurrent pods. These tests pin the normalization.
 
 from __future__ import annotations
 
+import contextlib
 import errno
+import json
+import threading
+import time
+from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -222,3 +228,176 @@ def test_local_write_atomic_leaves_no_temp_files(tmp_path: Any) -> None:
 
     leftovers = [p.name for p in tmp_path.iterdir() if p.name != "current.json"]
     assert leftovers == [], f"temp file leaked: {leftovers!r}"
+
+
+@pytest.mark.unit
+def test_local_replace_atomic_creates_when_missing(tmp_path: Any) -> None:
+    target = tmp_path / "run.json"
+
+    _local_writer().replace_atomic(_local_uri(target), b'{"status":"started"}')
+
+    assert target.read_bytes() == b'{"status":"started"}'
+
+
+@pytest.mark.unit
+def test_local_replace_atomic_overwrites_existing(tmp_path: Any) -> None:
+    """Unlike write_atomic, replace_atomic must succeed over an existing file."""
+    target = tmp_path / "run.json"
+    writer = _local_writer()
+
+    writer.replace_atomic(_local_uri(target), b'{"status":"started"}')
+    writer.replace_atomic(_local_uri(target), b'{"status":"completed"}')
+
+    assert target.read_bytes() == b'{"status":"completed"}'
+
+
+@pytest.mark.unit
+def test_local_replace_atomic_leaves_no_temp_files(tmp_path: Any) -> None:
+    target = tmp_path / "run.json"
+    writer = _local_writer()
+
+    writer.replace_atomic(_local_uri(target), b"{}")
+    writer.replace_atomic(_local_uri(target), b'{"n":2}')
+
+    leftovers = [p.name for p in tmp_path.iterdir() if p.name != "run.json"]
+    assert leftovers == [], f"temp file leaked: {leftovers!r}"
+
+
+class _CapturingReplaceFs:
+    """Fake remote fs recording the buffered whole-body write replace_atomic emits."""
+
+    protocol = "s3"
+
+    def __init__(self) -> None:
+        self.written: bytes | None = None
+        self.mode: str | None = None
+
+    def open(self, path: str, mode: str = "rb") -> Any:
+        fs = self
+        fs.mode = mode
+
+        class _Handle:
+            def __enter__(self) -> _Handle:
+                return self
+
+            def __exit__(self, *_: object) -> None:
+                return None
+
+            def write(self, data: bytes) -> None:
+                fs.written = data
+
+        return _Handle()
+
+
+@pytest.mark.unit
+def test_remote_replace_atomic_is_single_buffered_put() -> None:
+    """On object stores the write must be one whole-body PUT ('wb'), never
+    an exclusive create ('xb') that would fail on an existing object."""
+    fs = _CapturingReplaceFs()
+    writer = FsspecAtomicWriter(fs)
+
+    writer.replace_atomic(_URI, b'{"status":"started"}')
+
+    assert fs.mode == "wb"
+    assert fs.written == b'{"status":"started"}'
+
+
+def _payload(n: int) -> bytes:
+    """A distinct, self-describing JSON body large enough to span a partial write."""
+    return json.dumps({"generation": n, "filler": "x" * 4096}).encode("utf-8")
+
+
+def _observe_while_writing(
+    target: Path,
+    write: Callable[[bytes], None],
+    *,
+    generations: int,
+) -> list[bytes]:
+    """Rewrite *target* *generations* times while a reader thread samples it.
+
+    Returns every non-missing sample the reader observed. The reader only ever
+    sees bytes on disk, so any truncated, empty, or half-written state the
+    writer exposes lands in the returned list.
+    """
+    stop = threading.Event()
+    seen: list[bytes] = []
+
+    def reader() -> None:
+        while not stop.is_set():
+            with contextlib.suppress(FileNotFoundError):
+                seen.append(target.read_bytes())
+
+    thread = threading.Thread(target=reader, daemon=True)
+    thread.start()
+    try:
+        for n in range(generations):
+            write(_payload(n))
+    finally:
+        stop.set()
+        thread.join(timeout=10)
+    return seen
+
+
+def _corrupt_samples(seen: list[bytes]) -> list[bytes]:
+    """Samples that are not a complete payload a writer actually published."""
+    bad = []
+    for sample in seen:
+        try:
+            decoded = json.loads(sample)
+        except (ValueError, UnicodeDecodeError):
+            bad.append(sample)
+            continue
+        if sample != _payload(int(decoded["generation"])):
+            bad.append(sample)
+    return bad
+
+
+@pytest.mark.unit
+def test_local_replace_atomic_never_exposes_a_partial_read(tmp_path: Any) -> None:
+    """A concurrent reader observes whole generations only — the core contract.
+
+    ``AtomicWriter.replace_atomic`` promises a reader sees either the previous
+    content or the new content in full, never a truncated or empty file. This
+    is the invariant the control plane depends on: peer pods list runs and
+    parse ``run.json`` while a live run rewrites it, and a torn read surfaces
+    as ``ControlPlaneCorruptionError``.
+    """
+    target = tmp_path / "run.json"
+    writer = _local_writer()
+    uri = _local_uri(target)
+
+    seen = _observe_while_writing(
+        target, lambda data: writer.replace_atomic(uri, data), generations=200
+    )
+
+    assert seen, "reader never sampled the file; the race harness did not run"
+    assert _corrupt_samples(seen) == [], (
+        f"replace_atomic exposed {len(_corrupt_samples(seen))} torn read(s) "
+        f"out of {len(seen)} samples"
+    )
+    assert target.read_bytes() == _payload(199)
+
+
+@pytest.mark.unit
+def test_partial_read_harness_catches_a_truncating_writer(tmp_path: Any) -> None:
+    """The harness above must actually be able to see a torn read.
+
+    Guards `test_local_replace_atomic_never_exposes_a_partial_read` against
+    passing vacuously: the same reader, pointed at the plain ``open(path, "w")``
+    that ``replace_atomic`` replaced, must catch the 0-byte window between
+    truncate and write.
+    """
+    target = tmp_path / "run.json"
+
+    def truncating_write(data: bytes) -> None:
+        with open(target, "wb") as fh:
+            fh.flush()  # truncated to 0 bytes and visible to any reader
+            time.sleep(0.001)
+            fh.write(data)
+
+    seen = _observe_while_writing(target, truncating_write, generations=20)
+
+    assert _corrupt_samples(seen), (
+        "harness saw no torn read from a truncating writer, so it cannot prove "
+        "replace_atomic is atomic"
+    )

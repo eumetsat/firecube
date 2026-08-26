@@ -14,7 +14,7 @@
 
 """Click rename-hint layer.
 
-Augments :class:`click.NoSuchOption` errors with a navigation hint when the
+Augments `click.NoSuchOption` errors with a navigation hint when the
 user types a flag that was renamed in the strict-URI refactor.
 
 This is NOT a deprecation alias - the old flag still errors out. It is a UX
@@ -64,7 +64,7 @@ def build_command_path(ctx: click.Context | None) -> tuple[str, ...]:
     """Build a dotted command path from a Click context chain.
 
     Excludes the root context (whose ``info_name`` is the program name -
-    ``"firecube"`` in production, ``"cli"`` under :class:`click.testing.CliRunner`).
+    ``"firecube"`` in production, ``"cli"`` under `click.testing.CliRunner`).
     For ``firecube archive restore`` the returned tuple is ``("archive", "restore")``.
     """
     if ctx is None:
@@ -98,7 +98,7 @@ _INSTALLED_FLAG = "_firecube_rename_hints_installed"
 
 
 def install_rename_hints() -> None:
-    """Monkey-patch :meth:`click.Command.parse_args` once to inject rename hints.
+    """Monkey-patch `click.Command.parse_args` once to inject rename hints.
 
     Subsequent calls are no-ops (idempotent). Safe to call from any module init.
     """

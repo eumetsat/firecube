@@ -34,6 +34,7 @@ from firecube.core.controlplane._helpers import (
 from firecube.core.controlplane._helpers import (
     open_controlplane_fs_cached as _open_controlplane_fs_cached,
 )
+from firecube.core.controlplane._paths import run_dir_for
 from firecube.core.controlplane._projection import ManifestProjection
 from firecube.core.controlplane._snapshot import (
     read_latest_pointer,
@@ -753,10 +754,15 @@ class ManifestRepository:
         return self._projection._run_info_from_entry(product, payload)
 
     def _get_run_entry(self, *, product: str, run_id: str) -> dict[str, Any]:
-        for entry in self._list_run_entries(product):
-            if str(entry.get("run_id", "")) == run_id:
-                return entry
-        raise ManifestError(f"Run '{run_id}' not found for product '{product}'.")
+        self._ensure_bound()
+        assert self._wal_reader is not None and self._resolver is not None
+        run_dir, run_uri = run_dir_for(self._resolver, product, run_id)
+        entry = self._wal_reader.read_run_entry(
+            product=product, run_dir=run_dir, run_uri=run_uri, run_id=run_id
+        )
+        if entry is None:
+            raise ManifestError(f"Run '{run_id}' not found for product '{product}'.")
+        return entry
 
     def _assert_compaction_allowed(self, product: str) -> None:
         claims = self.list_claims(product=product)

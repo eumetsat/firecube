@@ -20,33 +20,9 @@ This reference covers the public types used to declare and resolve direct-Zarr i
     "resolve_index_spec",
 ]) }}
 
-## Core API
+## Index Types
 
-::: firecube.core.api.AxisSpec
-
-::: firecube.core.api.IndexSpec
-
-::: firecube.core.api.IntegerAxis
-
-::: firecube.core.api.IrregularTimeAxis
-
-::: firecube.core.api.AUTO
-
-::: firecube.core.api.RegularTimeAxis
-
-::: firecube.core.api.ItemInfo
-
-::: firecube.core.api.ResolvedIndex
-
-::: firecube.core.api.ResolvedIndexRecord
-
-::: firecube.core.api.coerce_to_epoch_s
-
-::: firecube.core.api.resolve_index_spec
-
-## Ingestor Re-Exports
-
-The public ingestor facade re-exports the declarative types used by plugin code.
+Import these from `firecube.ingestor.api`.
 
 ::: firecube.ingestor.api.AxisSpec
 
@@ -67,6 +43,13 @@ The public ingestor facade re-exports the declarative types used by plugin code.
 ::: firecube.ingestor.api.ResolvedIndexRecord
 
 ::: firecube.ingestor.api.resolve_index_spec
+
+## Core API
+
+`coerce_to_epoch_s()` is exported from `firecube.core.api` only; the ingestor
+facade does not re-export it.
+
+::: firecube.core.api.coerce_to_epoch_s
 
 ## Resolved Index Behavior
 

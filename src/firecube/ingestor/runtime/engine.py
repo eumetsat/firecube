@@ -129,7 +129,7 @@ class _PipelineRunAccumulator:
 
         ``cpu_time_total``/``io_time_total`` override the per-batch sums when
         provided. The final run snapshot passes a single process-wide CPU
-        measurement (see :meth:`PipelineRunner.run_state`); interim snapshots
+        measurement (see `PipelineRunner.run_state`); interim snapshots
         used by lifecycle hooks fall back to the per-batch accumulation.
         """
         return PipelineRunState(
@@ -161,7 +161,7 @@ def _process_batch_timed(
     Per-batch ``cpu_time_s`` uses ``time.thread_time()`` (this thread only) and
     is a diagnostic lower bound — it misses CPU spent in shared dask/C-extension
     worker threads. The authoritative run-level CPU total is measured separately
-    over the whole processing window in :meth:`PipelineRunner.run_state`.
+    over the whole processing window in `PipelineRunner.run_state`.
     """
     start_wall = time.perf_counter()
     start_cpu = time.thread_time()

@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Coordinate-keyed indexed write intent for :class:`DirectZarrIngestor`.
+"""Coordinate-keyed indexed write intent for `DirectZarrIngestor`.
 
-Defines :class:`IndexedWrite`, a frozen dataclass produced by
-``DirectZarrIngestor.build_indexed_write()``. Lives in ``firecube.core``
+Defines `IndexedWrite`, a frozen dataclass produced by
+``DirectZarrIngestor.build_indexed_write()``.  Lives in ``firecube.core``
 so both the ``firecube.core.api`` and ``firecube.ingestor.api`` façades
 can re-export it without violating the core-below-ingestor layering rule
 enforced by ``tests/architecture/test_core_independence.py``.
 
-The compile step from :class:`IndexedWrite` to :class:`WriteIntent` is
+The compile step from `IndexedWrite` to `WriteIntent` is
 ingestor-owned and stays in ``firecube.ingestor.templates.direct_zarr``.
 """
 
@@ -44,8 +44,8 @@ class IndexedWrite:
     time against the plugin's declared ``IndexSpec``, then materializes an
     equivalent ``WriteIntent``.
 
-    Use the :meth:`region` classmethod for 2-D spatial region writes and
-    :meth:`slot` for 1-D per-slot writes. These are the only two builders by
+    Use the `region` classmethod for 2-D spatial region writes and
+    `slot` for 1-D per-slot writes. These are the only two builders by
     design — there is intentionally no ``.static()`` or ``.coordinate()``
     factory:
 
@@ -81,15 +81,15 @@ class IndexedWrite:
     """
 
     y_slice: slice | None = None
-    """Row slice within the array; required for :meth:`region`, ``None`` for :meth:`slot`."""
+    """Row slice within the array; required for `region`, ``None`` for `slot`."""
 
     channel_index: int | None = None
-    """Channel dimension index for :meth:`region` writes, ``None`` otherwise."""
+    """Channel dimension index for `region` writes, ``None`` otherwise."""
 
     _kind: str = "region"
     """Private discriminator selecting region vs slot compile behavior.
 
-    Set by the :meth:`region` / :meth:`slot` classmethods. Not part of the
+    Set by the `region` / `slot` classmethods. Not part of the
     public constructor contract — pass builders, not raw kwargs.
     """
 
@@ -130,7 +130,7 @@ class IndexedWrite:
                 non-channel arrays.
 
         Returns:
-            An :class:`IndexedWrite` with ``_kind="region"``.
+            An `IndexedWrite` describing a 2-D spatial region write.
 
         Examples:
             >>> import numpy as np
@@ -178,7 +178,7 @@ class IndexedWrite:
             data: 1-D array payload, or a zero-arg callable that returns it.
 
         Returns:
-            An :class:`IndexedWrite` with ``_kind="slot"``.
+            An `IndexedWrite` describing a 1-D per-slot write.
 
         Examples:
             >>> import numpy as np

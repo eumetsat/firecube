@@ -73,11 +73,11 @@ class FsspecAtomicWriter:
       with ``FileExistsError`` if the target already exists, preserving the
       create-if-not-exists contract.
 
-    Per the :class:`~firecube.core.filesystem.protocol.AtomicWriter` contract,
-    backend-specific "already exists" signals are normalized to
-    ``FileExistsError``: local raises ``errno EEXIST``; s3fs wraps the 412 as
+    Per the `AtomicWriter` contract, backend-specific "already exists" signals
+    are normalized to ``FileExistsError``: local raises ``errno EEXIST``;
+    s3fs wraps the 412 as
     ``OSError(EINVAL)`` with a botocore ``ClientError`` cause (matched by
-    :func:`_is_precondition_failed`). Without this translation the control-plane
+    `_is_precondition_failed`). Without this translation the control-plane
     claim layer never observes ``FileExistsError`` on S3, so ``ClaimConflictError``
     is never raised and concurrent pods crash at startup instead of converging
     (see ``ChunkManager.ensure_slot_index_model``).
@@ -100,6 +100,36 @@ class FsspecAtomicWriter:
             if getattr(exc, "errno", None) == errno.EEXIST or _is_precondition_failed(exc):
                 raise FileExistsError(str(uri)) from exc
             raise
+
+    def replace_atomic(self, uri: StorageUri, data: bytes) -> None:
+        """Atomic overwrite-or-create (see `AtomicWriter`).
+
+        - Local filesystem: write a sibling temp file, fsync it, then
+          ``os.replace`` it into place — the rename publishes the fully-written
+          inode over the old one in a single step, so a concurrent reader sees
+          the old or the new content, never a truncated file. A plain
+          ``open(path, "w")`` would truncate in place and expose a 0-byte
+          window (observed as ``ControlPlaneCorruptionError`` "Expecting
+          value: ... char 0" when peer pods list runs during a meta write).
+        - Remote object stores: a buffered ``"wb"`` write emits one whole-body
+          ``PutObject`` on close, which the store publishes atomically.
+        """
+        path = self._to_path(uri)
+        if self._is_local():
+            directory = os.path.dirname(path) or "."
+            fd, tmp = tempfile.mkstemp(dir=directory, prefix=".firecube-atomic-", suffix=".tmp")
+            try:
+                with os.fdopen(fd, "wb") as fh:
+                    fh.write(data)
+                    fh.flush()
+                    os.fsync(fh.fileno())
+                os.replace(tmp, path)
+            finally:
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp)
+            return
+        with self._fs.open(path, "wb") as fh:
+            fh.write(data)
 
     def _is_local(self) -> bool:
         proto = getattr(self._fs, "protocol", None)

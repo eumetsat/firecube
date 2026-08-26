@@ -77,20 +77,6 @@ All three inherit from `ConfigurationError`.
 
 ::: firecube.ingestor.api.IndexedWriteCompilationError
 
-## Core API Re-Exports
-
-The core facade re-exports the error types used by plugin code and the engine.
-
-::: firecube.core.api.ExtentUnknownError
-
-::: firecube.core.api.MissingIrregularCoordinateError
-
-::: firecube.core.api.DuplicateIrregularCoordinateError
-
-::: firecube.core.api.NoDiscoveredItemsError
-
-::: firecube.core.api.IndexedWriteCompilationError
-
 ## See Also
 
 - [Templates](templates.md)

@@ -21,7 +21,7 @@ or the auto-computation in ``IndexedRegionStrategy``.
 
 Extracted from the MTG FCI plugin's ``ZarrStoreWriter``; all sensor-specific
 logic has been removed.  Use ``coord_names`` to specify which array names are
-coordinate axes and should be skipped by :meth:`ensure_timestamp_slot`.
+coordinate axes and should be skipped by `ensure_timestamp_slot`.
 """
 
 from __future__ import annotations
@@ -90,7 +90,7 @@ def _array_is_all_fill(arr: np.ndarray, fill_value: Any) -> bool:
     """Return True iff every element of *arr* equals *fill_value* under
     missing-aware equality.
 
-    Mirrors :func:`_fill_value_is_missing` semantics:
+    Mirrors `_fill_value_is_missing` semantics:
       - float / complex NaN fill: every element must be NaN
       - datetime64 / timedelta64 NaT fill: every element must be NaT
       - all other dtypes (int, bool, bytes/string): plain element-wise equality
@@ -238,9 +238,57 @@ class RegionZarrWriterProtocol(Protocol):
         filters: Sequence[Any] | None = None,
         serializer: Any | None = None,
         compressors: Sequence[Any] | None = None,
-    ) -> Any: ...
+    ) -> Any:
+        """Ensure a group or array path exists, creating it when absent.
 
-    def ensure_timestamp_slot(self, group: str, ts_index: int) -> None: ...
+        A single-segment *group* with no *shape* resolves to a group. Any
+        other path resolves to an array, and *shape* and *dtype* are then
+        required. Existing arrays are returned as-is unless *allow_grow* is
+        set, in which case they are resized up to *shape*.
+
+        Args:
+            group: Group path or array path (e.g. ``data_1km/counts``).
+            shape: Array shape when creating array paths.
+            dtype: Array dtype when creating array paths.
+            fill_value: Fill value for newly created arrays.
+            chunks: Chunk shape for newly created arrays.
+            allow_grow: If ``True``, grow an existing array to at least
+                *shape* instead of leaving it undersized.
+            shards: Optional Zarr v3 shard shape for newly created arrays.
+            attrs: Optional user attributes written at array creation.
+                Reserved keys (see `RESERVED_ARRAY_ATTRS`) are rejected.
+                This is creation-only: attribute drift on existing arrays is
+                reported by `verify_array_spec`, not here.
+            dimension_names: Optional Zarr v3 ``dimension_names`` for newly
+                created arrays.
+            filters: Optional Zarr v3 filter chain for newly created arrays.
+            serializer: Optional Zarr v3 serializer for newly created arrays.
+            compressors: Optional Zarr v3 compressor chain for newly created
+                arrays.
+
+        Returns:
+            The existing or newly created group or array.
+
+        Raises:
+            ValueError: If array creation is requested without *shape* and
+                *dtype*, or if *attrs* contains reserved keys.
+            SchemaDriftError: If *dimension_names* differs from an existing
+                array's ``dimension_names`` on resume. Firecube performs no
+                in-place dimension renames.
+        """
+        ...
+
+    def ensure_timestamp_slot(self, group: str, ts_index: int) -> None:
+        """Ensure every timestamped array in *group* can hold *ts_index*.
+
+        Coordinate arrays and scalar arrays are skipped; only arrays carrying
+        a leading time axis are checked or grown.
+
+        Args:
+            group: Data group path (e.g. ``data_1km``).
+            ts_index: Zero-based timestamp index that must be addressable.
+        """
+        ...
 
     def write_region(
         self,
@@ -251,7 +299,22 @@ class RegionZarrWriterProtocol(Protocol):
         data: np.ndarray,
         *,
         channel_index: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Write one spatial region into one timestamp slot.
+
+        Args:
+            group: Data group path.
+            array_name: Target array name inside *group*.
+            ts_index: Timestamp slot index to write into.
+            y_slice: Spatial y-range covered by *data*.
+            data: Region payload; its shape must match the addressed window.
+            channel_index: Channel index for 4-D arrays; ``None`` for 3-D.
+
+        Raises:
+            ValueError: If the target array rank is unsupported or *data*
+                does not match the addressed window.
+        """
+        ...
 
     def write_1d(
         self,
@@ -259,23 +322,87 @@ class RegionZarrWriterProtocol(Protocol):
         array_name: str,
         ts_index: int,
         data: np.ndarray,
-    ) -> None: ...
+    ) -> None:
+        """Write exactly one timestamp slot.
 
-    def resolve_timestamp_index(self, group: str, timestamp_val: Any) -> int: ...
+        For a 1-D target the slot is the single element at *ts_index* and
+        *data* must hold exactly one value. For a higher-rank target the slot
+        is ``arr[ts_index]`` and *data* must match ``arr.shape[1:]``.
+        Multi-slot payloads are rejected: the control plane records writes at
+        ``(group, ts_index)`` granularity, so a wider write would leave an
+        unrecorded data-integrity gap.
+
+        Args:
+            group: Data group path.
+            array_name: Target array name.
+            ts_index: Timestamp slot index.
+            data: The single value to write at the slot.
+
+        Raises:
+            ValueError: If a 1-D target receives a payload with ``size != 1``,
+                or a higher-rank target receives a payload whose shape does
+                not match ``arr.shape[1:]``.
+        """
+        ...
+
+    def resolve_timestamp_index(self, group: str, timestamp_val: Any) -> int:
+        """Return the slot index *timestamp_val* occupies in *group*.
+
+        Resolution is idempotent: a timestamp already present in the group's
+        time coordinate resolves to its existing index, so a replayed write
+        lands on the same slot. An unseen timestamp resolves to the next
+        available slot, which equals the current coordinate length.
+
+        Args:
+            group: Data group path.
+            timestamp_val: Timestamp to place, in any form the implementation
+                normalizes to the group's time dtype.
+
+        Returns:
+            The zero-based slot index for *timestamp_val*.
+        """
+        ...
 
     def write_timestamp(
         self,
         group: str,
         ts_index: int,
         timestamp_val: Any,
-    ) -> None: ...
+    ) -> None:
+        """Write the time coordinate value for one slot.
+
+        Grows the time coordinate and every timestamped array in *group* as
+        needed so *ts_index* is addressable before the value is stored.
+
+        Args:
+            group: Data group path.
+            ts_index: Timestamp slot index to stamp.
+            timestamp_val: Timestamp to write at that slot.
+        """
+        ...
 
     def write_static(
         self,
         group: str,
         array_name: str,
         data: np.ndarray,
-    ) -> None: ...
+    ) -> None:
+        """Write a static (non-time-indexed) array at its declared shape.
+
+        The array must already exist from schema setup. The write is a full
+        overwrite of the array contents and touches no time axis.
+
+        Args:
+            group: Data group path.
+            array_name: Target array name.
+            data: Payload with the same ndim and shape as the stored array.
+
+        Raises:
+            KeyError: If the array does not exist in the store.
+            ValueError: If ``data.ndim`` or ``data.shape`` does not match the
+                stored array.
+        """
+        ...
 
 
 class RegionZarrWriter:
@@ -285,7 +412,7 @@ class RegionZarrWriter:
         store_uri: Target store URI/path (local path, ``file://`` URI, or
             ``s3://`` URI).
         coord_names: Array names treated as coordinate axes.  These are
-            skipped by :meth:`ensure_timestamp_slot` when resizing timestamped
+            skipped by `ensure_timestamp_slot` when resizing timestamped
             arrays.  Defaults to ``{"y", "x", "channel"}``.
     """
 
@@ -356,14 +483,12 @@ class RegionZarrWriter:
                 inspect undersized arrays and raise their own drift errors.
             shards: Optional Zarr v3 shard shape for newly created arrays.
             attrs: Optional user attributes to write at array creation.
-                Reserved keys (see
-                :data:`firecube.core.zarr._reserved_attrs.RESERVED_ARRAY_ATTRS`)
-                are rejected. ``ensure_group`` is creation-only — drift
-                detection for the attrs of existing arrays is handled by
-                :meth:`verify_array_spec`.
+                Reserved keys (see `RESERVED_ARRAY_ATTRS`) are rejected.
+                ``ensure_group`` is creation-only — drift detection for the
+                attrs of existing arrays is handled by `verify_array_spec`.
             dimension_names: Optional Zarr v3 ``dimension_names`` for newly
                 created arrays. On resume, a mismatch against an existing
-                array raises :class:`SchemaDriftError`; firecube does not
+                array raises `SchemaDriftError`; firecube does not
                 perform in-place dimension renames.
 
         Returns:
@@ -453,7 +578,7 @@ class RegionZarrWriter:
 
         Writes ``attrs`` verbatim onto the Zarr group's ``zarr.json``; the writer
         does not interpret the mapping. Reserved firecube-internal attribute names
-        are rejected (see :func:`assert_attrs_safe`). A falsy ``attrs`` is a no-op.
+        are rejected (see `assert_attrs_safe`). A falsy ``attrs`` is a no-op.
         Idempotent — re-stamping the same attrs is safe.
         """
         if not attrs:

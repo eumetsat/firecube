@@ -35,3 +35,16 @@ def test_obstore_atomic_writer_uses_put_mode_create() -> None:
         writer.write_atomic(uri, b'{"owner": "thread-2"}')
 
     assert bytes(store.get(uri.path).bytes()) == b'{"owner": "thread-1"}'
+
+
+def test_obstore_replace_atomic_overwrites_existing() -> None:
+    """replace_atomic must succeed over an existing object (default-mode put),
+    unlike write_atomic's create-only contract."""
+    store = MemoryStore()
+    writer = ObstoreAtomicWriter(store)
+    uri = StorageUri.parse("memory:///test-bucket/runs/run-1/run.json")
+
+    writer.replace_atomic(uri, b'{"status":"started"}')
+    writer.replace_atomic(uri, b'{"status":"completed"}')
+
+    assert bytes(store.get(uri.path).bytes()) == b'{"status":"completed"}'

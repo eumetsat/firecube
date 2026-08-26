@@ -16,19 +16,19 @@
 
 These helpers bin irregular ``(lat, lon, value)`` samples onto a HEALPix
 discrete global grid system (DGGS) without interpolation. They are the
-spherical sibling of :mod:`firecube.ingestor.extensions.grid`: where that module
-bins onto a regular lat/lon grid, this one bins onto equal-area HEALPix cells.
-Both share the binning/aggregation core in :mod:`._binning`.
+spherical sibling of `grid`: where that module bins onto a regular lat/lon
+grid, this one bins onto equal-area HEALPix cells.
+Both share the binning/aggregation core in `_binning`.
 
 Design notes
 ------------
-- The lat/lon -> cell mapping is delegated to :mod:`healpix_geo` (built on the
+- The lat/lon -> cell mapping is delegated to `healpix_geo` (built on the
   ``cdshealpix`` Rust crate). ``healpix_geo`` is the same backend ``xdggs`` uses,
   so cells produced here align with ``xdggs``-decoded HEALPix cubes at the same
   ``depth`` and ``ellipsoid``.
 - ``depth`` is the HEALPix order/level; the sphere has ``12 * 4**depth`` cells.
 - The target cell axis can be **derived** from the input (the unique cells it
-  touches) or **supplied** via ``target_cells`` -- e.g. from :func:`cells_in_bbox`
+  touches) or **supplied** via ``target_cells`` -- e.g. from `cells_in_bbox`
   -- so every granule/timestep lands on one fixed axis and results can be
   appended. The result carries the absolute cell ids as a coordinate.
 - Aggregations mean/min/max/first/last/median mirror the lat/lon module; ``any``

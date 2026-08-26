@@ -36,6 +36,10 @@ class _CountingAtomicWriter:
         self._counts["write_atomic"] = self._counts.get("write_atomic", 0) + 1
         self._writer.write_atomic(uri, data)
 
+    def replace_atomic(self, uri: StorageUri, data: bytes) -> None:
+        self._counts["replace_atomic"] = self._counts.get("replace_atomic", 0) + 1
+        self._writer.replace_atomic(uri, data)
+
     def __getattr__(self, name: str) -> Any:
         return getattr(self._writer, name)
 
