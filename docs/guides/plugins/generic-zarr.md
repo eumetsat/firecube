@@ -56,9 +56,9 @@ class MyPlugin(GenericZarrIngestor):
 
 See the [Plugin Templates](../../reference/templates.md#genericzarringestor)
 for the exact hook signature and optional group, path, and writer
-customizations, or the quickstart's
-[example implementation](../../quickstart/plugins.md#implement-the-plugin) for
-a complete, runnable version of this example.
+customizations, or the quickstart plugin's
+[`build_dataset` implementation](https://github.com/eumetsat/firecube-quickstart-plugin/blob/main/src/firecube_quickstart_plugin/ingestor.py)
+for a complete, runnable version of this example.
 
 ## Verify
 
