@@ -32,11 +32,7 @@ from firecube.core.controlplane.types import (
     SlotIndexModelRecord,
     WriteDomain,
 )
-from firecube.core.errors import (
-    ManifestError,
-    SlotIndexModelClaimTimeoutError,
-    SlotIndexModelConflictError,
-)
+from firecube.core.errors import ManifestError, SlotIndexModelConflictError
 from firecube.core.filesystem import StorageFilesystem
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.slot_index import (
@@ -388,7 +384,15 @@ def test_empty_run_id_raises(tmp_path):
 
 
 @pytest.mark.unit
-def test_race_window_cp_only_state_raises_timeout(tmp_path):
+def test_cp_only_state_triggers_row1_remirror(tmp_path):
+    """Backward-compat: CP-only match with attrs absent → re-mirror + accept.
+
+    Pre-seeds current.json (CP present, matches model.identity_hash) but leaves
+    the zarr root WITHOUT the identity-hash attr, and pins a fake winner claim
+    so acquire_claim raises ClaimConflictError. The loser must execute Row 1
+    of the unified 5-row convergence policy: re-mirror attrs from the
+    authoritative CP record, then return the CP record (no timeout).
+    """
     cm = _make_manager(tmp_path)
     _start_run(cm, tmp_path, "prod1", "winner")
     model = _model()
@@ -399,14 +403,9 @@ def test_race_window_cp_only_state_raises_timeout(tmp_path):
         recorded_at="2026-01-01T00:00:00+00:00",
         recorded_by_run_id="winner",
     )
-    # Pre-seed current.json so cp_record matches model.identity_hash, but
-    # leave the zarr root WITHOUT the identity-hash attr. This simulates the
-    # race window where the winner has written CP but not yet stamped attrs.
     cp_file = _slot_index_current(tmp_path, "prod1")
     cp_file.parent.mkdir(parents=True, exist_ok=True)
     cp_file.write_bytes(winner_record.to_json_bytes())
-    # Pre-seed an active (non-stale) claim file: forces acquire_claim to raise
-    # ClaimConflictError so the loser executes the retry/convergence path.
     claim_file = _claim_file(tmp_path, "prod1")
     claim_file.parent.mkdir(parents=True, exist_ok=True)
     claim_file.write_text(
@@ -425,11 +424,15 @@ def test_race_window_cp_only_state_raises_timeout(tmp_path):
     )
     assert _read_zarr_attrs_hash(tmp_path, "prod1") is None
 
-    with pytest.raises(SlotIndexModelClaimTimeoutError):
-        cm.ensure_slot_index_model(
-            product="prod1",
-            model=model,
-            run_id="loser",
-            max_retries=2,
-            initial_backoff_s=0.01,
-        )
+    returned = cm.ensure_slot_index_model(
+        product="prod1",
+        model=model,
+        run_id="loser",
+        max_retries=2,
+        initial_backoff_s=0.01,
+    )
+
+    assert returned.identity_hash == model.identity_hash
+    assert _read_zarr_attrs_hash(tmp_path, "prod1") == model.identity_hash, (
+        "loser must re-mirror the identity hash to the zarr root attrs (Row 1)"
+    )

@@ -150,7 +150,7 @@ def test_no_dynamic_opentelemetry_imports() -> None:
     ``importlib.import_module("opentelemetry...")`` and
     ``__import__("opentelemetry...")`` defeat the static-import boundary check
     above and are never an acceptable workaround. This test has NO allowlist
-    and MUST pass immediately — Wave 1 confirmed zero existing violations.
+    and MUST pass immediately.
     """
     offenders: list[str] = []
     for path in sorted(_SRC_ROOT.rglob("*.py")):

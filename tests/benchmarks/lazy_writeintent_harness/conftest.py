@@ -59,7 +59,7 @@ from typing import Final
 import pytest
 
 REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
-EVIDENCE_DIR: Final[Path] = REPO_ROOT / ".sisyphus" / "evidence"
+EVIDENCE_DIR: Final[Path] = REPO_ROOT / ".evidence"
 BASELINE_JSON: Final[Path] = EVIDENCE_DIR / "task-T0-baseline.json"
 MEMRAY_REPORT: Final[Path] = EVIDENCE_DIR / "task-T0-memray-eager-baseline.txt"
 

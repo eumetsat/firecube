@@ -35,18 +35,29 @@ Parquet templates. See [Plugin Extensions](extensions.md) before choosing
 
 Follow [Create a Plugin](create-a-plugin.md), select `base`, then
 [install the plugin](install-a-plugin.md). Replace the generated
-`_process_batch` stub:
+`_process_batch` stub. The example writer copies each granule into a local
+target directory; swap `write_product_item` for the product's real writer:
 
 ```python
+import shutil
+from pathlib import Path
 from typing import ClassVar
 
+from firecube.core.api import local_path_from_target
 from firecube.ingestor.api import (
     BaseIngestor,
+    OutputPaths,
     PipelineBatch,
     PipelineResult,
     PluginContext,
     register_ingestor,
 )
+
+
+def write_product_item(source: Path, target_dir: Path) -> Path:
+    """The plugin's own writer. This example copies one granule verbatim."""
+    target_dir.mkdir(parents=True, exist_ok=True)
+    return Path(shutil.copy2(source, target_dir / source.name))
 
 
 @register_ingestor("my_plugin")
@@ -58,7 +69,10 @@ class MyPlugin(BaseIngestor):
         batch: PipelineBatch,
         ctx: PluginContext,
     ) -> PipelineResult:
-        ...
+        target_dir = local_path_from_target(ctx.target or "")
+        for item in batch.items:
+            write_product_item(ctx.materialize(item), target_dir)
+        return PipelineResult(batch=batch, outputs=OutputPaths(primary=target_dir))
 ```
 
 The implementation must write the batch through the plugin's supported writer

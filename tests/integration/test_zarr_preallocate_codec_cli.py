@@ -120,7 +120,7 @@ def test_preallocate_default_codec_routes_to_zstd_level_zero(tmp_path: Path) -> 
     Locks the ``firecube zarr preallocate`` path to zarr-python v3's default
     codec pipeline when neither ``zarr_compression`` nor ``zarr_codecs`` is
     supplied. Regression here would indicate either the ``TierConfigurator``
-    handoff or ``ensure_group`` codec kwargs plumbing has broken in the
+    path or ``ensure_group`` codec kwargs plumbing has broken in the
     preallocate command.
     """
     result = CliRunner().invoke(cli, _preallocate_args(tmp_path))

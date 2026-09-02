@@ -79,7 +79,6 @@ All three inherit from `ConfigurationError`.
 
 ## See Also
 
-- [Templates](templates.md)
-- [Index Specification](parallelism.md)
-- [IrregularTimeAxis Plugin Guide](../guides/plugins/irregular-axis.md)
+- [Discovery failure modes](parallelism.md#firecube.ingestor.api.TimeAxis.discovered)
+- [`build_write_intents`](templates.md#firecube.ingestor.api.DirectZarrIngestor.build_write_intents)
 - [Implement DirectZarrIngestor](../guides/plugins/direct-zarr.md)

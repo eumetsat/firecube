@@ -79,8 +79,7 @@ def _ctx() -> Any:
 def test_static_array_chunks_excluded_from_alignment_check() -> None:
     """Regression: static (time_indexed=False) array chunks must NOT participate
     in time-axis alignment validation. Their spatial shape was bleeding through
-    and demanding slot ranges be multiples of the spatial dim. Reference:
-    parallel_gate.py:107 + plugin handoff firecube-parallel-gate-includes-static-array-chunks.md.
+    and demanding slot ranges be multiples of the spatial dim.
     """
     schema = [
         ZarrGroupSpec(

@@ -9,6 +9,20 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- New concepts page `docs/concepts/reproducibility.md`: the tiered
+  reproducibility contract (value-identical always; byte-identical only in a
+  pinned environment) and where its provenance records live.
+- New reference page `docs/reference/control-plane-spec.md`: normative
+  specification of the `.firecube/` control-plane layout and file formats
+  (run records, WAL events, claims, snapshots, index records, versioning),
+  pinned to the code by `tests/sdk/test_control_plane_spec_consistency.py`.
+- `preallocate` now materializes `RegularTimeAxis` time coordinates densely at plugin-declared chunk size (default `min(256, T)`); previously-NaT-filled spec-loop arrays are filled and marker-stamped in place.
+- New `TimeAxis` intent-named constructors (`TimeAxis.grid`, `TimeAxis.observed`, `TimeAxis.explicit`, `TimeAxis.discovered`) on `firecube.ingestor.api` and `firecube.core.api`: sugar over the raw axis dataclasses, producing identical index identities.
+- `firecube zarr preallocate`: new `--slot-start`/`--slot-end` flags bound the coordinate materialization window explicitly (default: the full declared extent).
+- New: `firecube zarr consolidate-time-coord` — maintenance command for existing cubes with per-slot time coordinate chunks; `--dry-run` reports proposed changes without mutation; consolidation seals the cube (further ingest to it is refused).
+- New reserved attribute names: `firecube_preallocated`, `firecube_coord_managed`, `firecube_consolidated_at`.
+- `RegionZarrWriter.write_timestamp` is now marker-aware: sealed time coordinates are drift-checked (`SchemaDriftError` on mismatch) rather than overwritten; legacy (unmarked) cubes retain existing create-on-demand behavior.
+- New WAL event: `ConsolidatedTimeCoord` — records time-coordinate consolidation in the control-plane log.
 - `extract_all_from_zips` extracts a batch of ZIP archives, serially by
   default or concurrently via `workers=`, returning an `(extracted, failures)`
   pair in which every input archive appears exactly once; a failed archive is
@@ -22,7 +36,7 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   `firecube.core.api` facades). `IndexedWriteCompilationError` appears in
   `docs/reference/exceptions.md`. The DirectZarr plugin guide
   (`docs/guides/plugins/direct-zarr.md`) gained a section on letting the
-  engine resolve slots via `build_indexed_write`.
+  engine resolve slots by returning `IndexedWrite` elements from `build_write_intents`.
 - `IrregularTimeAxis` axis type for `IndexSpec`: declare an irregular time axis
   with an explicit tuple of coordinate values when items are not evenly spaced.
   Importable from `firecube.core.api` and `firecube.ingestor.api`.
@@ -179,6 +193,17 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Fixed
 
+- Float-dtype arrays with a finite fill value (for example `-999.0` sentinels)
+  are no longer unopenable by xarray: the stamped `_FillValue` attribute now
+  carries the base64-encoded IEEE-754 form xarray decodes for float dtypes,
+  instead of a bare number that made `xr.open_zarr` raise `TypeError`.
+  Integer, bool, and string fills are unchanged; NaN and NaT fills still
+  stamp nothing.
+
+- `click` is now declared as a runtime dependency; it was imported by the CLI
+  but reached installations only transitively, so a minimal install could not
+  run `firecube`.
+
 - Concurrent multi-process ingests no longer crash at startup with
   `ControlPlaneCorruptionError` ("Expecting value: line 1 column 1") when one
   process's resume guard lists runs while a peer is writing its `run.json`:
@@ -192,6 +217,14 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   IndexError on stores containing a zero-dimensional array (for example a CF
   grid-mapping scalar such as `spatial_ref`); scalar values are now compared
   like any other array.
+
+- `firecube zarr compare` and `compare_zarr_stores` no longer materialize
+  whole arrays into memory: values are compared in chunk-aligned slabs
+  bounded by a fixed byte budget, so product-scale cubes compare in constant
+  memory instead of being killed by the OOM killer. Comparison also treats
+  NaT (and complex NaN) like float NaN: two stores holding NaT in the same
+  positions — for example the unfilled slots of a partially ingested dense
+  time coordinate — now compare equal instead of reporting `values differ`.
 
 - `include_patterns` is documented as additive to the built-in `.zip`/`.h5`/
   `.nc` selection; the reference previously stated that it replaced them.

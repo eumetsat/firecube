@@ -25,6 +25,11 @@ from collections.abc import Sequence
 
 import click
 
+from firecube.cli._ctx import get_storage_config
+from firecube.cli._product import resolve_product_identity
+from firecube.core.controlplane import ChunkManager
+from firecube.core.storage.binding import StorageBinding
+from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.ingestor.api import ZarrGroupSpec
 
 #: Plan JSON schema version. Independent of control-plane SCHEMA_VERSION.
@@ -93,3 +98,103 @@ def _chunk_aligned_remaining(
         else:
             blocked.append((start, clamped_end))
     return aligned, blocked
+
+
+def _query_slots_coverage(
+    ctx: click.Context,
+    *,
+    target: str,
+    product_name: str,
+    storage_type: str,
+    storage_driver: str,
+    groups: list[str],
+) -> dict[str, list[tuple[int, int]]]:
+    """Read covered time ranges per group from ChunkManager."""
+    coverage: dict[str, list[tuple[int, int]]] = {g: [] for g in groups}
+    identity = resolve_product_identity(
+        target, format="zarr", product_name=product_name, option_name="--target"
+    )
+    storage_config = get_storage_config(
+        ctx,
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+        },
+        cache=False,
+    )
+    driver = StorageDriverConfig.from_storage_config(storage_config)
+    binding = StorageBinding(identity=identity, driver=driver)
+    manager = ChunkManager(binding=binding)
+    try:
+        chunks = manager.list_chunks(
+            product=product_name,
+            chunk_type="span",
+            include_replaced=False,
+        )
+    finally:
+        manager.close()
+
+    for chunk in chunks:
+        meta = chunk.meta or {}
+        group = meta.get("group")
+        if group not in coverage:
+            continue
+        span_payload = chunk.record.get("span") if isinstance(chunk.record, dict) else None
+        if not isinstance(span_payload, dict):
+            continue
+        time_index_ranges = span_payload.get("time_index_ranges") or []
+        for entry in time_index_ranges:
+            if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+                continue
+            try:
+                start = int(entry[0])
+                end_inclusive = int(entry[1])
+            except (TypeError, ValueError):
+                continue
+            coverage[group].append((start, end_inclusive + 1))
+
+    return coverage
+
+
+def _merge_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    if not intervals:
+        return []
+    sorted_iv = sorted(intervals)
+    merged: list[tuple[int, int]] = [sorted_iv[0]]
+    for start, end in sorted_iv[1:]:
+        last_start, last_end = merged[-1]
+        if start <= last_end:
+            merged[-1] = (last_start, max(last_end, end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _complement_intervals(covered: list[tuple[int, int]], total: int) -> list[tuple[int, int]]:
+    if total <= 0:
+        return []
+    result: list[tuple[int, int]] = []
+    cursor = 0
+    for start, end in covered:
+        clamped_start = max(0, min(start, total))
+        clamped_end = max(0, min(end, total))
+        if clamped_start > cursor:
+            result.append((cursor, clamped_start))
+        cursor = max(cursor, clamped_end)
+        if cursor >= total:
+            break
+    if cursor < total:
+        result.append((cursor, total))
+    return result
+
+
+def _partition_remaining(remaining: list[tuple[int, int]], slot_size: int) -> list[tuple[int, int]]:
+    """Partition each remaining interval into chunk-aligned slot_size chunks."""
+    partitions: list[tuple[int, int]] = []
+    for interval_start, interval_end in remaining:
+        cursor = interval_start
+        while cursor < interval_end:
+            next_cursor = min(cursor + slot_size, interval_end)
+            partitions.append((cursor, next_cursor))
+            cursor = next_cursor
+    return partitions

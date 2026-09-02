@@ -71,12 +71,35 @@ def _make_ctx(tmp_path: Path):
     )
 
 
-def test_base_run_serial_unbounded_axis_raises_configuration_error(
+def test_base_run_serial_unbounded_axis_accepts(tmp_path: Path) -> None:
+    """Serial mode (no slot_start/slot_end) accepts unbounded axes and completes the run."""
+    ingestor = _SerialUnboundedAxisIngestor(name="serial_unbounded_axis")
+    ingestor._configurator = SimpleNamespace(  # type: ignore[assignment]
+        configure=lambda runtime_ctx: (
+            EngineConfig(write_mode="direct"),  # NO slot_start/slot_end → serial
+            None,
+            None,
+        )
+    )
+    ctx = _make_ctx(tmp_path)
+
+    result = ingestor.ingest(ctx)
+
+    assert result.registered is True
+    assert result.write_mode_applied == "direct"
+    assert str(result.outputs.primary).endswith("serial_unbounded_axis.zarr")
+
+
+def test_base_run_parallel_unbounded_axis_raises_configuration_error(
     tmp_path: Path,
 ) -> None:
     ingestor = _SerialUnboundedAxisIngestor(name="serial_unbounded_axis")
     ingestor._configurator = SimpleNamespace(  # type: ignore[assignment]
-        configure=lambda runtime_ctx: (EngineConfig(write_mode="direct"), None, None)
+        configure=lambda runtime_ctx: (
+            EngineConfig(write_mode="direct", slot_start=0, slot_end=1),
+            None,
+            None,
+        )
     )
     ctx = _make_ctx(tmp_path)
 

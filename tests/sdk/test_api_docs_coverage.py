@@ -103,6 +103,9 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "CatalogGroupInfo": "host integration type",
         "RegionZarrWriterProtocol": "engine writer protocol",
         "RunInfo": "control-plane type",
+        "FIRECUBE_GROUP_IDENTITY_HASH_ATTR": "engine identity-marker attr",
+        "_compute_group_identity_hash": "engine identity helper; not a plugin-authoring surface",
+        "compute_group_identity_hash": "engine identity helper; not a plugin-authoring surface",
         # Byte-parity legacy types superseded by IndexSpec + RegularTimeAxis;
         # older docs versions cover this surface.
         "SlotAxis": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",

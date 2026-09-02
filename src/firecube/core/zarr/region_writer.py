@@ -26,11 +26,13 @@ coordinate axes and should be skipped by `ensure_timestamp_slot`.
 
 from __future__ import annotations
 
+import base64
 import logging
 import math
+import struct
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 import numpy as np
 import zarr
@@ -39,6 +41,11 @@ from zarr.storage import LocalStore
 
 from firecube.core.errors import SchemaDriftError
 from firecube.core.uris import is_remote_target, local_path_from_target
+from firecube.core.zarr._coord_lifecycle import (
+    CoordLifecycleState,
+    raise_if_invalid,
+    resolve_coord_lifecycle,
+)
 from firecube.core.zarr._reserved_attrs import _FILL_VALUE_ATTR, assert_attrs_safe
 
 log = logging.getLogger("firecube.core.zarr.region_writer")
@@ -110,19 +117,31 @@ def _array_is_all_fill(arr: np.ndarray, fill_value: Any) -> bool:
     return bool(np.all(arr == fill_value))
 
 
-def _fill_value_attr_value(fill_value: Any) -> Any:
-    """Return a JSON-safe scalar for use as a ``_FillValue`` attr, or ``None``.
+def _fill_value_attr_value(fill_value: Any, dtype: Any) -> Any:
+    """Return a JSON-safe ``_FillValue`` attr encoding, or ``None``.
+
+    Follows xarray's Zarr v3 attribute convention: for float dtypes the fill
+    is base64-encoded little-endian IEEE-754 double — the only form
+    ``xr.open_zarr`` decodes for kind ``f``; a bare number there raises
+    ``TypeError`` at open time. Bool, int, and string fills pass through as
+    plain JSON scalars.
 
     Args:
         fill_value: The fill value declared in ``ZarrArraySpec.fill_value``.
+        dtype: The array's dtype; selects the attribute encoding.
 
     Returns:
-        A JSON-finite scalar (bool, int, str, or finite float) suitable for
-        writing into Zarr array attrs, or ``None`` if the value cannot be
-        represented safely (NaT, NaN, datetime objects, etc.).
+        The encoded attr value, or ``None`` if the value cannot be
+        represented safely (NaT, NaN, datetime objects, etc.), in which case
+        the attribute is not stamped.
     """
     if isinstance(fill_value, np.generic):
         fill_value = fill_value.item()
+    if np.dtype(dtype).kind == "f":
+        if isinstance(fill_value, bool | int | float) and math.isfinite(fill_value):
+            packed = struct.pack("<d", float(fill_value))
+            return base64.standard_b64encode(packed).decode("ascii")
+        return None
     if isinstance(fill_value, bool | int | str):
         return fill_value
     if isinstance(fill_value, float) and math.isfinite(fill_value):
@@ -455,6 +474,65 @@ class RegionZarrWriter:
             return np.datetime64(str(timestamp_val.isoformat()), "s")
         return np.datetime64(str(timestamp_val), "s")
 
+    @staticmethod
+    def _normalize_timestamp_value_ns(timestamp_val: Any) -> np.datetime64:
+        """Normalize timestamp-like values to ``datetime64[ns]`` for equality checks."""
+        if isinstance(timestamp_val, np.datetime64):
+            return timestamp_val.astype("datetime64[ns]")
+        if hasattr(timestamp_val, "isoformat"):
+            return np.datetime64(str(timestamp_val.isoformat()), "ns")
+        return np.datetime64(str(timestamp_val), "ns")
+
+    @staticmethod
+    def _normalize_for_coord_compare(
+        value: Any,
+        target_dtype: np.dtype[Any],
+    ) -> np.datetime64:
+        """Normalize a datetime-like value to *target_dtype* for coord equality.
+
+        Used by both the observed-coord materializer and the pod-write
+        ``COORD_MANAGED`` verify-first branch. Comparing an in-memory
+        ``datetime64[ns]`` candidate against a stored ``datetime64[s]`` slot
+        used to raise a spurious ``SchemaDriftError`` because the incoming
+        side kept sub-second precision the stored side had already truncated
+        away. Truncating both sides to the on-disk resolution before the
+        equality check removes that false drift.
+
+        Callers must apply this helper to *both* the stored and the
+        incoming value and then compare them with ``==``. NaT semantics
+        are handled here: NaT-in returns NaT-in-target-dtype, so callers
+        can distinguish an empty slot with ``np.isnat`` on the result.
+
+        Args:
+            value: A ``datetime64`` scalar/0-d array, a Python ``datetime``,
+                a Zarr array element, or any input ``np.array`` accepts as a
+                ``datetime64`` scalar.
+            target_dtype: The on-disk array dtype. Must be a ``datetime64``
+                dtype; other kinds are rejected because this helper is
+                intentionally scoped to time coords.
+
+        Returns:
+            A 0-d ``np.datetime64`` in *target_dtype*.
+
+        Raises:
+            TypeError: If *target_dtype* is not a ``datetime64`` dtype.
+            OverflowError / ValueError: Whatever numpy raises when *value*
+                cannot be represented in *target_dtype* (e.g. a year outside
+                the ``datetime64[s]`` range). Callers must not silence
+                these — they indicate the incoming coord genuinely does
+                not fit the schema and would otherwise be silently
+                truncated to a wrong value.
+        """
+        if target_dtype.kind != "M":
+            raise TypeError(
+                "_normalize_for_coord_compare requires a datetime64 target dtype; "
+                f"got {target_dtype!r}"
+            )
+        arr = np.asarray(value)
+        if arr.dtype.kind == "M" and bool(np.isnat(arr)):
+            return cast(np.datetime64, np.array(np.datetime64("NaT", "ns"), dtype=target_dtype)[()])
+        return cast(np.datetime64, np.array(value, dtype=target_dtype)[()])
+
     def ensure_group(
         self,
         group: str,
@@ -542,7 +620,7 @@ class RegionZarrWriter:
                         f"existing={tuple(existing_dimnames)!r} spec={tuple(dimension_names)!r}. "
                         "Re-ingest from scratch; no in-place migration is provided."
                     )
-            _fv_attr = _fill_value_attr_value(fill_value)
+            _fv_attr = _fill_value_attr_value(fill_value, dtype)
             if _fv_attr is not None and _FILL_VALUE_ATTR not in dict(arr.attrs):
                 arr.attrs[_FILL_VALUE_ATTR] = _fv_attr
             return arr
@@ -568,7 +646,7 @@ class RegionZarrWriter:
         if compressors is not None:
             kwargs["compressors"] = list(compressors)
         arr = target_group.create_array(**kwargs)
-        _fv_attr = _fill_value_attr_value(fill_value)
+        _fv_attr = _fill_value_attr_value(fill_value, dtype)
         if _fv_attr is not None and _FILL_VALUE_ATTR not in dict(arr.attrs):
             arr.attrs[_FILL_VALUE_ATTR] = _fv_attr
         return arr
@@ -877,7 +955,66 @@ class RegionZarrWriter:
         ts_index: int,
         timestamp_val: Any,
     ) -> None:
-        """Ensure and write the timestamp coordinate for one slot."""
+        """Ensure and write the timestamp coordinate for one slot.
+
+        Routes on the coord array's lifecycle state, resolved from its
+        reserved marker attrs by ``resolve_coord_lifecycle``:
+
+        - ``LEGACY`` (no marker, or coord array does not exist yet):
+          per-slot create-or-grow write. Unchanged from the pre-marker
+          contract.
+        - ``PREALLOCATED``: verify-or-error against the dense pre-materialized
+          value. An exact ``datetime64[ns]``-normalized replay is a no-op;
+          divergence raises ``SchemaDriftError``.
+        - ``COORD_MANAGED``: verify-or-error against the engine-materialized
+          value. A stored ``NaT`` means the materialization step was skipped
+          and raises with the recovery command. Divergence raises
+          ``SchemaDriftError``.
+        - ``INVALID_BOTH_MARKERS``: the two lifecycles are mutually exclusive;
+          combined presence is a corrupted state surfaced by
+          ``raise_if_invalid`` before any read or write.
+        """
+        root = self._open_root()
+        timestamp_path = f"{group}/{self._time_coord_name}"
+        try:
+            timestamp_arr = root[timestamp_path]
+        except KeyError:
+            timestamp_arr = None
+
+        attrs: dict[str, Any] = dict(timestamp_arr.attrs) if timestamp_arr is not None else {}
+        state = resolve_coord_lifecycle(attrs)
+        raise_if_invalid(state, timestamp_path)
+
+        if state is CoordLifecycleState.PREALLOCATED and timestamp_arr is not None:
+            current_ns = self._normalize_timestamp_value_ns(timestamp_arr[ts_index])
+            incoming_ns = self._normalize_timestamp_value_ns(timestamp_val)
+            if (np.isnat(current_ns) and np.isnat(incoming_ns)) or current_ns == incoming_ns:
+                return
+            raise SchemaDriftError(
+                f"Preallocated timestamp coordinate {timestamp_path!r} in group {group!r} "
+                f"slot {ts_index} diverged: current={current_ns!r} incoming={incoming_ns!r}."
+            )
+
+        if state is CoordLifecycleState.COORD_MANAGED and timestamp_arr is not None:
+            target_dtype = timestamp_arr.dtype
+            current_norm = self._normalize_for_coord_compare(timestamp_arr[ts_index], target_dtype)
+            incoming_norm = self._normalize_for_coord_compare(timestamp_val, target_dtype)
+            if np.isnat(current_norm):
+                raise SchemaDriftError(
+                    f"coord array {timestamp_path} slot {ts_index} is NaT under "
+                    "firecube_coord_managed marker; the materialization step "
+                    "must run first. Invoke: firecube zarr preallocate "
+                    "<plugin> --target <uri> --product-name <name> "
+                    "--write-mode <mode> --input-data <path> "
+                    "--slot-start=<n> --slot-end=<m>"
+                )
+            if current_norm == incoming_norm:
+                return
+            raise SchemaDriftError(
+                f"Coord-managed timestamp coordinate {timestamp_path!r} in group {group!r} "
+                f"slot {ts_index} diverged: current={current_norm!r} incoming={incoming_norm!r}."
+            )
+
         normalized = self._normalize_timestamp_value(timestamp_val)
         timestamp_arr = self.ensure_group(
             f"{group}/{self._time_coord_name}",

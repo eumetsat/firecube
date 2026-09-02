@@ -283,7 +283,7 @@ def test_dry_run_and_preallocate_produce_equal_identity_hash(tmp_path: Any) -> N
 
     dry_result = CliRunner().invoke(cli, [*base_args, "--dry-run"])
     assert dry_result.exit_code == 0, dry_result.output
-    dry_hash = json.loads(dry_result.output)["identity_hash"]
+    dry_hash = json.loads(dry_result.stdout)["identity_hash"]
 
     real_result = CliRunner().invoke(cli, base_args)
     assert real_result.exit_code == 0, real_result.output

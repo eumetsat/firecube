@@ -28,8 +28,9 @@ import json
 import logging
 import math
 import time
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import numpy as np
 
@@ -174,14 +175,61 @@ def _static_marker(array: Any) -> Any:
     return dict(getattr(array, "attrs", {}) or {}).get(FIRECUBE_STATIC_WRITTEN_ATTR)
 
 
+_COMPARE_SLAB_BYTES: Final[int] = 512 * 1024 * 1024
+"""Per-store byte budget for one streamed comparison slab."""
+
+
+def _chunk_aligned_slabs(
+    shape: tuple[int, ...], chunks: tuple[int, ...], itemsize: int, axis: int = 0
+) -> Iterator[tuple[slice, ...]]:
+    """Yield chunk-aligned index tuples bounded by the slab budget.
+
+    Splits along the leading axis first; when a single chunk along that axis
+    still overruns the budget, takes one chunk there and splits along the
+    next axis too, recursively. Steps whole chunks on every axis: a sub-chunk
+    slice still decompresses the entire chunk, so a finer walk would decode
+    each chunk many times over. The irreducible floor is one chunk.
+    """
+    if axis >= len(shape):
+        yield ()
+        return
+    rest_bytes = itemsize
+    for size in shape[axis + 1 :]:
+        rest_bytes *= size
+    chunk_step = max(int(chunks[axis]) if axis < len(chunks) else 1, 1)
+    step_bytes = rest_bytes * chunk_step
+    if step_bytes > _COMPARE_SLAB_BYTES and axis + 1 < len(shape):
+        for start in range(0, shape[axis], chunk_step):
+            head = slice(start, min(start + chunk_step, shape[axis]))
+            for tail in _chunk_aligned_slabs(shape, chunks, itemsize, axis + 1):
+                yield (head, *tail)
+        return
+    multiples = max(1, _COMPARE_SLAB_BYTES // max(step_bytes, 1))
+    step = chunk_step * multiples
+    for start in range(0, shape[axis], step):
+        yield (slice(start, min(start + step, shape[axis])),)
+
+
 def _values_equal(left: Any, right: Any) -> bool:
-    # Ellipsis indexing works for every rank; `[:]` raises on 0-d arrays
-    # (e.g. a CF grid-mapping scalar such as spatial_ref).
-    left_values = np.asarray(left[...])
-    right_values = np.asarray(right[...])
-    if left_values.dtype.kind == "f" and right_values.dtype.kind == "f":
-        return bool(np.array_equal(left_values, right_values, equal_nan=True))
-    return bool(np.array_equal(left_values, right_values))
+    # Streamed in chunk-aligned slabs: a product-scale array can be tens of
+    # decompressed GB per store and must never be fully resident. Ellipsis
+    # indexing handles 0-d arrays (e.g. the spatial_ref grid-mapping scalar).
+    shape = tuple(int(size) for size in left.shape)
+    chunks = tuple(int(size) for size in (getattr(left, "chunks", ()) or ()))
+    itemsize = np.dtype(left.dtype).itemsize
+    # NaT and NaN are equal to themselves for comparison purposes: a dense
+    # coordinate carries explicit NaT for unfilled slots.
+    nan_aware = np.dtype(left.dtype).kind in {"f", "c", "M", "m"}
+    for index in _chunk_aligned_slabs(shape, chunks, itemsize):
+        left_values = np.asarray(left[index] if index else left[...])
+        right_values = np.asarray(right[index] if index else right[...])
+        if nan_aware:
+            same = np.array_equal(left_values, right_values, equal_nan=True)
+        else:
+            same = np.array_equal(left_values, right_values)
+        if not same:
+            return False
+    return True
 
 
 def compare_zarr_stores(

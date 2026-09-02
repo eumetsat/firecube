@@ -31,10 +31,15 @@ This is the first tutorial that uses real EUMETSAT data. **[Download a
 Sentinel-3 FRP product with EUMDAC](sentinel3-frp.md)**, build a plugin for its
 standard MWIR detections, and write them to Parquet.
 
-## Parallel DirectZarrIngestor
+## DirectZarrIngestor (Region)
 
 **[Build a slot-capable `DirectZarrIngestor`](direct-zarr-parallel.md)** and
 write two disjoint slot ranges into one preallocated Zarr array.
+
+## DirectZarrIngestor (Auto)
+
+**[Build a `DirectZarrIngestor` that declares no timestamps at all](direct-zarr-auto.md)**
+and let Firecube discover the time axis from the source files.
 
 ## Next Steps
 

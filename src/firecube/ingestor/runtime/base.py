@@ -793,12 +793,23 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
                     ingestor_self: Any = self
                     if isinstance(ingestor_self, DirectZarrIngestor):
+                        serial_run = (
+                            self.engine_config.slot_start is None
+                            and self.engine_config.slot_end is None
+                        )
                         global_expected: dict[str, int] = {}
                         for group in binding.resolved.groups:
                             try:
                                 global_expected[group] = binding.resolved.size(group)
                             except ExtentUnknownError as exc:
-                                raise UnboundedAxisError(group) from exc
+                                if not serial_run:
+                                    raise UnboundedAxisError(group) from exc
+                                # A serial run may legitimately declare an axis
+                                # without a horizon (RegularTimeAxis with neither
+                                # slot_count nor end_date); arrays grow via
+                                # allow_grow. Skip extent validation for the
+                                # group. Parallel runs still fail loudly above.
+                                continue
                         schema = ingestor_self.zarr_schema(runtime_plugin_ctx)
                         if schema:
                             validate_global_expected_subset_of_schema(global_expected, schema)

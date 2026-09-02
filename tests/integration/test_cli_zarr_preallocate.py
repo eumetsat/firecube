@@ -98,7 +98,7 @@ def test_preallocate_emits_index_ensured_wal_and_telemetry(
 
     monkeypatch.setattr(ChunkManager, "record_index_ensured_event", record_spy)
     monkeypatch.setattr(
-        "firecube.cli.zarr.observability.create_ingestion_telemetry",
+        "firecube.cli.zarr._preallocate.observability.create_ingestion_telemetry",
         lambda **_kwargs: telemetry,
     )
 
@@ -108,7 +108,7 @@ def test_preallocate_emits_index_ensured_wal_and_telemetry(
     assert len(wal_events) == 1
     event = wal_events[0]
     assert event.product == PRODUCT_NAME
-    assert event.run_id == "preallocate"
+    assert event.run_id.startswith("preallocate")
     assert event.outcome == INDEX_ENSURED_OUTCOME_CREATED
     assert event.axis_kinds == ("regular_time",)
     assert event.groups == ("data",)

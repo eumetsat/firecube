@@ -156,3 +156,36 @@ def test_staged_resume_static_array_round_trip(tmp_path: Path) -> None:
     root = zarr.open_group(store=LocalStore(final), mode="r", zarr_format=3)
     assert root["G/lat"].attrs.get("firecube_static_written") is True
     np.testing.assert_array_equal(np.asarray(cast(Any, root["G/lat"])[:]), data)
+
+
+def test_staged_seed_preserves_coord_managed(tmp_path: Path) -> None:
+    final = tmp_path / "final.zarr"
+    temp = tmp_path / "temp.zarr"
+    _write_array_json(
+        final,
+        group="G",
+        array="lat",
+        shape=[4],
+        attrs={
+            "_ARRAY_DIMENSIONS": ["lat"],
+            "_FillValue": None,
+            "firecube_coord_managed": True,
+            "custom_attr": "kept",
+        },
+    )
+
+    session = make_local_session(str(final))
+    with assert_no_fsspec_bypass():
+        seed_staged_store_metadata(
+            temp_store_uri=str(temp),
+            final_target_uri=str(final),
+            groups=["G"],
+            session=session,
+        )
+
+    seeded = json.loads((temp / "G" / "lat" / "zarr.json").read_text())
+    assert "attributes" in seeded
+    assert seeded["attributes"].get("firecube_coord_managed") is True
+    assert seeded["attributes"]["_ARRAY_DIMENSIONS"] == ["lat"]
+    assert seeded["attributes"]["_FillValue"] is None
+    assert seeded["attributes"]["custom_attr"] == "kept"

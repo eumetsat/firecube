@@ -112,8 +112,8 @@ def test_preallocate_records_terminal_run_on_success(tmp_path: Path) -> None:
         )
 
         all_runs = cm.list_runs(product=PRODUCT_NAME)
-        preallocate_runs = [r for r in all_runs if r.run_id == "preallocate"]
-        assert preallocate_runs, f"no run with run_id='preallocate' was recorded; runs={all_runs!r}"
+        preallocate_runs = [r for r in all_runs if r.run_id.startswith("preallocate")]
+        assert preallocate_runs, f"no preallocate run was recorded; runs={all_runs!r}"
         assert all(r.is_terminal for r in preallocate_runs), (
             f"preallocate runs are not terminal: {[(r.run_id, r.status) for r in preallocate_runs]}"
         )
@@ -154,8 +154,8 @@ def test_preallocate_records_failed_run_on_post_slot_index_error(
         )
 
         all_runs = cm.list_runs(product=PRODUCT_NAME)
-        preallocate_runs = [r for r in all_runs if r.run_id == "preallocate"]
-        assert preallocate_runs, f"no run with run_id='preallocate' was recorded; runs={all_runs!r}"
+        preallocate_runs = [r for r in all_runs if r.run_id.startswith("preallocate")]
+        assert preallocate_runs, f"no preallocate run was recorded; runs={all_runs!r}"
         assert any(r.status == "failed" for r in preallocate_runs), (
             f"no preallocate run with status='failed'; "
             f"statuses={[r.status for r in preallocate_runs]}"

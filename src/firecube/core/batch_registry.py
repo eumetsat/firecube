@@ -142,5 +142,28 @@ class BatchResourceRegistry:
         if first_error is not None:
             raise first_error
 
+    def teardown_all(self) -> None:
+        """Tear down every registered batch id.
+
+        Intended for pipeline-start drains of batches whose per-batch
+        teardown never ran (crash paths). Like ``teardown``, every close is
+        attempted and the first exception is re-raised at the end.
+
+        Examples:
+            >>> registry = BatchResourceRegistry()
+            >>> registry.register("batch-1", open(__file__))
+            >>> registry.register("batch-2", open(__file__))
+            >>> registry.teardown_all()
+        """
+        first_error: Exception | None = None
+        for batch_id in list(self._resources):
+            try:
+                self.teardown(batch_id)
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+        if first_error is not None:
+            raise first_error
+
 
 __all__ = ["BatchResourceRegistry"]

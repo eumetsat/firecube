@@ -31,7 +31,7 @@ from firecube.core import observability
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.manager import check_legacy_index_record
 from firecube.core.errors import LegacyIndexRecordError, ManifestError, ResolvedIndexConflictError
-from firecube.core.index_resolve import resolve_index_spec
+from firecube.core.index_resolve import ExtentUnknownError, resolve_index_spec
 from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
@@ -164,6 +164,21 @@ def _derived_coordinates_for_group(
     return [(epoch_dt + i * delta).isoformat().replace("+00:00", "Z") for i in range(slot_count)]
 
 
+def _derived_coordinates_label_for_group(
+    group_name: str, group_payload: dict[str, Any]
+) -> str | None:
+    coords = _derived_coordinates_for_group(group_name, group_payload)
+    if coords is None:
+        return None
+
+    params = group_payload.get("params", {})
+    mode = params.get("mode") if isinstance(params, dict) else None
+    label = f"derived_coordinates[{group_name!r}]"
+    if mode == "floor":
+        label += " (nominal grid labels — stored values are observed times)"
+    return f"{label}:"
+
+
 @index.command("show")
 @click.option("--target", required=True, help="Product Zarr URI to inspect.")
 @click.option("--product-name", required=True, help="Logical product name.")
@@ -214,7 +229,7 @@ def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> No
                     )
                     continue
                 any_regular = True
-                click.echo(f"derived_coordinates[{group_name!r}]:")
+                click.echo(_derived_coordinates_label_for_group(group_name, group_payload))
                 for coord in coords:
                     click.echo(f"  {coord}")
             if not any_regular:
@@ -348,6 +363,22 @@ def rebuild_cmd(target: str, plugin: str, product_name: str) -> None:
                     f"(1) remove the `firecube_slot_index_model_identity_hash` root attr from the Zarr store, "
                     f"AND (2) delete `.firecube/slot_index/current.json`. Both steps required."
                 )
+        # An unbounded group serializes as ``size: null`` rather than raising,
+        # so ``as_resolved_index_record`` cannot signal the refusal; probe each
+        # group's extent explicitly before persisting anything.
+        unbounded_groups: list[str] = []
+        for group in resolved.groups:
+            try:
+                resolved.size(group)
+            except ExtentUnknownError:
+                unbounded_groups.append(group)
+        if unbounded_groups:
+            groups = ", ".join(repr(group) for group in unbounded_groups)
+            raise click.ClickException(
+                f"Plugin '{plugin}' failed to create resolved index record for "
+                f"unbounded group(s) {groups}: set end_date or slot_count to "
+                "materialize the group's coord"
+            )
         record = resolved.as_resolved_index_record(run_id=run_id)
         try:
             persisted_record, outcome = manager.ensure_resolved_index(

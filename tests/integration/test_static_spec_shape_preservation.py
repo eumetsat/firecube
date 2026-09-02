@@ -14,7 +14,8 @@
 
 """Static-array shape preservation through preallocate and IndexedRegion.
 
-TDD-RED today (bug at cli/zarr.py:699); GREEN after T8 guard is applied.
+Preallocate must create static (time_indexed=False) arrays at their declared
+shape and must not stretch them along the time axis.
 """
 
 from __future__ import annotations
@@ -120,7 +121,7 @@ def _read_lat(tmp_path: Path) -> np.ndarray:
 
 
 def test_static_spec_preserved_via_cli_preallocate(tmp_path: Path) -> None:
-    """TDD-RED today (bug at cli/zarr.py:699); GREEN after T8 guard is applied."""
+    """CLI preallocate keeps a static array at its declared (non-time) shape."""
     result = _invoke_preallocate(f"file://{tmp_path}")
 
     assert result.exit_code == 0

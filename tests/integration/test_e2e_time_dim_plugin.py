@@ -28,7 +28,7 @@ from typing import Any
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_CF_TIME_DIM_FIXTURE = _REPO_ROOT / "tests" / "fixtures" / "cf_time_dim_test_plugin"
+_CF_TIME_DIM_FIXTURE = _REPO_ROOT / "tests" / "fixtures" / "firecube_test_plugins"
 
 
 def _ingest(target: Path, source: Path) -> subprocess.CompletedProcess[str]:

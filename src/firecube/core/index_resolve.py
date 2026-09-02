@@ -23,8 +23,10 @@ from __future__ import annotations
 
 import datetime as dt
 import functools
+import hashlib
+import json
 import numbers
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol, cast, runtime_checkable
 
@@ -95,7 +97,7 @@ def coerce_to_epoch_s(value: Any, *, mode: str = "floor") -> int:
     Accepts the following types:
 
     - ``str``: UTC-explicit ISO 8601 string (via ``iso_to_epoch_s``).
-    - ``datetime.datetime``: naive treated as UTC (D6 default; FCI pattern);
+    - ``datetime.datetime``: naive treated as UTC (FCI pattern);
       aware converted to UTC.
     - ``numpy.datetime64``: any unit, converted to seconds.
     - ``pandas.Timestamp``: naive treated as UTC; aware converted to UTC.
@@ -132,7 +134,7 @@ def coerce_to_epoch_s(value: Any, *, mode: str = "floor") -> int:
 
     if isinstance(value, dt.datetime):
         if value.tzinfo is None:
-            # D6 default: naive datetime treated as UTC (FCI pattern)
+            # Default: naive datetime treated as UTC (FCI pattern)
             value = value.replace(tzinfo=dt.UTC)
         else:
             value = value.astimezone(dt.UTC)
@@ -357,6 +359,12 @@ class ResolvedIndex:
     the ``DirectZarrIngestor`` instance, so repeated lookups within a run
     return the same object.
 
+    Plugin code reaches it through ``resolved_index(ctx)``. Use
+    ``size(group)`` when a schema needs the declared axis extent before
+    writes begin, ``position(group, coordinate)`` when a write needs the
+    slot index for a timestamp or integer coordinate, and
+    ``coordinate(group, index)`` for the reverse lookup.
+
     The ``identity_hash`` is content-addressed from the canonical
     resolved-index payload. It intentionally does not track the legacy
     slot-index model hash.
@@ -370,6 +378,8 @@ class ResolvedIndex:
         items: Sequence[ItemManifestEntry] | None = None,
     ) -> None:
         self._spec = spec
+        self._name = spec.name
+        self._time_unit = spec.time_unit
         self._resolvers = resolvers
         self._groups: tuple[str, ...] = tuple(sorted(resolvers))
         self.items: tuple[ItemManifestEntry, ...] | None = (
@@ -380,6 +390,55 @@ class ResolvedIndex:
     def groups(self) -> tuple[str, ...]:
         """Sorted tuple of group names."""
         return self._groups
+
+    def filtered_spec(self, groups: Iterable[str] | None = None) -> IndexSpec:
+        """Return an ``IndexSpec`` rebuilt from the resolved state.
+
+        ``bound_axes()``-only reconstruction was rejected because callers need
+        the product ``name`` and ``time_unit`` too, not just axis objects.
+        Filtering ``as_resolved_index_record()`` was rejected because mixed
+        specs still include unbounded axes, and that path re-raises
+        ``ExtentUnknownError`` when it meets them.
+        """
+
+        selected_group_set = None if groups is None else set(groups)
+        selected_groups = (
+            self._groups
+            if selected_group_set is None
+            else tuple(group for group in self._groups if group in selected_group_set)
+        )
+        if not selected_groups:
+            raise ValueError("filtered_spec() requires at least one group")
+
+        spec_groups: dict[str, AxisSpec] = {}
+        for group in selected_groups:
+            axis = self.axis_for(group)
+            if axis is None:
+                raise KeyError(group)
+            if isinstance(axis, RegularTimeAxis):
+                spec_groups[group] = RegularTimeAxis(
+                    coordinate=axis.coordinate,
+                    epoch=axis.epoch,
+                    cadence_s=axis.cadence_s,
+                    mode=axis.mode,
+                    end_date=axis.end_date,
+                    slot_count=axis.slot_count,
+                )
+                continue
+            if isinstance(axis, IntegerAxis):
+                spec_groups[group] = IntegerAxis(slot_count=axis.slot_count)
+                continue
+            if isinstance(axis, IrregularTimeAxis):
+                values = axis.values
+                if values is AUTO:
+                    raise ExtentUnknownError("irregular axis has no explicit values")
+                spec_groups[group] = IrregularTimeAxis(coordinate=axis.coordinate, values=values)
+                continue
+            raise NotImplementedError(
+                f"No filtered spec reconstruction for axis type {type(axis).__name__!r}"
+            )
+
+        return IndexSpec(name=self._name, groups=spec_groups, time_unit=self._time_unit)
 
     def canonical_index_payload(self) -> dict[str, Any]:
         """Return the canonical resolved-index payload."""
@@ -396,9 +455,13 @@ class ResolvedIndex:
                 }
                 if axis.end_date is not None:
                     params["end_date"] = axis.end_date
+                try:
+                    size: int | None = resolver.size
+                except ExtentUnknownError:
+                    size = None
                 groups[group] = {
                     "kind": "regular_time",
-                    "size": resolver.size,
+                    "size": size,
                     "params": params,
                 }
                 continue
@@ -564,8 +627,8 @@ def resolve_index_spec(
         ... )
         >>> spec = IndexSpec(name="demo", groups={"data": axis})
         >>> resolved = resolve_index_spec(spec, time_dim_name="timestamp")
-        >>> resolved.spec.name
-        'demo'
+        >>> resolved.groups
+        ('data',)
     """
     from firecube.core.errors import ConfigurationError
 
@@ -583,3 +646,88 @@ def resolve_index_spec(
         resolvers[group] = _resolver_for(axis)
 
     return ResolvedIndex(spec=spec, resolvers=resolvers, items=items)
+
+
+def _compute_group_identity_hash(
+    axis: AxisSpec,
+    resolved_size: int,
+    dtype: Any,
+) -> str:
+    """Return a deterministic SHA-256 identity hash for a single bounded group.
+
+    Used to stamp/verify the ``firecube_group_identity_hash`` attribute on a
+    bounded group's coord array. Complements the product-wide
+    ``compute_resolved_index_identity_hash`` for mixed-spec ingests where
+    only a subset of groups have a fixed extent: the group-level hash lets ingest startup verify each bounded
+    group independently without persisting a full resolved-index record.
+
+    Hash inputs, canonicalised as JSON with sorted keys:
+
+    * ``kind``: axis kind (e.g. ``"regular_time"``, ``"integer"``,
+      ``"irregular_time"``).
+    * For ``RegularTimeAxis``: ``mode``, normalised ``epoch``, ``cadence_s``.
+    * For ``IntegerAxis``: no additional params (``resolved_size`` alone).
+    * For ``IrregularTimeAxis``: canonicalised ``coordinate`` name.
+    * ``resolved_size``: the resolved slot count (from ``end_date`` or
+      ``slot_count`` for regular axes, ``slot_count`` for integer, or
+      ``len(values)`` for irregular).
+    * ``dtype``: numpy dtype string of the coord array.
+
+    Args:
+        axis: The axis specification for the group.
+        resolved_size: The resolved slot count for the group.
+        dtype: The coord array dtype (numpy dtype or dtype-like string).
+
+    Returns:
+        Lowercase-hex SHA-256 digest (64 characters).
+
+    Raises:
+        NotImplementedError: If the axis kind is not supported.
+
+    Examples:
+        >>> from firecube.core.index_spec import RegularTimeAxis
+        >>> axis = RegularTimeAxis(
+        ...     coordinate="timestamp",
+        ...     epoch="2024-01-01T00:00:00Z",
+        ...     cadence_s=600,
+        ...     slot_count=100,
+        ... )
+        >>> hash_a = _compute_group_identity_hash(axis, 100, "datetime64[ns]")
+        >>> hash_b = _compute_group_identity_hash(axis, 100, "datetime64[ns]")
+        >>> hash_a == hash_b
+        True
+        >>> len(hash_a)
+        64
+    """
+    if isinstance(axis, RegularTimeAxis) or (
+        hasattr(axis, "epoch") and hasattr(axis, "cadence_s") and hasattr(axis, "mode")
+    ):
+        regular_axis = cast(RegularTimeAxis, axis)
+        payload: dict[str, Any] = {
+            "kind": "regular_time",
+            "mode": regular_axis.mode,
+            "epoch": normalize_epoch_iso(regular_axis.epoch),
+            "cadence_s": int(regular_axis.cadence_s),
+            "resolved_size": int(resolved_size),
+            "dtype": str(np.dtype(dtype)),
+        }
+    elif isinstance(axis, IrregularTimeAxis) or (
+        hasattr(axis, "values") and hasattr(axis, "coordinate")
+    ):
+        irregular_axis = cast(IrregularTimeAxis, axis)
+        payload = {
+            "kind": "irregular_time",
+            "coordinate": str(irregular_axis.coordinate),
+            "resolved_size": int(resolved_size),
+            "dtype": str(np.dtype(dtype)),
+        }
+    elif isinstance(axis, IntegerAxis) or hasattr(axis, "slot_count"):
+        payload = {
+            "kind": "integer",
+            "resolved_size": int(resolved_size),
+            "dtype": str(np.dtype(dtype)),
+        }
+    else:
+        raise NotImplementedError(f"No group identity hash for axis type {type(axis).__name__!r}")
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

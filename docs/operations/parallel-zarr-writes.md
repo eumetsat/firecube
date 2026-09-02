@@ -7,6 +7,11 @@ group.
 Firecube plans and validates the ranges. Your scheduler starts one
 `firecube ingest` process for each range.
 
+<figure markdown="span">
+  ![Declare the time axis, preallocate the store, plan slot ranges, then fan out ingest workers that write disjoint ranges of one Zarr product.](../assets/images/firecube-direct-zarr-golden-path.svg){ width="900" }
+  <figcaption markdown="span">The workflow at a glance: one declaration, one preallocate, one plan, N workers.</figcaption>
+</figure>
+
 ## Before You Start
 
 The plugin must:
@@ -17,7 +22,7 @@ The plugin must:
 - declare the complete Zarr schema;
 - map source values to deterministic indexes through the resolved index.
 
-See the [DirectZarrIngestor guide](../guides/plugins/direct-zarr.md#index-spec-and-write-intents)
+See the [DirectZarrIngestor guide](../guides/plugins/direct-zarr.md#implement-the-plugin)
 for the plugin contract. Use [Parallelism](../concepts/parallelism.md) first if
 you have not yet chosen a write model.
 
@@ -36,6 +41,28 @@ firecube zarr preallocate <plugin> \
 
 The command is idempotent when the existing arrays match the declared schema.
 It fails when their shape, data type, or chunk layout differs.
+
+If the plugin declares a `TimeAxis.observed` axis, the coordinate values come
+from the source data, not from the declaration. Materialize them before
+starting workers by passing `--input-data` and the slot window to the same
+command:
+
+```bash
+firecube zarr preallocate <plugin> \
+  --target file:///data/products/my_product.zarr \
+  --product-name my_product \
+  --storage-type local \
+  --storage-driver fsspec \
+  --write-mode direct \
+  --input-data /data/source \
+  --slot-start 0 \
+  --slot-end 432
+```
+
+Workers refuse to write into slots whose coordinate is still unmaterialized,
+so a skipped window surfaces as a loud per-slot error, never as silent data
+misplacement. `TimeAxis.grid` and `TimeAxis.explicit` axes are filled from
+the declaration alone and skip this step.
 
 Add `--dry-run` to inspect the resolved index without writing any files or
 control-plane records:
@@ -210,6 +237,6 @@ recovery commands.
 ## Next Steps
 
 - **[Parallel Zarr Writes](../concepts/output-formats/zarr/parallel-writes.md)** - understand the slot safety model
-- **[Parallel DirectZarrIngestor Plugin](../tutorials/direct-zarr-parallel.md)** - build a direct-indexed plugin
+- **[DirectZarrIngestor (Region) Tutorial](../tutorials/direct-zarr-parallel.md)** - build a direct-indexed plugin
 - **[Scheduling And Write Safety](../concepts/orchestration/write-safety.md)** - coordinate external workers
 - **[CLI Reference](../reference/cli.md)** - look up all slot and ingest flags

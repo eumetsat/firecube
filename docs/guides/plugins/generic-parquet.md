@@ -105,5 +105,5 @@ If built-in discovery does not include the product's source names, pass
 
 - **[Parquet](../../concepts/output-formats/parquet.md)** — understand the persisted dataset layout
 - **[Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md)** — download and ingest a real EUMETSAT product end to end, once `build_dataset` is in place
-- **[Configure a Plugin](cli-and-config.md)** — declare typed plugin options for the reader you just implemented
+- **[Add Plugin Configuration Options](add-config-options.md)** — declare typed plugin options for the reader you just implemented
 - **[Plugin Templates](../../reference/templates.md)** — look up the public template types

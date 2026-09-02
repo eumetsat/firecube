@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "firecube-test-plugins"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["firecube"]
+
+[project.entry-points."firecube.plugins"]
+callable_payload_safe = "callable_payload_test_plugin:CallablePayloadSafeIngestor"
+callable_payload_unsafe = "callable_payload_test_plugin:CallablePayloadUnsafeIngestor"
+cf_time_dim = "cf_time_dim_test_plugin"
+cf_time_dim_value_dedup = "cf_time_dim_test_plugin"
+cli_test_plugin = "cli_test_plugin"
+direct_zarr_capable_test_plugin = "direct_zarr_capable_test_plugin"
+direct_zarr_non_capable_test_plugin = "direct_zarr_non_capable_test_plugin"
+fixed_epoch_shape_plugin = "slot_shape_test_plugin:FixedEpochShapeIngestor"
+index_spec_custom_dim = "index_spec_test_plugin:IndexSpecCustomTimeDimIngestor"
+index_spec_integer = "index_spec_integer_test_plugin:IntegerAxisIngestor"
+index_spec_integer_mixed = "index_spec_integer_test_plugin:MixedAxisIngestor"
+index_spec_multi = "index_spec_test_plugin:IndexSpecMultiGroupIngestor"
+index_spec_single = "index_spec_test_plugin:IndexSpecSingleGroupIngestor"
+indexed_write_drop = "indexed_write_test_plugin:IndexedWriteDropIngestor"
+indexed_write_error = "indexed_write_test_plugin:IndexedWriteErrorIngestor"
+indexed_write_fan_out = "indexed_write_test_plugin:IndexedWriteFanOutIngestor"
+indexed_write_single = "indexed_write_test_plugin:IndexedWriteSingleIngestor"
+indexed_write_with_statics = "indexed_write_test_plugin:IndexedWriteWithStaticsIngestor"
+irregular_axis_concrete = "irregular_axis_test_plugin:IrregularAxisConcreteIngestor"
+irregular_axis_duplicate = "irregular_axis_test_plugin:IrregularAxisDuplicateIngestor"
+irregular_axis_empty = "irregular_axis_test_plugin:IrregularAxisEmptyIngestor"
+irregular_axis_missing_coord = "irregular_axis_test_plugin:IrregularAxisMissingCoordIngestor"
+irregular_axis_reverse_order = "irregular_axis_test_plugin:IrregularAxisReverseOrderIngestor"
+irregular_axis_safe = "irregular_axis_test_plugin:IrregularAxisSafeIngestor"
+mixed_bounded_unbounded_test = "mixed_bounded_unbounded_test_plugin:MixedBoundedUnboundedTestIngestor"
+multi_group_capable_test_plugin = "multi_group_capable_test_plugin"
+option_epoch_shape_plugin = "slot_shape_test_plugin:OptionEpochShapeIngestor"
+regular_axis_dense_coord = "regular_axis_test_plugin:RegularAxisDenseCoordIngestor"
+regular_axis_end_date = "regular_axis_test_plugin:RegularAxisEndDateIngestor"
+regular_axis_floor_coord = "regular_axis_test_plugin:RegularAxisFloorCoordIngestor"
+regular_axis_no_coord_spec = "regular_axis_test_plugin:RegularAxisNoCoordSpecIngestor"
+regular_axis_unbounded = "regular_axis_test_plugin:RegularAxisUnboundedIngestor"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cli_test_plugin", "src/direct_zarr_capable_test_plugin", "src/direct_zarr_non_capable_test_plugin", "src/multi_group_capable_test_plugin", "src/cf_time_dim_test_plugin", "src/slot_shape_test_plugin", "src/index_spec_test_plugin", "src/index_spec_integer_test_plugin", "src/callable_payload_test_plugin", "src/irregular_axis_test_plugin", "src/regular_axis_test_plugin", "src/indexed_write_test_plugin", "src/mixed_bounded_unbounded_test_plugin"]

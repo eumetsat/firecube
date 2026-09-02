@@ -111,9 +111,9 @@ nav:
       - GenericZarrIngestor (Append): guides/plugins/generic-zarr.md
       - GenericParquetIngestor (Tabular): guides/plugins/generic-parquet.md
       - DirectZarrIngestor (Region): guides/plugins/direct-zarr.md
-      - IrregularTimeAxis And AUTO: guides/plugins/irregular-axis.md
+      - DirectZarrIngestor (Auto): guides/plugins/direct-zarr-auto.md
     - Develop Further:
-      - Configure a Plugin: guides/plugins/cli-and-config.md
+      - Add Configuration Options: guides/plugins/add-config-options.md
       - Add Telemetry: guides/plugins/observability.md
     - Advanced Customization:
       - Plugin Extensions: guides/plugins/extensions.md
@@ -130,7 +130,7 @@ nav:
         - Overview: concepts/output-formats/zarr/index.md
         - GenericZarrIngestor (Append): concepts/output-formats/zarr/generic-append.md
         - DirectZarrIngestor (Region): concepts/output-formats/zarr/direct-region.md
-        - Parallel Zarr Writes: concepts/output-formats/zarr/parallel-writes.md
+        - 'DirectZarrIngestor: Parallel Writes': concepts/output-formats/zarr/parallel-writes.md
       - Parquet: concepts/output-formats/parquet.md
       - Tensogram: concepts/output-formats/archive.md
     - Storage & ChunkManager:
@@ -150,6 +150,7 @@ nav:
       - Traces: concepts/observability/traces.md
     - Best Practices & Performance:
       - Overview: concepts/best-practices.md
+      - Reproducibility: concepts/reproducibility.md
       - Production Guide: concepts/production-guide.md
       - Performance Tuning: concepts/performance.md
       - Parallelism: concepts/parallelism.md
@@ -184,7 +185,8 @@ nav:
     - Product Examples:
       - Sentinel-3 FRP To Parquet: tutorials/sentinel3-frp.md
     - Advanced Zarr:
-      - Parallel DirectZarrIngestor: tutorials/direct-zarr-parallel.md
+      - DirectZarrIngestor (Region): tutorials/direct-zarr-parallel.md
+      - DirectZarrIngestor (Auto): tutorials/direct-zarr-auto.md
   - Contributing:
     - Overview: contributing/index.md
     - Firecube Contributors: contributing/firecube-contributors.md
@@ -202,3 +204,4 @@ nav:
     - Configuration: reference/config.md
     - Observability: reference/observability.md
     - Storage Drivers: reference/storage-drivers.md
+    - Control-Plane Spec: reference/control-plane-spec.md

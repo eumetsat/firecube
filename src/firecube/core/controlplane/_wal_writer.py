@@ -21,7 +21,7 @@ import uuid
 from typing import Any
 
 from firecube.core.controlplane import types
-from firecube.core.controlplane.events import RunEventWriter
+from firecube.core.controlplane.events import ConsolidatedTimeCoord, RunEventWriter
 from firecube.core.controlplane.repo_utils import parse_pod_run_id_slot
 from firecube.core.controlplane.types import (
     EVENT_INDEX_ENSURED,
@@ -330,6 +330,18 @@ class ManifestWalWriter:
             meta={},
             flush=False,
         )
+
+    def record_time_coord_consolidation(
+        self, *, product: str, event: ConsolidatedTimeCoord
+    ) -> None:
+        self._writer(product, event.run_id, resume_existing=True).append(
+            types.EVENT_CONSOLIDATED_TIME_COORD,
+            event.to_dict(),
+            meta={"kind": event.kind},
+            flush=True,
+        )
+        self._writer(product, event.run_id, resume_existing=True).finalize(status="complete")
+        self._repo._writers.pop((product, event.run_id), None)
 
     def record_slot_index_model_event(
         self,

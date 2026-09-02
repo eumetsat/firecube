@@ -29,6 +29,7 @@ _KNOWN_USER_ERROR_TYPE_NAMES: frozenset[str] = frozenset(
         "NotADirectoryError",
         "PathNotFoundError",
         "PermissionError",
+        "SchemaDriftError",
     }
 )
 

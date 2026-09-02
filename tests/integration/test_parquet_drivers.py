@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""W4.5 — DuckDB driver integration suite.
+"""DuckDB driver integration suite.
 
 Exercises ``StorageSession.duckdb.apply(...)`` against a real
-``duckdb.connect(":memory:")`` connection. BT2b in
+``duckdb.connect(":memory:")`` connection.
+``test_obstore_duckdb_remote_hard_error`` in
 ``test_architecture_invariants.py`` covers the same obstore-remote hard-error
-contract via ``MagicMock``; this file complements it with real-DuckDB scenarios
-plus fsspec-remote settings propagation and local parquet round-trips.
+contract via ``MagicMock``; this file complements it with real-DuckDB
+scenarios plus fsspec-remote settings propagation and local parquet
+round-trips.
 """
 
 from __future__ import annotations
@@ -116,8 +118,11 @@ def test_local_parquet_under_obstore(tmp_path: Path) -> None:
 
 @pytest.mark.integration
 def test_obstore_remote_hard_error() -> None:
-    """BT2b in ``test_architecture_invariants.py`` covers the same contract with a
-    ``MagicMock`` connection; this cell adds real-DuckDB coverage so any future
+    """The obstore driver refuses remote parquet access with a typed hard error.
+
+    ``test_obstore_duckdb_remote_hard_error`` in
+    ``test_architecture_invariants.py`` covers the same contract with a
+    ``MagicMock`` connection; this test adds real-DuckDB coverage so any future
     regression in the bridge surfaces in the parquet integration suite as well.
     """
     session = _make_session("s3://test-bucket/data.parquet", driver="obstore")
@@ -210,7 +215,7 @@ def test_storage_uri_remote_detection_drives_bridge_branch() -> None:
     """Pins ``StorageUri.is_remote()`` as the local/remote selector.
 
     A regression that misclassifies ``s3://`` as local would silently downgrade
-    the obstore guard into a no-op; this cell guards the W4.1/W4.2/W4.3 contract.
+    the obstore guard into a no-op; this cell guards the driver contract.
     """
     remote_uri = StorageUri.parse("s3://branch-detection/data.parquet")
     local_uri = StorageUri.parse("file:///tmp/branch-detection/data.parquet")

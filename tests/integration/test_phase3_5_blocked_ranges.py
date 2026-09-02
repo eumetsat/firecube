@@ -24,8 +24,8 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from firecube.cli import zarr as zarr_module
 from firecube.cli.main import cli
+from firecube.cli.zarr import _slots as zarr_module
 from firecube.ingestor.registry import loader as _loader
 
 pytestmark = pytest.mark.integration

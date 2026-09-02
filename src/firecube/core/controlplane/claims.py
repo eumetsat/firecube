@@ -116,8 +116,11 @@ class ClaimHandle:
                     "heartbeat_interval_s": self.heartbeat_interval_s,
                     "stale_threshold_s": self.stale_threshold_s,
                 }
-                with suppress(Exception), self.fs.open(self.claim_path, "w") as handle:
-                    json.dump(payload, handle, separators=(",", ":"))
+                try:
+                    with self.fs.open(self.claim_path, "w") as handle:
+                        json.dump(payload, handle, separators=(",", ":"))
+                except Exception as exc:
+                    log.warning("claim heartbeat write failed for %s: %s", self.claim_path, exc)
 
         self._thread = threading.Thread(
             target=_loop,

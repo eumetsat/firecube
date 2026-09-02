@@ -54,4 +54,4 @@ ingestion using representative input data for the selected plugin path.
 - **[Plugin Development Overview](index.md)** — review the public authoring classes
 - **[Create a Plugin](create-a-plugin.md)** — generate a package with matching registration metadata
 - **[Install Your Plugin](install-a-plugin.md)** — verify discovery before publishing
-- **[Configure a Plugin](cli-and-config.md)** — declare typed plugin options
+- **[Add Plugin Configuration Options](add-config-options.md)** — declare typed plugin options

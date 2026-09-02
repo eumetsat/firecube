@@ -58,7 +58,6 @@ assertion-light mock tests.
 5. Tighten storage summaries and driver reporting.
    Add direct-S3 result-summary tests where metrics storage is absent and the
    selected driver must still be reported accurately.
-
 ## P2 - Lower-Risk Gaps
 
 1. WAL negative branches: malformed records, duplicate run IDs, and missing

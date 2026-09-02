@@ -107,5 +107,5 @@ If built-in discovery does not include the product's source names, pass
 - **[Quickstart](../../quickstart/index.md)** — create and run a complete local plugin with this template
 - **[NetCDF To Zarr](../../tutorials/weather-netcdf.md)** — inspect the example plugin and verify its stored values
 - **[Route Writes To Multiple Groups](multi-group-writes.md)** — write more than the single default group
-- **[Configure a Plugin](cli-and-config.md)** — declare typed options the plugin validates before ingestion
+- **[Add Plugin Configuration Options](add-config-options.md)** — declare typed options the plugin validates before ingestion
 - **[Plugin Templates](../../reference/templates.md)** — look up the public template types

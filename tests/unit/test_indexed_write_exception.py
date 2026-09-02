@@ -78,5 +78,5 @@ def test_abstract_error_fires_when_neither_hook_overridden() -> None:
         ingestor.build_write_intents(cast(Any, []), cast(Any, None))
 
     message = str(excinfo.value)
-    assert "build_indexed_write" in message
     assert "build_write_intents" in message
+    assert "WriteIntent and IndexedWrite" in message

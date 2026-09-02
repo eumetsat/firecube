@@ -61,7 +61,7 @@ Speculative ideas only. Items here are not accepted scope. Promote to [TODO.md](
     - `src/firecube/core/controlplane/manager.py`
     - `src/firecube/core/controlplane/repo.py`
     - `src/firecube/ingestor/runtime/recording.py`
-    - `src/firecube/cli/zarr.py`
+    - `src/firecube/cli/zarr/`
 
 ### §20.1 Verify the real failure mode first (pod exit)
 
@@ -163,7 +163,7 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
   for `firecube-opera-seviri-nordlis`; the working stand-in is ingest-side
   over-allocation (`--option expected_timesteps_per_group`, wrapped as
   `opera-ingest.sh --horizon YYYYMMDD`).
-- **Gap 1 — preallocate ignores plugin `--option`.** `cli/zarr.py:preallocate`
+- **Gap 1 — preallocate ignores plugin `--option`.** `cli/zarr/_preallocate.py:preallocate`
   coerces `--option` pairs into `IngestContext.options` but never builds/applies
   the plugin's typed `plugin_config` from them (unlike `firecube ingest`). So
   hooks that read `self.plugin_config` (`reference_epoch`,

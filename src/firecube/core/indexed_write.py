@@ -15,7 +15,7 @@
 """Coordinate-keyed indexed write intent for `DirectZarrIngestor`.
 
 Defines `IndexedWrite`, a frozen dataclass produced by
-``DirectZarrIngestor.build_indexed_write()``.  Lives in ``firecube.core``
+``DirectZarrIngestor.build_write_intents()``.  Lives in ``firecube.core``
 so both the ``firecube.core.api`` and ``firecube.ingestor.api`` façades
 can re-export it without violating the core-below-ingestor layering rule
 enforced by ``tests/architecture/test_core_independence.py``.
@@ -37,7 +37,7 @@ import numpy as np
 class IndexedWrite:
     """A coordinate-keyed write intent whose slot index is resolved at compile time.
 
-    Produced by ``DirectZarrIngestor.build_indexed_write()`` to describe a
+    Returned from ``DirectZarrIngestor.build_write_intents()`` to describe a
     write whose target slot is expressed as a raw coordinate value (typically
     a ``datetime``, ``numpy.datetime64``, or integer) rather than a pre-resolved
     integer index. The engine maps ``coordinate`` to a slot index at compile
@@ -51,11 +51,15 @@ class IndexedWrite:
 
     - Static (non-time-indexed) arrays remain ``WriteIntent.static`` because
       they carry no slot coordinate.
-    - Time-coordinate writes are engine-owned; plugins never emit them.
+    - Time-coordinate verify-writes are emitted automatically by the engine
+      for every compiled slot; plugins never resolve or emit them on this
+      path.
 
-    ``data`` may be an eager ``numpy.ndarray`` or a zero-arg callable
-    ``Callable[[], np.ndarray]``. The callable is resolved exactly once at
-    dispatch time, in dispatch order, on the same terms as ``WriteIntent``.
+    For `region`, ``data`` may be an eager ``numpy.ndarray`` or a zero-arg
+    callable ``Callable[[], np.ndarray]`` resolved exactly once at dispatch
+    time, in dispatch order, on the same terms as ``WriteIntent`` — so large
+    payloads are not held in memory while the batch is assembled. `slot`
+    requires an eager array; a callable is rejected at compile time.
     """
 
     group: str
@@ -175,7 +179,8 @@ class IndexedWrite:
             coordinate: Raw slot key (e.g. ``datetime``, ``numpy.datetime64``,
                 or ``int``). Resolved to a slot index by the engine at compile
                 time. Must not be ``None``.
-            data: 1-D array payload, or a zero-arg callable that returns it.
+            data: Eager 1-D array payload. Unlike `region`, a callable is
+                rejected when the compiled write is validated.
 
         Returns:
             An `IndexedWrite` describing a 1-D per-slot write.

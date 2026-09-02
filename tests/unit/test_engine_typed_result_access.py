@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""T8: PipelineExecutor consumes typed ResultMetrics/OutputPaths attributes.
+"""PipelineExecutor consumes typed ResultMetrics/OutputPaths attributes.
 
 Asserts that ``PipelineExecutor.complete_output`` operates on
 ``result.metrics.write_mode``/``result.metrics.storage``/``result.outputs.primary``

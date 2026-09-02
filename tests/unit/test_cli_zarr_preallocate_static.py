@@ -45,7 +45,7 @@ def _args(target: str) -> list[str]:
 
 
 def test_preallocate_preserves_static_array_shape(tmp_path: Path) -> None:
-    """TDD-RED today (bug at cli/zarr.py:699); GREEN after T8 guard is applied."""
+    """Preallocate must preserve static (time_indexed=False) array shape."""
     runner = CliRunner()
     result = runner.invoke(cli, _args(f"file://{tmp_path}"))
 
@@ -57,7 +57,7 @@ def test_preallocate_preserves_static_array_shape(tmp_path: Path) -> None:
 
 
 def test_preallocate_substitutes_time_indexed_shape(tmp_path: Path) -> None:
-    """GREEN baseline — time-indexed substitution must work after T8 fix."""
+    """Preallocate must substitute the time-axis extent into time-indexed array shapes."""
     runner = CliRunner()
     result = runner.invoke(cli, _args(f"file://{tmp_path}"))
 

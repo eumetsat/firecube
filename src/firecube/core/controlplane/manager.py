@@ -29,7 +29,9 @@ from typing import Any, Literal
 
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane._paths import run_dir_for
+from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.deletion import DeletionEngine
+from firecube.core.controlplane.events import ConsolidatedTimeCoord
 from firecube.core.controlplane.repo import ManifestRepository
 from firecube.core.controlplane.types import (
     EVENT_SLOT_INDEX_MODEL_RECORDED,
@@ -55,6 +57,7 @@ from firecube.core.controlplane.types import (
 )
 from firecube.core.errors import (
     ClaimConflictError,
+    ConfigurationError,
     LegacyIndexRecordError,
     ManifestError,
     ResolvedIndexClaimTimeoutError,
@@ -469,6 +472,25 @@ class ChunkManager:
         """
         self.repo.record_index_ensured_event(event)
 
+    def record_time_coord_consolidation(
+        self,
+        groups: tuple[str, ...],
+        timestamp_iso: str,
+    ) -> None:
+        """Record that time coordinate consolidation has sealed these groups."""
+
+        event = ConsolidatedTimeCoord(
+            run_id="time-coord-consolidation",
+            timestamp_iso=timestamp_iso,
+            groups=groups,
+        )
+        self.repo.record_time_coord_consolidation(event)
+
+    def list_time_coord_consolidations(self, *, product: str) -> list[ConsolidatedTimeCoord]:
+        """Return WAL events that sealed time coordinates for a product."""
+
+        return self.repo.list_time_coord_consolidations(product=product)
+
     def discover_manifests(self) -> list[str]:
         """Scan the workspace for products with control-plane roots."""
         return self.repo.discover_manifests()
@@ -537,6 +559,108 @@ class ChunkManager:
     ) -> list[RunInfo]:
         """List runs for a product with optional status/terminal filtering."""
         return self.repo.list_runs(product=product, status=status, non_terminal=non_terminal)
+
+    def claim_coord_materialization_window(
+        self,
+        *,
+        product: str,
+        run_id: str,
+        output_path: str,
+        output_format: str,
+        windows_by_group: dict[str, tuple[int, int]],
+        coord_chunk_sizes: dict[str, int],
+        slot_group: str | None = None,
+        meta: dict[str, Any] | None = None,
+    ) -> ClaimHandle:
+        """Atomically reject overlapping coord-chunk peers and return a live claim.
+
+        Under a single write-domain claim lock, this checks every windowed
+        group against active peer runs using that group's own coordinate
+        chunk geometry, rejects any window that touches a peer-owned
+        coordinate chunk, then records this run as started while the claim is
+        still held.
+
+        If this method raises, no run is registered and no terminalization is
+        needed. If it returns normally, the caller must release the returned
+        handle after materialization and record a terminal run state on every
+        exit path.
+        """
+
+        # Function-scope import: avoid module-level cycle with core.zarr.
+        from firecube.core.zarr.chunk_geometry import chunk_axis_range
+
+        domain = WriteDomain(
+            product=product,
+            category="coord_materialization",
+            name="all",
+        )
+
+        handle = self.acquire_claim(product=product, domain=domain, owner_id=run_id)
+        try:
+            all_peers = [
+                peer
+                for peer in self.list_runs(product=product, non_terminal=True)
+                if peer.run_id != run_id
+            ]
+            serial_peers = [peer for peer in all_peers if peer.slot_range is None]
+            ranged_peers = [peer for peer in all_peers if peer.slot_range is not None]
+            # Serial (non-range) runs own the full extent by convention; keep
+            # symmetric with resume_guard._check_non_terminal_runs (reverse leg).
+            if serial_peers:
+                serial_peer = serial_peers[0]
+                elapsed = "unknown"
+                if serial_peer.started_at:
+                    elapsed_s = datetime.now(tz=UTC).timestamp() - float(serial_peer.started_at)
+                    elapsed = f"{elapsed_s:.0f}s"
+                raise ConfigurationError(
+                    f"conflicting serial ingest run {serial_peer.run_id} is live "
+                    f"(holds full extent; state: {serial_peer.status}, running for {elapsed}); "
+                    f"if this run is confirmed dead, abandon it explicitly: "
+                    f"firecube chunks runs abandon {serial_peer.run_id} "
+                    f"then re-run preallocate. Automatic timeout is not implemented."
+                )
+            for group, window in windows_by_group.items():
+                chunk_size = coord_chunk_sizes.get(group)
+                if chunk_size is None:
+                    continue
+                proposed_chunks = set(chunk_axis_range(window[0], window[1], chunk_size))
+                for peer in ranged_peers:
+                    peer_range = peer.slot_range
+                    assert peer_range is not None
+                    if peer.slot_group is not None and peer.slot_group != group:
+                        continue
+                    peer_chunks = set(chunk_axis_range(peer_range[0], peer_range[1], chunk_size))
+                    overlap = sorted(proposed_chunks & peer_chunks)
+                    if overlap:
+                        elapsed = "unknown"
+                        if peer.started_at:
+                            elapsed_s = datetime.now(tz=UTC).timestamp() - float(peer.started_at)
+                            elapsed = f"{elapsed_s:.0f}s"
+                        raise ConfigurationError(
+                            f"group {group!r} window [{window[0]}, {window[1]}) touches "
+                            f"coordinate chunk(s) {overlap} owned by run {peer.run_id} "
+                            f"(state: {peer.status}, materializing for {elapsed}); "
+                            f"if this run is confirmed dead, abandon it explicitly: "
+                            f"firecube chunks runs abandon {peer.run_id} "
+                            f"then re-run preallocate. Automatic timeout is not implemented."
+                        )
+
+            hull_start = min(window[0] for window in windows_by_group.values())
+            hull_end = max(window[1] for window in windows_by_group.values())
+            self.record_run_started(
+                product=product,
+                run_id=run_id,
+                output_path=output_path,
+                output_format=output_format,
+                size=hull_end - hull_start,
+                meta=meta or {},
+                slot_range=(hull_start, hull_end),
+                slot_group=slot_group,
+            )
+        except BaseException:
+            handle.release()
+            raise
+        return handle
 
     def time_coverage_summary(
         self, product: str, *, meta: dict[str, Any] | None = None
@@ -806,8 +930,28 @@ class ChunkManager:
                 ):
                     return self._apply_resolved_index_precedence(product, record)
             except ClaimConflictError:
+                # Unified 5-row convergence policy (see also
+                # ``ensure_slot_index_model``). The two loser-branch policies
+                # must stay identical so operators do not see one primitive
+                # self-heal via re-mirror while the other refuses loudly.
+                #
+                # +-----+------------+---------------------+-----------------------+
+                # | Row | CP record  | Attrs hash          | Action                |
+                # +=====+============+=====================+=======================+
+                # | 1   | matches    | absent (None)       | re-mirror + accept    |
+                # | 2   | matches    | transient read error| propagate (raise)     |
+                # | 3   | matches    | matches             | accept                |
+                # | 4   | matches    | mismatches          | reject (drift error)  |
+                # | 5   | mismatches | *                   | reject (CP conflict)  |
+                # +-----+------------+---------------------+-----------------------+
+                #
+                # Row 2 is enforced implicitly: ``read_resolved_index_attrs_hash``
+                # returns ``None`` for absent stores / missing attrs and re-raises
+                # ``PermissionError``/``OSError``/``TimeoutError``/parse errors
+                # (transient read failures are categorized separately from absent attrs).
                 cp_record = self.get_resolved_index(product=product)
                 if cp_record is not None and cp_record.identity_hash != record.identity_hash:
+                    # Row 5: CP mismatch — refuse and audit.
                     self._record_conflict_refused_index_ensured_event(
                         product=product,
                         record=record,
@@ -818,7 +962,22 @@ class ChunkManager:
                         f"declared={record.identity_hash[:16]}"
                     ) from None
                 if cp_record is not None:
-                    return cp_record, "matched_existing"
+                    attrs_hash = self.read_resolved_index_attrs_hash(product=product)
+                    if attrs_hash == record.identity_hash:
+                        # Row 3: full convergence.
+                        return cp_record, "matched_existing"
+                    if attrs_hash is None:
+                        # Row 1: pre-mirror compat — re-mirror from authoritative
+                        # CP record so older cubes without an attrs mirror can
+                        # start up cleanly instead of failing loudly.
+                        self._mirror_resolved_index_attrs(product, cp_record)
+                        return cp_record, "matched_existing"
+                    # Row 4: attrs drifted from the authoritative CP record.
+                    raise ManifestError(
+                        "zarr root attrs have drifted from authoritative resolved-index record: "
+                        f"cp_hash={cp_record.identity_hash[:16]} "
+                        f"attrs_hash={str(attrs_hash)[:16]!r}"
+                    ) from None
                 if attempt == int(max_retries):
                     raise ResolvedIndexClaimTimeoutError(
                         f"resolved_index claim held for >{max_retries} retries; "
@@ -1008,11 +1167,14 @@ class ChunkManager:
 
         Acquires the ``slot_index_model:current`` write claim and dispatches into
         `_apply_slot_model_precedence`. Loser threads (``ClaimConflictError``)
-        inspect full convergence: ``current.json`` AND the zarr root identity-hash
-        attribute must both match the declared model before the loser emits
-        ``EVENT_SLOT_INDEX_MODEL_VERIFIED`` and returns. CP-only match is the race
-        window state (winner mid-write) and is NOT a convergence signal; the loop
-        keeps retrying with jittered exponential backoff until the budget is spent.
+        apply the unified 5-row convergence policy documented inline in the
+        loser branch below (mirrored on ``ensure_resolved_index``): CP+attrs
+        match accepts, CP-only match with absent attrs re-mirrors from the
+        authoritative CP record before accepting (pre-mirror-cube backward
+        compatibility), CP-only match with drifted attrs raises drift,
+        transient attrs read errors propagate, CP mismatch refuses, and a
+        missing CP record keeps retrying with jittered exponential backoff
+        until the budget is spent.
         """
         if not run_id:
             raise ValueError("run_id must be non-empty")
@@ -1023,8 +1185,28 @@ class ChunkManager:
                 with self.acquire_claim(product=product, domain=domain, owner_id=run_id):
                     return self._apply_slot_model_precedence(product, model, run_id)
             except ClaimConflictError:
+                # Unified 5-row convergence policy (mirrors
+                # ``ensure_resolved_index``). The two loser-branch policies
+                # must stay identical so operators do not see one primitive
+                # self-heal via re-mirror while the other refuses loudly.
+                #
+                # +-----+------------+---------------------+-----------------------+
+                # | Row | CP record  | Attrs hash          | Action                |
+                # +=====+============+=====================+=======================+
+                # | 1   | matches    | absent (None)       | re-mirror + accept    |
+                # | 2   | matches    | transient read error| propagate (raise)     |
+                # | 3   | matches    | matches             | accept                |
+                # | 4   | matches    | mismatches          | reject (drift error)  |
+                # | 5   | mismatches | *                   | reject (CP conflict)  |
+                # +-----+------------+---------------------+-----------------------+
+                #
+                # Row 2 is enforced implicitly: ``read_slot_index_attrs_hash``
+                # returns ``None`` for absent stores / missing attrs and re-raises
+                # ``PermissionError``/``OSError``/``TimeoutError``/parse errors
+                # (transient read failures are categorized separately from absent attrs).
                 cp_record = self.get_slot_index_model(product=product)
                 if cp_record is not None and cp_record.identity_hash != model.identity_hash:
+                    # Row 5: CP mismatch — refuse.
                     raise SlotIndexModelConflictError(
                         "concurrent write detected with incompatible model: "
                         f"stored={cp_record.identity_hash[:16]} "
@@ -1033,6 +1215,7 @@ class ChunkManager:
                 if cp_record is not None:
                     attrs_hash = self.read_slot_index_attrs_hash(product=product)
                     if attrs_hash == model.identity_hash:
+                        # Row 3: full convergence.
                         self.repo.record_slot_index_model_event(
                             product=product,
                             run_id=run_id,
@@ -1041,6 +1224,25 @@ class ChunkManager:
                             model_name=model.name,
                         )
                         return cp_record
+                    if attrs_hash is None:
+                        # Row 1: pre-mirror compat — re-mirror from authoritative
+                        # CP record so older cubes without an attrs mirror can
+                        # start up cleanly instead of failing loudly.
+                        self._mirror_attrs(product, cp_record)
+                        self.repo.record_slot_index_model_event(
+                            product=product,
+                            run_id=run_id,
+                            event_type=EVENT_SLOT_INDEX_MODEL_VERIFIED,
+                            identity_hash=model.identity_hash,
+                            model_name=model.name,
+                        )
+                        return cp_record
+                    # Row 4: attrs drifted from the authoritative CP record.
+                    raise SlotIndexModelConflictError(
+                        "zarr root attrs have drifted from authoritative CP record: "
+                        f"cp_hash={cp_record.identity_hash[:16]} "
+                        f"attrs_hash={str(attrs_hash)[:16]!r}"
+                    ) from None
                 if attempt == int(max_retries):
                     raise SlotIndexModelClaimTimeoutError(
                         f"slot_index_model claim held for >{max_retries} retries; "
@@ -1180,15 +1382,17 @@ class ChunkManager:
                 f"cp_record={cp_record!r} attrs_hash={attrs_hash!r}"
             )
 
-    def _mirror_attrs(self, product: str, record: SlotIndexModelRecord) -> None:
-        """Write the slot-index model attrs to the zarr root group.
+    def _open_zarr_root_for_mirror(self, product: str) -> Any:
+        """Open the zarr root group for attribute mirroring, tolerating the
+        ``open_group(mode="a")`` check-then-create race that surfaces when
+        the claim-holding winner and Row-1 re-mirror losers race
+        to create the group. Returns the opened zarr group.
 
-        Must be called INSIDE the ``slot_index_model:current`` claim. Bypasses
-        the reserved-root-attrs guard by design: the slot-index service is the
-        authoritative writer of these reserved root attrs, and the guard exists
-        to block external (user/plugin) code paths only.
+        The retry is safe because ``mode="a"`` opens the group in place once
+        it exists — no divergent state can be written between attempts.
         """
         import zarr
+        from zarr.errors import ContainsGroupError
         from zarr.storage import LocalStore
 
         from firecube.core.filesystem.store_factory import create_zarr_store
@@ -1199,14 +1403,38 @@ class ChunkManager:
             storage_config = self.storage_config
             if storage_config is None:
                 raise RuntimeError(
-                    "storage_config is required to open the remote zarr root "
-                    "for slot-index attr mirroring"
+                    "storage_config is required to open the remote zarr root for attr mirroring"
                 )
             handle = create_zarr_store(uri=product_root, storage_config=storage_config, mode="a")
-            root = zarr.open_group(**handle.zarr_kwargs(), mode="a", zarr_format=3)
+            open_kwargs: dict[str, Any] = {**handle.zarr_kwargs(), "mode": "a", "zarr_format": 3}
         else:
             store = LocalStore(str(local_path_from_target(product_root)))
-            root = zarr.open_group(store=store, mode="a", zarr_format=3)
+            open_kwargs = {"store": store, "mode": "a", "zarr_format": 3}
+
+        last_exc: BaseException | None = None
+        for attempt in range(4):
+            try:
+                return zarr.open_group(**open_kwargs)
+            except ContainsGroupError as exc:
+                last_exc = exc
+                if attempt == 3:
+                    raise
+                time.sleep(0.005 * (attempt + 1))
+        raise RuntimeError("failed to open zarr root for mirror after retries") from last_exc
+
+    def _mirror_attrs(self, product: str, record: SlotIndexModelRecord) -> None:
+        """Write the slot-index model attrs to the zarr root group.
+
+        Authoritative writer of the reserved slot-index root attrs; bypasses
+        the reserved-root-attrs guard by design (the guard blocks external
+        user/plugin code paths only). Called by the winner INSIDE the
+        ``slot_index_model:current`` claim (Row 1/Row 3 of the precedence
+        matrix) and by Row-1 losers OUTSIDE the claim (backward-compatible
+        re-mirror for pre-attrs-mirror cubes). Both call sites write the
+        same value deterministically from the CP record, so concurrent
+        invocations converge on identical attrs.
+        """
+        root = self._open_zarr_root_for_mirror(product)
         root.attrs.update(
             {
                 SLOT_INDEX_MODEL_ATTR: record.model.canonical_bytes().decode("utf-8"),
@@ -1217,11 +1445,26 @@ class ChunkManager:
     def _mirror_resolved_index_attrs(self, product: str, record: ResolvedIndexRecord) -> None:
         """Write the resolved-index attrs to the zarr root group.
 
-        Must be called INSIDE the ``resolved_index:current`` claim. Bypasses
-        the reserved-root-attrs guard by design: the resolved-index service is
-        the authoritative writer of these reserved root attrs, and the guard
-        exists to block external (user/plugin) code paths only.
+        Authoritative writer of the reserved resolved-index root attrs;
+        bypasses the reserved-root-attrs guard by design (the guard blocks
+        external user/plugin code paths only). Called by the winner INSIDE
+        the ``resolved_index:current`` claim (Row 1/Row 3 of the precedence
+        matrix) and by Row-1 losers OUTSIDE the claim (backward-compatible
+        re-mirror for pre-attrs-mirror cubes). Both call sites write the
+        same value deterministically from the CP record, so concurrent
+        invocations converge on identical attrs.
         """
+        root = self._open_zarr_root_for_mirror(product)
+        root.attrs.update(
+            {
+                RESOLVED_INDEX_ATTR: canonical_index_bytes(record.index).decode("utf-8"),
+                RESOLVED_INDEX_IDENTITY_HASH_ATTR: record.identity_hash,
+            }
+        )
+
+    def _read_root_index_attrs_hash(
+        self, *, product: str, attr_name: str, label: str
+    ) -> str | None:
         import zarr
         from zarr.storage import LocalStore
 
@@ -1229,24 +1472,32 @@ class ChunkManager:
         from firecube.core.uris import is_remote_target, local_path_from_target
 
         product_root = str(self.get_product_root(product))
-        if is_remote_target(product_root):
-            storage_config = self.storage_config
-            if storage_config is None:
-                raise RuntimeError(
-                    "storage_config is required to open the remote zarr root "
-                    "for resolved-index attr mirroring"
+        try:
+            if is_remote_target(product_root):
+                storage_config = self.storage_config
+                if storage_config is None:
+                    return None
+                handle = create_zarr_store(
+                    uri=product_root, storage_config=storage_config, mode="r"
                 )
-            handle = create_zarr_store(uri=product_root, storage_config=storage_config, mode="a")
-            root = zarr.open_group(**handle.zarr_kwargs(), mode="a", zarr_format=3)
-        else:
-            store = LocalStore(str(local_path_from_target(product_root)))
-            root = zarr.open_group(store=store, mode="a", zarr_format=3)
-        root.attrs.update(
-            {
-                RESOLVED_INDEX_ATTR: canonical_index_bytes(record.index).decode("utf-8"),
-                RESOLVED_INDEX_IDENTITY_HASH_ATTR: record.identity_hash,
-            }
-        )
+                root = zarr.open_group(**handle.zarr_kwargs(), mode="r", zarr_format=3)
+            else:
+                local = local_path_from_target(product_root)
+                store = LocalStore(str(local))
+                root = zarr.open_group(store=store, mode="r", zarr_format=3)
+        except FileNotFoundError:
+            return None
+        except (PermissionError, OSError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+            log.warning("Failed to read %s hash for %s: %s", label, product, exc, exc_info=True)
+            raise
+
+        try:
+            value = root.attrs[attr_name]
+        except KeyError:
+            return None
+        if value is None:
+            return None
+        return str(value)
 
     def read_resolved_index_attrs_hash(self, *, product: str) -> str | None:
         """Read the resolved-index identity hash mirrored on the product's
@@ -1261,34 +1512,14 @@ class ChunkManager:
         Returns:
             The identity hash string, or ``None`` if the attribute is absent
             (fresh store, or attrs were cleared after the record was written).
+            Transient read/parse failures are logged and re-raised.
         """
 
-        import zarr
-        from zarr.storage import LocalStore
-
-        from firecube.core.filesystem.store_factory import create_zarr_store
-        from firecube.core.uris import is_remote_target, local_path_from_target
-
-        product_root = str(self.get_product_root(product))
-        try:
-            if is_remote_target(product_root):
-                storage_config = self.storage_config
-                if storage_config is None:
-                    return None
-                handle = create_zarr_store(
-                    uri=product_root, storage_config=storage_config, mode="r"
-                )
-                root = zarr.open_group(**handle.zarr_kwargs(), mode="r", zarr_format=3)
-            else:
-                local = local_path_from_target(product_root)
-                store = LocalStore(str(local))
-                root = zarr.open_group(store=store, mode="r", zarr_format=3)
-        except Exception:
-            return None
-        value = root.attrs.get(RESOLVED_INDEX_IDENTITY_HASH_ATTR)
-        if value is None:
-            return None
-        return str(value)
+        return self._read_root_index_attrs_hash(
+            product=product,
+            attr_name=RESOLVED_INDEX_IDENTITY_HASH_ATTR,
+            label="resolved-index",
+        )
 
     def read_slot_index_attrs_hash(self, *, product: str) -> str | None:
         """Read the legacy slot-index identity hash mirrored on root attrs.
@@ -1296,39 +1527,16 @@ class ChunkManager:
         Public read-only query used by the ``firecube zarr index rebuild`` CLI to
         detect slot-index attrs/on-disk-record drift.
 
-        Returns ``None`` when the zarr root group is missing, unreadable, or
-        does not yet carry the reserved attr. The probe never raises, because
-        a missing or pre-existing-but-untouched store is the legitimate Row 1
-        fresh-store input. Only a real I/O failure under the claim should
-        surface, and the precedence-matrix caller will see it during the
-        subsequent write step.
+        Returns ``None`` when the zarr root group is missing or does not yet
+        carry the reserved attr. Missing stores and absent attrs are treated as
+        legitimate fresh-store input. Transient read/parse failures are logged
+        and re-raised for the caller.
         """
-        import zarr
-        from zarr.storage import LocalStore
-
-        from firecube.core.filesystem.store_factory import create_zarr_store
-        from firecube.core.uris import is_remote_target, local_path_from_target
-
-        product_root = str(self.get_product_root(product))
-        try:
-            if is_remote_target(product_root):
-                storage_config = self.storage_config
-                if storage_config is None:
-                    return None
-                handle = create_zarr_store(
-                    uri=product_root, storage_config=storage_config, mode="r"
-                )
-                root = zarr.open_group(**handle.zarr_kwargs(), mode="r", zarr_format=3)
-            else:
-                local = local_path_from_target(product_root)
-                store = LocalStore(str(local))
-                root = zarr.open_group(store=store, mode="r", zarr_format=3)
-        except Exception:
-            return None
-        value = root.attrs.get(SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR)
-        if value is None:
-            return None
-        return str(value)
+        return self._read_root_index_attrs_hash(
+            product=product,
+            attr_name=SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
+            label="slot-index",
+        )
 
 
 def check_legacy_index_record(

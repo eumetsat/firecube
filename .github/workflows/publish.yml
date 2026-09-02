@@ -18,21 +18,11 @@ jobs:
       - run: uv sync --locked --extra test --group dev
       - name: Install test fixture plugins
         run: |
-          uv pip install -e tests/fixtures/cli_test_plugin
-          uv pip install -e tests/fixtures/direct_zarr_capable_test_plugin
-          uv pip install -e tests/fixtures/direct_zarr_non_capable_test_plugin
-          uv pip install -e tests/fixtures/multi_group_capable_test_plugin
-          uv pip install -e tests/fixtures/cf_time_dim_test_plugin
-          uv pip install -e tests/fixtures/slot_shape_test_plugin
-          uv pip install -e tests/fixtures/index_spec_test_plugin
-          uv pip install -e tests/fixtures/index_spec_integer_test_plugin
-          uv pip install -e tests/fixtures/callable_payload_test_plugin
-          uv pip install -e tests/fixtures/irregular_axis_test_plugin
-          uv pip install -e tests/fixtures/indexed_write_test_plugin
+          uv pip install -e tests/fixtures/firecube_test_plugins
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
-      - run: uv run pytest --strict-deps -m "not slow and not s3" -n auto --cov=firecube -q
+      - run: uv run pytest --strict-deps -m "not slow and not s3 and not race" -n auto --cov=firecube -q
 
   publish:
     name: publish to PyPI

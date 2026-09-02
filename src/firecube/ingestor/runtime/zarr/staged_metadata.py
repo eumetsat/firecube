@@ -235,7 +235,16 @@ def _seed_group_via_session(
                 if payload.get("node_type") == "array":
                     attrs = payload.get("attributes")
                     if isinstance(attrs, dict):
-                        # If a second write-once reserved attr is added later, refactor _reserved_attrs.py into RESERVED_SHAPE_ATTRS (kept on seed) vs RESERVED_RUN_STATE_ATTRS (stripped on seed), and switch this strip from a literal key to a set membership check. YAGNI today (only one such attr exists).
+                        # RUN-STATE attrs (stripped on seed): only ``firecube_static_written``
+                        # today. If a second run-state reserved attr is added later, refactor
+                        # _reserved_attrs.py into RESERVED_SHAPE_ATTRS (kept on seed) vs
+                        # RESERVED_RUN_STATE_ATTRS (stripped on seed) and switch this strip
+                        # from a literal key to a set membership check.
+                        # SHAPE attrs (preserved on seed) include ``firecube_preallocated``,
+                        # ``firecube_coord_managed``, ``firecube_consolidated_at``, and
+                        # ``firecube_group_identity_hash``: they encode contract shape
+                        # negotiated at preallocate time and MUST survive staged seeding so
+                        # ingest startup can verify per-group identity on the temp store.
                         attrs.pop("firecube_static_written", None)
                 dst_path.write_bytes(json.dumps(payload).encode())
             else:

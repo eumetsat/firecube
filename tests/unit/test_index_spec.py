@@ -14,7 +14,12 @@
 
 from __future__ import annotations
 
-from firecube.core.api import AUTO, IrregularTimeAxis
+from datetime import UTC, datetime, timedelta, timezone
+
+import pytest
+
+from firecube.core.api import AUTO, IrregularTimeAxis, RegularTimeAxis
+from firecube.core.index_spec import _canonical_coordinate_value
 from firecube.ingestor.api import AUTO as INGESTOR_AUTO
 
 
@@ -50,5 +55,45 @@ def test_irregular_time_axis_rejects_duplicate_values() -> None:
         raise AssertionError("duplicate values were accepted")
 
 
+def test_irregular_time_axis_normalizes_list_to_tuple() -> None:
+    axis = IrregularTimeAxis(coordinate="time", values=["2024-01-01T00:00:00Z"])
+
+    assert axis.values == ("2024-01-01T00:00:00Z",)
+
+
+def test_regular_time_axis_rejects_zero_slot_count() -> None:
+    with pytest.raises(ValueError, match="slot_count must be positive"):
+        RegularTimeAxis(
+            coordinate="time",
+            epoch="2024-01-01T00:00:00Z",
+            cadence_s=600,
+            mode="floor",
+            slot_count=0,
+        )
+
+
 def test_auto_is_singleton_across_facades() -> None:
     assert AUTO is INGESTOR_AUTO
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (datetime(2024, 1, 1, 12, 0, 0), "2024-01-01T12:00:00Z"),
+        (
+            datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC),
+            "2024-01-01T12:00:00Z",
+        ),
+        (
+            datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=-5))),
+            "2024-01-01T17:00:00Z",
+        ),
+        ("2024-01-01T12:00:00Z", "2024-01-01T12:00:00Z"),
+        (42, 42),
+    ],
+)
+def test_canonical_coordinate_value_timezone_canonicalization(
+    value: object,
+    expected: object,
+) -> None:
+    assert _canonical_coordinate_value(value) == expected

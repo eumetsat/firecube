@@ -20,7 +20,8 @@ import json
 import logging
 import re
 import time
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
 from firecube.core.controlplane.types import (
     DEFAULT_RUN_STALE_THRESHOLD_S,
@@ -36,6 +37,54 @@ _log = logging.getLogger(__name__)
 DEFAULT_EVENT_SEGMENT_SIZE = 25
 DEFAULT_RUN_META_HEARTBEAT_SECONDS = 30.0
 _SEGMENT_PATTERN = re.compile(r"events-(\d+)\.jsonl$")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ConsolidatedTimeCoord:
+    """WAL event recording that time-coordinate consolidation sealed groups."""
+
+    run_id: str
+    timestamp_iso: str
+    groups: tuple[str, ...]
+    kind: Literal["consolidated_time_coord"] = field(default="consolidated_time_coord", init=False)
+
+    def __post_init__(self) -> None:
+        if not self.run_id:
+            raise ValueError("run_id must be non-empty")
+        if not self.timestamp_iso:
+            raise ValueError("timestamp_iso must be non-empty")
+        if not isinstance(self.groups, tuple):
+            object.__setattr__(self, "groups", tuple(self.groups))
+        normalized = tuple(str(group).strip("/") for group in self.groups)
+        if not normalized:
+            raise ValueError("groups must contain at least one group")
+        object.__setattr__(self, "groups", normalized)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the event record to a JSON-compatible dict."""
+
+        return {
+            "kind": self.kind,
+            "run_id": self.run_id,
+            "timestamp_iso": self.timestamp_iso,
+            "groups": list(self.groups),
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> ConsolidatedTimeCoord:
+        """Deserialize an event record from a JSON-compatible dict."""
+
+        kind = payload.get("kind")
+        if kind != "consolidated_time_coord":
+            raise ValueError(f"unexpected consolidated time coord kind: {kind!r}")
+        groups = payload.get("groups")
+        if not isinstance(groups, list):
+            raise ValueError("groups must be a JSON array")
+        return cls(
+            run_id=str(payload.get("run_id", "")),
+            timestamp_iso=str(payload.get("timestamp_iso", "")),
+            groups=tuple(str(group) for group in groups),
+        )
 
 
 class RunEventWriter:

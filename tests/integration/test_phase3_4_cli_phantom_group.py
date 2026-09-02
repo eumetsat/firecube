@@ -270,11 +270,9 @@ def test_preallocate_rejects_phantom_global_expected(tmp_path: Path) -> None:
     assert "phantom" in result.output
     assert not (target_path / "real").exists()
     assert not (target_path / "phantom").exists()
-    run_record = json.loads(
-        (target_path / ".firecube" / "runs" / "preallocate" / "run.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    run_paths = sorted((target_path / ".firecube" / "runs").glob("preallocate*/run.json"))
+    assert run_paths
+    run_record = json.loads(run_paths[0].read_text(encoding="utf-8"))
     assert run_record["status"] == "failed"
 
 
