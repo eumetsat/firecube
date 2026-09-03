@@ -4760,9 +4760,10 @@ Parquet templates. See <a href="../extensions/">Plugin Extensions</a> before cho
 <code>BaseIngestor</code> only to add reusable processing behavior.</p>
 <h2 id="implement-the-batch-boundary">Implement The Batch Boundary</h2>
 <p>Follow <a href="../create-a-plugin/">Create a Plugin</a>, select <code>base</code>, then
-<a href="../install-a-plugin/">install the plugin</a>. Replace the generated
-<code>_process_batch</code> stub. The example writer copies each granule into a local
-target directory; swap <code>write_product_item</code> for the product's real writer:</p>
+<a href="../install-a-plugin/">install the plugin</a>. Implement the generated
+<code>write_product_item</code> writer that <code>_process_batch</code> calls. The example below
+copies each granule into a local target directory; swap its body for the
+product's real writer:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span>

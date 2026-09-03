@@ -4783,14 +4783,14 @@ the template prompts, enter the values that match the product:</p>
 </tr>
 </tbody>
 </table>
-<p>The <code>Template</code> prompt currently displays <code>base</code> as its default. Select <code>zarr</code>
-or <code>parquet</code> explicitly when one of the template contracts fits the product.</p>
-<p>For a <code>GenericZarrIngestor</code> plugin, the relevant part of the interaction is:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Template (base, zarr, parquet) [base]: zarr
+<p>The <code>Template</code> prompt defaults to <code>zarr</code>, and the write strategy defaults to
+<code>xarray</code>, so accepting both defaults creates a <code>GenericZarrIngestor</code> plugin:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Template (zarr, parquet, base) [zarr]:
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Zarr write strategy (xarray, zarr-python) [xarray]:
 </code></pre></div>
-<p>The command creates <code>firecube-my-plugin/</code>. Its generated <code>ingestor.py</code> contains
-the required method stubs for the selected template. Those methods raise
+<p>The command creates <code>firecube-my-plugin/</code>. Its generated <code>ingestor.py</code> is a
+complete plugin for the selected template with one reader function left
+unimplemented; every hook is already wired to it, and it raises
 <code>NotImplementedError</code> until product behavior is added. The generated README
 owns the implementation, test, installation, inspection, and first-run steps
 for that scaffold.</p>

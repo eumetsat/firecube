@@ -4725,7 +4725,8 @@ layout and write model.</p>
 <p>Follow <a href="../create-a-plugin/">Create a Plugin</a>, select <code>parquet</code>, then
 <a href="../install-a-plugin/">install the plugin</a>.</p>
 <p>Edit <code>src/firecube_my_plugin/ingestor.py</code>. Keep the generated registration and
-product name, and replace the <code>build_dataset</code> stub.</p>
+product name, and implement the <code>read_table</code> reader that the generated
+<code>build_dataset</code> calls, or replace <code>build_dataset</code> as in the listing below.</p>
 <h2 id="implement-build_dataset">Implement <code>build_dataset</code></h2>
 <p>This example reads a batch of CSV files with <code>pyarrow</code> and concatenates
 them into one table; replace the file format and parsing with what the

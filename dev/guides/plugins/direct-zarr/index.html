@@ -4845,7 +4845,7 @@ Products whose items map to an integer position instead of a timestamp
 declare <code>IntegerAxis</code>; see the
 <a href="../../../reference/parallelism/#firecube.ingestor.api.IntegerAxis">Index Specification Reference</a>.</p>
 <h2 id="implement-the-plugin">Implement The Plugin</h2>
-<p>Follow <a href="../create-a-plugin/">Create a Plugin</a>, choose the <code>zarr</code> template, and keep the generated registration and product name. Replace the <code>index_spec</code>, <code>inspect_item</code>, <code>zarr_schema</code>, and <code>build_write_intents</code> stubs.</p>
+<p>Follow <a href="../create-a-plugin/">Create a Plugin</a>, choose the <code>zarr</code> template with the <code>zarr-python</code> write strategy, and keep the generated registration and product name. The generated plugin is the listing below with <code>read_product_item</code> unimplemented; adapt <code>index_spec</code> and <code>zarr_schema</code> to the product's time axis and arrays.</p>
 <p>The example ingests NetCDF granules that each carry one observation time and
 four sample values. Only <code>read_product_item</code> knows that format: swap its body
 for the product's real reader and everything below it stays the same.</p>
