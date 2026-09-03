@@ -19,7 +19,8 @@ Follow [Create a Plugin](create-a-plugin.md), select `zarr` and the `xarray`
 write strategy, then [install the plugin](install-a-plugin.md).
 
 Edit `src/firecube_my_plugin/ingestor.py`. Keep the generated registration and
-product name, and replace the `build_dataset` stub.
+product name, and implement the `read_dataset` reader that the generated
+`build_dataset` calls, or replace `build_dataset` as in the listing below.
 
 ## Implement `build_dataset`
 

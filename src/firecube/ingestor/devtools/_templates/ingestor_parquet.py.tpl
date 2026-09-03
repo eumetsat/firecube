@@ -12,50 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Generic Parquet ingestor for {plugin_name}."""
+"""Generic Parquet ingestor for {plugin_name}.
+
+Only ``read_table`` knows the source format. Implement it; ``build_dataset``
+concatenates what it returns into one table per batch.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, ClassVar
+from pathlib import Path
+from typing import ClassVar
+
+import pyarrow as pa
 
 from firecube.ingestor.api import (
     GenericParquetIngestor,
     PipelineBatch,
-    PluginConfig,
     PluginContext,
     register_ingestor,
 )
 
 
-@dataclass
-class {class_name}Config(PluginConfig):
-    """Plugin configuration.
-
-    To accept ``--option key=value`` flags, add dataclass fields here.
-    See the Firecube plugin development guide.
-    """
-
-    pass
+def read_table(path: Path) -> pa.Table:
+    """Read one source file as a ``pyarrow.Table``."""
+    raise NotImplementedError(
+        f"read_table() is not implemented (called for {{path}}). Read the file and "
+        "return a pyarrow.Table."
+    )
 
 
 @register_ingestor("{plugin_name}")
 class {class_name}(GenericParquetIngestor):
     PRODUCT_NAME: ClassVar[str] = "{plugin_name}"
-    plugin_config_class = {class_name}Config
+    # To accept ``--option key=value`` flags, attach a PluginConfig subclass;
+    # see the Firecube "Add Plugin Configuration Options" guide.
 
-    def build_dataset(self, group: str, batch: PipelineBatch, ctx: PluginContext) -> Any | None:
-        # Materialize items before passing them to readers that require local paths:
-        # local_paths = [ctx.materialize(item) for item in batch.items]
-        #
-        # Return a pyarrow.Table or pandas.DataFrame for this group/batch.
-        # Returning None skips writing for this group/batch (intentional skip).
-        #
-        # If you choose pandas.DataFrame, add `pandas` to your pyproject.toml
-        # dependencies.
-        raise NotImplementedError(
-            "{class_name}.build_dataset(): implement this hook to convert a batch of "
-            "source items into a pyarrow.Table or pandas.DataFrame for the given group. "
-            "Return None to intentionally skip this group/batch. "
-            "See the Firecube GenericParquetIngestor guide for examples."
-        )
+    def build_dataset(
+        self,
+        group: str,  # Called once per output group; most plugins ignore this.
+        batch: PipelineBatch,
+        ctx: PluginContext,
+    ) -> pa.Table | None:  # May also return a pandas.DataFrame; None skips the batch.
+        _ = group
+        if not batch.items:
+            return None
+
+        tables = [read_table(ctx.materialize(item)) for item in batch.items]
+        return pa.concat_tables(tables)

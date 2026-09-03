@@ -31,18 +31,17 @@ the template prompts, enter the values that match the product:
 | Known Zarr indexes or disjoint slot workers writing one group | `DirectZarrIngestor` (Region) | `Template`: `zarr`; `Zarr write strategy`: `zarr-python` |
 | A product no template represents | Custom pipeline, advanced | `Template`: `base` |
 
-The `Template` prompt currently displays `base` as its default. Select `zarr`
-or `parquet` explicitly when one of the template contracts fits the product.
-
-For a `GenericZarrIngestor` plugin, the relevant part of the interaction is:
+The `Template` prompt defaults to `zarr`, and the write strategy defaults to
+`xarray`, so accepting both defaults creates a `GenericZarrIngestor` plugin:
 
 ```text
-Template (base, zarr, parquet) [base]: zarr
+Template (zarr, parquet, base) [zarr]:
 Zarr write strategy (xarray, zarr-python) [xarray]:
 ```
 
-The command creates `firecube-my-plugin/`. Its generated `ingestor.py` contains
-the required method stubs for the selected template. Those methods raise
+The command creates `firecube-my-plugin/`. Its generated `ingestor.py` is a
+complete plugin for the selected template with one reader function left
+unimplemented; every hook is already wired to it, and it raises
 `NotImplementedError` until product behavior is added. The generated README
 owns the implementation, test, installation, inspection, and first-run steps
 for that scaffold.
