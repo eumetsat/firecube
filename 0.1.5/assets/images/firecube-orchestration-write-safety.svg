@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" role="img" aria-labelledby="title desc">
+  <title id="title">Orchestration write safety</title>
+  <desc id="desc">Safe scheduling uses disjoint write domains. Unsafe scheduling overlaps the same write domain. Firecube uses ChunkManager claims to fail closed.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#546a7b"/>
+    </marker>
+    <style>
+      .title { font: 700 20px Arial, sans-serif; fill: #1f2d36; }
+      .label { font: 700 16px Arial, sans-serif; fill: #1f2d36; }
+      .small { font: 14px Arial, sans-serif; fill: #415361; }
+      .safe { fill: #f2fbf5; stroke: #39b36e; stroke-width: 2; rx: 8; }
+      .unsafe { fill: #fff4f2; stroke: #ff5f57; stroke-width: 2; rx: 8; }
+      .item { fill: #ffffff; stroke: #c7d4df; stroke-width: 1.6; rx: 5; }
+      .cm { fill: #f7fbff; stroke: #4c9aff; stroke-width: 2; rx: 6; }
+      .arrow { stroke: #546a7b; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="50" y="45" width="420" height="320" class="safe"/>
+  <text x="260" y="82" text-anchor="middle" class="title">Safe concurrent work</text>
+  <text x="260" y="108" text-anchor="middle" class="small">each job owns a distinct write domain</text>
+
+  <rect x="95" y="140" width="320" height="42" class="item"/>
+  <text x="255" y="166" text-anchor="middle" class="label">different product roots</text>
+  <rect x="95" y="198" width="320" height="42" class="item"/>
+  <text x="255" y="224" text-anchor="middle" class="label">different Parquet files</text>
+  <rect x="95" y="256" width="320" height="42" class="item"/>
+  <text x="255" y="282" text-anchor="middle" class="label">different Zarr groups</text>
+  <rect x="95" y="314" width="320" height="42" class="item"/>
+  <text x="255" y="340" text-anchor="middle" class="label">disjoint direct-Zarr slots</text>
+
+  <rect x="530" y="45" width="420" height="320" class="unsafe"/>
+  <text x="740" y="82" text-anchor="middle" class="title">Serialize this work</text>
+  <text x="740" y="108" text-anchor="middle" class="small">jobs can touch the same write domain</text>
+
+  <rect x="575" y="140" width="320" height="42" class="item"/>
+  <text x="735" y="166" text-anchor="middle" class="label">same append-Zarr group</text>
+  <rect x="575" y="198" width="320" height="42" class="item"/>
+  <text x="735" y="224" text-anchor="middle" class="label">overlapping direct-Zarr slots</text>
+  <rect x="575" y="256" width="320" height="42" class="item"/>
+  <text x="735" y="282" text-anchor="middle" class="label">same output file</text>
+  <rect x="575" y="314" width="320" height="42" class="item"/>
+  <text x="735" y="340" text-anchor="middle" class="label">cleanup while writer is active</text>
+
+  <rect x="295" y="430" width="410" height="66" class="cm"/>
+  <text x="500" y="456" text-anchor="middle" class="label">ChunkManager claims and records</text>
+  <text x="500" y="480" text-anchor="middle" class="small">Firecube fails closed when safety cannot be proven</text>
+
+  <path d="M 260 365 L 260 400 L 430 400 L 430 423" class="arrow"/>
+  <path d="M 740 365 L 740 400 L 570 400 L 570 423" class="arrow"/>
+</svg>

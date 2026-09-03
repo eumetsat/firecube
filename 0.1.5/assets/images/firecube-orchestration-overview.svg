@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 520" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube orchestration flow</title>
+  <desc id="desc">An external orchestrator starts firecube ingest. Firecube writes a product root with a data store and ChunkManager records, and emits observability signals: Pushgateway-compatible metrics, logs, and traces.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5d6b78}
+      .orchestrator{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .engine{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .product{fill:#f7f7fb;stroke:#76808f;stroke-width:2}
+      .data{fill:#ffffff;stroke:#2f9d65;stroke-width:1.8}
+      .cm{fill:#f3f1ff;stroke:#6f62d2;stroke-width:1.8}
+      .obsPanel{fill:#f7fbff;stroke:#9bb8d6;stroke-width:1.8}
+      .obs{fill:#ffffff;stroke:#9bb8d6;stroke-width:1.6}
+      .line{stroke:#3b4652;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+      .thin{stroke:#667381;stroke-width:1.9;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="60" y="78" width="240" height="132" rx="12" class="orchestrator"/>
+  <text x="180" y="115" text-anchor="middle" class="label">External</text>
+  <text x="180" y="139" text-anchor="middle" class="label">orchestrator</text>
+  <text x="180" y="168" text-anchor="middle" class="small">starts command</text>
+  <text x="180" y="190" text-anchor="middle" class="hint">shell, job, CI, workflow</text>
+
+  <path class="line" d="M300 144 H375"/>
+
+  <rect x="375" y="78" width="240" height="132" rx="12" class="engine"/>
+  <text x="495" y="119" text-anchor="middle" class="label">firecube ingest</text>
+  <text x="495" y="148" text-anchor="middle" class="small">engine + plugin</text>
+  <text x="495" y="171" text-anchor="middle" class="hint">one command, one target</text>
+
+  <path class="line" d="M615 144 H690"/>
+
+  <rect x="690" y="78" width="240" height="132" rx="12" class="product"/>
+  <text x="810" y="111" text-anchor="middle" class="label">Product root</text>
+  <text x="810" y="133" text-anchor="middle" class="hint">file:// or s3:// target</text>
+
+  <rect x="708" y="154" width="92" height="42" rx="7" class="data"/>
+  <text x="754" y="172" text-anchor="middle" class="small">Data store</text>
+  <text x="754" y="190" text-anchor="middle" class="hint">Zarr / Parquet</text>
+
+  <rect x="814" y="154" width="108" height="42" rx="7" class="cm"/>
+  <text x="868" y="172" text-anchor="middle" class="small">ChunkManager</text>
+  <text x="868" y="190" text-anchor="middle" class="hint">runs, claims</text>
+
+  <path class="thin" d="M495 210 V278"/>
+
+  <rect x="275" y="278" width="450" height="132" rx="12" class="obsPanel"/>
+  <text x="500" y="315" text-anchor="middle" class="label">Observability</text>
+  <text x="500" y="338" text-anchor="middle" class="hint">emitted during the run</text>
+
+  <rect x="318" y="360" width="150" height="42" rx="7" class="obs"/>
+  <text x="393" y="377" text-anchor="middle" class="small">Metrics</text>
+  <text x="393" y="395" text-anchor="middle" class="hint">Pushgateway compatible</text>
+
+  <rect x="492" y="360" width="96" height="42" rx="7" class="obs"/>
+  <text x="540" y="386" text-anchor="middle" class="small">Logs</text>
+
+  <rect x="612" y="360" width="96" height="42" rx="7" class="obs"/>
+  <text x="660" y="386" text-anchor="middle" class="small">Traces</text>
+</svg>

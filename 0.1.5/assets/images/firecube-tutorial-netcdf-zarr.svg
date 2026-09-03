@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 330" role="img" aria-labelledby="title desc">
+  <title id="title">Weather NetCDF tutorial flow</title>
+  <desc id="desc">Four NetCDF time-step files pass through the weather plugin and are appended to one Zarr group.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5a6673}
+      .file{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .plugin{fill:#fff8df;stroke:#d6a400;stroke-width:2}
+      .zarr{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .slot{fill:#ccebd8;stroke:#2f9d65;stroke-width:1.5}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="42" y="96" width="140" height="126" rx="10" class="file"/>
+  <text x="112" y="140" text-anchor="middle" class="label">4 NetCDF files</text>
+  <text x="112" y="172" text-anchor="middle" class="small">one time step</text>
+  <text x="112" y="198" text-anchor="middle" class="small">in each file</text>
+
+  <path class="line" d="M182 159 H310"/>
+  <rect x="310" y="86" width="260" height="146" rx="10" class="plugin"/>
+  <text x="440" y="127" text-anchor="middle" class="label">Weather plugin</text>
+  <text x="440" y="158" text-anchor="middle" class="small">materialize and open each file</text>
+  <text x="440" y="187" text-anchor="middle" class="small">return one xarray.Dataset</text>
+
+  <path class="line" d="M570 159 H670"/>
+  <text x="620" y="140" text-anchor="middle" class="hint">append</text>
+  <rect x="670" y="78" width="248" height="162" rx="10" class="zarr"/>
+  <text x="794" y="116" text-anchor="middle" class="label">Zarr group</text>
+  <text x="794" y="142" text-anchor="middle" class="small">timestamp dimension</text>
+  <g transform="translate(710 168)">
+    <rect x="0" y="0" width="42" height="42" class="slot"/>
+    <rect x="42" y="0" width="42" height="42" class="slot"/>
+    <rect x="84" y="0" width="42" height="42" class="slot"/>
+    <rect x="126" y="0" width="42" height="42" class="slot"/>
+    <text x="21" y="66" text-anchor="middle" class="hint">00</text>
+    <text x="63" y="66" text-anchor="middle" class="hint">06</text>
+    <text x="105" y="66" text-anchor="middle" class="hint">12</text>
+    <text x="147" y="66" text-anchor="middle" class="hint">18</text>
+  </g>
+  <text x="480" y="300" text-anchor="middle" class="hint">GenericZarrIngestor serializes appends to the group</text>
+</svg>

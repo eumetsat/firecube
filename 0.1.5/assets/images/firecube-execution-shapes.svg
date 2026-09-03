@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube execution shapes</title>
+  <desc id="desc">A shell command, scheduled job, CI step, container step, and workflow fan-out can all serve as the external orchestrator for the same firecube ingest command.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#546a7b"/>
+    </marker>
+    <style>
+      .label { font: 700 16px Arial, sans-serif; fill: #1f2d36; }
+      .small { font: 14px Arial, sans-serif; fill: #415361; }
+      .shape { fill: #f7fbff; stroke: #4c9aff; stroke-width: 2; rx: 6; }
+      .cmd { fill: #f2fbf5; stroke: #39b36e; stroke-width: 2; rx: 8; }
+      .product { fill: #fff8ee; stroke: #ff9f43; stroke-width: 2; rx: 6; }
+      .arrow { stroke: #546a7b; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="70" y="45" width="180" height="54" class="shape"/>
+  <text x="160" y="78" text-anchor="middle" class="label">Shell command</text>
+
+  <rect x="70" y="125" width="180" height="54" class="shape"/>
+  <text x="160" y="158" text-anchor="middle" class="label">Scheduled job</text>
+
+  <rect x="70" y="205" width="180" height="54" class="shape"/>
+  <text x="160" y="238" text-anchor="middle" class="label">CI step</text>
+
+  <rect x="70" y="285" width="180" height="54" class="shape"/>
+  <text x="160" y="318" text-anchor="middle" class="label">Container step</text>
+
+  <rect x="70" y="365" width="180" height="54" class="shape"/>
+  <text x="160" y="398" text-anchor="middle" class="label">Workflow fan-out</text>
+
+  <rect x="390" y="190" width="230" height="86" class="cmd"/>
+  <text x="505" y="223" text-anchor="middle" class="label">same command shape</text>
+  <text x="505" y="247" text-anchor="middle" class="small">firecube ingest ...</text>
+
+  <rect x="760" y="190" width="170" height="86" class="product"/>
+  <text x="845" y="223" text-anchor="middle" class="label">Product target</text>
+  <text x="845" y="247" text-anchor="middle" class="small">file:// or s3://</text>
+
+  <path d="M 250 72 L 360 72 L 390 206" class="arrow"/>
+  <path d="M 250 152 L 360 152 L 390 222" class="arrow"/>
+  <path d="M 250 232 L 382 232" class="arrow"/>
+  <path d="M 250 312 L 360 312 L 390 248" class="arrow"/>
+  <path d="M 250 392 L 360 392 L 390 264" class="arrow"/>
+  <path d="M 620 233 L 752 233" class="arrow"/>
+
+  <text x="505" y="333" text-anchor="middle" class="small">The external orchestrator changes scheduling, retries, resources, and credentials.</text>
+  <text x="505" y="355" text-anchor="middle" class="small">The Firecube command remains explicit and portable.</text>
+</svg>
