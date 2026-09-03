@@ -1086,14 +1086,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    DirectZarrIngestor (Auto)
   
 
     
@@ -1176,14 +1176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../../guides/plugins/add-config-options/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    Add Configuration Options
   
 
     
@@ -1820,7 +1820,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2497,6 +2497,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3947,7 +3975,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4545,6 +4601,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4709,6 +4793,11 @@ product. Each worker receives a disjoint, chunk-aligned range of indexes in one
 group.</p>
 <p>Firecube plans and validates the ranges. Your scheduler starts one
 <code>firecube ingest</code> process for each range.</p>
+<figure>
+  <img alt="Declare the time axis, preallocate the store, plan slot ranges, then fan out ingest workers that write disjoint ranges of one Zarr product." src="../../assets/images/firecube-direct-zarr-golden-path.svg" width="900" />
+<br />
+<figcaption>The workflow at a glance: one declaration, one preallocate, one plan, N workers.</figcaption>
+</figure>
 <h2 id="before-you-start">Before You Start</h2>
 <p>The plugin must:</p>
 <ul>
@@ -4718,7 +4807,7 @@ group.</p>
 <li>declare the complete Zarr schema;</li>
 <li>map source values to deterministic indexes through the resolved index.</li>
 </ul>
-<p>See the <a href="../../guides/plugins/direct-zarr/#index-spec-and-write-intents">DirectZarrIngestor guide</a>
+<p>See the <a href="../../guides/plugins/direct-zarr/#implement-the-plugin">DirectZarrIngestor guide</a>
 for the plugin contract. Use <a href="../../concepts/parallelism/">Parallelism</a> first if
 you have not yet chosen a write model.</p>
 <h2 id="1-preallocate-the-product">1. Preallocate The Product</h2>
@@ -4732,28 +4821,46 @@ you have not yet chosen a write model.</p>
 </code></pre></div>
 <p>The command is idempotent when the existing arrays match the declared schema.
 It fails when their shape, data type, or chunk layout differs.</p>
-<p>Add <code>--dry-run</code> to inspect the resolved index without writing any files or
-control-plane records:</p>
+<p>If the plugin declares a <code>TimeAxis.observed</code> axis, the coordinate values come
+from the source data, not from the declaration. Materialize them before
+starting workers by passing <code>--input-data</code> and the slot window to the same
+command:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>preallocate<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--dry-run
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/source<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--slot-start<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--slot-end<span class="w"> </span><span class="m">432</span>
 </code></pre></div>
-<p>The dry-run output is the same JSON format as <code>firecube zarr index show --json</code>.
-No Zarr arrays, claim files, or index records are created.</p>
-<h2 id="2-plan-slot-ranges">2. Plan Slot Ranges</h2>
-<p>Inspect a human-readable plan before launching workers:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>slots<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<p>Workers refuse to write into slots whose coordinate is still unmaterialized,
+so a skipped window surfaces as a loud per-slot error, never as silent data
+misplacement. <code>TimeAxis.grid</code> and <code>TimeAxis.explicit</code> axes are filled from
+the declaration alone and skip this step.</p>
+<p>Add <code>--dry-run</code> to inspect the resolved index without writing any files or
+control-plane records:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>preallocate<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--slot-size<span class="w"> </span><span class="m">144</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--format<span class="w"> </span>table
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--dry-run
+</code></pre></div>
+<p>The dry-run output is the same JSON format as <code>firecube zarr index show --json</code>.
+No Zarr arrays, claim files, or index records are created.</p>
+<h2 id="2-plan-slot-ranges">2. Plan Slot Ranges</h2>
+<p>Inspect a human-readable plan before launching workers:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>slots<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--slot-size<span class="w"> </span><span class="m">144</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>--format<span class="w"> </span>table
 </code></pre></div>
 <p>Each row contains a group and a half-open range such as <code>[0, 144)</code>. The slot
 size must align with the indexed dimension's chunk size. Omit <code>--format table</code>
@@ -4762,19 +4869,19 @@ to receive the JSON plan used by schedulers.</p>
 <code>--no-resume</code> only when the scheduler must deliberately ignore recorded
 coverage and emit the full range.</p>
 <p>The JSON plan also names one range per group as the static owner. Read it with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>slots<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--slot-size<span class="w"> </span><span class="m">144</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>--format<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.groups[0].static_owner&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>slots<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--slot-size<span class="w"> </span><span class="m">144</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span>--format<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.groups[0].static_owner&#39;</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;slot_start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;slot_end&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">144</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;slot_start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&quot;slot_end&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">144</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">}</span>
 </code></pre></div>
 <p>Use this value in step 3 so exactly one worker writes static arrays such as
 latitude and longitude grids.</p>
@@ -4782,25 +4889,6 @@ latitude and longitude grids.</p>
 <p>Scale this workflow by starting more slot-assigned processes. Keep
 <code>pipeline_workers=1</code> within each process so one worker owns each range.</p>
 <p>Pass one planned range to each ingestion process:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/source<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span>--slot-start<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">  </span>--slot-end<span class="w"> </span><span class="m">144</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span>--slot-group<span class="w"> </span>&lt;group&gt;
-</code></pre></div>
-<p>A worker assigned <code>[0, 144)</code> owns indexes <code>0</code> through <code>143</code>. For a single-group
-plugin, <code>--slot-group</code> can be omitted.</p>
-<h3 id="write-static-arrays-once">Write Static Arrays Once</h3>
-<p>Static arrays do not move with the time axis, so by default every worker
-rewrites them. To restrict them to one worker, add two flags to every worker
-command, using the <code>static_owner</code> value from the plan in step 2:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/source<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
@@ -4810,10 +4898,29 @@ command, using the <code>static_owner</code> value from the plan in step 2:</p>
 <a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--slot-start<span class="w"> </span><span class="m">144</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--slot-end<span class="w"> </span><span class="m">288</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span>--suppress-static-emission-for-non-owner<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span>--static-owner-slot-start<span class="w"> </span><span class="m">0</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--slot-start<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--slot-end<span class="w"> </span><span class="m">144</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span>--slot-group<span class="w"> </span>&lt;group&gt;
+</code></pre></div>
+<p>A worker assigned <code>[0, 144)</code> owns indexes <code>0</code> through <code>143</code>. For a single-group
+plugin, <code>--slot-group</code> can be omitted.</p>
+<h3 id="write-static-arrays-once">Write Static Arrays Once</h3>
+<p>Static arrays do not move with the time axis, so by default every worker
+rewrites them. To restrict them to one worker, add two flags to every worker
+command, using the <code>static_owner</code> value from the plan in step 2:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/source<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span>--slot-start<span class="w"> </span><span class="m">144</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span>--slot-end<span class="w"> </span><span class="m">288</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span>--suppress-static-emission-for-non-owner<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span>--static-owner-slot-start<span class="w"> </span><span class="m">0</span>
 </code></pre></div>
 <p>The worker whose <code>--slot-start</code> equals <code>--static-owner-slot-start</code> writes the
 static arrays and stamps their markers. Every other worker skips them and logs
@@ -4823,19 +4930,19 @@ groups.</p>
 <h3 id="derive-ranges-from-a-scheduler-index">Derive Ranges From A Scheduler Index</h3>
 <p>An indexed scheduler can assign ranges without constructing the slot flags.
 Set the task index and slot size for each process:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">JOB_COMPLETION_INDEX</span><span class="o">=</span><span class="s2">&quot;0&quot;</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_SLOT_SIZE</span><span class="o">=</span><span class="s2">&quot;144&quot;</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/source<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span>--slot-group<span class="w"> </span>&lt;group&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">JOB_COMPLETION_INDEX</span><span class="o">=</span><span class="s2">&quot;0&quot;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_SLOT_SIZE</span><span class="o">=</span><span class="s2">&quot;144&quot;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/source<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">  </span>--slot-group<span class="w"> </span>&lt;group&gt;
 </code></pre></div>
 <p>Task index <code>0</code> owns <code>[0, 144)</code>, index <code>1</code> owns <code>[144, 288)</code>, and so on. Explicit
 <code>--slot-start</code> and <code>--slot-end</code> values take precedence over
@@ -4843,8 +4950,8 @@ Set the task index and slot size for each process:</p>
 over <code>JOB_COMPLETION_INDEX</code> with <code>FIRECUBE_SLOT_SIZE</code> or <code>--slot-size</code>.</p>
 <h2 id="4-verify-worker-runs">4. Verify Worker Runs</h2>
 <p>Inspect the runs after the workers finish:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--product-name<span class="w"> </span>file:///data/products/my_product.zarr
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--product-name<span class="w"> </span>file:///data/products/my_product.zarr
 </code></pre></div>
 <p>Every planned range should have a completed run. If a retry remains blocked,
 use <a href="../chunk-manager/">ChunkManager Operations</a> to inspect the product's
@@ -4887,7 +4994,7 @@ recovery commands.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../../concepts/output-formats/zarr/parallel-writes/">Parallel Zarr Writes</a></strong> - understand the slot safety model</li>
-<li><strong><a href="../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor Plugin</a></strong> - build a direct-indexed plugin</li>
+<li><strong><a href="../../tutorials/direct-zarr-parallel/">DirectZarrIngestor (Region) Tutorial</a></strong> - build a direct-indexed plugin</li>
 <li><strong><a href="../../concepts/orchestration/write-safety/">Scheduling And Write Safety</a></strong> - coordinate external workers</li>
 <li><strong><a href="../../reference/cli/">CLI Reference</a></strong> - look up all slot and ingest flags</li>
 </ul>

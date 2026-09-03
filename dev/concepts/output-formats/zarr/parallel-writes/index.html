@@ -27,7 +27,7 @@
     
     
       
-        <title>Parallel Zarr Writes - Firecube</title>
+        <title>DirectZarrIngestor: Parallel Writes - Firecube</title>
       
     
     
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Parallel Zarr Writes
+              DirectZarrIngestor: Parallel Writes
             
           </span>
         </div>
@@ -1086,14 +1086,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../../../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    DirectZarrIngestor (Auto)
   
 
     
@@ -1176,14 +1176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../../../../guides/plugins/add-config-options/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    Add Configuration Options
   
 
     
@@ -1835,7 +1835,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -1853,7 +1853,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2639,6 +2639,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3922,7 +3950,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../tutorials/direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4520,6 +4576,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4663,16 +4747,14 @@ is not a separate plugin class, and it does not apply to
 <figcaption>Each worker owns a half-open index range. Range boundaries align with physical chunks so workers do not share a chunk.</figcaption>
 </figure>
 <h2 id="how-this-removes-the-append-bottleneck">How This Removes The Append Bottleneck</h2>
-<p>An append writer finds the next position from the current group length. Two
-writers extending the group would share its shape, metadata, append cursor, and
-possibly its trailing physical chunk, so Firecube serializes that mutation.</p>
-<p>A direct-indexed <code>DirectZarrIngestor</code> takes a different approach. The complete
-indexed extent is created first, the plugin maps product coordinates to absolute
-indexes, and the slot planner produces disjoint ranges aligned with the
-physical chunks of every time-indexed array. An external scheduler passes one
-range to each ingest process, and Firecube validates that range before writing.
-Workers can then write one group concurrently without sharing an append cursor
-or a physical chunk.</p>
+<p>An append writer finds the next position from the current group length, so
+concurrent appenders must be serialized. Slot workers avoid the shared cursor
+entirely: the complete indexed extent is created first (the
+<a href="../direct-region/">direct write model</a> explains how the declared time axis
+makes that possible), the slot planner produces disjoint ranges aligned with
+the physical chunks of every time-indexed array, and an external scheduler
+passes one range to each ingest process. Firecube validates each range before
+writing.</p>
 <p>This is optional. A normal <code>DirectZarrIngestor</code> run remains serial unless the
 plugin declares the index spec and the processes are launched with assigned
 ranges.</p>
@@ -4697,7 +4779,7 @@ to align with the indexed chunk layout of every writable array.</p>
 </ul>
 <p>These requirements are additional to the normal <code>DirectZarrIngestor</code> schema
 and write-intent contract. The
-<a href="../../../../guides/plugins/direct-zarr/#index-spec-and-write-intents"><code>DirectZarrIngestor</code> guide</a>
+<a href="../../../../guides/plugins/direct-zarr/#implement-the-plugin"><code>DirectZarrIngestor</code> guide</a>
 lists the public hooks.</p>
 <h2 id="what-firecube-coordinates">What Firecube Coordinates</h2>
 <p>Firecube creates or validates the shared schema, plans ranges, rejects unsafe
@@ -4719,9 +4801,9 @@ scheduler.</p>
 <ul>
 <li><strong><a href="../../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></strong> -
   preallocate, plan, launch, verify, and recover workers</li>
-<li><strong><a href="../../../../guides/plugins/direct-zarr/#index-spec-and-write-intents"><code>DirectZarrIngestor</code> Guide</a></strong> -
+<li><strong><a href="../../../../guides/plugins/direct-zarr/#implement-the-plugin"><code>DirectZarrIngestor</code> Guide</a></strong> -
   implement the index contract and write-intent hooks</li>
-<li><strong><a href="../../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor Plugin</a></strong> -
+<li><strong><a href="../../../../tutorials/direct-zarr-parallel/">DirectZarrIngestor (Region) Tutorial</a></strong> -
   build a complete parallel example</li>
 <li><strong><a href="../../../benchmarks/#same-group-slot-scaling">Benchmarks</a></strong> - review one
   measured slot-scaling workload</li>

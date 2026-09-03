@@ -1086,14 +1086,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    DirectZarrIngestor (Auto)
   
 
     
@@ -1176,14 +1176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../../guides/plugins/add-config-options/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    Add Configuration Options
   
 
     
@@ -1820,7 +1820,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2497,6 +2497,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3780,7 +3808,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4638,6 +4694,34 @@
     
   
     Storage Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
   
 
     
@@ -5622,9 +5706,8 @@ The time axis shape[0] is handled specially: smaller fails, larger warns.</p>
 
 </div><h2 id="see-also">See Also</h2>
 <ul>
-<li><a href="../templates/">Templates</a></li>
-<li><a href="../parallelism/">Index Specification</a></li>
-<li><a href="../../guides/plugins/irregular-axis/">IrregularTimeAxis Plugin Guide</a></li>
+<li><a href="../parallelism/#firecube.ingestor.api.TimeAxis.discovered">Discovery failure modes</a></li>
+<li><a href="../templates/#firecube.ingestor.api.DirectZarrIngestor.build_write_intents"><code>build_write_intents</code></a></li>
 <li><a href="../../guides/plugins/direct-zarr/">Implement DirectZarrIngestor</a></li>
 </ul>
 

@@ -1086,14 +1086,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../../../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    DirectZarrIngestor (Auto)
   
 
     
@@ -1176,14 +1176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../../../../guides/plugins/add-config-options/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    Add Configuration Options
   
 
     
@@ -1873,6 +1873,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#time-axes-and-coordinate-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time Axes And Coordinate Ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#serial-store-growth" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1888,17 +1899,6 @@
     <span class="md-ellipsis">
       
         When To Use It
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-parallel-writes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Optional Parallel Writes
       
     </span>
   </a>
@@ -1939,7 +1939,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2628,6 +2628,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3911,7 +3939,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../tutorials/direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4509,6 +4565,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4565,6 +4649,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#time-axes-and-coordinate-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time Axes And Coordinate Ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#serial-store-growth" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4580,17 +4675,6 @@
     <span class="md-ellipsis">
       
         When To Use It
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-parallel-writes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Optional Parallel Writes
       
     </span>
   </a>
@@ -4639,42 +4723,44 @@ plugin emits write intents rather than returning an <code>xarray.Dataset</code>;
 applies them through <code>zarr-python</code>.</p>
 <h2 id="how-direct-writes-work">How Direct Writes Work</h2>
 <ol>
-<li>The plugin declares the product's Zarr groups and arrays.</li>
-<li>Firecube creates missing arrays or validates the existing schema.</li>
+<li>The plugin declares the product's time axis and its Zarr groups and arrays.</li>
+<li>Firecube resolves the axis into a slot index, creates missing arrays or
+   validates the existing schema, and materializes the coordinate values.</li>
 <li>For each batch, the plugin returns write intents for specific arrays and
    indexes.</li>
 <li>Firecube validates and applies those intents, then records the run.</li>
 </ol>
 <figure>
-  <img alt="DirectZarrIngestor converts source values into region, one-dimensional, timestamp, or static write intents that Firecube applies to a declared Zarr schema." src="../../../../assets/images/firecube-direct-zarr-region.svg" width="820" />
+  <img alt="DirectZarrIngestor converts source values into region, slot, coordinate, or static write intents that Firecube applies to a declared Zarr schema." src="../../../../assets/images/firecube-direct-zarr-region.svg" width="820" />
 <br />
 <figcaption>Direct writes replace the append cursor with explicit indexed placement.</figcaption>
 </figure>
 <h2 id="schema-and-write-intents">Schema And Write Intents</h2>
 <p>The schema defines each array's shape, chunks, dimensions, data type, and
-attributes. A write intent then describes one write:</p>
+attributes. A write intent then describes one write, built with the factory
+matching its purpose:</p>
 <table>
 <thead>
 <tr>
-<th>Intent kind</th>
+<th>Factory</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>region</code></td>
+<td><code>WriteIntent.region(...)</code></td>
 <td>Write a spatial slice at one indexed position in a rank-3 or rank-4 array.</td>
 </tr>
 <tr>
-<td><code>1d</code></td>
+<td><code>WriteIntent.slot(...)</code></td>
 <td>Write one complete indexed slot of an array.</td>
 </tr>
 <tr>
-<td><code>timestamp</code></td>
+<td><code>WriteIntent.coordinate(...)</code></td>
 <td>Write one indexed coordinate value.</td>
 </tr>
 <tr>
-<td><code>static</code></td>
+<td><code>WriteIntent.static(...)</code></td>
 <td>Write a non-indexed array once and verify it on replay.</td>
 </tr>
 </tbody>
@@ -4682,41 +4768,103 @@ attributes. A write intent then describes one write:</p>
 <p>The plugin owns the mapping from source data to those writes. Firecube owns
 schema setup and validation, storage access, write coordination, and run
 tracking.</p>
+<h2 id="time-axes-and-coordinate-ownership">Time Axes And Coordinate Ownership</h2>
+<p>The declared time axis decides what the coordinate array stores and who
+writes it. Declaring one is a single entry in <code>index_spec</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexSpec</span><span class="p">,</span> <span class="n">TimeAxis</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">IndexSpec</span><span class="p">(</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_product_v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">groups</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">TimeAxis</span><span class="o">.</span><span class="n">observed</span><span class="p">(</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>            <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>            <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>            <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2024-01-08T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="p">),</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="p">},</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">)</span>
+</code></pre></div>
+<figure>
+  <img alt="Preallocate is the single writer of the time coordinate array; ingest workers write data arrays and only verify coordinate values. A strip shows what the coordinate array stores in each axis regime." src="../../../../assets/images/firecube-time-axis-ownership.svg" width="860" />
+<br />
+<figcaption>One writer for the coordinate array; workers verify. The strip shows the stored values per regime.</figcaption>
+</figure>
+<p>One rule underpins parallel safety: the coordinate array has a
+single writer, and it is never an ingestion worker. A dense coordinate keeps
+hundreds of slots per physical chunk, so concurrent workers writing their own
+timestamps would silently overwrite each other. Firecube therefore
+materializes coordinate values up front, and workers only verify: a write
+whose timestamp differs from the stored value is refused loudly, never
+merged.</p>
+<p>Each <code>TimeAxis</code> constructor commits the product to one regime:</p>
+<ul>
+<li><strong>Grid</strong> (<a href="../../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.grid"><code>TimeAxis.grid</code></a>): regular cadence and the nominal grid is the
+  truth. Slot <code>n</code> stores exactly <code>epoch + n * cadence</code>, so the axis is filled
+  and sealed without reading any source data. Worker timestamps must land
+  exactly on the grid; any deviation is treated as corruption. Claim this
+  only when the source guarantees exact slot times.</li>
+<li><strong>Observed</strong> (<a href="../../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.observed"><code>TimeAxis.observed</code></a>): regular cadence for placement, real
+  observation times for storage. A ten-minute sensor rarely stamps files at
+  the slot boundary; the observation arrives at <code>00:00:02</code> or <code>00:10:07</code>.
+  Firecube floors each timestamp onto the cadence to find its slot while the
+  coordinate array keeps the true time. Readers get honest timestamps and
+  the planner still gets a regular grid. This is the regime most real
+  products need. The axis stays open-ended: windows materialize as source
+  data arrives, and re-runs reconcile per slot instead of failing or
+  overwriting.</li>
+<li><strong>Explicit</strong> (<a href="../../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.explicit"><code>TimeAxis.explicit</code></a>): no regular cadence, but the full list
+  of timestamps is known upfront. The declaration carries the values, so the
+  axis is written and sealed like the grid regime.</li>
+<li><strong>Discovered</strong> (<a href="../../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.discovered"><code>TimeAxis.discovered</code></a>): the timestamps live inside the
+  source files. This declares <code>IrregularTimeAxis(values=AUTO)</code>, the spelling
+  the reference and error messages use. Firecube runs <code>inspect_item</code> over
+  every item before any write, sorts the collected coordinates, and builds
+  the axis from them. Discovery happens once and its result is handed to
+  parallel workers by stable reference, which is why <code>inspect_item</code> must be
+  idempotent, order-independent, and resolvable through references that stay
+  valid for the cube's lifetime. Duplicate or missing coordinates are
+  refused at discovery time.</li>
+</ul>
+<p>The tradeoff runs along two lines. Regular beats irregular when you can
+claim it: a regular axis lets Firecube plan slot ranges from the declaration
+alone and lets rolling products extend indefinitely, while irregular axes
+need the complete value set first. Within each pair, the earlier option is
+stricter and the later more honest: grid enforces nominal times, observed
+stores what the instrument measured; explicit trusts your list, discovered
+trusts the data. Stricter regimes fail earlier and louder, which is what you
+want whenever the guarantee genuinely holds.</p>
+<p>To declare an axis, start from the routing table in the
+<a href="../../../../guides/plugins/direct-zarr/#choose-the-time-axis"><code>DirectZarrIngestor</code> guide</a>; the exact constructor signatures are in
+the <a href="../../../../reference/parallelism/#index-types">Index Specification Reference</a>.</p>
+<p>All regimes share one failure philosophy: divergence between a stored value
+and an incoming one raises a schema drift error naming the slot and both
+values. Nothing is overwritten, and an interrupted run re-runs with the same
+input; matching values are no-ops and missing values are filled.</p>
 <h2 id="serial-store-growth">Serial Store Growth</h2>
 <p>A serial direct-write store does not need a known final indexed extent. An
 indexed array may begin at length zero, and Firecube grows it when an intent
 targets a later index. Static arrays are created at their declared shape.</p>
 <p>A fixed, preallocated global extent is required only when the plugin opts into
-slot-range parallelism.</p>
+slot-range parallelism; see <a href="../parallel-writes/">Parallel Zarr Writes</a> for
+that safety model.</p>
 <h2 id="when-to-use-it">When To Use It</h2>
 <p>Use <code>DirectZarrIngestor</code> when explicit array placement is part of the product
 contract, including sparse regions, indexed coordinate writes, or static arrays
-that accompany indexed data. If the plugin can return complete, compatible
-<code>xarray.Dataset</code> batches, <a href="../generic-append/">GenericZarrIngestor (Append)</a>
-provides a smaller authoring surface.</p>
-<h2 id="optional-parallel-writes">Optional Parallel Writes</h2>
-<p>A <code>DirectZarrIngestor</code> plugin can opt into multiple processes writing the same
-group. Firecube first creates or validates the complete indexed extent. The
-slot planner then produces half-open ranges whose boundaries align with every
-time-indexed array's physical chunks. An external scheduler passes one range to
-each process. Because each write uses an absolute index and no two ranges share
-a chunk, the processes do not contend for an append cursor or the same physical
-chunk.</p>
-<p>That extension requires a fixed global layout, deterministic index mapping,
-and disjoint chunk-aligned ranges. It partitions the first indexed dimension;
-it does not allow several processes to write different spatial regions of the
-same index. Serial direct writes do not require those hooks or constraints, and
-selecting <code>DirectZarrIngestor</code> alone does not enable parallelism.</p>
-<p>See <a href="../parallel-writes/">Parallel Zarr Writes</a> for the safety model.</p>
+that accompany indexed data, and always when you need slot-range parallel
+ingestion. If the plugin can return complete, compatible <code>xarray.Dataset</code>
+batches and serial appends suffice,
+<a href="../generic-append/">GenericZarrIngestor (Append)</a> provides a smaller authoring
+surface.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../../../../guides/plugins/direct-zarr/"><code>DirectZarrIngestor</code> Guide</a></strong> —
-  implement the schema and write-intent hooks</li>
-<li><strong><a href="../parallel-writes/">Parallel Zarr Writes</a></strong> — understand the optional
-  slot-range model</li>
+  implement the axis, schema, and write-intent hooks</li>
+<li><strong><a href="../parallel-writes/">Parallel Zarr Writes</a></strong> — understand the slot-range
+  safety model</li>
 <li><strong><a href="../generic-append/">GenericZarrIngestor (Append)</a></strong> — compare the complete
   dataset contract</li>
-<li><strong><a href="../../../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor Plugin</a></strong> —
+<li><strong><a href="../../../../tutorials/direct-zarr-parallel/">DirectZarrIngestor (Region) Tutorial</a></strong> —
   build and run a slot-capable plugin</li>
 </ul>
 

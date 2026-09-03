@@ -1086,14 +1086,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    DirectZarrIngestor (Auto)
   
 
     
@@ -1176,14 +1176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../../guides/plugins/add-config-options/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    Add Configuration Options
   
 
     
@@ -1820,7 +1820,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2497,6 +2497,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3780,7 +3808,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4258,6 +4314,84 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;TimeAxis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" TimeAxis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis.grid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;grid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis.observed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;observed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis.explicit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;explicit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis.discovered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;discovered
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#firecube.ingestor.api.AxisSpec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4656,6 +4790,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResolvedIndex.filtered_spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;filtered_spec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#firecube.ingestor.api.ResolvedIndex.canonical_index_payload" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4828,67 +4973,6 @@
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#resolved-index-behavior" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Resolved Index Behavior
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-group-index-specs-and-axis-sharing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-group index specs and axis sharing
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multi-group index specs and axis sharing">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-identity-not-equality" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why identity, not equality?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#two-ways-to-satisfy-the-requirement" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Two ways to satisfy the requirement
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-pitfall" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common pitfall
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -5088,6 +5172,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -5129,6 +5241,84 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;TimeAxis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" TimeAxis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis.grid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;grid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis.observed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;observed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis.explicit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;explicit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.TimeAxis.discovered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;discovered
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -5531,6 +5721,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ResolvedIndex.filtered_spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;filtered_spec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#firecube.ingestor.api.ResolvedIndex.canonical_index_payload" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5707,67 +5908,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resolved-index-behavior" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Resolved Index Behavior
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-group-index-specs-and-axis-sharing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-group index specs and axis sharing
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multi-group index specs and axis sharing">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-identity-not-equality" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why identity, not equality?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#two-ways-to-satisfy-the-requirement" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Two ways to satisfy the requirement
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#common-pitfall" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common pitfall
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5799,7 +5939,7 @@
 
 
 <h1 id="index-specification">Index Specification</h1>
-<p>This reference covers the public types used to declare and resolve direct-Zarr index specs. <code>IndexSpec</code>, <code>RegularTimeAxis</code>, <code>IntegerAxis</code>, and <code>IrregularTimeAxis</code> describe the layout. <code>AUTO</code> is the sentinel that tells the engine to discover coordinates at planning time. <code>inspect_item()</code> returns <code>ItemInfo</code>, and <code>resolve_index_spec()</code> turns the declarative spec into a cached <code>ResolvedIndex</code> for the run.</p>
+<p>This reference covers the public types used to declare and resolve direct-Zarr index specs. <code>TimeAxis</code> provides the recommended intent-named constructors for time axes. <code>IndexSpec</code>, <code>RegularTimeAxis</code>, <code>IntegerAxis</code>, and <code>IrregularTimeAxis</code> describe the layout. <code>AUTO</code> is the sentinel that tells the engine to discover coordinates at planning time. <code>inspect_item()</code> returns <code>ItemInfo</code>, and <code>resolve_index_spec()</code> turns the declarative spec into a cached <code>ResolvedIndex</code> for the run.</p>
 <p><code>coerce_to_epoch_s()</code> normalizes supported timestamp values to Unix epoch seconds.</p>
 <p><code>ResolvedIndexRecord</code> is the on-disk control-plane record written after the engine resolves an <code>IndexSpec</code>.</p>
 <table>
@@ -5810,6 +5950,10 @@
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.TimeAxis" href="#firecube.ingestor.api.TimeAxis"><code>TimeAxis</code></a></td>
+<td>Intent-named constructors for time-axis declarations.</td>
+</tr>
 <tr>
 <td><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.AxisSpec" href="#firecube.ingestor.api.AxisSpec"><code>AxisSpec</code></a></td>
 <td>Marker base for axis specifications.</td>
@@ -5899,6 +6043,526 @@
 
 
 
+<h2 id="firecube.ingestor.api.TimeAxis" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.TimeAxis</span>
+
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Intent-named constructors for time-axis declarations.</p>
+<p>The four constructors cover every supported time-axis shape and are the
+recommended way to declare one; each returns a plain axis dataclass, so
+the explicit <code>RegularTimeAxis</code> / <code>IrregularTimeAxis</code> forms remain
+available as an escape hatch.</p>
+<p>Pick by answering one question -- what defines your product's timeline?</p>
+<ul>
+<li>A fixed cadence, and the coordinate should carry the grid labels:
+  :meth:<code>grid</code>.</li>
+<li>A fixed cadence, but the coordinate should carry each slot's real
+  observation time: :meth:<code>observed</code>.</li>
+<li>A known list of timestamps with no fixed cadence: :meth:<code>explicit</code>.</li>
+<li>Timestamps only your source items can reveal: :meth:<code>discovered</code>.</li>
+</ul>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">axis</span> <span class="o">=</span> <span class="n">TimeAxis</span><span class="o">.</span><span class="n">observed</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">... </span>    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">... </span>    <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2025-07-01T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">... </span>    <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>    <span class="n">slot_count</span><span class="o">=</span><span class="mi">4320</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span> <span class="o">=</span> <span class="n">IndexSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_product_v1&quot;</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">})</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+<h3 id="firecube.ingestor.api.TimeAxis-functions">Methods:</h3>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.TimeAxis.grid" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">grid</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">grid</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">coordinate</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">epoch</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">cadence_s</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">slot_count</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">end_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">placement</span><span class="o">=</span><span class="s2">&quot;exact&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>A fixed-cadence axis whose coordinate carries the grid labels.</p>
+<p>The coordinate values are <code>epoch + n * cadence_s</code>, known before
+ingest, so the engine materializes and seals them at preallocate.
+Item timestamps must sit exactly on grid boundaries; off-grid
+observation times need :meth:<code>observed</code> instead, because sealed grid
+values cannot pass drift verification against off-grid writes.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>coordinate</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Name of the time coordinate dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>epoch</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>UTC-explicit ISO 8601 axis origin.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>cadence_s</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Slot cadence in seconds (positive integer).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>slot_count</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Total slots; mutually exclusive with <code>end_date</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>end_date</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Exclusive UTC-explicit axis end; mutually exclusive
+with <code>slot_count</code>. Leave both <code>None</code> for serial mode.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>placement</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="typing.Literal" href="https://docs.python.org/3/library/typing.html#typing.Literal">Literal</a>[&#39;exact&#39;, &#39;floor&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Must be <code>"exact"</code>; <code>"floor"</code> raises <code>ValueError</code>
+(use :meth:<code>observed</code> for floor placement).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;exact&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.TimeAxis.observed" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">observed</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">observed</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">coordinate</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">epoch</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">cadence_s</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">slot_count</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">end_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>A fixed-cadence axis whose coordinate carries real observation times.</p>
+<p>Items are placed on the grid by flooring, but the coordinate stores
+each slot's actual observation time (for example a sensing start such
+as <code>00:00:02</code> in a ten-minute cadence). Those values only exist once
+the source items are known, so the engine writes them in a
+single-writer materialization step; ingest verifies them.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>coordinate</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Name of the time coordinate dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>epoch</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>UTC-explicit ISO 8601 axis origin.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>cadence_s</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Slot cadence in seconds (positive integer).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>slot_count</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Total slots; mutually exclusive with <code>end_date</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>end_date</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Exclusive UTC-explicit axis end; mutually exclusive
+with <code>slot_count</code>. Leave both <code>None</code> for serial mode.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.TimeAxis.explicit" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">explicit</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">explicit</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>An axis whose timeline is a known, explicit list of timestamps.</p>
+<p>Use when the product has no fixed cadence but the full timeline is
+known when the plugin is configured. The engine sorts the values
+ascending, assigns slot indices in that order, and materializes the
+coordinate at preallocate. The rest of the plugin is unchanged:
+<code>resolved_index(ctx).position(group, timestamp)</code> maps each value to
+its declared slot.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>coordinate</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Name of the time coordinate dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>values</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Sequence" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Non-empty sequence of distinct coordinate values
+(<code>datetime</code>, <code>numpy.datetime64</code>, or integers). Strings,
+bytes, duplicates, and empty input are rejected.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">axis</span> <span class="o">=</span> <span class="n">TimeAxis</span><span class="o">.</span><span class="n">explicit</span><span class="p">(</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">... </span>    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">... </span>    <span class="n">values</span><span class="o">=</span><span class="p">(</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>        <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2026-01-01T00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span>        <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2026-01-01T00:17:30&quot;</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>        <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2026-01-01T00:42:00&quot;</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">... </span>    <span class="p">),</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">... </span><span class="p">)</span>
+</code></pre></div>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.TimeAxis.discovered" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">discovered</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">discovered</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">coordinate</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>An axis whose timeline is discovered from the source items.</p>
+<p>Use when only the inputs can reveal the timestamps. Before
+preallocate the engine calls <code>inspect_item</code> on every discovered
+source item, sorts the coordinates ascending, and freezes the
+resulting axis. That costs one full source pass at planning time.
+The declaration is <code>IrregularTimeAxis(values=AUTO)</code>, the spelling
+error messages use.</p>
+<p>Discovery makes <code>inspect_item</code> load-bearing:</p>
+<ul>
+<li>Return <code>ItemInfo(coordinate=timestamp)</code> for every item that
+  belongs on the axis.</li>
+<li>Return <code>None</code> to skip an item entirely.</li>
+<li>Return <code>ItemInfo(coordinate=None)</code> only when the item exists but
+  its coordinate cannot be resolved; discovery fails with
+  <code>MissingIrregularCoordinateError</code> for it.</li>
+</ul>
+<p><code>inspect_item</code> runs during discovery and again during the write
+phase, so it must be idempotent and independent of discovery order,
+and items must resolve through references that stay valid for the
+run because the discovered axis is handed to parallel workers.
+Duplicate coordinates raise <code>DuplicateIrregularCoordinateError</code>;
+zero discovered items raise <code>NoDiscoveredItemsError</code>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>coordinate</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Name of the time coordinate dimension.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
 <h2 id="firecube.ingestor.api.AxisSpec" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.ingestor.api.AxisSpec</span>
 
@@ -5948,6 +6612,14 @@ dispatches on <code>isinstance</code> -- no abstract methods are required here.<
 
 
         <p>Declarative index specification for a multi-group DirectZarr product.</p>
+<p>When <code>groups</code> has more than one entry and the ingestion caller does not
+pass <code>slot_group</code> to name one authoritative group, every group must
+reference the same axis object (Python <code>is</code> identity, not value
+equality): slot-range filtering operates on one canonical axis, and two
+structurally equal axes give the engine no way to pick one. Separately
+constructed axes with identical fields are rejected with
+<code>ConfigurationError</code> at bind time; share the instance instead, or pass
+<code>--slot-group</code> on the command line.</p>
 
 
 <p><span class="doc-section-title">Attributes:</span></p>
@@ -6018,12 +6690,15 @@ Normalized to a sorted tuple internally for hashability.</p>
 
 <p><span class="doc-section-title">Examples:</span></p>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">axis</span> <span class="o">=</span> <span class="n">RegularTimeAxis</span><span class="p">(</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">... </span>    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">... </span>    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">... </span>    <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">... </span>    <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>    <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2024-01-08T00:00:00Z&quot;</span><span class="p">,</span>  <span class="c1"># or slot_count=1008</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span><span class="p">)</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span> <span class="o">=</span> <span class="n">IndexSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_product_v1&quot;</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">})</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span> <span class="o">=</span> <span class="n">IndexSpec</span><span class="p">(</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">... </span>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_product_v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">... </span>    <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;data_1km&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">,</span> <span class="s2">&quot;data_2km&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">},</span>  <span class="c1"># same object</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">... </span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -6150,6 +6825,11 @@ Normalized to a sorted tuple internally for hashability.</p>
 
 
         <p>A zero-based integer axis with a fixed slot count.</p>
+<p>Declares an integer position with no epoch or cadence. <code>inspect_item</code>
+returns the integer position as the item's coordinate, and
+<code>resolved_index(ctx).position(group, key)</code> maps it to the slot index.
+A single <code>IndexSpec</code> may mix <code>IntegerAxis</code> and time-axis groups;
+each group resolves its own axis independently.</p>
 
 
 <p><span class="doc-section-title">Attributes:</span></p>
@@ -6183,6 +6863,22 @@ axis are created with shape <code>(slot_count, ...)</code>.</p>
           </tr>
       </tbody>
     </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span> <span class="o">=</span> <span class="n">IndexSpec</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">... </span>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_mixed_product_v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">... </span>    <span class="n">groups</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">... </span>        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">TimeAxis</span><span class="o">.</span><span class="n">observed</span><span class="p">(</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>            <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span>            <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>            <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">... </span>            <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2024-01-08T00:00:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">... </span>        <span class="p">),</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">... </span>        <span class="s2">&quot;lookup&quot;</span><span class="p">:</span> <span class="n">IntegerAxis</span><span class="p">(</span><span class="n">slot_count</span><span class="o">=</span><span class="mi">64</span><span class="p">),</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">... </span>    <span class="p">},</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gp">... </span><span class="p">)</span>
+</code></pre></div>
 
 
 
@@ -6896,6 +7592,11 @@ coordinate.</p>
 <p>Built by <code>resolve_index_spec</code> and cached per run context and spec on
 the <code>DirectZarrIngestor</code> instance, so repeated lookups within a run
 return the same object.</p>
+<p>Plugin code reaches it through <code>resolved_index(ctx)</code>. Use
+<code>size(group)</code> when a schema needs the declared axis extent before
+writes begin, <code>position(group, coordinate)</code> when a write needs the
+slot index for a timestamp or integer coordinate, and
+<code>coordinate(group, index)</code> for the reverse lookup.</p>
 <p>The <code>identity_hash</code> is content-addressed from the canonical
 resolved-index payload. It intentionally does not track the legacy
 slot-index model hash.</p>
@@ -6969,6 +7670,31 @@ slot-index model hash.</p>
 
 
 <h3 id="firecube.ingestor.api.ResolvedIndex-functions">Methods:</h3>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="firecube.ingestor.api.ResolvedIndex.filtered_spec" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">filtered_spec</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">filtered_spec</span><span class="p">(</span><span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return an <code>IndexSpec</code> rebuilt from the resolved state.</p>
+<p><code>bound_axes()</code>-only reconstruction was rejected because callers need
+the product <code>name</code> and <code>time_unit</code> too, not just axis objects.
+Filtering <code>as_resolved_index_record()</code> was rejected because mixed
+specs still include unbounded axes, and that path re-raises
+<code>ExtentUnknownError</code> when it meets them.</p>
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 
@@ -7401,6 +8127,12 @@ specs is handled by a future release.</p>
 
 
         <p>On-disk record for an engine-resolved index payload.</p>
+<p>The engine writes it to <code>.firecube/index/current.json</code> after the first
+successful resolution. Subsequent runs read it back and verify that the
+declared <code>IndexSpec</code> produces the same <code>identity_hash</code> before
+writing. Inspect the record with <code>firecube zarr index show</code> and
+regenerate it from a plugin declaration with
+<code>firecube zarr index rebuild</code>.</p>
 <p>Optional <code>items</code> carries a content-addressed manifest for
 <code>IrregularTimeAxis</code> cubes. It is omitted from the wire format and
 <code>identity_hash</code> for regular / integer axes so those cubes stay
@@ -7621,8 +8353,8 @@ byte-identically to pre-manifest records.</p>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span><span class="p">)</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span> <span class="o">=</span> <span class="n">IndexSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;demo&quot;</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">})</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">resolved</span> <span class="o">=</span> <span class="n">resolve_index_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">time_dim_name</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">resolved</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="go">&#39;demo&#39;</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">resolved</span><span class="o">.</span><span class="n">groups</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="go">(&#39;data&#39;,)</span>
 </code></pre></div>
 
 
@@ -7650,7 +8382,7 @@ facade does not re-export it.</p>
 <p>Accepts the following types:</p>
 <ul>
 <li><code>str</code>: UTC-explicit ISO 8601 string (via <code>iso_to_epoch_s</code>).</li>
-<li><code>datetime.datetime</code>: naive treated as UTC (D6 default; FCI pattern);
+<li><code>datetime.datetime</code>: naive treated as UTC (FCI pattern);
   aware converted to UTC.</li>
 <li><code>numpy.datetime64</code>: any unit, converted to seconds.</li>
 <li><code>pandas.Timestamp</code>: naive treated as UTC; aware converted to UTC.</li>
@@ -7763,65 +8495,10 @@ fractional seconds raise <code>ValueError</code>.</p>
 
     </div>
 
-</div><h2 id="resolved-index-behavior">Resolved Index Behavior</h2>
-<p><code>ResolvedIndex</code> is the object plugin code uses after resolution. The key methods are <code>size(group)</code>, <code>position(group, coordinate)</code>, and <code>coordinate(group, index)</code>.</p>
-<p>Use <code>resolved_index(ctx).size(group)</code> when a schema needs the declared axis extent before writes begin. Use <code>resolved_index(ctx).position(group, coordinate)</code> when a write needs the slot index for a timestamp or integer coordinate.</p>
-<p><code>ResolvedIndexRecord</code> is the persisted form of the resolved index. The engine writes it to <code>.firecube/index/current.json</code> after the first successful resolution. Subsequent runs read it back and verify that the declared <code>IndexSpec</code> produces the same <code>identity_hash</code> before writing. Use <code>firecube zarr index show</code> to inspect the record and <code>firecube zarr index rebuild</code> to regenerate it from a plugin declaration.</p>
-<h2 id="multi-group-index-specs-and-axis-sharing">Multi-group index specs and axis sharing</h2>
-<p>When a plugin's <code>index_spec(ctx)</code> returns an <code>IndexSpec</code> with multiple
-groups, and the ingestion caller does not pass <code>slot_group</code> to name one
-specific group, Firecube requires all groups to reference the <strong>same axis
-object</strong> (Python <code>is</code>-identity, not value-equality). Two structurally
-equal <code>RegularTimeAxis(...)</code> instances constructed separately will be
-rejected with a <code>ConfigurationError</code> at bind time.</p>
-<h3 id="why-identity-not-equality">Why identity, not equality?</h3>
-<p>Slot-range filtering must operate on ONE canonical axis. If two groups
-declare distinct axis objects, even with identical <code>epoch</code>, <code>cadence_s</code>,
-and <code>coordinate</code>, Firecube cannot pick which is authoritative without
-operator input.</p>
-<h3 id="two-ways-to-satisfy-the-requirement">Two ways to satisfy the requirement</h3>
-<p><strong>1. Share one axis instance across groups</strong> (recommended for uniform
-temporal geometry, e.g., a satellite-imagery plugin whose 1 km and 2 km
-data share the same time axis):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexSpec</span><span class="p">,</span> <span class="n">RegularTimeAxis</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">axis</span> <span class="o">=</span> <span class="n">RegularTimeAxis</span><span class="p">(</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2024-01-08T00:00:00Z&quot;</span><span class="p">,</span>  <span class="c1"># or equivalently slot_count=1008</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="k">return</span> <span class="n">IndexSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_product_v1&quot;</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="s2">&quot;data_1km&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="s2">&quot;data_2km&quot;</span><span class="p">:</span> <span class="n">axis</span><span class="p">,</span>   <span class="c1"># SAME OBJECT, not a fresh construction</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">})</span>
-</code></pre></div>
-<p><strong>2. Pass <code>--slot-group</code> when calling into the ingestor</strong> to name which
-group's axis is authoritative:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>--slot-group<span class="w"> </span>data_1km<span class="w"> </span>...
-</code></pre></div>
-<h3 id="common-pitfall">Common pitfall</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># WRONG - two structurally equal axes, distinct Python objects:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">return</span> <span class="n">IndexSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_product_v1&quot;</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="p">{</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="s2">&quot;data_1km&quot;</span><span class="p">:</span> <span class="n">RegularTimeAxis</span><span class="p">(</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="n">slot_count</span><span class="o">=</span><span class="mi">1008</span><span class="p">,</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="p">),</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="s2">&quot;data_2km&quot;</span><span class="p">:</span> <span class="n">RegularTimeAxis</span><span class="p">(</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="n">epoch</span><span class="o">=</span><span class="s2">&quot;2024-01-01T00:00:00Z&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="n">cadence_s</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="n">slot_count</span><span class="o">=</span><span class="mi">1008</span><span class="p">,</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="p">),</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="p">})</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c1"># Raises ConfigurationError at ingestion time.</span>
-</code></pre></div>
-<h2 id="see-also">See Also</h2>
+</div><h2 id="see-also">See Also</h2>
 <ul>
 <li><a href="../../guides/plugins/direct-zarr/">Implement <code>DirectZarrIngestor</code></a></li>
-<li><a href="../../tutorials/direct-zarr-parallel/">Parallel DirectZarrIngestor tutorial</a></li>
+<li><a href="../../tutorials/direct-zarr-parallel/">DirectZarrIngestor (Region) tutorial</a></li>
 <li><a href="../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></li>
 </ul>
 

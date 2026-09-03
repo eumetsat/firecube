@@ -1086,14 +1086,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    DirectZarrIngestor (Auto)
   
 
     
@@ -1176,14 +1176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../../guides/plugins/add-config-options/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    Add Configuration Options
   
 
     
@@ -1820,7 +1820,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2497,6 +2497,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3938,7 +3966,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4536,6 +4592,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4725,7 +4809,7 @@ contract:</p>
 <li><code>xr.concat(...).sortby("timestamp")</code> combines the four time steps in order.</li>
 </ul>
 <p>The quickstart owns the complete
-<a href="../../quickstart/plugins/#implement-the-plugin">plugin implementation</a>. The
+<a href="../../quickstart/plugins/#steps">plugin implementation</a>. The
 <a href="../../guides/plugins/generic-zarr/">GenericZarrIngestor guide</a> explains how to
 adapt the same hook for another dataset.</p>
 <h2 id="2-inspect-the-netcdf-inputs">2. Inspect The NetCDF Inputs</h2>
@@ -4830,7 +4914,7 @@ physical Zarr array chunks.</p>
 <li><strong><a href="../source-discovery/">NetCDF To Zarr: Source Discovery</a></strong>: extend the same plugin run to another NetCDF filename pattern.</li>
 <li><strong><a href="../observability/">NetCDF To Zarr: Observability</a></strong>: add one custom metric to the same plugin.</li>
 <li><strong><a href="../sentinel3-frp/">Sentinel-3 FRP To Parquet</a></strong>: download and ingest a real EUMETSAT product.</li>
-<li><strong><a href="../direct-zarr-parallel/">Parallel DirectZarrIngestor</a></strong>: learn the slot-write path for disjoint parallel writes.</li>
+<li><strong><a href="../direct-zarr-parallel/">DirectZarrIngestor (Region)</a></strong>: learn the slot-write path for disjoint parallel writes.</li>
 </ul>
 
 

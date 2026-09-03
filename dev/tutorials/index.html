@@ -1086,14 +1086,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    DirectZarrIngestor (Auto)
   
 
     
@@ -1176,14 +1176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../guides/plugins/add-config-options/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    Add Configuration Options
   
 
     
@@ -1820,7 +1820,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2497,6 +2497,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3551,10 +3579,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#parallel-directzarringestor" class="md-nav__link">
+  <a href="#directzarringestor-region" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Parallel DirectZarrIngestor
+        DirectZarrIngestor (Region)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directzarringestor-auto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DirectZarrIngestor (Auto)
       
     </span>
   </a>
@@ -3894,7 +3933,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4492,6 +4559,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4559,10 +4654,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#parallel-directzarringestor" class="md-nav__link">
+  <a href="#directzarringestor-region" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Parallel DirectZarrIngestor
+        DirectZarrIngestor (Region)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directzarringestor-auto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DirectZarrIngestor (Auto)
       
     </span>
   </a>
@@ -4626,9 +4732,12 @@ data throughout:</p>
 <p>This is the first tutorial that uses real EUMETSAT data. <strong><a href="sentinel3-frp/">Download a
 Sentinel-3 FRP product with EUMDAC</a></strong>, build a plugin for its
 standard MWIR detections, and write them to Parquet.</p>
-<h2 id="parallel-directzarringestor">Parallel DirectZarrIngestor</h2>
+<h2 id="directzarringestor-region">DirectZarrIngestor (Region)</h2>
 <p><strong><a href="direct-zarr-parallel/">Build a slot-capable <code>DirectZarrIngestor</code></a></strong> and
 write two disjoint slot ranges into one preallocated Zarr array.</p>
+<h2 id="directzarringestor-auto">DirectZarrIngestor (Auto)</h2>
+<p><strong><a href="direct-zarr-auto/">Build a <code>DirectZarrIngestor</code> that declares no timestamps at all</a></strong>
+and let Firecube discover the time axis from the source files.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../guides/plugins/">Plugin Development</a></strong> — choose a plugin authoring class</li>

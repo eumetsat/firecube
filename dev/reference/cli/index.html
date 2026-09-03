@@ -1086,14 +1086,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/irregular-axis/" class="md-nav__link">
+      <a href="../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    DirectZarrIngestor (Auto)
   
 
     
@@ -1176,14 +1176,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/cli-and-config/" class="md-nav__link">
+      <a href="../../guides/plugins/add-config-options/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Configure a Plugin
+    Add Configuration Options
   
 
     
@@ -1820,7 +1820,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2497,6 +2497,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3780,7 +3808,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4824,6 +4880,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#firecube-zarr-consolidate-time-coord" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        consolidate-time-coord
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#firecube-zarr-index" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5007,6 +5074,34 @@
     
   
     Storage Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
   
 
     
@@ -5539,6 +5634,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#firecube-zarr-consolidate-time-coord" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        consolidate-time-coord
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#firecube-zarr-index" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5698,7 +5804,7 @@ start a job, or explore subcommands for storage management and diagnostics.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5724,7 +5830,7 @@ a recommended pipeline_batch_size before running large ingestion jobs.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5776,7 +5882,7 @@ set --option pipeline_batch_size=N.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5846,7 +5952,7 @@ emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5873,7 +5979,7 @@ and archive restore to extract it back to Zarr.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -5985,7 +6091,7 @@ product group.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6024,7 +6130,7 @@ inspection.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6057,7 +6163,7 @@ restoring.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6125,7 +6231,7 @@ to the target Zarr store. archive groups restore to their original paths.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6164,7 +6270,7 @@ corrupted or incomplete.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6192,7 +6298,7 @@ library.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6256,7 +6362,7 @@ source specs and optional storage_options placeholders. Requires
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6297,7 +6403,7 @@ history</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6322,7 +6428,7 @@ history</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6396,7 +6502,7 @@ operations prompt in a terminal and require the flag in non-TTY contexts.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6442,7 +6548,7 @@ claims clear to release them</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6554,7 +6660,7 @@ removes both control-plane records and the underlying storage files. use
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6648,7 +6754,7 @@ first</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6741,7 +6847,7 @@ supports table and JSON output for scripting</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6766,7 +6872,7 @@ supports table and JSON output for scripting</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6838,7 +6944,7 @@ prompt in a terminal and require the flag in non-TTY contexts.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6889,7 +6995,7 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6914,7 +7020,7 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -6965,7 +7071,7 @@ corrupt, or very stale to restore fast query performance for chunks list</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7010,7 +7116,7 @@ it was last rebuilt. use to decide whether a rebuild is needed</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7043,7 +7149,7 @@ completion for all firecube commands and options.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7167,7 +7273,7 @@ a plugin.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7194,7 +7300,7 @@ a single optimized file.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7252,7 +7358,7 @@ is not modified.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7297,7 +7403,7 @@ not modify any data.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7324,7 +7430,7 @@ a plugin's options.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7390,7 +7496,7 @@ a plugin's options.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7423,7 +7529,7 @@ firecube ingest.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7456,7 +7562,7 @@ path format is <plugin>.<tier>.<field> (e.g. example_plugin.ingest.option).</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7505,7 +7611,7 @@ path format is <plugin>.<tier>.<field> (e.g. example_plugin.ingest.option).</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7538,7 +7644,7 @@ plugin. Use -f to control output format.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7569,7 +7675,7 @@ plugin. Use -f to control output format.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7597,7 +7703,7 @@ zarr slots to emit parallel ingestion plans.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7633,17 +7739,29 @@ zarr slots to emit parallel ingestion plans.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
 </tr>
 </tbody>
 </table>
-<h4 id="firecube-zarr-index">firecube zarr index</h4>
-<p>Inspect resolved-index control-plane records.</p>
+<h4 id="firecube-zarr-consolidate-time-coord">firecube zarr consolidate-time-coord</h4>
+<p>Consolidate time coordinate chunks from per-slot storage to dense storage.</p>
+<p>Use this command on existing cubes produced before dense time-coordinate
+materialization. After consolidation, the time coordinate is stored in a
+denser chunk layout so object storage opens the cube with less metadata work.</p>
+<p>Consolidation seals the cube. After it completes, the cube becomes
+read-only for further ingest. The operation is irreversible without a
+restore from backup.</p>
+<p>The rewrite stages the new coordinate as a time.consolidating sibling
+before replacing the original array. If a local consolidation is
+interrupted, re-run the command: it detects the partial state, repairs
+it, and preserves the coordinate values.</p>
+<p>Use it for existing cubes with chunks=(1,) on the time coordinate.
+Always run with --dry-run first.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>firecube zarr index [OPTIONS] COMMAND [ARGS]...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>firecube zarr consolidate-time-coord [OPTIONS]
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7657,7 +7775,73 @@ zarr slots to emit parallel ingestion plans.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--target</code></td>
+<td>text</td>
+<td>URI of the Zarr cube to consolidate.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--product-name</code></td>
+<td>text</td>
+<td>Logical product name.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--storage-type</code></td>
+<td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
+<td>Storage backend type.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--storage-driver</code></td>
+<td>choice (<code>fsspec</code> &#x7C; <code>obstore</code>)</td>
+<td>Storage driver.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td>boolean</td>
+<td>Report proposed changes without mutating the store.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td><code>--chunk-size</code></td>
+<td>integer</td>
+<td>Override the consolidated coordinate chunk size (default: computed from the axis length).</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>--time-dim</code></td>
+<td>text</td>
+<td>Explicit time-dimension name for cubes written with a custom <code>time_dim_name</code> (plugin <code>BaseIngestor.time_dim_name</code> ClassVar). When omitted, the effective name is discovered per group from the resolved-index record (<code>params.coordinate</code>) and then from the group's 1-D datetime coord arrays. Pass this when discovery cannot settle on a single candidate or must be overridden.</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>--help</code>, <code>-h</code></td>
+<td>boolean</td>
+<td>Show this message and exit.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="firecube-zarr-index">firecube zarr index</h4>
+<p>Inspect resolved-index control-plane records.</p>
+<p><strong>Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>firecube zarr index [OPTIONS] COMMAND [ARGS]...
+</code></pre></div>
+<p><strong>Options:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7667,7 +7851,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <h5 id="firecube-zarr-index-rebuild">firecube zarr index rebuild</h5>
 <p>Rebuild the resolved-index record from a plugin declaration.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>firecube zarr index rebuild [OPTIONS]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>firecube zarr index rebuild [OPTIONS]
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7699,7 +7883,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7709,7 +7893,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <h5 id="firecube-zarr-index-show">firecube zarr index show</h5>
 <p>Show the current resolved-index record.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>firecube zarr index show [OPTIONS]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>firecube zarr index show [OPTIONS]
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7747,7 +7931,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7757,7 +7941,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <h5 id="firecube-zarr-index-verify">firecube zarr index verify</h5>
 <p>Verify the current resolved-index record and mirrored root attr.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>firecube zarr index verify [OPTIONS]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>firecube zarr index verify [OPTIONS]
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7789,7 +7973,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7799,7 +7983,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <h4 id="firecube-zarr-multires">firecube zarr multires</h4>
 <p>Build multi-resolution Zarr pyramid for an existing product.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>firecube zarr multires [OPTIONS]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>firecube zarr multires [OPTIONS]
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7843,7 +8027,7 @@ zarr slots to emit parallel ingestion plans.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7856,7 +8040,7 @@ zarr slots to emit parallel ingestion plans.</p>
 this command is a no-op. If arrays exist with mismatched schema, exits non-zero
 with a diff showing expected vs found values. Safe to re-run.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>firecube zarr preallocate [OPTIONS] PLUGIN
+<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>firecube zarr preallocate [OPTIONS] PLUGIN
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7906,6 +8090,18 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <td>None</td>
 </tr>
 <tr>
+<td><code>--slot-start</code></td>
+<td>integer</td>
+<td>Preallocate coordinate materialization window: first slot index (inclusive).</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>--slot-end</code></td>
+<td>integer</td>
+<td>Preallocate coordinate materialization window: last slot index (exclusive).</td>
+<td>None</td>
+</tr>
+<tr>
 <td><code>--option</code></td>
 <td>TYPED_OPTION</td>
 <td>Plugin/engine option in key=value form.</td>
@@ -7918,7 +8114,7 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -7930,7 +8126,7 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <p>Read-only: does NOT mutate target storage or tracking state.
 JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>firecube zarr slots [OPTIONS] PLUGIN
+<div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>firecube zarr slots [OPTIONS] PLUGIN
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -7974,6 +8170,12 @@ JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
+<td><code>--input-data</code></td>
+<td>text</td>
+<td>Source input URI or path for AUTO discovery (optional).</td>
+<td>None</td>
+</tr>
+<tr>
 <td><code>--slot-size</code></td>
 <td>integer</td>
 <td>Slot partition size (default: chunk_shape[0] of first array of first group).</td>
@@ -7998,7 +8200,7 @@ JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>
@@ -8011,7 +8213,7 @@ JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 without modifying any data. Requires --product and --group; exits with a
 structured JSON summary.</p>
 <p><strong>Usage:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>firecube zarr validate [OPTIONS]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>firecube zarr validate [OPTIONS]
 </code></pre></div>
 <p><strong>Options:</strong></p>
 <table>
@@ -8067,7 +8269,7 @@ structured JSON summary.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-h</code>, <code>--help</code></td>
+<td><code>--help</code>, <code>-h</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
 <td><code>False</code></td>

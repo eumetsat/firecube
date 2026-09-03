@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/guides/plugins/irregular-axis/">
+        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/guides/plugins/add-config-options/">
       
       
-        <link rel="prev" href="../direct-zarr/">
+        <link rel="prev" href="../direct-zarr-auto/">
       
       
-        <link rel="next" href="../cli-and-config/">
+        <link rel="next" href="../observability/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>IrregularTimeAxis And AUTO - Firecube</title>
+        <title>Add Configuration Options - Firecube</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#irregulartimeaxis-and-auto-discovery" class="md-skip">
+        <a href="#add-plugin-configuration-options" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              IrregularTimeAxis And AUTO
+              Add Configuration Options
             
           </span>
         </div>
@@ -951,8 +951,6 @@
                 
   
   
-    
-  
   
   
     
@@ -968,11 +966,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
         
           
           <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
@@ -993,7 +993,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1092,6 +1092,99 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop Further
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Develop Further
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
     
   
   
@@ -1111,7 +1204,7 @@
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    Add Configuration Options
   
 
     
@@ -1129,7 +1222,7 @@
   <span class="md-ellipsis">
     
   
-    IrregularTimeAxis And AUTO
+    Add Configuration Options
   
 
     
@@ -1166,10 +1259,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#choose-the-right-axis" class="md-nav__link">
+  <a href="#add-configuration-to-an-existing-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Choose The Right Axis
+        Add Configuration to an Existing Plugin
       
     </span>
   </a>
@@ -1177,10 +1270,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#declare-with-concrete-values" class="md-nav__link">
+  <a href="#full-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Declare With Concrete Values
+        Full Example
       
     </span>
   </a>
@@ -1188,49 +1281,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#declare-with-auto" class="md-nav__link">
+  <a href="#set-configuration-values" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Declare With AUTO
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Declare With AUTO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#implement-inspect_item-for-auto" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implement inspect_item For AUTO
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#source_ref-stability-contract" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        source_ref Stability Contract
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#preallocate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Preallocate
+        Set Configuration Values
       
     </span>
   </a>
@@ -1238,10 +1292,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#failure-modes" class="md-nav__link">
+  <a href="#verify" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Failure Modes
+        Verify
       
     </span>
   </a>
@@ -1249,10 +1303,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#common-mistakes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        Common Mistakes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
       
     </span>
   </a>
@@ -1263,99 +1328,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Develop Further
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Develop Further
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-and-config/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configure a Plugin
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1990,7 +1962,7 @@
   <span class="md-ellipsis">
     
   
-    Parallel Zarr Writes
+    DirectZarrIngestor: Parallel Writes
   
 
     
@@ -2667,6 +2639,34 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/reproducibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reproducibility
   
 
     
@@ -3950,7 +3950,35 @@
   <span class="md-ellipsis">
     
   
-    Parallel DirectZarrIngestor
+    DirectZarrIngestor (Region)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DirectZarrIngestor (Auto)
   
 
     
@@ -4548,6 +4576,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/control-plane-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control-Plane Spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4593,10 +4649,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#choose-the-right-axis" class="md-nav__link">
+  <a href="#add-configuration-to-an-existing-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Choose The Right Axis
+        Add Configuration to an Existing Plugin
       
     </span>
   </a>
@@ -4604,10 +4660,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#declare-with-concrete-values" class="md-nav__link">
+  <a href="#full-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Declare With Concrete Values
+        Full Example
       
     </span>
   </a>
@@ -4615,49 +4671,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#declare-with-auto" class="md-nav__link">
+  <a href="#set-configuration-values" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Declare With AUTO
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Declare With AUTO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#implement-inspect_item-for-auto" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implement inspect_item For AUTO
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#source_ref-stability-contract" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        source_ref Stability Contract
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#preallocate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Preallocate
+        Set Configuration Values
       
     </span>
   </a>
@@ -4665,10 +4682,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#failure-modes" class="md-nav__link">
+  <a href="#verify" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Failure Modes
+        Verify
       
     </span>
   </a>
@@ -4676,10 +4693,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#common-mistakes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        Common Mistakes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
       
     </span>
   </a>
@@ -4706,261 +4734,141 @@
   
 
 
-<h1 id="irregulartimeaxis-and-auto-discovery">IrregularTimeAxis And AUTO Discovery</h1>
+<h1 id="add-plugin-configuration-options">Add Plugin Configuration Options</h1>
 <h2 id="goal">Goal</h2>
-<p>Use <code>IrregularTimeAxis</code> when the time coordinates of your product are not
-evenly spaced and cannot be described by a fixed epoch and cadence. The axis
-holds an explicit list of coordinate values, either supplied at declaration time
-or discovered automatically from the source data.</p>
-<p>This guide covers:</p>
-<ul>
-<li>when to choose <code>IrregularTimeAxis</code> over <code>RegularTimeAxis</code> or <code>IntegerAxis</code>;</li>
-<li>how to declare the axis with a concrete tuple of values;</li>
-<li>how to use <code>AUTO</code> to let the engine discover coordinates at planning time;</li>
-<li>how to implement <code>inspect_item</code> for the <code>AUTO</code> path;</li>
-<li>the <code>source_ref</code> stability contract;</li>
-<li>failure modes and the exceptions the engine raises.</li>
-</ul>
-<h2 id="choose-the-right-axis">Choose The Right Axis</h2>
+<p>Declare product-specific options that Firecube validates before calling plugin
+hooks.</p>
+<h2 id="add-configuration-to-an-existing-plugin">Add Configuration to an Existing Plugin</h2>
+<p>Define the configuration next to an already working plugin:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">PluginConfig</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyConfig</span><span class="p">(</span><span class="n">PluginConfig</span><span class="p">):</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">scale_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+</code></pre></div>
+<p>Then add the configuration class to the ingestor:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">plugin_config_class</span> <span class="o">=</span> <span class="n">MyConfig</span>
+</code></pre></div>
+<p>Inside a plugin hook, read the validated instance:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugin_config</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">MyConfig</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">scale_factor</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">scale_factor</span>
+</code></pre></div>
+<p><code>@dataclass</code> is required when a <code>PluginConfig</code> subclass adds fields.</p>
+<p>Use <code>self.plugin_config</code> for declared product fields. Do not treat
+<code>ctx.option()</code> as a separate CLI-only configuration channel.</p>
+<p>Use <code>ctx.option(key, default)</code> only for effective engine settings or
+experimental <code>x_*</code> values. <code>ctx.options</code> exposes the same effective values as a
+read-only mapping. See the
+<a href="../../../reference/config/#pluginconfig">Configuration Reference</a> for the
+public configuration types.</p>
+<h2 id="full-example">Full Example</h2>
+<p>One complete plugin with one declared option. The config class declares
+<code>scale_factor</code>, the ingestor attaches it, and the hook applies the validated
+value:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">GenericZarrIngestor</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">PluginConfig</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">PluginContext</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">register_ingestor</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyConfig</span><span class="p">(</span><span class="n">PluginConfig</span><span class="p">):</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    <span class="n">scale_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_plugin&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">GenericZarrIngestor</span><span class="p">):</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;my_product&quot;</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="n">time_dim_name</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;time&quot;</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="n">plugin_config_class</span> <span class="o">=</span> <span class="n">MyConfig</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_dataset</span><span class="p">(</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>            <span class="k">return</span> <span class="kc">None</span>
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugin_config</span>
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">MyConfig</span><span class="p">)</span>
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>
+<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a>        <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_mfdataset</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">combine</span><span class="o">=</span><span class="s2">&quot;by_coords&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a>        <span class="k">return</span> <span class="p">(</span><span class="n">dataset</span> <span class="o">*</span> <span class="n">config</span><span class="o">.</span><span class="n">scale_factor</span><span class="p">)</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_dim_name</span><span class="p">)</span>
+</code></pre></div>
+<p>This is the <a href="../generic-zarr/#implement-build_dataset">GenericZarrIngestor guide's example</a>
+plus the three configuration pieces: the <code>MyConfig</code> declaration, the
+<code>plugin_config_class</code> attachment, and the validated read inside the hook. The
+same three pieces work unchanged on any other ingestor template.</p>
+<h2 id="set-configuration-values">Set Configuration Values</h2>
+<p>Set defaults in the plugin section of a config file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">[plugins.my_plugin]</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">scale_factor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.01</span>
+</code></pre></div>
+<p>Override declared fields for one run with repeatable <code>--option</code> flags:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--input-data<span class="w"> </span>./sample-input<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">scale_factor</span><span class="o">=</span><span class="m">0</span>.01
+</code></pre></div>
+<p>Unknown keys fail during configuration. Options in the <code>x_*</code> namespace bypass
+the declared tiers and are intended for experimental plugin behavior.</p>
+<p>Keep product identity, target, storage driver, output format, and write mode in
+their dedicated command flags. Use <code>--option</code> only for declared plugin or engine
+settings.</p>
+<h2 id="verify">Verify</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>my_plugin
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>--show-options
+</code></pre></div>
+<p>Confirm that the declared fields and defaults appear before running a small
+ingestion with one overridden value.</p>
+<h2 id="common-mistakes">Common Mistakes</h2>
 <table>
 <thead>
 <tr>
-<th>Axis</th>
-<th>Use when</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>RegularTimeAxis</code></td>
-<td>Items arrive at a fixed cadence (e.g. every 10 minutes).</td>
-</tr>
-<tr>
-<td><code>IntegerAxis</code></td>
-<td>Items map to a zero-based integer position with no time meaning.</td>
-</tr>
-<tr>
-<td><code>IrregularTimeAxis</code></td>
-<td>Items have timestamps that are not evenly spaced, or the full set of timestamps is only known after reading the source data.</td>
-</tr>
-</tbody>
-</table>
-<p>If the cadence is fixed, prefer <code>RegularTimeAxis</code>. The engine can plan slot
-ranges for parallel workers without reading any source files.</p>
-<h2 id="declare-with-concrete-values">Declare With Concrete Values</h2>
-<p>When you know all timestamps before ingestion starts, pass them as a tuple:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">DirectZarrIngestor</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">IndexSpec</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">IrregularTimeAxis</span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">ItemInfo</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">PipelineBatch</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">PluginContext</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">WriteIntent</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">ZarrArraySpec</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">ZarrGroupSpec</span><span class="p">,</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">register_ingestor</span><span class="p">,</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">)</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_irregular_plugin&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyIrregularPlugin</span><span class="p">(</span><span class="n">DirectZarrIngestor</span><span class="p">):</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;my_irregular_product&quot;</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">index_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexSpec</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="n">_</span> <span class="o">=</span> <span class="n">ctx</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        <span class="n">timestamps</span> <span class="o">=</span> <span class="p">(</span>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>            <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2026-01-01T00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>            <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2026-01-01T00:17:30&quot;</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span>
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>            <span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="s2">&quot;2026-01-01T00:42:00&quot;</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">),</span>
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>        <span class="p">)</span>
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        <span class="k">return</span> <span class="n">IndexSpec</span><span class="p">(</span>
-<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_irregular_product_v1&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>            <span class="n">groups</span><span class="o">=</span><span class="p">{</span>
-<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">IrregularTimeAxis</span><span class="p">(</span>
-<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>                    <span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>                    <span class="n">values</span><span class="o">=</span><span class="n">timestamps</span><span class="p">,</span>
-<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>                <span class="p">),</span>
-<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>            <span class="p">},</span>
-<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>        <span class="p">)</span>
-<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>
-<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">inspect_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ItemInfo</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>        <span class="n">stamp</span> <span class="o">=</span> <span class="n">read_timestamp</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
-<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>        <span class="k">return</span> <span class="n">ItemInfo</span><span class="p">(</span><span class="n">coordinate</span><span class="o">=</span><span class="n">stamp</span><span class="p">)</span>
-<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>
-<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">zarr_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ZarrGroupSpec</span><span class="p">]:</span>
-<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolved_index</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>        <span class="k">return</span> <span class="p">[</span>
-<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>            <span class="n">ZarrGroupSpec</span><span class="p">(</span>
-<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>                <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>                <span class="n">coord_names</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;timestamp&quot;</span><span class="p">}),</span>
-<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>                <span class="n">arrays</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>                    <span class="n">ZarrArraySpec</span><span class="p">(</span>
-<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>                        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,),</span>
-<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>                        <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;datetime64[ns]&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>                        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,),</span>
-<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>                        <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,),</span>
-<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>                    <span class="p">),</span>
-<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>                    <span class="n">ZarrArraySpec</span><span class="p">(</span>
-<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>                        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>                        <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>                        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>                        <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">),</span>
-<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>                    <span class="p">),</span>
-<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>                <span class="p">],</span>
-<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>            <span class="p">)</span>
-<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>        <span class="p">]</span>
-<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>
-<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_write_intents</span><span class="p">(</span>
-<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>        <span class="n">batch</span><span class="p">:</span> <span class="n">PipelineBatch</span><span class="p">,</span>
-<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">,</span>
-<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">WriteIntent</span><span class="p">]:</span>
-<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>        <span class="n">intents</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">WriteIntent</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batch</span><span class="o">.</span><span class="n">items</span><span class="p">:</span>
-<a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>            <span class="n">stamp</span> <span class="o">=</span> <span class="n">read_timestamp</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
-<a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a>            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolved_index</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">position</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">stamp</span><span class="p">)</span>
-<a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a>            <span class="n">intents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">WriteIntent</span><span class="o">.</span><span class="n">coordinate</span><span class="p">(</span><span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">stamp</span><span class="p">))</span>
-<a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a>            <span class="n">intents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-<a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>                <span class="n">WriteIntent</span><span class="o">.</span><span class="n">slot</span><span class="p">(</span>
-<a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a>                    <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a>                    <span class="n">array</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a>                    <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-<a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a>                    <span class="n">data</span><span class="o">=</span><span class="n">read_values</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">)),</span>
-<a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>                <span class="p">)</span>
-<a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a>            <span class="p">)</span>
-<a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a>        <span class="k">return</span> <span class="n">intents</span>
-</code></pre></div>
-<p>The engine writes the coordinate array to the Zarr store during preallocate.
-<code>resolved_index(ctx).position("data", stamp)</code> maps each timestamp to its
-declared slot index.</p>
-<h2 id="declare-with-auto">Declare With AUTO</h2>
-<p>When the full set of timestamps is only known after reading the source files,
-set <code>values=AUTO</code>. The engine calls <code>inspect_item</code> on every discovered source
-item before preallocate, collects the returned coordinates, and builds the axis
-from them.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">AUTO</span><span class="p">,</span> <span class="n">IrregularTimeAxis</span>
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">index_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexSpec</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">_</span> <span class="o">=</span> <span class="n">ctx</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="k">return</span> <span class="n">IndexSpec</span><span class="p">(</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_irregular_product_v1&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="n">groups</span><span class="o">=</span><span class="p">{</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">IrregularTimeAxis</span><span class="p">(</span><span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">AUTO</span><span class="p">),</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="p">},</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="p">)</span>
-</code></pre></div>
-<p>With <code>AUTO</code>, <code>inspect_item</code> runs twice: once during discovery (to collect
-coordinates) and once during the write phase (to produce write intents). The
-implementation must be idempotent and must not depend on discovery order.</p>
-<h3 id="implement-inspect_item-for-auto">Implement <code>inspect_item</code> For AUTO</h3>
-<p>Return <code>ItemInfo(coordinate=stamp)</code> for every item that has a valid coordinate.
-Return <code>None</code> to skip an item entirely. Return <code>ItemInfo(coordinate=None)</code> only
-when the item is present but its coordinate cannot be resolved; the engine
-raises <code>MissingIrregularCoordinateError</code> in that case.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">inspect_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ItemInfo</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">stamp</span> <span class="o">=</span> <span class="n">read_timestamp</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">if</span> <span class="n">stamp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        <span class="c1"># Item has no timestamp: skip it.</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>        <span class="k">return</span> <span class="kc">None</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="k">return</span> <span class="n">ItemInfo</span><span class="p">(</span><span class="n">coordinate</span><span class="o">=</span><span class="n">stamp</span><span class="p">)</span>
-</code></pre></div>
-<p>The engine sorts discovered coordinates and assigns each a slot index in
-ascending order. Duplicate coordinates raise <code>DuplicateIrregularCoordinateError</code>,
-naming both conflicting items and the shared coordinate value.</p>
-<h3 id="source_ref-stability-contract"><code>source_ref</code> Stability Contract</h3>
-<p>During AUTO discovery the engine records a <code>source_ref</code> for each item. The
-<code>source_ref</code> is a stable reference the engine uses to hand work to parallel
-workers without a second discovery pass. The stability contract depends on the
-kind:</p>
-<table>
-<thead>
-<tr>
-<th><code>source_ref_kind</code></th>
-<th>What the caller promises</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>"path"</code></td>
-<td>Absolute filesystem path is stable for the cube's lifetime.</td>
-</tr>
-<tr>
-<td><code>"uri"</code></td>
-<td>URL (e.g. <code>s3://bucket/key</code>) is dereferenceable for the cube's lifetime.</td>
-</tr>
-<tr>
-<td><code>"identifier"</code></td>
-<td>Plugin-defined identifier is resolvable by the plugin's own logic for the cube's lifetime.</td>
-</tr>
-</tbody>
-</table>
-<p>Do not use paths that change between discovery and write (e.g. temporary
-directories, session-scoped scratch paths). If the source data moves, the
-engine cannot dereference the recorded reference.</p>
-<h2 id="preallocate">Preallocate</h2>
-<p>Run preallocate before starting workers. For <code>AUTO</code>, the engine runs discovery
-during preallocate and writes the coordinate array to the Zarr store:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>preallocate<span class="w"> </span>my_irregular_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_irregular_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_irregular_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
-</code></pre></div>
-<p>Use <code>--dry-run</code> to inspect the resolved index without writing anything:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>preallocate<span class="w"> </span>my_irregular_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_irregular_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_irregular_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--dry-run
-</code></pre></div>
-<p>The dry-run output is the same JSON format as <code>firecube zarr index show --json</code>.
-No files are created or modified.</p>
-<h2 id="failure-modes">Failure Modes</h2>
-<table>
-<thead>
-<tr>
-<th>Error</th>
-<th>Cause</th>
+<th>Mistake</th>
 <th>Fix</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>MissingIrregularCoordinateError</code></td>
-<td><code>inspect_item</code> returned <code>ItemInfo(coordinate=None)</code> for an item.</td>
-<td>Check the source data for items with missing timestamps.</td>
+<td>Adding fields without <code>@dataclass</code></td>
+<td>Decorate the <code>PluginConfig</code> subclass.</td>
 </tr>
 <tr>
-<td><code>DuplicateIrregularCoordinateError</code></td>
-<td>Two discovered items resolve to the same coordinate value.</td>
-<td>Check the source data for duplicate timestamps.</td>
+<td>Reading a declared field only from <code>ctx.option()</code></td>
+<td>Read it from the validated <code>self.plugin_config</code>.</td>
 </tr>
 <tr>
-<td><code>NoDiscoveredItemsError</code></td>
-<td>Discovery found zero items for the axis.</td>
-<td>Verify that the source path contains data and that <code>filter_item</code> is not excluding everything.</td>
+<td>Using <code>batch_size</code></td>
+<td>Use the engine option <code>pipeline_batch_size</code>.</td>
 </tr>
 <tr>
-<td><code>ConfigurationError</code></td>
-<td>The declared <code>values</code> tuple contains duplicates, or <code>values</code> is empty.</td>
-<td>Pass a non-empty tuple with distinct values, or use <code>AUTO</code>.</td>
+<td>Parsing <code>ctx.target</code> to choose a storage driver</td>
+<td>Let the runtime resolve the storage binding.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="see-also">See Also</h2>
+<h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../../reference/parallelism/">Index Specification Reference</a></strong> - <code>IrregularTimeAxis</code>, <code>AUTO</code>, <code>IndexSpec</code>, and <code>ResolvedIndex</code> types</li>
-<li><strong><a href="../../../reference/exceptions/">Exceptions Reference</a></strong> - <code>MissingIrregularCoordinateError</code>, <code>DuplicateIrregularCoordinateError</code>, and <code>NoDiscoveredItemsError</code></li>
-<li><strong><a href="../direct-zarr/">Implement DirectZarrIngestor</a></strong> - the full <code>DirectZarrIngestor</code> plugin contract</li>
-<li><strong><a href="../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></strong> - preallocate and slot-range workflow</li>
+<li><strong><a href="../../../concepts/configuration/">Configuration Model</a></strong> — understand how configuration is resolved</li>
+<li><strong><a href="../../../reference/config/">Configuration Reference</a></strong> — look up supported keys and precedence</li>
+<li><strong><a href="../../../reference/cli/">CLI Reference</a></strong> — inspect the complete command surface</li>
 </ul>
 
 
