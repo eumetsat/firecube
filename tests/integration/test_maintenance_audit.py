@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""W4.4: maintenance ops produce an audit trail in the control plane.
+"""Maintenance ops produce an audit trail in the control plane.
 
 These tests cover the end-to-end behavior that ``execute_deletion``,
 ``delete_spans``, and ``archive restore`` each emit ``maintenance_started``

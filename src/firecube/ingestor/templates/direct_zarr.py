@@ -43,7 +43,17 @@ from typing import Any
 
 import numpy as np
 
-from firecube.core.api import ExtentUnknownError, IndexSpec, ItemInfo, ResolvedIndex
+from firecube.core.api import (
+    FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
+    ExtentUnknownError,
+    IndexSpec,
+    IntegerAxis,
+    IrregularTimeAxis,
+    ItemInfo,
+    RegularTimeAxis,
+    ResolvedIndex,
+    compute_group_identity_hash,
+)
 from firecube.core.errors import ClaimConflictError, IndexedWriteCompilationError
 from firecube.core.indexed_write import IndexedWrite
 from firecube.ingestor.api import (
@@ -443,6 +453,17 @@ class ZarrArraySpec:
     """
 
     def __post_init__(self) -> None:
+        if (
+            isinstance(self.fill_value, str)
+            and self.fill_value == "NaT"
+            and self.dtype is not None
+            and "datetime" in str(self.dtype)
+        ):
+            raise ValueError(
+                f"fill_value='NaT' is a string but dtype={self.dtype!r} is a datetime type. "
+                f"Use np.datetime64('NaT', 'ns') explicitly to avoid schema-verify mismatch "
+                f"in parallel-mode ingest."
+            )
         if self.expected_time_count is not None and self.expected_time_count < 0:
             raise ValueError(
                 f"expected_time_count must be non-negative, got {self.expected_time_count}"
@@ -796,6 +817,40 @@ def _compile_indexed_write(iw: IndexedWrite, resolved_index: ResolvedIndex) -> l
     ]
 
 
+def _axis_coordinate_name(axis: Any) -> str | None:
+    if isinstance(axis, (RegularTimeAxis, IrregularTimeAxis)):
+        return str(axis.coordinate)
+    if isinstance(axis, IntegerAxis):
+        return None
+    return None
+
+
+def _open_zarr_root_for_read(store_uri: str, storage_config: Any) -> Any | None:
+    import zarr
+    from zarr.storage import LocalStore
+
+    from firecube.core.filesystem.store_factory import create_zarr_store
+    from firecube.core.uris import is_remote_target, local_path_from_target
+
+    try:
+        if is_remote_target(store_uri):
+            if storage_config is None:
+                return None
+            handle = create_zarr_store(uri=store_uri, storage_config=storage_config, mode="r")
+            return zarr.open_group(**handle.zarr_kwargs(), mode="r", zarr_format=3)
+        local = local_path_from_target(store_uri)
+        return zarr.open_group(store=LocalStore(str(local)), mode="r", zarr_format=3)
+    except Exception:
+        return None
+
+
+def _open_zarr_array(root: Any, path: str) -> Any | None:
+    try:
+        return root[path]
+    except (KeyError, FileNotFoundError):
+        return None
+
+
 class DirectZarrIngestor(BaseIngestor):
     """Abstract template for direct-Zarr region-based ingestors.
 
@@ -855,65 +910,6 @@ class DirectZarrIngestor(BaseIngestor):
             f"{type(self).__name__} did not override inspect_item(). "
             "Override this method to enable parallel ingestion; "
             "return None to drop items your plugin cannot map to a slot."
-        )
-
-    def build_indexed_write(
-        self, item: Any, ctx: PluginContext
-    ) -> IndexedWrite | Sequence[IndexedWrite] | None:
-        """Compile a single source item into one or more indexed writes.
-
-        Called once per element of ``batch.items`` by the default
-        `build_write_intents` implementation. Each returned `IndexedWrite` is
-        compiled against the plugin's resolved `IndexSpec` and appended to the
-        batch's `WriteIntent` list.
-
-        Return options:
-
-        - **``IndexedWrite``** — one write for this item.
-        - **``Sequence[IndexedWrite]``** — fan-out: multiple writes for this
-          item; each is compiled independently and all results are
-          concatenated.
-        - **``None``** — drop this item; no ``WriteIntent`` is emitted.
-
-        Static (non-time-indexed) arrays are *not* emitted through this hook
-        — they carry no slot coordinate to resolve. To emit statics alongside
-        indexed writes, override `build_write_intents` instead, call
-        ``super().build_write_intents(batch, ctx)`` for the indexed
-        compilation, then append `WriteIntent.static` items:
-
-        If a plugin overrides both hooks, the engine calls
-        `build_write_intents` directly and this hook is reached only via
-        the default `build_write_intents` implementation below.
-
-        .. code-block:: python
-
-            def build_write_intents(self, batch, ctx):
-                intents = super().build_write_intents(batch, ctx)
-                intents.append(WriteIntent.static(
-                    group="grid", array="lat", data=self._lat_grid,
-                ))
-                return intents
-
-        Default raises ``NotImplementedError``. Plugins must override either
-        this hook or `build_write_intents`; overriding neither raises
-        ``NotImplementedError`` from `build_write_intents` at first call.
-
-        Args:
-            item: A single element from ``batch.items``.
-            ctx: The plugin context for this run.
-
-        Returns:
-            A single `IndexedWrite`, a sequence of them, or ``None``
-            to drop the item.
-
-        Raises:
-            NotImplementedError: If not overridden and
-                `build_write_intents` is also not overridden.
-        """
-        _ = item, ctx
-        raise NotImplementedError(
-            f"{type(self).__name__} did not override build_indexed_write(). "
-            "Override this method (or build_write_intents) to emit write intents."
         )
 
     def resolved_index(self, ctx: PluginContext) -> ResolvedIndex:
@@ -1010,70 +1006,106 @@ class DirectZarrIngestor(BaseIngestor):
         specs = self._cached_zarr_schema(ctx)
         return sorted({spec.group for spec in specs})
 
-    def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
+    def build_write_intents(
+        self, batch: PipelineBatch, ctx: PluginContext
+    ) -> Sequence[WriteIntent | IndexedWrite]:
         """Convert a batch into a list of write operations.
 
-        Default implementation: iterates ``batch.items``, calls
-        `build_indexed_write` per item, compiles each returned `IndexedWrite`
-        against `resolved_index`, and returns the concatenated `WriteIntent`
-        list.
+        Return one flat list that may freely mix two element types:
 
-        Plugins have two override options:
+        - **``IndexedWrite``** — a coordinate-keyed write. Build it with
+          ``coordinate=<timestamp or integer key>`` and the engine resolves
+          the slot index for you; an unmappable coordinate raises
+          ``IndexedWriteCompilationError`` before any write.
+        - **``WriteIntent``** — a fully resolved write. Use it when you have
+          computed the index yourself, and for writes that carry no slot
+          coordinate (``WriteIntent.coordinate`` and ``WriteIntent.static``).
 
-        - **Override `build_indexed_write`** (recommended for
-          time-indexed writes) — return coordinate-keyed writes per item;
-          the engine resolves slot indices for you.
-        - **Override this method directly** (needed for statics or when
-          the batch requires cross-item state) — return the
-          `WriteIntent` list yourself. Call
-          ``super().build_write_intents(batch, ctx)`` first if you want
-          to keep the indexed-write compilation path and just append
-          statics.
+        Skip an item by not appending anything for it; emit several writes
+        for one item by appending several elements. Return an empty list to
+        skip the whole batch. Every element's ``group`` must exist in
+        ``zarr_schema(ctx)``, and resolved indexes must fall inside the
+        worker's slot range when slot-range parallelism is enabled.
+        Compilation of ``IndexedWrite`` elements runs at the call site,
+        outside this hook, so no override can bypass it.
 
-        If a plugin overrides both hooks, this method wins: the engine calls
-        `build_write_intents` directly. `build_indexed_write` is
-        reached only through the default implementation here.
-
-        Overriding neither raises ``NotImplementedError``.
-
-        Return an empty list to skip the batch. Every intent's ``group``
-        must exist in ``zarr_schema(ctx)``, and ``ts_index`` must fall
-        inside the worker's slot range when slot-range parallelism is
-        enabled.
+        For every compiled ``IndexedWrite``, the engine also emits the slot's
+        time-coordinate verify-write automatically (one per resolved slot,
+        skipped when the list already carries an explicit
+        ``WriteIntent.coordinate`` for that slot), so plugins on this path
+        never resolve or emit coordinate writes themselves.
 
         Examples:
-            Emit one region write per item via `build_indexed_write`
-            (the default fallback compiles them for you):
+            One coordinate-keyed write per item plus one static array:
 
-                def build_indexed_write(self, item, ctx):
-                    array, stamp = read_product(ctx.materialize(item))
-                    return IndexedWrite.region(
-                        group="FWI", array="fire_risk",
-                        coordinate=stamp, data=array,
-                        y_slice=slice(0, array.shape[0]),
-                    )
+                def build_write_intents(self, batch, ctx):
+                    out = []
+                    for item in batch.items:
+                        timestamp, values = read_product(ctx.materialize(item))
+                        out.append(IndexedWrite.slot(
+                            group="data", array="value",
+                            coordinate=timestamp, data=values,
+                        ))
+                    out.append(WriteIntent.static(
+                        group="grid", array="lat", data=self._lat_grid,
+                    ))
+                    return out
+
+        Args:
+            batch: The pipeline batch to convert.
+            ctx: The plugin context for this run.
+
+        Returns:
+            A list mixing ``WriteIntent`` and ``IndexedWrite`` elements.
+
+        Raises:
+            NotImplementedError: If the plugin does not override this hook.
         """
-        if (
-            type(self).build_indexed_write is DirectZarrIngestor.build_indexed_write
-            and type(self).build_write_intents is DirectZarrIngestor.build_write_intents
-        ):
-            raise NotImplementedError(
-                "Plugin must implement either build_indexed_write or build_write_intents. "
-                "See firecube.ingestor.api.DirectZarrIngestor for hook documentation."
-            )
-        if not batch.items:
-            return []
+        _ = batch, ctx
+        raise NotImplementedError(
+            f"{type(self).__name__} did not override build_write_intents(). "
+            "Override it to emit WriteIntent and IndexedWrite elements."
+        )
+
+    def _compile_write_intents(
+        self, raw: Sequence[WriteIntent | IndexedWrite], ctx: PluginContext
+    ) -> list[WriteIntent]:
+        """Resolve ``IndexedWrite`` elements and emit their coordinate writes.
+
+        Runs after ``build_write_intents`` returns, so plugins cannot bypass
+        compilation by overriding a hook. ``resolved_index(ctx)`` is consulted
+        only when the list actually contains an ``IndexedWrite``, keeping
+        serial plugins (``index_spec() -> None``) free to emit plain intents.
+
+        For each unique ``(group, slot)`` produced by compilation, one
+        ``WriteIntent.coordinate`` verify-write is appended automatically
+        unless the plugin already emitted an explicit coordinate intent for
+        that slot. The stored value is verified (never overwritten) by the
+        marker-aware timestamp write path.
+        """
+        if not any(isinstance(element, IndexedWrite) for element in raw):
+            return [element for element in raw if isinstance(element, WriteIntent)]
         resolved = self.resolved_index(ctx)
         intents: list[WriteIntent] = []
-        for item in batch.items:
-            result = self.build_indexed_write(item, ctx)
-            if result is None:
+        explicit_coordinate_slots: set[tuple[str, int]] = set()
+        compiled_slots: dict[tuple[str, int], Any] = {}
+        for element in raw:
+            if isinstance(element, IndexedWrite):
+                compiled = _compile_indexed_write(element, resolved)
+                intents.extend(compiled)
+                for intent in compiled:
+                    if intent.ts_index is not None:
+                        compiled_slots.setdefault(
+                            (element.group, intent.ts_index), element.coordinate
+                        )
+            else:
+                intents.append(element)
+                if element.kind == "timestamp" and element.ts_index is not None:
+                    explicit_coordinate_slots.add((element.group, element.ts_index))
+        for (group, slot), coordinate in compiled_slots.items():
+            if (group, slot) in explicit_coordinate_slots:
                 continue
-            if isinstance(result, IndexedWrite):
-                intents.extend(_compile_indexed_write(result, resolved))
-                continue
-            for iw in result:
-                intents.extend(_compile_indexed_write(iw, resolved))
+            intents.append(WriteIntent.coordinate(group=group, index=slot, value=coordinate))
         return intents
 
     def _bind_index_at_startup(self, ctx: PluginContext) -> None:
@@ -1103,7 +1135,16 @@ class DirectZarrIngestor(BaseIngestor):
         product = _ctx_product_name(ctx, self.name)
         self._check_legacy_index_record_at_startup(product=product, plugin_name=self.name)
         run_id = str(ctx.run_id or ctx.option("run_id", "unknown"))
-        record = binding.resolved.as_resolved_index_record(run_id=run_id)
+        try:
+            record = binding.resolved.as_resolved_index_record(run_id=run_id)
+        except ExtentUnknownError:
+            # Mixed spec (some groups bounded, some unbounded): the full
+            # canonical record cannot be built because unbounded axes have
+            # no fixed extent. Skip full-record persistence and verify each bounded group independently
+            # against its stamped ``firecube_group_identity_hash`` coord attr.
+            self._verify_per_group_identity_at_startup(ctx, binding.resolved)
+            self._resolved_index_stamped = True
+            return
         stored_record, outcome = self._chunk_manager.ensure_resolved_index(
             product=product,
             record=record,
@@ -1117,6 +1158,65 @@ class DirectZarrIngestor(BaseIngestor):
             outcome=outcome,
         )
         self._resolved_index_stamped = True
+
+    def _verify_per_group_identity_at_startup(
+        self, ctx: PluginContext, resolved: ResolvedIndex
+    ) -> None:
+        """Verify each bounded group's identity hash against the coord array attr.
+
+        For mixed-spec cubes (some bounded, some unbounded groups), the full
+        resolved-index record cannot be persisted because unbounded axes have
+        no fixed extent. This helper implements the per-group defense-in-depth
+        verification path: for each bounded group in the resolved spec, it
+        computes the canonical ``firecube_group_identity_hash`` and compares
+        it against the stamp on the coord array. On divergence it raises
+        ``SchemaDriftError`` naming the group and both hashes.
+
+        Unbounded groups are skipped (no hash to compare). Missing stamps are
+        treated as skip (backward-compat with pre-hash stores and fresh
+        ingests that have not yet run ``firecube zarr preallocate``).
+        """
+        write_mode = self.engine_config.write_mode
+        try:
+            store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
+        except ConfigurationError:
+            # No resolvable output yet (e.g. fresh in-memory context): nothing
+            # to verify. Any other exception must propagate; swallowing it
+            # would silently disable per-group identity verification.
+            return
+
+        self._verify_per_group_identity_at_store(store_uri, resolved)
+
+    def _verify_per_group_identity_at_store(self, store_uri: str, resolved: ResolvedIndex) -> None:
+        root = _open_zarr_root_for_read(store_uri, self._chunk_manager.storage_config)
+        if root is None:
+            return
+
+        for group_name in resolved.groups:
+            axis = resolved.axis_for(group_name)
+            if axis is None:
+                continue
+            try:
+                resolved_size = int(resolved.size(group_name))
+            except ExtentUnknownError:
+                continue  # unbounded group: no per-group hash to verify
+            coord_name = _axis_coordinate_name(axis)
+            if coord_name is None:
+                continue
+            coord_array_path = f"{group_name}/{coord_name}"
+            coord_arr = _open_zarr_array(root, coord_array_path)
+            if coord_arr is None:
+                continue  # coord array not yet created — skip verification
+            stamped = coord_arr.attrs.get(FIRECUBE_GROUP_IDENTITY_HASH_ATTR)
+            if stamped is None:
+                continue  # legacy/fresh store: no stamp to compare against
+            dtype = coord_arr.dtype
+            expected = compute_group_identity_hash(axis, resolved_size, dtype)
+            if str(stamped) != expected:
+                raise SchemaDriftError(
+                    f"per-group identity drift for group {group_name!r} at "
+                    f"{coord_array_path}: stored={stamped!s}, declared={expected}"
+                )
 
     def _verify_schema_at_pod_startup(self, ctx: PluginContext) -> None:
         """Verify global direct-Zarr schema once per pod process before batches run."""
@@ -1228,7 +1328,7 @@ class DirectZarrIngestor(BaseIngestor):
 
             coord_names_by_group = {spec.group: spec.coord_names for spec in schema}
 
-            intents = self.build_write_intents(batch, ctx)
+            intents = self._compile_write_intents(self.build_write_intents(batch, ctx), ctx)
             if not intents:
                 return PipelineResult(
                     batch=batch,

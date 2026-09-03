@@ -58,6 +58,8 @@ def _write_args_without_storage(path: tuple[str, ...], tmp_path: Path) -> list[s
             return ["cli_test_plugin", "--target", target, "--product-name", "pn"]
         case ("zarr", "multires"):
             return ["--target", target, "--product-name", "pn"]
+        case ("zarr", "consolidate-time-coord"):
+            return ["--target", target]
         case ("zarr", "preallocate"):
             return ["cli_test_plugin", "--target", target, "--product-name", "pn"]
         case _:
@@ -96,6 +98,17 @@ def _write_args_with_required_storage(path: tuple[str, ...], tmp_path: Path) -> 
                 "direct",
             ]
         case ("zarr", "multires"):
+            return [
+                "--target",
+                target,
+                "--product-name",
+                "pn",
+                "--storage-type",
+                "local",
+                "--storage-driver",
+                "fsspec",
+            ]
+        case ("zarr", "consolidate-time-coord"):
             return [
                 "--target",
                 target,

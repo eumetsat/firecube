@@ -175,5 +175,5 @@ and the identity hash matches the plugin's current `index_spec()` declaration.
 
 - **[Index Specification Reference](../reference/parallelism.md)** - `IndexSpec`, `IntegerAxis`, `IrregularTimeAxis`, `RegularTimeAxis`, and `ResolvedIndexRecord` types
 - **[Implement DirectZarrIngestor](../guides/plugins/direct-zarr.md)** - declare an `IndexSpec` in a plugin
-- **[IrregularTimeAxis Plugin Guide](../guides/plugins/irregular-axis.md)** - declare and use `IrregularTimeAxis` with `AUTO`
+- **[Implement DirectZarrIngestor](../guides/plugins/direct-zarr.md)** - declare time axes, including discovered coordinates
 - **[ChunkManager Operations](chunk-manager/index.md)** - inspect and recover the broader control plane

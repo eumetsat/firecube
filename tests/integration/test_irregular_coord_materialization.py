@@ -14,13 +14,19 @@
 
 """Contracts for coordinate materialization during ``firecube zarr preallocate``.
 
-``IrregularTimeAxis`` groups persist their coordinate values densely into a
-Zarr array at ``{group}/{axis.coordinate}``; ``RegularTimeAxis`` and
-``IntegerAxis`` stay lazy-derived. Dry-run must never touch the store.
+Both ``IrregularTimeAxis`` (values != AUTO) and ``RegularTimeAxis``
+(``slot_count`` set) groups persist their coordinate values densely into a
+Zarr array at ``{group}/{axis.coordinate}`` and stamp
+``firecube_preallocated=True``. ``IntegerAxis`` stays lazy-derived. Dry-run
+must never touch the store.
 
 Fixtures come from ``irregular_axis_test_plugin`` (installed by A6) and
 ``index_spec_test_plugin``. These tests exercise the real CLI wiring — no
 mocks — so a regression in the preallocate loop surfaces here.
+
+Dense-chunk contracts for ``RegularTimeAxis`` with an explicit ``(time,)``
+coord ``ZarrArraySpec`` live in
+``tests/integration/test_preallocate_regular_axis_dense.py``.
 """
 
 from __future__ import annotations
@@ -145,7 +151,11 @@ def test_irregular_preallocate_is_idempotent_on_matching_coord_array(tmp_path: P
     assert np.array_equal(values, _EXPECTED_TIMESTAMPS)
 
 
-def test_regular_axis_preallocate_does_not_materialize_coords(tmp_path: Path) -> None:
+def test_regular_axis_preallocate_materializes_coords_via_no_spec_fallback(
+    tmp_path: Path,
+) -> None:
+    from firecube.core.zarr._sealing_markers import ATTR_PREALLOCATED
+
     target_path = tmp_path / "out.zarr"
 
     result = CliRunner().invoke(
@@ -155,7 +165,15 @@ def test_regular_axis_preallocate_does_not_materialize_coords(tmp_path: Path) ->
 
     assert result.exit_code == 0, result.output
     root = _root(target_path)
-    assert "timestamp" not in cast(Any, root["data"])
+    coord = cast(Any, root["data/timestamp"])
+    assert coord.shape == (12,)
+    assert coord.dtype == np.dtype("datetime64[ns]")
+    assert tuple(coord.chunks) == (12,)
+    assert coord.attrs[ATTR_PREALLOCATED] is True
+    epoch = np.datetime64("2024-01-01T00:00:00", "ns")
+    step = np.timedelta64(300, "s").astype("timedelta64[ns]")
+    expected = epoch + np.arange(12, dtype=np.int64) * step
+    assert np.array_equal(np.asarray(coord[:]), expected)
 
 
 def test_dry_run_does_not_write_any_zarr_metadata(tmp_path: Path) -> None:
@@ -202,8 +220,12 @@ def test_concrete_irregular_axis_materializes_same_values_as_auto(tmp_path: Path
     assert np.array_equal(auto_values, _EXPECTED_TIMESTAMPS)
 
 
-def test_coord_array_carries_no_reserved_attrs(tmp_path: Path) -> None:
-    from firecube.core.zarr._reserved_attrs import RESERVED_ARRAY_ATTRS
+def test_coord_array_carries_only_expected_reserved_attrs(tmp_path: Path) -> None:
+    from firecube.core.zarr._reserved_attrs import (
+        FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
+        RESERVED_ARRAY_ATTRS,
+    )
+    from firecube.core.zarr._sealing_markers import ATTR_PREALLOCATED
 
     target_path = tmp_path / "out.zarr"
     result = CliRunner().invoke(
@@ -214,9 +236,15 @@ def test_coord_array_carries_no_reserved_attrs(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     coord = cast(Any, _root(target_path)["data/timestamp"])
     user_attr_keys = set(coord.attrs)
-    firecube_managed = RESERVED_ARRAY_ATTRS - {"_ARRAY_DIMENSIONS", "_FillValue"}
-    assert user_attr_keys.isdisjoint(firecube_managed), (
-        f"coord attrs {user_attr_keys!r} intersect reserved names {firecube_managed!r}"
+    assert coord.attrs[ATTR_PREALLOCATED] is True
+    disallowed = RESERVED_ARRAY_ATTRS - {
+        "_ARRAY_DIMENSIONS",
+        "_FillValue",
+        ATTR_PREALLOCATED,
+        FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
+    }
+    assert user_attr_keys.isdisjoint(disallowed), (
+        f"coord attrs {user_attr_keys!r} intersect disallowed reserved names {disallowed!r}"
     )
 
 

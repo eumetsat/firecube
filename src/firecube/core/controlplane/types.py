@@ -60,6 +60,7 @@ SLOT_INDEX_CURRENT_FILENAME = "current.json"
 EVENT_SLOT_INDEX_MODEL_RECORDED = "slot_index_model_recorded"
 EVENT_SLOT_INDEX_MODEL_VERIFIED = "slot_index_model_verified"
 EVENT_INDEX_ENSURED = "index_ensured"
+EVENT_CONSOLIDATED_TIME_COORD = "consolidated_time_coord"
 INDEX_ENSURED_OUTCOME_CREATED = "created"
 INDEX_ENSURED_OUTCOME_MATCHED_EXISTING = "matched_existing"
 INDEX_ENSURED_OUTCOME_CONFLICT_REFUSED = "conflict_refused"
@@ -566,6 +567,13 @@ class DeletionPlan:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ResolvedIndexRecord:
     """On-disk record for an engine-resolved index payload.
+
+    The engine writes it to ``.firecube/index/current.json`` after the first
+    successful resolution. Subsequent runs read it back and verify that the
+    declared ``IndexSpec`` produces the same ``identity_hash`` before
+    writing. Inspect the record with ``firecube zarr index show`` and
+    regenerate it from a plugin declaration with
+    ``firecube zarr index rebuild``.
 
     Optional ``items`` carries a content-addressed manifest for
     ``IrregularTimeAxis`` cubes. It is omitted from the wire format and

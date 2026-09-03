@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import pytest
 
+from firecube.core.api import ATTR_CONSOLIDATED_AT, ATTR_COORD_MANAGED, ATTR_PREALLOCATED
 from firecube.core.zarr._reserved_attrs import (  # pyright: ignore[reportMissingImports]
+    FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
     RESERVED_ARRAY_ATTRS,
     assert_attrs_safe,
 )
@@ -39,3 +41,28 @@ def test_non_reserved_keys_pass() -> None:
 
 def test_empty_mapping_passes() -> None:
     assert_attrs_safe({})
+
+
+@pytest.mark.parametrize(
+    ("marker", "expected_value"),
+    [
+        (ATTR_PREALLOCATED, "firecube_preallocated"),
+        (ATTR_CONSOLIDATED_AT, "firecube_consolidated_at"),
+        (ATTR_COORD_MANAGED, "firecube_coord_managed"),
+    ],
+)
+def test_sealing_markers_reserved(marker: str, expected_value: str) -> None:
+    """Sealing-marker constants keep their persisted names, stay reserved, and are rejected."""
+    assert marker == expected_value
+    assert marker in RESERVED_ARRAY_ATTRS
+
+    with pytest.raises(ValueError, match=marker):
+        assert_attrs_safe({marker: True})
+
+
+def test_group_identity_hash_attr_reserved() -> None:
+    assert FIRECUBE_GROUP_IDENTITY_HASH_ATTR == "firecube_group_identity_hash"
+    assert FIRECUBE_GROUP_IDENTITY_HASH_ATTR in RESERVED_ARRAY_ATTRS
+
+    with pytest.raises(ValueError, match=FIRECUBE_GROUP_IDENTITY_HASH_ATTR):
+        assert_attrs_safe({FIRECUBE_GROUP_IDENTITY_HASH_ATTR: "a" * 64})

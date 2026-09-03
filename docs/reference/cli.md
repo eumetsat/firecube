@@ -9,3 +9,4 @@ This page is generated from the live Click command tree. Use
     :prog_name: firecube
     :depth: 1
     :style: table
+

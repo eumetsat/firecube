@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""W4.3: maintenance ops acquire write claims before mutating product state."""
+"""Maintenance ops acquire write claims before mutating product state."""
 
 from __future__ import annotations
 

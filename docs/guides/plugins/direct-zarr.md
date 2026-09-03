@@ -2,46 +2,67 @@
 
 ## Goal
 
-Use `DirectZarrIngestor` when the plugin knows each item's time coordinate and must place data at explicit Zarr indexes. The direct path is:
+Use `DirectZarrIngestor` when you want slot-based parallel ingestion: many
+workers writing disjoint slices of the same Zarr product at the same time,
+safely. You declare the product's time axis once, and Firecube plans
+chunk-aligned slot ranges, pre-allocates the store, and lets each worker own
+its slice without coordination at write time.
+
+The plugin contract is four hooks:
 
 - `index_spec(ctx)` declares the indexed time axis.
 - `inspect_item(item, ctx)` returns `ItemInfo(coordinate=...)`.
 - `zarr_schema(ctx)` declares the arrays.
 - `build_write_intents(batch, ctx)` emits `WriteIntent` objects.
 
-Firecube resolves the declared index once, sizes arrays from `resolved_index(ctx).size(group)`, and then applies the emitted write intents.
+Firecube resolves the declared index once, sizes arrays from
+`resolved_index(ctx).size(group)`, and then applies the emitted write intents.
 
-Read [Parallel Zarr writes](../../reference/parallelism.md) for the public index types and resolver helpers.
+## Choose The Time Axis
 
-## Index Spec And Write Intents
+Declare the axis with a `TimeAxis` constructor. Pick the row that matches your
+product:
 
-### Choose A Write Intent Factory
+| Your product | Constructor |
+|---|---|
+| Fixed cadence, real timestamps can be slightly off the nominal slot time (most sensors) | [`TimeAxis.observed(...)`](../../reference/parallelism.md#index-types) |
+| Fixed cadence, every timestamp is exactly `epoch + n * cadence` | [`TimeAxis.grid(...)`](../../reference/parallelism.md#index-types) |
+| Unevenly spaced, all timestamps known before ingestion | [`TimeAxis.explicit(...)`](../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.explicit) |
+| Unevenly spaced, timestamps only known after reading the source files | [`TimeAxis.discovered(...)`](../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.discovered) |
 
-| Path | Factory | Use |
-|---|---|---|
-| Common path | `WriteIntent.slot(...)` | 1-D writes on the time axis. |
-| Common path | `WriteIntent.coordinate(...)` | Timestamp coordinate arrays. |
-| Common path | `WriteIntent.static(...)` | Arrays that do not share the indexed axis. |
-| Advanced path | `WriteIntent.region(...)` | 2-D region writes. |
-| Escape hatch | `WriteIntent(...)` | Only when no factory fits. |
+The first row is the common case and is what the example below uses. The
+last row has its own guide:
+[DirectZarrIngestor (Auto)](direct-zarr-auto.md). To
+understand what each choice means for the stored coordinate values and for
+write verification, read the
+[DirectZarrIngestor write model](../../concepts/output-formats/zarr/direct-region.md).
+Products whose items map to an integer position instead of a timestamp
+declare `IntegerAxis`; see the
+[Index Specification Reference](../../reference/parallelism.md#firecube.ingestor.api.IntegerAxis).
 
-### Implement The Plugin
+## Implement The Plugin
 
 Follow [Create a Plugin](create-a-plugin.md), choose the `zarr` template, and keep the generated registration and product name. Replace the `index_spec`, `inspect_item`, `zarr_schema`, and `build_write_intents` stubs.
+
+The example ingests NetCDF granules that each carry one observation time and
+four sample values. Only `read_product_item` knows that format: swap its body
+for the product's real reader and everything below it stays the same.
 
 ```python
 from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
+import xarray as xr
 
 from firecube.ingestor.api import (
     DirectZarrIngestor,
+    IndexedWrite,
     IndexSpec,
     ItemInfo,
     PipelineBatch,
     PluginContext,
-    RegularTimeAxis,
+    TimeAxis,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
@@ -50,7 +71,11 @@ from firecube.ingestor.api import (
 
 
 def read_product_item(path: Path) -> tuple[np.datetime64, np.ndarray]:
-    ...
+    """Read one granule: its observation time and its four sample values."""
+    with xr.open_dataset(path) as product:
+        timestamp = product["time"].values[0]
+        values = product["value"].values.astype(np.float32)
+    return timestamp, values
 
 
 @register_ingestor("my_plugin")
@@ -62,7 +87,7 @@ class MyPlugin(DirectZarrIngestor):
         return IndexSpec(
             name="my_product_v1",
             groups={
-                "data": RegularTimeAxis(
+                "data": TimeAxis.observed(
                     coordinate="timestamp",
                     epoch="2024-01-01T00:00:00Z",
                     cadence_s=600,
@@ -97,62 +122,69 @@ class MyPlugin(DirectZarrIngestor):
         ]
 
     def inspect_item(self, item: object, ctx: PluginContext) -> ItemInfo | None:
-        stamp, values = read_product_item(ctx.materialize(item))
+        timestamp, values = read_product_item(ctx.materialize(item))
         if values.shape != (4,):
             raise ValueError(f"Expected four sample values, got {values.shape}")
-        return ItemInfo(coordinate=stamp)
+        return ItemInfo(coordinate=timestamp)
 
     def build_write_intents(
         self,
         batch: PipelineBatch,
         ctx: PluginContext,
-    ) -> list[WriteIntent]:
-        intents: list[WriteIntent] = []
+    ) -> list[WriteIntent | IndexedWrite]:
+        out: list[WriteIntent | IndexedWrite] = []
         for item in batch.items:
-            stamp, values = read_product_item(ctx.materialize(item))
-            index = self.resolved_index(ctx).position("data", stamp)
-            intents.append(WriteIntent.coordinate(group="data", index=index, value=stamp))
-            intents.append(
-                WriteIntent.slot(
+            timestamp, values = read_product_item(ctx.materialize(item))
+            out.append(
+                IndexedWrite.slot(
                     group="data",
                     array="value",
-                    index=index,
+                    coordinate=timestamp,
                     data=values,
                 )
             )
-        return intents
+        return out
 ```
 
-Use `WriteIntent.static(...)` for arrays that never move with the time axis, such as latitude and longitude grids. Every intent must target a declared group and array.
+`inspect_item` returns the real observation timestamp, not a rounded slot
+time. Firecube maps it to a slot and stores the observed value in the
+coordinate array.
 
-### Let The Engine Resolve Slots
+Each `IndexedWrite` carries the raw `coordinate=`; Firecube resolves the slot
+index, raises `IndexedWriteCompilationError` for any timestamp it cannot map,
+and emits the slot's time-coordinate verify-write for you. Append
+`WriteIntent.static(...)` items to the same list for arrays that never move
+with the time axis, such as latitude and longitude grids. Every element must
+target a declared group and array.
 
-When each source item maps to one coordinate-keyed write, override
-`build_indexed_write` instead of `build_write_intents` and return an
-`IndexedWrite` keyed by the raw coordinate. The engine resolves the slot index
-against your `IndexSpec` and builds the `WriteIntent` for you:
+### Choose A Write Factory
+
+| Path | Factory | Use |
+|---|---|---|
+| Common path | `IndexedWrite.slot(...)` | 1-D writes keyed by timestamp; Firecube resolves the slot. |
+| Common path | `IndexedWrite.region(...)` | 2-D region writes keyed by timestamp. |
+| Common path | `WriteIntent.static(...)` | Arrays that do not share the indexed axis. |
+| Advanced path | `WriteIntent.slot(...)` / `WriteIntent.region(...)` | Writes with a self-resolved `index=`. |
+| Advanced path | `WriteIntent.coordinate(...)` | Explicit coordinate writes (auto-emitted otherwise). |
+| Escape hatch | `WriteIntent(...)` | Only when no factory fits. |
+
+### Advanced: Resolve Indexes Yourself
+
+When you need the slot index in hand (cross-item logic, custom slicing, or a
+write whose index does not come from a coordinate), resolve it yourself and
+return plain `WriteIntent` elements:
 
 ```python
-from firecube.ingestor.api import IndexedWrite
-
-
-class MyPlugin(DirectZarrIngestor):
-    def build_indexed_write(self, item: object, ctx: PluginContext) -> IndexedWrite | None:
-        stamp, values = read_product_item(ctx.materialize(item))
-        return IndexedWrite.slot(group="data", array="value", coordinate=stamp, data=values)
+index = self.resolved_index(ctx).position("data", timestamp)
+out.append(WriteIntent.coordinate(group="data", index=index, value=timestamp))
+out.append(WriteIntent.slot(group="data", array="value", index=index, data=values))
 ```
 
-Return `None` to drop an item. Use `IndexedWrite.region(...)` for 2-D region
-writes; its `data` field also accepts a zero-argument callable resolved once at
-dispatch time (`IndexedWrite.slot` requires an eager array). A coordinate the
-engine cannot map raises `IndexedWriteCompilationError` before any write.
-
-Timestamp-coordinate and static arrays carry no slot coordinate to resolve, so
-they still go through `build_write_intents`: override both hooks, call
-`super().build_write_intents(batch, ctx)` for the indexed compilation, and
-append `WriteIntent.coordinate` / `WriteIntent.static` items. If you override
-`build_write_intents` without calling `super()`, `build_indexed_write` is never
-reached.
+On this path you also emit the coordinate write explicitly; Firecube
+auto-emits it only for slots it resolved from `IndexedWrite` elements. Both
+element types mix freely in one returned list. See
+[Plugin Templates](../../reference/templates.md#firecube.ingestor.api.DirectZarrIngestor.build_write_intents) for
+the full contract.
 
 ## Verify
 
@@ -171,112 +203,14 @@ uv run firecube ingest my_plugin \
 
 The run should create the target store, write the declared arrays, and report no schema or index errors.
 
-## Integer Axis
+## Run It In Parallel
 
-Use `IntegerAxis` when items map to a zero-based integer position rather than a
-timestamp. The axis has a fixed size and no epoch or cadence.
-
-```python
-from firecube.ingestor.api import (
-    DirectZarrIngestor,
-    IndexSpec,
-    IntegerAxis,
-    ItemInfo,
-    PipelineBatch,
-    PluginContext,
-    WriteIntent,
-    ZarrArraySpec,
-    ZarrGroupSpec,
-    register_ingestor,
-)
-from typing import ClassVar
-
-
-@register_ingestor("my_integer_plugin")
-class MyIntegerPlugin(DirectZarrIngestor):
-    PRODUCT_NAME: ClassVar[str] = "my_integer_product"
-
-    def index_spec(self, ctx: PluginContext) -> IndexSpec | None:
-        _ = ctx
-        return IndexSpec(
-            name="my_integer_product_v1",
-            groups={
-                "data": IntegerAxis(slot_count=256),
-            },
-        )
-
-    def inspect_item(self, item: object, ctx: PluginContext) -> ItemInfo | None:
-        # Return the integer position as the coordinate.
-        position: int = ...  # derive from item
-        return ItemInfo(coordinate=position)
-
-    def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
-        n = self.resolved_index(ctx).size("data")
-        return [
-            ZarrGroupSpec(
-                group="data",
-                arrays=[
-                    ZarrArraySpec(
-                        name="value",
-                        shape=(n,),
-                        dtype="float32",
-                        chunks=(32,),
-                        dimension_names=("index",),
-                    ),
-                ],
-            )
-        ]
-
-    def build_write_intents(
-        self,
-        batch: PipelineBatch,
-        ctx: PluginContext,
-    ) -> list[WriteIntent]:
-        intents: list[WriteIntent] = []
-        for item in batch.items:
-            info = self.inspect_item(item, ctx)
-            if info is None:
-                continue
-            idx = self.resolved_index(ctx).position("data", info.coordinate)
-            intents.append(
-                WriteIntent.slot(
-                    group="data",
-                    array="value",
-                    index=idx,
-                    data=...,
-                )
-            )
-        return intents
-```
-
-### Mixed Axes
-
-A single `IndexSpec` can mix `IntegerAxis` and `RegularTimeAxis` groups. Each
-group resolves its own axis independently.
-
-```python
-from firecube.ingestor.api import IndexSpec, IntegerAxis, RegularTimeAxis
-
-
-def index_spec(self, ctx):
-    return IndexSpec(
-        name="my_mixed_product_v1",
-        groups={
-            "data": RegularTimeAxis(
-                coordinate="timestamp",
-                epoch="2024-01-01T00:00:00Z",
-                cadence_s=600,
-                end_date="2024-01-08T00:00:00Z",
-            ),
-            "lookup": IntegerAxis(slot_count=64),
-        },
-    )
-```
-
-Use `resolved_index(ctx).size("data")` and `resolved_index(ctx).size("lookup")`
-separately in `zarr_schema`. Use `resolved_index(ctx).position("data", stamp)`
-for the time group and `resolved_index(ctx).position("lookup", integer_key)` for
-the integer group.
+The serial run above is the smoke test. The payoff is the parallel workflow:
+preallocate the store, plan chunk-aligned slot ranges, then start one ingest
+worker per range. That is an operator workflow with its own page:
+[Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md). The
+[DirectZarrIngestor (Region) tutorial](../../tutorials/direct-zarr-parallel.md)
+walks it end to end with real data.
 
 ## Common Mistakes
 
@@ -284,11 +218,15 @@ the integer group.
 |---|---|
 | Replacing `index_spec` with the old slot-era hooks | Declare the time axis in `IndexSpec` and derive indexes from `ResolvedIndex`. |
 | Returning raw source indexes from `inspect_item` | Return `ItemInfo(coordinate=...)` and let Firecube resolve the slot index. |
+| Returning rounded slot times from `inspect_item` with `TimeAxis.observed` | Return the real observation timestamp; Firecube does the slot mapping. |
 | Sizing arrays from the input files | Use `resolved_index(ctx).size(group)` in `zarr_schema`. |
 | Importing private runtime modules | Import from `firecube.ingestor.api`. |
+| Calling `.position()` for every write by hand | Return `IndexedWrite` elements with `coordinate=` and let Firecube resolve the slot. |
 
 ## Next Steps
 
-- **[Parallel Zarr Writes](../../reference/parallelism.md)** - reference for `IndexSpec`, `RegularTimeAxis`, and `ResolvedIndex`
-- **[Parallel DirectZarrIngestor](../../tutorials/direct-zarr-parallel.md)** - complete tutorial with real timestamps
+- **[Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md)** - preallocate, slot planning, and worker fan-out
+- **[DirectZarrIngestor (Region) Tutorial](../../tutorials/direct-zarr-parallel.md)** - complete tutorial with real timestamps
+- **[DirectZarrIngestor (Region)](../../concepts/output-formats/zarr/direct-region.md)** - the write model, time-axis regimes, and coordinate ownership
+- **[Index Specification Reference](../../reference/parallelism.md)** - `TimeAxis`, `IndexSpec`, and `ResolvedIndex` types
 - **[Plugin Templates](../../reference/templates.md)** - full template surface

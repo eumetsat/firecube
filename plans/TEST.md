@@ -36,7 +36,7 @@ Each mechanism has a specific purpose. Use the right one, and always supply a re
 ```bash
 uv sync --extra test
 uv run pyright
-uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -q --tb=short
+uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot and not race" -q --tb=short
 uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
 uv run pytest --strict-deps -q --tb=short -W error::DeprecationWarning
 ```
@@ -46,6 +46,10 @@ The `--strict-deps` flag (registered in `tests/conftest.py`) causes pytest colle
 The first pytest command is the primary behavior gate for agentic workloads. The
 second command runs broad documentation/help/static drift checks separately so
 their failures are visible without drowning out behavioral regressions.
+
+A CLI `-m` expression REPLACES the `-m 'not race'` filter from `addopts`, so
+every explicit `-m` invocation must carry `and not race` itself; omitting it
+runs the red-by-design race characterization and fails the lane.
 
 ## Local Dev Invocation
 
@@ -60,7 +64,7 @@ Run a focused subset during development:
 
 ```bash
 # Fast behavior loop
-uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -q --tb=short
+uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot and not race" -q --tb=short
 
 # Docs/help/static lane
 uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
@@ -88,30 +92,39 @@ uv run pytest --strict-deps -q --tb=short -W error::DeprecationWarning
 | `plugin` | Tests a specific ingestor plugin |
 | `s3` | Requires a live or mocked S3 endpoint (moto) |
 | `slow` | Long-running; excluded from the default fast loop |
+| `race` | Red-by-design characterization of a known legacy race; excluded from the default lane and all CI lanes. Run explicitly via `-m race`. |
+| `gate` | Deterministic concurrency-invariant gates (e.g. coordinate-materialization serialization). Run in the default lane; use `-m gate` to run them alone. |
 | `concurrency` | Tests parallel/concurrent behaviour |
 
 Mark tests at definition time. Unmarked tests are still collected; markers exist to let you filter, not to gate collection.
 
+## Red-by-Design Tests
+
+Tests marked `race` are intentionally RED: they characterize the legacy per-slot write path losing updates in dense coordinate chunks, as an executable record of why the managed-coordinate path exists. They are excluded from the default lane via the `addopts` `-m 'not race'` filter in `pyproject.toml` and from the CI/publish `-m` filters; run them explicitly with `uv run pytest -m race`, and do not "fix" them to green. `gate` tests are the opposite: always green, run in the default lane, and assert the invariants the fix guarantees (e.g. no overlapping materialization-run intervals).
+
 ## Integration Test Fixture Plugins
 
-The integration tests require fixture plugins installed as editable packages:
+The integration tests require the in-tree fixture plugins, shipped as one
+editable distribution that installs every fixture module and entry point:
 
 ```bash
-uv pip install -e tests/fixtures/cli_test_plugin
-uv pip install -e tests/fixtures/direct_zarr_capable_test_plugin
-uv pip install -e tests/fixtures/direct_zarr_non_capable_test_plugin
-uv pip install -e tests/fixtures/multi_group_capable_test_plugin
-uv pip install -e tests/fixtures/cf_time_dim_test_plugin
-uv pip install -e tests/fixtures/slot_shape_test_plugin
-uv pip install -e tests/fixtures/index_spec_test_plugin
-uv pip install -e tests/fixtures/index_spec_integer_test_plugin
-uv pip install -e tests/fixtures/callable_payload_test_plugin
-uv pip install -e tests/fixtures/irregular_axis_test_plugin
-uv pip install -e tests/fixtures/indexed_write_test_plugin
+uv pip install -e tests/fixtures/firecube_test_plugins
 ```
 
-This is required before running the full integration suite. Without these fixtures,
-plugin-contract and typed-ingest tests will error at import time.
+This is required before running the full integration suite. Without it,
+plugin-contract and typed-ingest tests will error at import time. The
+fixture modules keep their individual names (`cli_test_plugin`,
+`regular_axis_test_plugin`, ...); only the packaging is unified.
+
+Plugin-specific compatibility tests belong in each plugin's own repository,
+not here: core's test bench must not depend on sibling plugin checkouts.
+
+## Test Suite Options
+
+`--trials <int>` (default 30): repetition count for the multiprocess race
+characterization in `tests/integration/test_multiprocess_race_managed_coord.py`.
+Only the `race`-marked red test consumes the full trial count; the green `gate`
+test uses a small fixed count so the default lane stays fast.
 
 ## Architecture And Contract Tests
 

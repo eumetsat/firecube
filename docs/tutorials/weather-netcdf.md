@@ -43,7 +43,7 @@ contract:
 - `xr.concat(...).sortby("timestamp")` combines the four time steps in order.
 
 The quickstart owns the complete
-[plugin implementation](../quickstart/plugins.md#implement-the-plugin). The
+[plugin implementation](../quickstart/plugins.md#steps). The
 [GenericZarrIngestor guide](../guides/plugins/generic-zarr.md) explains how to
 adapt the same hook for another dataset.
 
@@ -145,4 +145,4 @@ The plugin only supplied the dataset-specific read and combination logic.
 - **[NetCDF To Zarr: Source Discovery](source-discovery.md)**: extend the same plugin run to another NetCDF filename pattern.
 - **[NetCDF To Zarr: Observability](observability.md)**: add one custom metric to the same plugin.
 - **[Sentinel-3 FRP To Parquet](sentinel3-frp.md)**: download and ingest a real EUMETSAT product.
-- **[Parallel DirectZarrIngestor](direct-zarr-parallel.md)**: learn the slot-write path for disjoint parallel writes.
+- **[DirectZarrIngestor (Region)](direct-zarr-parallel.md)**: learn the slot-write path for disjoint parallel writes.

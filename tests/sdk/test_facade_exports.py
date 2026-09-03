@@ -12,20 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import firecube.core.api as core_api
+import firecube.ingestor.api as ingestor_api
+from firecube.core.api import ATTR_COORD_MANAGED as core_coord_managed
 from firecube.core.api import FIRECUBE_STATIC_WRITTEN_ATTR as core_static_written_attr
 from firecube.core.api import RESERVED_ARRAY_ATTRS as core_reserved_array_attrs
 from firecube.core.api import ExtentUnknownError as CoreExtentUnknownError
+from firecube.core.api import TimeAxis as CoreTimeAxis
 from firecube.core.api import assert_attrs_safe as core_assert_attrs_safe
 from firecube.core.api import resolve_index_spec as core_resolve_index_spec
 from firecube.ingestor.api import FIRECUBE_STATIC_WRITTEN_ATTR as ingestor_static_written_attr
 from firecube.ingestor.api import RESERVED_ARRAY_ATTRS as ingestor_reserved_array_attrs
 from firecube.ingestor.api import ExtentUnknownError as IngestorExtentUnknownError
+from firecube.ingestor.api import TimeAxis as IngestorTimeAxis
 from firecube.ingestor.api import assert_attrs_safe as ingestor_assert_attrs_safe
 from firecube.ingestor.api import resolve_index_spec as ingestor_resolve_index_spec
 
 
 def test_extent_unknown_error_exported_from_both_facades() -> None:
     assert CoreExtentUnknownError is IngestorExtentUnknownError
+
+
+def test_time_axis_exported_from_both_facades() -> None:
+    assert CoreTimeAxis is IngestorTimeAxis
 
 
 def test_reserved_attrs_exported_from_both_facades() -> None:
@@ -45,6 +54,26 @@ def test_reserved_attrs_exported_from_both_facades() -> None:
             pass
         else:
             raise AssertionError("reserved attrs must be rejected")
+
+
+def test_coord_managed_marker_is_core_only() -> None:
+    # Coordinate lifecycle markers are operator-tooling surface: plugins never
+    # read or stamp them, so the plugin facade must not export them.
+    assert core_coord_managed == "firecube_coord_managed"
+    assert "ATTR_COORD_MANAGED" in core_api.__all__
+    assert "ATTR_COORD_MANAGED" not in ingestor_api.__all__
+
+
+def test_internal_helpers_hidden() -> None:
+    hidden_names = (
+        "CoordLifecycleState",
+        "resolve_coord_lifecycle",
+        "raise_if_invalid",
+    )
+
+    for module in (core_api, ingestor_api):
+        for name in hidden_names:
+            assert name not in module.__all__
 
 
 def test_resolve_index_spec_reexported_from_ingestor_api() -> None:

@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from firecube.core.observability.metrics import ResumeGuardMetrics, resume_guard_span
 from firecube.core.zarr.validation import validate_group_with_fs
@@ -151,6 +151,7 @@ class ResumeGuard:
         )
 
         slice_meta = dict(slice_meta or {})
+        self._check_time_coord_seal(product=product, slot_group=slot_group)
 
         try:
             self._check_non_terminal_runs(
@@ -350,6 +351,32 @@ class ResumeGuard:
             "Rerun with --option resume_existing=true to continue, "
             "or --option force_reingest=true to overwrite. "
             "Use --option validate_zarr=true to inspect storage (may be slow)."
+        )
+
+    def _check_time_coord_seal(self, *, product: str, slot_group: str | None) -> None:
+        """Block ingest when a ConsolidatedTimeCoord WAL event sealed this cube."""
+
+        list_events = getattr(self.chunk_manager, "list_time_coord_consolidations", None)
+        if not callable(list_events):
+            return
+        sealing_events = list(cast(Any, list_events)(product=product))
+        if not sealing_events:
+            return
+        requested_group = slot_group.strip("/") if isinstance(slot_group, str) else None
+        if requested_group is None:
+            latest = sealing_events[-1]
+            group = next(iter(latest.groups), "")
+        else:
+            matching = [event for event in sealing_events if requested_group in event.groups]
+            if not matching:
+                return
+            latest = matching[-1]
+            group = requested_group
+        target = self.chunk_manager.get_product_root(product).rstrip("/")
+        group_suffix = f"/{group}" if group else ""
+        raise ResumeConflictError(
+            f"Cube {target}{group_suffix} is sealed "
+            f"(consolidated at {latest.timestamp_iso}). Further ingest is blocked."
         )
 
     def _check_non_terminal_runs(

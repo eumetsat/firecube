@@ -515,6 +515,23 @@ def _create_batches_with_parallel_filter(
                 "--slot-start/--slot-end require index_spec(); the plugin returned None"
             )
 
+        # The coord-chunk overlap guard is intentionally absent here.
+        # Fresh observed shells carry
+        # ``firecube_coord_managed`` at creation, so pods take the
+        # verify-or-error write path uniformly:
+        # - firecube_coord_managed: write_timestamp verifies the stored value;
+        #   no cross-slot write, no shared coord-chunk race.
+        # - firecube_preallocated: same verify-or-error path against the dense
+        #   pre-materialized value.
+        # - genuinely pre-marker legacy: only historical shells still take the
+        #   per-slot create-or-grow element write path (each pod writes its
+        #   own data-array chunk). Its parallel-pod fan-out race is
+        #   characterized RED-by-design in
+        #   tests/integration/test_multiprocess_race_managed_coord.py
+        #   (mark=race, excluded from the default lane); the corresponding
+        #   fresh-managed GREEN gate is in test_preallocate_parallel_zero_loss.py.
+        # The guard belongs on the preallocate side (claim_coord_materialization_window).
+
         all_items = list(base_host.discover_source_files(plugin_ctx))
         original_count = len(all_items)
 

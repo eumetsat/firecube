@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for ``firecube.cli.zarr._suppress_logger_warnings``.
+"""Unit tests for ``firecube.cli.zarr._slots._suppress_logger_warnings``.
 
 The suppressor is used by CLI commands that emit JSON on stdout, where a
 stray WARNING would corrupt the parseable output. The implementation
@@ -28,7 +28,7 @@ import threading
 
 import pytest
 
-from firecube.cli.zarr import _suppress_logger_warnings
+from firecube.cli.zarr._slots import _suppress_logger_warnings
 
 pytestmark = pytest.mark.unit
 

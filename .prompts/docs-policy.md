@@ -128,6 +128,19 @@ source-code concern. Docstring conventions live in `plans/STYLE.md`.
   `Examples:` section, where it also reaches editors and `help()`. A
   multi-step workflow with commands, expected output, or verification is a
   how-to: put it in a guide and link to it.
+- **No static API prose on reference pages.** A reference page is `:::`
+  directives, short connective glue, and links. Hand-written sections that
+  restate a public symbol's behavior, constraints, or examples duplicate the
+  docstring and drift from the code silently; write them into the docstring
+  and let the directive render them. Python code fences under
+  `docs/reference/` are rejected by
+  `tests/sdk/test_reference_pages_stay_generated.py`; a page that genuinely
+  needs one must be allowlisted there with a reason.
+- **Link to auto-generated anchors, not hand-made headings.** When another
+  page points at reference material for one symbol, target the mkdocstrings
+  anchor (`#firecube.ingestor.api.TimeAxis.discovered`), which exists for as
+  long as the symbol does, rather than a static section heading that can be
+  deleted with its section.
 - Keep reference pages complete for their declared surface. A hook that every
   ingestor inherits belongs on the hook reference even when a guide covers the
   same ground in more depth.

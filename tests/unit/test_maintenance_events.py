@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""W4.4: maintenance lifecycle WAL events."""
+"""Maintenance lifecycle WAL events."""
 
 from __future__ import annotations
 

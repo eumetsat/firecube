@@ -21,7 +21,7 @@ Covers:
 - Freeze detection: manifest items fold into identity_hash so adding or
   removing an item mutates the recorded value.
 - Validation: ``validate_manifest_entries`` rejects duplicate identity_hashes,
-  duplicate coordinate_values, and empty source_ref.
+  duplicate coordinate entries, and empty source_ref.
 - Wire round-trip: with-manifest records survive to_json_bytes /
   from_json_bytes preserving item content.
 """
@@ -211,7 +211,7 @@ def test_validate_manifest_entries_rejects_duplicate_identity_hashes() -> None:
         validate_manifest_entries(entries)
 
 
-def test_validate_manifest_entries_rejects_duplicate_coordinate_values() -> None:
+def test_validate_manifest_entries_rejects_duplicate_coordinates() -> None:
     entries = [
         ItemManifestEntry(
             identity_hash="a" * 64,

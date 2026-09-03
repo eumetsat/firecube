@@ -28,6 +28,7 @@ dependencies = [
     "prometheus-client>=0.23.1",
     "opentelemetry-sdk>=1.37.0",
     "opentelemetry-exporter-otlp>=1.44.0",
+    "click>=8.2.1",
 ]
 
 [project.optional-dependencies]
@@ -120,7 +121,7 @@ extraPaths = ["src"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --strict-markers"
+addopts = "-ra -q --strict-markers -m 'not race'"
 testpaths = [
     "tests",
 ]
@@ -135,6 +136,8 @@ markers = [
     "plugin: plugin tests",
     "s3: s3 tests",
     "concurrency: concurrency tests",
+    "race: multi-process race regression on legacy per-slot chunks; RED by design; excluded from default lane; run explicitly via -m race",
+    "gate: promoted regression gates that must stay GREEN under the shipped mechanism",
     "benchmark: peak-retained-payload regression-smoke harness (Linux + /usr/bin/time -v; skips gracefully otherwise)",
     "benchmark_evidence: long-form high-fidelity benchmark evidence (manual; not part of default CI lane)",
 ]

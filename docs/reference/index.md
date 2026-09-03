@@ -106,4 +106,13 @@ not part of the public contract and are rejected by the plugin contract test.
 
     [:octicons-arrow-right-24: Storage Drivers](storage-drivers.md)
 
+-   :material-file-tree:{ .lg .middle } **Control-Plane Spec**
+
+    ---
+
+    What ChunkManager writes into `.firecube/` to make resume, recovery,
+    and parallel writes safe.
+
+    [:octicons-arrow-right-24: Control-Plane Spec](control-plane-spec.md)
+
 </div>

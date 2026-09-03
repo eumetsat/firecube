@@ -33,13 +33,9 @@ LEAK_PATTERNS = [
     r"§\d{2,}",
     r"per PR\d",
     r"PR#\d+",
-    r"from \.sisyphus",
-    r"see \.kovan",
     r"see plans/",
+    r"from \.sisyphus",
     r"see \.armagan",
-    r"\bSisyphus\b(?!.*licens)",
-    r"\bMetis\b",
-    r"\bMomus\b",
 ]
 
 

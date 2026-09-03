@@ -138,6 +138,7 @@ available as optional runtime extras:
 | `prometheus-client` | 0.25.0 | Apache-2.0 |  | https://github.com/prometheus/client_python | Direct dependency. |
 | `opentelemetry-sdk` | 1.44.0 | Apache-2.0 |  | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-sdk | Direct dependency. |
 | `opentelemetry-exporter-otlp` | 1.44.0 | Apache-2.0 |  | https://github.com/open-telemetry/opentelemetry-python/tree/main/exporter/opentelemetry-exporter-otlp | Direct dependency. |
+| `click` | 8.4.2 | BSD-3-Clause |  | https://github.com/pallets/click | Direct dependency. |
 | `obstore` | 0.11.0 | MIT |  | https://developmentseed.org/obstore | Direct optional `obstore` extra dependency. |
 | `tensogram` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
 | `tensogram-xarray` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |

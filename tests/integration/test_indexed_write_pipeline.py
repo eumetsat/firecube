@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Full-pipeline integration coverage for ``DirectZarrIngestor.build_indexed_write``.
+"""Full-pipeline integration coverage for coordinate-keyed ``IndexedWrite`` elements.
 
 Exercises the ``IndexedWrite`` + ``_compile_indexed_write`` surface introduced
 by Plan B end-to-end through the public ``firecube ingest`` CLI. Every
@@ -31,7 +31,7 @@ resolved once at dispatch). These integration-level assertions guard the
 from __future__ import annotations
 
 import importlib
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any, ClassVar, cast
 
@@ -54,6 +54,7 @@ from firecube.core.index_resolve import resolve_index_spec
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PluginContext,
+    WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
@@ -91,7 +92,7 @@ def _canonical_timestamps(count: int = _ITEM_COUNT) -> tuple[np.datetime64, ...]
 # autouse reset fixture below so the CLI can look it up after the fixture
 # reloads the sibling package. Composes:
 #   * Plan A — IrregularTimeAxis(values=AUTO)  → engine-owned discovery
-#   * Plan B — build_indexed_write             → per-item IndexedWrite compile
+#   * Plan B — IndexedWrite elements            → coordinate-keyed compile
 #   * Plan C — WriteIntent.data callable       → dispatch-time resolution
 # ---------------------------------------------------------------------------
 
@@ -107,7 +108,7 @@ _COMPOSED_PAYLOADS: tuple[np.ndarray, ...] = tuple(
 
 
 class _ComposedAutoIndexedCallableIngestor(DirectZarrIngestor):
-    """Composed A+B+C fixture: AUTO axis + build_indexed_write + callable payload.
+    """Composed A+B+C fixture: AUTO axis + IndexedWrite elements + callable payload.
 
     Not decorated with ``@register_ingestor`` at import time; the autouse
     reset fixture re-registers it into ``AVAILABLE_INGESTORS`` per test.
@@ -150,24 +151,29 @@ class _ComposedAutoIndexedCallableIngestor(DirectZarrIngestor):
             )
         ]
 
-    def build_indexed_write(
-        self, item: Any, ctx: PluginContext
-    ) -> IndexedWrite | Sequence[IndexedWrite] | None:
-        assert isinstance(item, int)
-        payload_ref = _COMPOSED_PAYLOADS[item]
+    def build_write_intents(
+        self, batch: Any, ctx: PluginContext
+    ) -> list[WriteIntent | IndexedWrite]:
+        out: list[WriteIntent | IndexedWrite] = []
+        for item in batch.items:
+            assert isinstance(item, int)
+            payload_ref = _COMPOSED_PAYLOADS[item]
 
-        # Callable closes over a module-level ndarray (Plan C lifetime
-        # contract point 1: stable module reference).
-        def _resolve_payload() -> np.ndarray:
-            return payload_ref
+            # Callable closes over a module-level ndarray (Plan C lifetime
+            # contract point 1: stable module reference).
+            def _resolve_payload(payload: np.ndarray = payload_ref) -> np.ndarray:
+                return payload
 
-        return IndexedWrite.region(
-            group="data",
-            array="values",
-            coordinate=_COMPOSED_TIMESTAMPS[item],
-            data=_resolve_payload,
-            y_slice=slice(0, _Y_ROWS),
-        )
+            out.append(
+                IndexedWrite.region(
+                    group="data",
+                    array="values",
+                    coordinate=_COMPOSED_TIMESTAMPS[item],
+                    data=_resolve_payload,
+                    y_slice=slice(0, _Y_ROWS),
+                )
+            )
+        return out
 
 
 # Ingestor name → class. The reset fixture uses this to guarantee the
@@ -238,7 +244,7 @@ def _run_ingest_and_open(plugin: str, product: str, target_path: Path) -> Any:
 def test_indexed_write_single_writes_one_region_per_item(tmp_path: Path) -> None:
     """Happy path: 5 items → 5 region writes at slots 0..4.
 
-    Each item's ``build_indexed_write`` returns a single
+    Each item contributes a single
     ``IndexedWrite.region`` keyed by the canonical timestamp for that slot.
     The engine must compile every one against the ``RegularTimeAxis``,
     resolve them to slots 0..4, and write byte-identical zeros into every
@@ -261,7 +267,7 @@ def test_indexed_write_single_writes_one_region_per_item(tmp_path: Path) -> None
 def test_indexed_write_fan_out_lands_two_row_slices_per_slot(tmp_path: Path) -> None:
     """Fan-out: each item emits two writes at the same slot, different rows.
 
-    Every ``build_indexed_write`` returns a ``Sequence[IndexedWrite]`` of
+    Every item contributes two ``IndexedWrite`` elements out of
     length 2 targeting ``y_slice=slice(0,1)`` and ``slice(1,2)`` at the
     same coordinate. Compilation must produce two ``WriteIntent`` per
     item, both routed to the same ``ts_index``. If the default
@@ -280,7 +286,7 @@ def test_indexed_write_fan_out_lands_two_row_slices_per_slot(tmp_path: Path) -> 
 
 
 def test_indexed_write_drop_leaves_slot_two_at_fill_value(tmp_path: Path) -> None:
-    """Drop: ``build_indexed_write`` returning ``None`` produces zero writes.
+    """Drop: appending nothing for an item produces zero writes for it.
 
     Item 2 returns ``None``; slots 0/1/3/4 write ``np.zeros((3,4))``. The
     store's slot 2 must remain at the declared ``fill_value=0.0``. Since
@@ -341,7 +347,7 @@ def test_indexed_write_with_statics_writes_both_indexed_and_static_arrays(
 def test_indexed_write_error_fails_ingest_with_compilation_error(tmp_path: Path) -> None:
     """Bogus coordinate must raise ``IndexedWriteCompilationError`` in-pipeline.
 
-    ``IndexedWriteErrorIngestor.build_indexed_write`` returns an
+    ``IndexedWriteErrorIngestor`` emits an
     ``IndexedWrite`` whose ``coordinate="NOT_IN_INDEX"`` is not a valid
     ISO timestamp on the ``RegularTimeAxis``. The engine must surface
     the compilation error through the CLI as a non-zero exit; a silent
@@ -384,7 +390,7 @@ def test_cross_plan_a_alignment_compiler_resolves_against_irregular_axis() -> No
     keyed by each declared coordinate and assert the compiled
     ``WriteIntent.ts_index`` equals the coordinate's slot position in
     the (sorted) axis. This protects the promise that a plugin can
-    author irregular-axis products through the ``build_indexed_write``
+    author irregular-axis products through the coordinate-keyed ``IndexedWrite``
     hook without ever touching slot integers itself. A regression in
     ``ResolvedIndex.position`` or in the compile's error handling
     would either misroute the write or raise instead of resolving.
@@ -522,7 +528,7 @@ def test_composed_auto_indexed_callable_writes_byte_equivalent_to_eager_baseline
     * Plan A — ``IrregularTimeAxis(coordinate="timestamp", values=AUTO)``
       triggers the engine's discovery pass; every ``inspect_item`` is
       called to build the axis before preallocation.
-    * Plan B — ``build_indexed_write`` returns one ``IndexedWrite.region``
+    * Plan B — the intent list carries one ``IndexedWrite.region``
       per item, keyed by the discovered coordinate; the default
       ``build_write_intents`` compiles them through
       ``_compile_indexed_write`` against the resolved axis.

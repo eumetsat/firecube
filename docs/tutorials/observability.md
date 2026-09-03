@@ -151,4 +151,4 @@ docker stop firecube-tutorial-pushgateway
 - **[Add Plugin Telemetry](../guides/plugins/observability.md)** — plugin telemetry rules
 - **[Observability Reference](../reference/observability.md)** — configure and inspect telemetry backends
 - **[Sentinel-3 FRP To Parquet](sentinel3-frp.md)** — download and ingest a real EUMETSAT product
-- **[Parallel DirectZarrIngestor](direct-zarr-parallel.md)** — continue to the advanced write path
+- **[DirectZarrIngestor (Region)](direct-zarr-parallel.md)** — continue to the advanced write path

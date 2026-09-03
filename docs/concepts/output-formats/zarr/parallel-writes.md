@@ -15,17 +15,14 @@ is not a separate plugin class, and it does not apply to
 
 ## How This Removes The Append Bottleneck
 
-An append writer finds the next position from the current group length. Two
-writers extending the group would share its shape, metadata, append cursor, and
-possibly its trailing physical chunk, so Firecube serializes that mutation.
-
-A direct-indexed `DirectZarrIngestor` takes a different approach. The complete
-indexed extent is created first, the plugin maps product coordinates to absolute
-indexes, and the slot planner produces disjoint ranges aligned with the
-physical chunks of every time-indexed array. An external scheduler passes one
-range to each ingest process, and Firecube validates that range before writing.
-Workers can then write one group concurrently without sharing an append cursor
-or a physical chunk.
+An append writer finds the next position from the current group length, so
+concurrent appenders must be serialized. Slot workers avoid the shared cursor
+entirely: the complete indexed extent is created first (the
+[direct write model](direct-region.md) explains how the declared time axis
+makes that possible), the slot planner produces disjoint ranges aligned with
+the physical chunks of every time-indexed array, and an external scheduler
+passes one range to each ingest process. Firecube validates each range before
+writing.
 
 This is optional. A normal `DirectZarrIngestor` run remains serial unless the
 plugin declares the index spec and the processes are launched with assigned
@@ -58,7 +55,7 @@ A plugin must provide:
 
 These requirements are additional to the normal `DirectZarrIngestor` schema
 and write-intent contract. The
-[`DirectZarrIngestor` guide](../../../guides/plugins/direct-zarr.md#index-spec-and-write-intents)
+[`DirectZarrIngestor` guide](../../../guides/plugins/direct-zarr.md#implement-the-plugin)
 lists the public hooks.
 
 ## What Firecube Coordinates
@@ -84,9 +81,9 @@ scheduler.
 
 - **[Run Parallel Zarr Writes](../../../operations/parallel-zarr-writes.md)** -
   preallocate, plan, launch, verify, and recover workers
-- **[`DirectZarrIngestor` Guide](../../../guides/plugins/direct-zarr.md#index-spec-and-write-intents)** -
+- **[`DirectZarrIngestor` Guide](../../../guides/plugins/direct-zarr.md#implement-the-plugin)** -
   implement the index contract and write-intent hooks
-- **[Parallel DirectZarrIngestor Plugin](../../../tutorials/direct-zarr-parallel.md)** -
+- **[DirectZarrIngestor (Region) Tutorial](../../../tutorials/direct-zarr-parallel.md)** -
   build a complete parallel example
 - **[Benchmarks](../../benchmarks.md#same-group-slot-scaling)** - review one
   measured slot-scaling workload

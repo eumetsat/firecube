@@ -19,7 +19,7 @@ from typing import Any
 
 from click.testing import CliRunner
 
-import firecube.cli.zarr as zarr_cli
+import firecube.cli.zarr._validate as zarr_cli
 from firecube.cli.main import cli
 from firecube.core.storage.session import StorageSession
 from firecube.core.zarr.validation import ZarrValidationReport

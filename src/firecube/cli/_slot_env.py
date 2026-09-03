@@ -49,10 +49,18 @@ def resolve_slot_range_from_env(
     cli_slot_size: int | None,
     cli_slot_group: str | None = None,
 ) -> tuple[int | None, int | None, str | None]:
-    """Resolve final (slot_start, slot_end, slot_group) from CLI args + environment."""
+    """Resolve final (slot_start, slot_end, slot_group) from CLI args + environment.
+
+    An empty or whitespace-only ``FIRECUBE_SLOT_GROUP`` is treated as unset,
+    matching the standard shell convention where ``VAR=`` is indistinguishable
+    from an omitted variable at the operator's intent level. Without this,
+    a K8s manifest that conditionally injects ``FIRECUBE_SLOT_GROUP: ""`` for
+    a single-group deployment would look like a request to scope the window
+    to a group named ``""`` and fail loudly at preallocate time.
+    """
     slot_group = cli_slot_group
     env_slot_group = os.getenv("FIRECUBE_SLOT_GROUP")
-    if slot_group is None and env_slot_group is not None:
+    if slot_group is None and env_slot_group is not None and env_slot_group.strip():
         slot_group = env_slot_group
 
     if cli_slot_start is not None and cli_slot_end is not None:

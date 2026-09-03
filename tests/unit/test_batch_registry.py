@@ -82,3 +82,33 @@ def test_identity_ref_distinguishes_reference_equality() -> None:
     assert _IdentityRef(first) == _IdentityRef(first)
     assert _IdentityRef(first) != _IdentityRef(second)
     assert len({_IdentityRef(first), _IdentityRef(second)}) == 2
+
+
+def test_teardown_all_closes_every_batch() -> None:
+    registry = BatchResourceRegistry()
+    first = MagicMock()
+    second = MagicMock()
+
+    registry.register("batch-1", first)
+    registry.register("batch-2", second)
+    registry.teardown_all()
+
+    first.close.assert_called_once_with()
+    second.close.assert_called_once_with()
+
+
+def test_teardown_all_continues_after_failure_and_reraises_first() -> None:
+    registry = BatchResourceRegistry()
+    failing = MagicMock()
+    healthy = MagicMock()
+    first_error = RuntimeError("close failure")
+    failing.close.side_effect = first_error
+
+    registry.register("batch-1", failing)
+    registry.register("batch-2", healthy)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        registry.teardown_all()
+
+    assert exc_info.value is first_error
+    healthy.close.assert_called_once_with()

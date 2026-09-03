@@ -132,9 +132,6 @@ def test_show_populated_cube_returns_human_readable_output(tmp_path: Path) -> No
     # Human-readable format must mention the identity_hash label and a group table hint.
     assert "identity_hash" in result.stdout
     assert "kind" in result.stdout
-    # Cube attributes must not leak internal control-plane paths.
-    assert ".sisyphus" not in result.stdout
-    assert ".armagan" not in result.stdout
     # Truncated hash prefix is enough for readability; the full hash still exists.
     assert record.identity_hash[:16] in result.stdout
 

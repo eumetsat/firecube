@@ -107,6 +107,14 @@ CLI_COMMAND_CONTRACTS: Mapping[tuple[str, ...], ContractEntry] = {
             ),
         ],
     ),
+    ("zarr", "consolidate-time-coord"): ContractEntry(
+        path=("zarr", "consolidate-time-coord"),
+        tier="write",
+        uri_roles={"--target": "product-input-output"},
+        required_storage_flags=["--product-name"],
+        smart_default_eligible=False,
+        expected_failures=[],
+    ),
     ("zarr", "preallocate"): ContractEntry(
         path=("zarr", "preallocate"),
         tier="write",

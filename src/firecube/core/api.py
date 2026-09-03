@@ -50,6 +50,7 @@ from firecube.core.formats import (
 from firecube.core.index_resolve import (
     ExtentUnknownError,
     ResolvedIndex,
+    _compute_group_identity_hash,
     coerce_to_epoch_s,
     resolve_index_spec,
 )
@@ -61,6 +62,7 @@ from firecube.core.index_spec import (
     IrregularTimeAxis,
     ItemInfo,
     RegularTimeAxis,
+    TimeAxis,
 )
 from firecube.core.indexed_write import IndexedWrite
 from firecube.core.intake import CatalogGroupInfo
@@ -79,10 +81,17 @@ from firecube.core.uris import (
     local_path_from_target,
     parse_uri,
 )
+from firecube.core.zarr._coord_lifecycle import assert_coord_markers_consistent
 from firecube.core.zarr._reserved_attrs import (
+    FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
     FIRECUBE_STATIC_WRITTEN_ATTR,
     RESERVED_ARRAY_ATTRS,
     assert_attrs_safe,
+)
+from firecube.core.zarr._sealing_markers import (
+    ATTR_CONSOLIDATED_AT,
+    ATTR_COORD_MANAGED,
+    ATTR_PREALLOCATED,
 )
 from firecube.core.zarr.chunk_geometry import (
     axis_selection_is_chunk_aligned,
@@ -97,8 +106,20 @@ from firecube.core.zarr.validation import (
     read_chunk_grid_with_shards,
 )
 
+compute_group_identity_hash = _compute_group_identity_hash
+"""Public alias for the per-group identity hash helper.
+
+Underscored source stays private to ``firecube.core.index_resolve``; this
+alias lets architecture-tier consumers call the helper without importing a
+private symbol.
+"""
+
 __all__ = [
+    "ATTR_CONSOLIDATED_AT",
+    "ATTR_COORD_MANAGED",
+    "ATTR_PREALLOCATED",
     "AUTO",
+    "FIRECUBE_GROUP_IDENTITY_HASH_ATTR",
     "FIRECUBE_STATIC_WRITTEN_ATTR",
     "RESERVED_ARRAY_ATTRS",
     "AxisSpec",
@@ -123,13 +144,17 @@ __all__ = [
     "SlotAxis",
     "SlotIndexModel",
     "StorageConfig",
+    "TimeAxis",
     "ZarrCompareReport",
+    "_compute_group_identity_hash",
     "assert_attrs_safe",
+    "assert_coord_markers_consistent",
     "axis_selection_is_chunk_aligned",
     "chunk_axis_range",
     "clean_netcdf_encoding",
     "coerce_to_epoch_s",
     "compare_zarr_stores",
+    "compute_group_identity_hash",
     "create_filesystem_for_uri",
     "decode_time_array",
     "delete_path",

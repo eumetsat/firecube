@@ -777,6 +777,7 @@ version = "0.1.4.post1"
 source = { editable = "." }
 dependencies = [
     { name = "botocore", extra = ["crt"] },
+    { name = "click" },
     { name = "dask", extra = ["array"] },
     { name = "duckdb" },
     { name = "fsspec" },
@@ -844,6 +845,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "botocore", extras = ["crt"], specifier = ">=1.42.19" },
+    { name = "click", specifier = ">=8.2.1" },
     { name = "dask", extras = ["array"], specifier = ">=2025.1.0" },
     { name = "duckdb", specifier = ">=1.4.1" },
     { name = "fsspec", specifier = ">=2025.9.0" },

@@ -1,4 +1,4 @@
-# Parallel DirectZarrIngestor
+# DirectZarrIngestor (Region)
 
 ## Goal
 
@@ -65,6 +65,7 @@ Replace `plugins_dev/firecube-grid-parallel/src/firecube_grid_parallel/ingestor.
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
@@ -72,16 +73,25 @@ import xarray
 
 from firecube.ingestor.api import (
     DirectZarrIngestor,
+    IndexedWrite,
     IndexSpec,
     ItemInfo,
     PipelineBatch,
     PluginContext,
-    RegularTimeAxis,
+    TimeAxis,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
     register_ingestor,
 )
+
+
+def read_observation(path: Path) -> tuple[datetime, np.ndarray]:
+    """Read one granule: its observation time and its four sample values."""
+    with xarray.open_dataset(path) as dataset:
+        timestamp = datetime.fromisoformat(str(dataset.attrs["timestamp"]))
+        values = dataset["temperature_cells"].values.astype(np.float32)
+    return timestamp, values
 
 
 @register_ingestor("grid_parallel")
@@ -93,7 +103,7 @@ class GridParallelIngestor(DirectZarrIngestor):
         return IndexSpec(
             name="grid_parallel_v1",
             groups={
-                "data": RegularTimeAxis(
+                "data": TimeAxis.observed(
                     coordinate="timestamp",
                     epoch="2024-01-01T00:00:00Z",
                     cadence_s=600,
@@ -128,52 +138,34 @@ class GridParallelIngestor(DirectZarrIngestor):
         ]
 
     def inspect_item(self, item: object, ctx: PluginContext) -> ItemInfo | None:
-        file_path = ctx.materialize(item)
-        dataset = xarray.open_dataset(file_path)
-        timestamp_text = str(dataset.attrs["timestamp"])
-        values = dataset["temperature_cells"].values
-        dataset.close()
-
+        timestamp, values = read_observation(ctx.materialize(item))
         if values.shape != (4,):
             raise ValueError(f"Expected four sample values, got {values.shape}")
-
-        timestamp = datetime.fromisoformat(timestamp_text)
         return ItemInfo(coordinate=timestamp)
 
     def build_write_intents(
         self,
         batch: PipelineBatch,
         ctx: PluginContext,
-    ) -> list[WriteIntent]:
-        intents: list[WriteIntent] = []
+    ) -> list[WriteIntent | IndexedWrite]:
+        out: list[WriteIntent | IndexedWrite] = []
         for item in batch.items:
-            file_path = ctx.materialize(item)
-            dataset = xarray.open_dataset(file_path)
-            timestamp_text = str(dataset.attrs["timestamp"])
-            values = dataset["temperature_cells"].values
-            dataset.close()
-
-            timestamp = datetime.fromisoformat(timestamp_text)
-            slot_index = self.resolved_index(ctx).position("data", timestamp)
-
-            intents.append(
-                WriteIntent.coordinate(group="data", index=slot_index, value=timestamp)
-            )
-            intents.append(
-                WriteIntent.slot(
+            timestamp, values = read_observation(ctx.materialize(item))
+            out.append(
+                IndexedWrite.slot(
                     group="data",
                     array="temperature_cells",
-                    index=slot_index,
+                    coordinate=timestamp,
                     data=values,
                 )
             )
-        return intents
+        return out
 ```
 
-The two hooks read the file the same explicit way:
+Both hooks read the file through the same `read_observation` helper:
 
-- `inspect_item()` opens the NetCDF file, reads the `timestamp` attribute, parses it with `datetime.fromisoformat()`, and hands the timestamp to Firecube as the item's coordinate.
-- `build_write_intents()` opens the file again, maps the timestamp to a slot index with `position()`, and emits one coordinate write and one data write for that slot.
+- `inspect_item()` hands each observation's timestamp to Firecube as the item's coordinate, so the engine can place the item on the declared axis.
+- `build_write_intents()` returns one `IndexedWrite.slot` per observation, keyed by the same timestamp. Firecube resolves the slot index and writes the slot's time-coordinate value for you; the plugin never computes an index.
 
 ## 4. Install The Plugin
 
@@ -184,6 +176,12 @@ uv run firecube plugins describe grid_parallel
 
 ## 5. Preallocate And Plan Ranges
 
+The declared axis stores observed timestamps, so preallocation reads the
+source data once to discover the real observation time for each slot in the
+window. That is why this `preallocate` call passes `--input-data` and the
+slot window; a `TimeAxis.grid` or `TimeAxis.explicit` axis is filled from the
+declaration alone and needs neither.
+
 ```bash
 mkdir -p tutorial-output
 PRODUCT_URI="file://$PWD/tutorial-output/grid_parallel.zarr"
@@ -193,7 +191,10 @@ uv run firecube zarr preallocate grid_parallel \
   --product-name grid_parallel \
   --storage-type local \
   --storage-driver fsspec \
-  --write-mode direct
+  --write-mode direct \
+  --input-data tutorial-data/grid-parallel \
+  --slot-start 0 \
+  --slot-end 8
 
 uv run firecube zarr slots grid_parallel \
   --target "$PRODUCT_URI" \
@@ -260,7 +261,7 @@ PY
 
 - Resolving the regular time axis from `index_spec()`
 - Mapping real timestamps to slot indexes through `inspect_item()`
-- Writing timestamp coordinates and data rows with `WriteIntent.coordinate()` and `WriteIntent.slot()`
+- Resolving each `IndexedWrite.slot` coordinate to its slot and writing the slot's timestamp value automatically
 - Validating the slot ranges before each worker writes
 
 ## Next Steps

@@ -27,12 +27,14 @@ before threads spawn; this is cleaner than parsing the WAL after the fact
 because the WAL writer batches slot events with ``flush=False`` (per the
 schema-verification pattern) and a post-test flush would still be racy.
 
-The fourth test is a regression guard for the CP-only race window: if a future
-refactor weakens the loser-thread convergence check to "CP record matches",
-losers would falsely emit VERIFIED and return when the winner is still
-mid-write (CP committed, attrs not yet stamped). This test simulates exactly
-that on-disk state and asserts the loser instead hits the retry budget and
-raises ``SlotIndexModelClaimTimeoutError`` with ZERO VERIFIED events.
+The fourth test is a backward-compat guard: on a CP-only match with
+absent attrs (pre-attrs-mirror cubes and post-crash stale-claim scenarios),
+the loser MUST re-mirror the attrs from the authoritative CP record and
+emit ``EVENT_SLOT_INDEX_MODEL_VERIFIED`` (Row 1 of the unified 5-row
+convergence policy documented on ``ChunkManager.ensure_slot_index_model``).
+This is the deliberate opposite of a stale earlier policy where losers
+timed out on CP-only state — that behavior was incompatible with older
+production cubes that lack the attrs mirror.
 """
 
 from __future__ import annotations
@@ -56,10 +58,7 @@ from firecube.core.controlplane.types import (
     SLOT_INDEX_DIRNAME,
     SlotIndexModelRecord,
 )
-from firecube.core.errors import (
-    SlotIndexModelClaimTimeoutError,
-    SlotIndexModelConflictError,
-)
+from firecube.core.errors import SlotIndexModelConflictError
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.slot_index import (
     SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
@@ -306,15 +305,20 @@ def test_concurrent_same_model_high_contention(tmp_path: Path) -> None:
     assert verified == n_threads - 1, f"expected {n_threads - 1} VERIFIED, got {verified}"
 
 
-def test_loser_never_converges_on_cp_only_state(tmp_path: Path) -> None:
-    """Regression: loser must NOT emit VERIFIED on a CP-only match.
+def test_loser_remirrors_on_cp_only_state(tmp_path: Path) -> None:
+    """Backward-compat: loser must re-mirror attrs and emit VERIFIED on a
+    CP-only match (attrs absent), so pre-attrs-mirror cubes and post-crash
+    stale-claim scenarios self-heal instead of failing loudly at startup.
 
-    Simulates the race window where the winner has written ``current.json``
-    but has not yet stamped the zarr root identity-hash attr. A loser thread
-    that treated CP-only match as convergence would return a stale (or even
-    correct-by-accident) record and emit VERIFIED, masking the unfinished
-    winner's transaction. The contract is: the loser keeps retrying until
-    both surfaces (CP + attrs) match, or it exhausts its retry budget.
+    Simulates the state where the winner (or a legacy pod) has written
+    ``current.json`` but the zarr root identity-hash attr is absent — either
+    because the cube pre-dates the attrs-mirror service, or because the winner
+    crashed after writing CP but before stamping attrs (leaving a stale claim
+    behind). Under the unified 5-row convergence policy (Row 1), the loser
+    reads the authoritative CP record, re-mirrors the attrs from it, emits
+    ``EVENT_SLOT_INDEX_MODEL_VERIFIED``, and returns the CP record — the
+    attrs mirror is idempotent (deterministic from CP) so a concurrent winner
+    would write the same value.
     """
     cm = _make_manager(tmp_path)
     model = _model(name="cp_only_regression_v1")
@@ -362,21 +366,25 @@ def test_loser_never_converges_on_cp_only_state(tmp_path: Path) -> None:
     )
 
     _start_run(cm, tmp_path, "loser")
-    with pytest.raises(SlotIndexModelClaimTimeoutError):
-        cm.ensure_slot_index_model(
-            product=_PRODUCT,
-            model=model,
-            run_id="loser",
-            max_retries=3,
-            initial_backoff_s=0.005,
-        )
+    returned = cm.ensure_slot_index_model(
+        product=_PRODUCT,
+        model=model,
+        run_id="loser",
+        max_retries=3,
+        initial_backoff_s=0.005,
+    )
+
+    assert returned.identity_hash == model.identity_hash, (
+        "loser must return the authoritative CP record"
+    )
+    assert _read_root_attrs_hash(tmp_path) == model.identity_hash, (
+        "loser must re-mirror the identity hash to the zarr root attrs"
+    )
 
     verified = counter.counts.get(EVENT_SLOT_INDEX_MODEL_VERIFIED, 0)
-    assert verified == 0, (
-        f"loser must NOT emit VERIFIED on CP-only state; got {verified} "
-        f"VERIFIED events (counter snapshot: {counter.counts!r})"
+    assert verified == 1, (
+        f"loser must emit exactly 1 VERIFIED event after re-mirror; got {verified} "
+        f"(counter snapshot: {counter.counts!r})"
     )
     recorded = counter.counts.get(EVENT_SLOT_INDEX_MODEL_RECORDED, 0)
-    assert recorded == 0, (
-        f"loser cannot enter Row 1 (CP exists), so no RECORDED expected; got {recorded}"
-    )
+    assert recorded == 0, f"loser must NOT emit RECORDED — CP already exists; got {recorded}"

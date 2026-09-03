@@ -15,17 +15,7 @@ This repo is a **batch ingestion worker** for EO datasets that writes Zarr/Parqu
 Before running the test suite, install the CLI integration test fixture plugin:
 
 ```bash
-uv pip install -e tests/fixtures/cli_test_plugin
-uv pip install -e tests/fixtures/direct_zarr_capable_test_plugin
-uv pip install -e tests/fixtures/direct_zarr_non_capable_test_plugin
-uv pip install -e tests/fixtures/multi_group_capable_test_plugin
-uv pip install -e tests/fixtures/cf_time_dim_test_plugin
-uv pip install -e tests/fixtures/index_spec_test_plugin
-uv pip install -e tests/fixtures/index_spec_integer_test_plugin
-uv pip install -e tests/fixtures/slot_shape_test_plugin
-uv pip install -e tests/fixtures/callable_payload_test_plugin
-uv pip install -e tests/fixtures/irregular_axis_test_plugin
-uv pip install -e tests/fixtures/indexed_write_test_plugin
+uv pip install -e tests/fixtures/firecube_test_plugins
 ```
 
 This is required for `tests/integration/test_ingest_command_typed.py` and related CLI tests.
@@ -45,6 +35,7 @@ When editing public docs:
 - In tutorials and how-to guides, prefer commands, examples, expected output, verification steps, and troubleshooting. Do not add them to reference or explanation pages merely to make a page look practical.
 - Explain user consequences before architecture.
 - Public docstrings are published API reference text. Follow the docstring rules in [plans/STYLE.md](plans/STYLE.md) and the reference rules in `.prompts/docs-policy.md`; when a rendered entry looks thin, enrich the docstring rather than moving it to another page.
+- Reference pages under `docs/reference/` are mkdocstrings directives plus glue, never hand-written API prose or examples — those go in the docstring, where they cannot drift. Enforced by `tests/sdk/test_reference_pages_stay_generated.py`.
 - Do not add phase history, audit findings, commit labels, reviewer notes, internal service names, private module paths, line numbers, or `plans/` references to public task pages.
 - Use public CLI flags and public SDK imports (`firecube.ingestor.api`, `firecube.core.api`) unless the page is explicitly internal.
 - Do not create or substantially rewrite a docs page without choosing the matching prompt from `.prompts/` (`write-user-doc`, `write-plugin-doc`, `write-operator-doc`, or `write-internal-doc`).
@@ -69,8 +60,9 @@ product URI (`file://`→local, `s3://`→s3; driver defaults to `fsspec`). Pass
 - `--target <uri>` — where to write the output product
 - `--write-mode [staged|direct]` — write strategy (NOT inferred from local vs remote)
 
-Write-tier commands require `--write-mode`, except `zarr multires`, which
-derives pyramid levels in place and has no staging path.
+Write-tier commands require `--write-mode`, except `zarr multires` (which
+derives pyramid levels in place) and `zarr consolidate-time-coord` (which
+mutates a single existing array in place and has no staging path).
 
 **Removed behaviors (migration required):**
 - `output_name` no longer inferred from target URI basename — use `--product-name` or plugin `PRODUCT_NAME`
@@ -101,6 +93,8 @@ Core design rules for this batch ingestor, including control-plane model and obs
 - Optional obstore dep: `src/firecube/core/filesystem/_obstore_compat.py` — import guard. Install: `uv pip install 'firecube[obstore]'`.
 - URI helpers: `src/firecube/core/uris.py` (protocol detection, file:// normalization).
 - Zarr maintenance: `src/firecube/core/zarr/validation.py`, `src/firecube/core/zarr/scrub.py`, `src/firecube/core/zarr/state.py`, `src/firecube/core/zarr/multires.py`
+- Coordinate materialization (single-writer time coords): `src/firecube/core/zarr/coord_materialization.py` — engine-owned; the zarr CLI is a thin caller.
+- Zarr CLI command package: `src/firecube/cli/zarr/` — group wiring in `__init__.py`, one module per command family, shared helpers in `_common.py`.
 - Time decode helper: `src/firecube/core/zarr/time_decode.py` — self-describing time-array decode helper (`decode_time_array`). Dispatches on `(dtype, attrs)`; used by `AppendCoverageBuilder` and the append cursor. xarray's CF decoder is a private impl detail. Output preserves the decoded `datetime64` resolution (NOT coarsened to seconds): its values feed coverage bounds and dedup keys, where a second-floor would collapse distinct sub-second timestamps. Decode failures (malformed `units`/`calendar`) propagate loudly — `AppendCoverageBuilder` does NOT swallow them (see DESIGN.md "Risks To Avoid"; the bare-except was removed 2026-06-18 because silent swallowing hid the 1970-epoch coverage bug).
 - Reserved attrs guard: `src/firecube/core/zarr/_reserved_attrs.py` — frozenset of reserved array attribute names firecube manages internally; `assert_attrs_safe(attrs)` helper.
 - Static array spec field: `ZarrArraySpec.time_indexed` — set `False` for non-time-indexed static arrays (e.g. lat/lon). Mirrors the `PRODUCT_NAME` pattern. Arrays with `time_indexed=False` are created at declared shape; they do NOT participate in time-axis preallocation.

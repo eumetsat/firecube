@@ -23,7 +23,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Final
 
-__all__ = ["FIRECUBE_STATIC_WRITTEN_ATTR", "RESERVED_ARRAY_ATTRS", "assert_attrs_safe"]
+__all__ = [
+    "FIRECUBE_GROUP_IDENTITY_HASH_ATTR",
+    "FIRECUBE_STATIC_WRITTEN_ATTR",
+    "RESERVED_ARRAY_ATTRS",
+    "assert_attrs_safe",
+]
 
 _ARRAY_DIMENSIONS_ATTR: Final[str] = "_ARRAY_DIMENSIONS"
 _FILL_VALUE_ATTR: Final[str] = "_FillValue"
@@ -38,6 +43,18 @@ Examples:
     'firecube_static_written'
 """
 
+FIRECUBE_GROUP_IDENTITY_HASH_ATTR: Final[str] = "firecube_group_identity_hash"
+"""Zarr array attr Firecube stamps on a bounded group's coord array.
+
+Mirrors the per-group identity hash so ingest startup can verify each
+bounded group independently for mixed-spec cubes without persisting a
+full resolved-index record.
+
+Examples:
+    >>> FIRECUBE_GROUP_IDENTITY_HASH_ATTR
+    'firecube_group_identity_hash'
+"""
+
 RESERVED_ARRAY_ATTRS: frozenset[str] = frozenset(
     {
         _ARRAY_DIMENSIONS_ATTR,
@@ -46,6 +63,10 @@ RESERVED_ARRAY_ATTRS: frozenset[str] = frozenset(
         _FIRECUBE_SPAN_ID_ATTR,
         _FIRECUBE_INTERNAL_ATTR,
         FIRECUBE_STATIC_WRITTEN_ATTR,
+        FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
+        "firecube_coord_managed",
+        "firecube_preallocated",
+        "firecube_consolidated_at",
     }
 )
 """Reserved Zarr array attribute keys managed by Firecube.

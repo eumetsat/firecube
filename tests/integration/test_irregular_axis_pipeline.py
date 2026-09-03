@@ -167,7 +167,7 @@ def _dry_run_manifest(plugin: str, product: str, target_path: Path) -> dict[str,
         _preallocate_args(plugin, product, target_path, dry_run=True),
     )
     assert result.exit_code == 0, result.output
-    return cast(dict[str, Any], json.loads(result.output))
+    return cast(dict[str, Any], json.loads(result.stdout))
 
 
 def _persist_and_read_hash(plugin: str, product: str, target_path: Path) -> str:

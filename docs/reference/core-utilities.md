@@ -6,7 +6,10 @@ preparation, and time conversion.
 
 `RESERVED_ARRAY_ATTRS`, `assert_attrs_safe()`, and
 `FIRECUBE_STATIC_WRITTEN_ATTR` describe the array attribute keys Firecube
-owns for Zarr writes.
+owns for Zarr writes. The sealing marker constants stamped by `firecube zarr
+preallocate` and `firecube zarr consolidate-time-coord` are operator-tooling
+surface; they are documented with those commands in
+[CLI reference](cli.md).
 
 `compare_zarr_stores()` performs a read-only, driver-aware comparison of two
 Zarr stores and returns `ZarrCompareReport`.
@@ -101,6 +104,20 @@ Zarr stores and returns `ZarrCompareReport`.
 ::: firecube.core.api.assert_attrs_safe
 
 ::: firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR
+
+The sealing markers record who owns a time-coordinate array's values.
+`firecube zarr preallocate` stamps `ATTR_PREALLOCATED` on grid-valued
+coordinates and `ATTR_COORD_MANAGED` on observed-values coordinates it
+materializes; `firecube zarr consolidate-time-coord` stamps
+`ATTR_PREALLOCATED` together with `ATTR_CONSOLIDATED_AT`.
+
+::: firecube.core.api.ATTR_PREALLOCATED
+
+::: firecube.core.api.ATTR_COORD_MANAGED
+
+::: firecube.core.api.ATTR_CONSOLIDATED_AT
+
+::: firecube.core.api.assert_coord_markers_consistent
 
 ## Batch Resources
 

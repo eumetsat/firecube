@@ -34,6 +34,7 @@ The `.firecube/` directory is the authoritative product-local control-plane root
 - `ChunkManager.list_runs()` supports `status` and `non_terminal` filtering.
 - `ChunkManager.time_coverage_summary()` returns per-group time bounds and span counts, useful for diagnostics and resume overlap detection.
 - Resume authority is control-plane-primary: `ResumeGuard` decides whether a run may proceed based solely on WAL state. Non-terminal runs block resume and require explicit `chunks runs abandon`. The data store is not consulted unless `validate_zarr=true`.
+- For products with mixed bounded/unbounded groups, the full resolved-index record is not persisted; per-group identity verification for bounded groups happens at ingest startup (see restored per-group verification path).
 
 ## Plugin Contract
 
@@ -119,6 +120,32 @@ These entries record audit findings that were reviewed and accepted rather than 
 `ChunkManager` in `src/firecube/core/controlplane/manager.py` exposes 31 public methods, of which 16 are pass-throughs to the underlying `ManifestRepository` and `DeletionEngine`. This width is intentional.
 
 **Why the width is not bloat:** The DESIGN.md invariant "all control-plane ops via the facade" (see Control-Plane Model above) requires that every caller, including engine code, maintenance tooling, and tests, goes through `ChunkManager` rather than reaching into `repo.py` or `deletion.py` directly. The method count tracks the breadth of the control-plane capability, not a design smell. After the post-C1 repo/deletion split, the facade fronts those split units unchanged; the split reduced internal coupling without shrinking the public surface, which is correct. Thinning the facade would require callers to import from internal modules, violating the boundary.
+
+## Time-coordinate arrays: single-writer invariant
+
+Time-coordinate arrays are engine-owned single-writer surfaces. Ingest pods never write them.
+
+The engine materializes coordinate values during `firecube zarr preallocate`. Pods that run later verify the stored value against the incoming coordinate and raise `SchemaDriftError` on mismatch. They never overwrite. This eliminates the read-modify-write race that the legacy per-slot chunk model exposed under parallel ingestion.
+
+### Axis regime table
+
+Each time-axis declaration falls into one of three regimes. The regime determines what values are stored, which component writes them, and which marker is stamped.
+
+| Regime | Stored values | Single writer | Marker stamped |
+|---|---|---|---|
+| Regular exact (`mode="exact"`) | Nominal grid: `epoch + slot * cadence` | `preallocate` | `firecube_preallocated` |
+| Regular floor (`mode="floor"`) | Per-item observed timestamps from `inspect_item(item).coordinate` | `preallocate` (per window, via `--input-data` discovery) | `firecube_coord_managed` |
+| Irregular explicit or discovered (`IrregularTimeAxis`, `values=AUTO`) | Declared or discovered coordinates | `preallocate` | `firecube_preallocated` |
+
+The `floor` regime is an unsealed managed surface: preallocate fills only the slots it discovers in the current window and stamps `firecube_coord_managed`. NaT holes remain for windows not yet processed. Pods verify-or-error; they never fill holes.
+
+### Marker lifecycle
+
+Each coordinate array carries at most one of two mutually exclusive markers: `firecube_preallocated` (grid or irregular values written; pods verify-only) and `firecube_coord_managed` (engine-managed observed surface; pods verify-only). Both markers present is a terminal error: detection raises `SchemaDriftError` before any slot read or write, and the store requires manual inspection. An array with neither marker is a pre-marker legacy cube; current `preallocate` never creates one, because it stamps the marker at array creation, before any value is written.
+
+`firecube_consolidated_at` is a separate timestamp attr stamped by `firecube zarr consolidate-time-coord`. Its presence alongside `firecube_preallocated` means the array was retroactively densified from a legacy per-slot layout; the accompanying `ConsolidatedTimeCoord` WAL event is what `ResumeGuard` reads to block further ingest on the sealed cube.
+
+Materialization is idempotent and window-extensible: a re-run reconciles per slot under the held global materialization claim and refuses on divergent values, for both regimes (grid values are deterministic, so the exact regime reconciles identically). Partial NaT under a marker is a reconcilable state, not corruption. See the DONE.md 2026-09-01 amendment for the per-slot rules.
 
 ## Related Files
 

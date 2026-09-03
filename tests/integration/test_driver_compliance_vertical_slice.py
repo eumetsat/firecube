@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Driver-compliance vertical slice (T2.4).
+"""Driver-compliance vertical slice.
 
-This test gates the Wave 3 fan-out by proving the storage-driver invariant on
-ONE end-to-end critical path before parallelizing migration across the rest of
-the codebase. The three operations exercised — zarr store creation, group
+This test proves the storage-driver invariant on ONE end-to-end critical
+path. The three operations exercised — zarr store creation, group
 validation, and WAL event recording — together cover the data plane, the
 metadata plane, and the control plane, which is the minimum slice that proves
 "one driver everywhere" (AGENTS.md).
@@ -85,7 +84,7 @@ def _exercise_critical_path(session: StorageSession, *, run_id: str) -> None:
             output_path=uri.to_str(),
             output_format="zarr",
             size=0,
-            meta={"test": "T2.4-vertical-slice"},
+            meta={"test": "driver-compliance-vertical-slice"},
         )
     finally:
         cm.close()
@@ -98,7 +97,7 @@ def test_fsspec_path(tmp_path: Path) -> None:
     `storage_driver=fsspec`. This is the baseline functional assertion.
     """
     session = make_test_session(tmp_path, driver="fsspec")
-    _exercise_critical_path(session, run_id="T2.4-fsspec-run")
+    _exercise_critical_path(session, run_id="vertical-slice-fsspec-run")
 
     # Sanity: the WAL artifact actually landed under .firecube/ on disk.
     control_root = Path(session.product.control_root_uri.path)
@@ -128,7 +127,7 @@ def test_obstore_no_bypass(tmp_path: Path) -> None:
     session = make_test_session(tmp_path, driver="fsspec")
 
     with patch("firecube.core.filesystem.ops._open_fsspec_url") as mock_open:
-        _exercise_critical_path(session, run_id="T2.4-obstore-no-bypass-run")
+        _exercise_critical_path(session, run_id="vertical-slice-no-bypass-run")
 
     assert mock_open.call_count == 0, (
         f"Driver invariant violated: `_open_fsspec_url` was called "

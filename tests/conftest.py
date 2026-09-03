@@ -29,7 +29,7 @@ sys.path.insert(0, str(src_path))
 
 
 def pytest_addoption(parser):
-    """Register --strict-deps CLI option for CI fail-fast on missing optional extras."""
+    """Register `--strict-deps` and `--trials` CLI options."""
     parser.addoption(
         "--strict-deps",
         action="store_true",
@@ -38,6 +38,13 @@ def pytest_addoption(parser):
             "Fail collection if any test-required optional dependency is missing. "
             "Install with: uv sync --extra test"
         ),
+    )
+    parser.addoption(
+        "--trials",
+        action="store",
+        type=int,
+        default=30,
+        help="Parametrized trial count for concurrency regression suites (default: 30).",
     )
 
 
@@ -77,30 +84,34 @@ def pytest_configure(config):
 def pytest_sessionstart(session):
     """Fail fast if any in-tree fixture plugin is not installed."""
     required_plugins = (
-        ("cli_test_plugin", "cli_test_plugin"),
-        ("direct_zarr_capable_test_plugin", "direct_zarr_capable_test_plugin"),
-        ("direct_zarr_non_capable_test_plugin", "direct_zarr_non_capable_test_plugin"),
-        ("multi_group_capable_test_plugin", "multi_group_capable_test_plugin"),
-        ("cf_time_dim_test_plugin", "cf_time_dim_test_plugin"),
-        ("slot_shape_test_plugin", "slot_shape_test_plugin"),
-        ("index_spec_test_plugin", "index_spec_test_plugin"),
-        ("index_spec_integer_test_plugin", "index_spec_integer_test_plugin"),
-        ("callable_payload_test_plugin", "callable_payload_test_plugin"),
-        ("irregular_axis_test_plugin", "irregular_axis_test_plugin"),
-        ("indexed_write_test_plugin", "indexed_write_test_plugin"),
+        "cli_test_plugin",
+        "direct_zarr_capable_test_plugin",
+        "direct_zarr_non_capable_test_plugin",
+        "multi_group_capable_test_plugin",
+        "cf_time_dim_test_plugin",
+        "slot_shape_test_plugin",
+        "index_spec_test_plugin",
+        "index_spec_integer_test_plugin",
+        "callable_payload_test_plugin",
+        "irregular_axis_test_plugin",
+        "regular_axis_test_plugin",
+        "indexed_write_test_plugin",
+        "mixed_bounded_unbounded_test_plugin",
     )
     missing_plugins = []
 
-    for module_name, fixture_dir in required_plugins:
+    for module_name in required_plugins:
         try:
             __import__(module_name)
         except ImportError:
-            missing_plugins.append((module_name, fixture_dir))
+            missing_plugins.append(module_name)
 
     if missing_plugins:
         details = ["Missing required fixture plugins:"]
-        for module_name, fixture_dir in missing_plugins:
-            details.append(f"- {module_name}: uv pip install -e tests/fixtures/{fixture_dir}")
+        details.extend(f"- {module_name}" for module_name in missing_plugins)
+        details.append(
+            "Install the unified fixture distribution: uv pip install -e tests/fixtures/firecube_test_plugins"
+        )
         raise pytest.UsageError("\n".join(details))
 
 

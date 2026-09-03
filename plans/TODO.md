@@ -26,7 +26,7 @@ restored when the write context exits.
 - **Landed:** `IndexSpec` + `RegularTimeAxis` + `ResolvedIndex`; byte parity for FCI and OPERA; recursion defect fixed.
 - **Landed:** `IntegerAxis` + engine-owned `.firecube/index/current.json` record (`ResolvedIndexRecord`); `firecube zarr index show/verify/rebuild` CLI; atomic reader migration path documented.
 - **Landed:** `IrregularTimeAxis` + `AUTO` sentinel + content-addressed item manifest; `--dry-run` for preallocate; `--derived` for index show; closes #27 spirit. See DONE.md 2026-08-24.
-- **Landed:** `IndexedWrite` high-level abstraction + `build_indexed_write` hook; documented in `docs/guides/plugins/direct-zarr.md` and the API reference. See DONE.md 2026-08-24.
+- **Landed:** `IndexedWrite` high-level abstraction, merged into a single `build_write_intents` contract accepting mixed `WriteIntent | IndexedWrite` lists; documented in `docs/guides/plugins/direct-zarr.md` and the API reference. See DONE.md 2026-08-24 and its 2026-09-02 amendment.
 - **Future deprecation pass:** `SlotIndexModel`, `SlotAxis`, and `as_legacy_slot_index_model()` are kept for byte-parity compatibility with cubes written before the new index model. Schedule a deprecation pass once all known production cubes have been migrated via `firecube zarr index rebuild`. The deprecation should add `DeprecationWarning` on construction, update the allowlist in `test_api_docs_coverage.py`, and remove the symbols in a subsequent major version.
 
 ---
@@ -180,7 +180,7 @@ power in the default test loop.
 
 ### §38 `zarr validate` static-marker check: configurable time-dimension names (post-2026-08-25)
 
-`src/firecube/cli/zarr.py::_static_marker_failures` classifies an array as
+`src/firecube/cli/zarr/_validate.py::_static_marker_failures` classifies an array as
 time-indexed when its first dimension is named `timestamp`, `time`, or
 `firecube_timestamp_state`; any other first-dimension name is treated as
 static and must carry the `firecube_static_written` marker. A plugin using a

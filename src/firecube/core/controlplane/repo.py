@@ -42,7 +42,7 @@ from firecube.core.controlplane._snapshot import (
 from firecube.core.controlplane._wal_reader import WalReader
 from firecube.core.controlplane._wal_writer import ManifestWalWriter
 from firecube.core.controlplane.claims import FilesystemClaimService
-from firecube.core.controlplane.events import RunEventWriter
+from firecube.core.controlplane.events import ConsolidatedTimeCoord, RunEventWriter
 from firecube.core.controlplane.metrics import (
     record_wal_snapshot_rebuild,
 )
@@ -56,6 +56,7 @@ from firecube.core.controlplane.types import (
     CLAIMS_DIRNAME,
     CONTROL_DIRNAME,
     DEFAULT_RUN_STALE_THRESHOLD_S,
+    EVENT_CONSOLIDATED_TIME_COORD,
     LATEST_POINTER,
     RUNS_DIRNAME,
     SCHEMA_VERSION,
@@ -304,6 +305,28 @@ class ManifestRepository:
 
     def record_index_ensured_event(self, event: IndexEnsuredEvent) -> None:
         self._wal_writer.record_index_ensured_event(event)
+
+    def record_time_coord_consolidation(self, event: ConsolidatedTimeCoord) -> None:
+        self._wal_writer.record_time_coord_consolidation(
+            product=self.binding.identity.product_name,
+            event=event,
+        )
+
+    def list_time_coord_consolidations(self, *, product: str) -> list[ConsolidatedTimeCoord]:
+        events: list[ConsolidatedTimeCoord] = []
+        for run_entry in self._list_run_entries(product):
+            for raw_event in self._read_run_events(product, run_entry):
+                if raw_event.get("event_type") != EVENT_CONSOLIDATED_TIME_COORD:
+                    continue
+                try:
+                    events.append(ConsolidatedTimeCoord.from_dict(raw_event.get("record", {})))
+                except ValueError:
+                    self.log.warning(
+                        "Skipping malformed consolidated time coord event for run %s: %s",
+                        raw_event.get("run_id", "<unknown>"),
+                        repr(raw_event)[:200],
+                    )
+        return events
 
     def record_slot_index_model_event(
         self,

@@ -148,6 +148,42 @@ def test_nan_fill_array_gets_no_fill_value_attr(tmp_path: Path) -> None:
     json.loads((store_path / _GROUP / _ARRAY / "zarr.json").read_text())
 
 
+def test_finite_float_fill_array_is_xarray_openable(tmp_path: Path) -> None:
+    # A bare float _FillValue attr makes xr.open_zarr raise TypeError for
+    # float dtypes; the attr must carry the base64-packed IEEE-754 form.
+    store_path = tmp_path / "float-fill.zarr"
+    writer = RegionZarrWriter(f"file://{store_path}")
+    arr = writer.ensure_group(
+        f"{_GROUP}/{_ARRAY}",
+        shape=_SHAPE,
+        dtype=np.float32,
+        fill_value=np.float32(-999.0),
+        dimension_names=_DIMS,
+    )
+
+    stamped = dict(arr.attrs)["_FillValue"]
+    assert isinstance(stamped, str)
+
+    counts = _open_counts(store_path, mode="a")
+    counts[0, :] = np.array([7.0, 11.0], dtype=np.float32)
+
+    ds = xr.open_dataset(
+        str(store_path),
+        engine="zarr",
+        group=_GROUP,
+        mask_and_scale=True,
+        consolidated=False,
+    )
+    try:
+        data = ds[_ARRAY]
+        assert data.encoding["_FillValue"] == -999.0
+        assert data.values[0, 0] == 7.0
+        assert np.isnan(data.values[1, 0])
+        assert np.isnan(data.values[1, 1])
+    finally:
+        ds.close()
+
+
 def test_integer_fill_value_attr_still_stamped(tmp_path: Path) -> None:
     store_path = tmp_path / "int-fill.zarr"
     writer = RegionZarrWriter(f"file://{store_path}")

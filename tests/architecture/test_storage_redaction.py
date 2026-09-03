@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Wave 7 / T4b: Credential redaction boundary tests.
+"""Credential redaction boundary tests.
 
 These tests assert that sentinel credentials placed in ``StorageBinding`` never
 appear in serialized artifacts emitted by:

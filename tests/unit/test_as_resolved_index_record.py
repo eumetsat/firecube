@@ -71,6 +71,20 @@ def _mixed_spec(*, name: str = "mixed") -> IndexSpec:
     )
 
 
+def _unbounded_regular_spec(*, name: str = "unbounded_regular") -> IndexSpec:
+    return IndexSpec(
+        name=name,
+        groups={
+            "data": RegularTimeAxis(
+                coordinate="time",
+                epoch="2024-01-01T00:00:00Z",
+                cadence_s=600,
+                mode="floor",
+            ),
+        },
+    )
+
+
 def test_canonical_index_payload_is_deterministic_for_regular_axes() -> None:
     resolved = resolve_index_spec(_regular_spec(), time_dim_name="time")
 
@@ -99,6 +113,28 @@ def test_canonical_index_payload_is_deterministic_for_regular_axes() -> None:
             "end_date": "2024-01-01T01:00:00Z",
         },
     }
+
+
+def test_unbounded_regular_axis_payload_uses_null_size_and_roundtrips() -> None:
+    resolved = resolve_index_spec(_unbounded_regular_spec(), time_dim_name="time")
+
+    assert resolved.position("data", "2024-01-01T00:00:00Z") == 0
+    assert resolved.position("data", "2024-01-01T00:19:59Z") == 1
+    assert resolved.position("data", "2024-01-02T00:00:00Z") == 144
+
+    payload = resolved.canonical_index_payload()
+    assert payload["groups"]["data"] == {
+        "kind": "regular_time",
+        "size": None,
+        "params": {
+            "epoch": "2024-01-01T00:00:00Z",
+            "cadence_s": 600,
+            "mode": "floor",
+        },
+    }
+
+    record = resolved.as_resolved_index_record(run_id="r1", recorded_at="2026-08-20T00:00:00Z")
+    assert ResolvedIndexRecord.from_json_bytes(record.to_json_bytes()) == record
 
 
 def test_canonical_index_payload_is_deterministic_for_integer_axes() -> None:

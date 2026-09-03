@@ -49,12 +49,14 @@ EXCLUDED_FIXTURE_DIRS: frozenset[str] = frozenset(
 
 
 def _actual_fixture_plugins() -> set[str]:
-    """Directories under tests/fixtures/ whose pyproject.toml registers
-    at least one ``firecube.plugins`` entry point AND whose name is not
-    in ``EXCLUDED_FIXTURE_DIRS``.
+    """Importable fixture modules shipped by tests/fixtures/ distributions.
 
-    The naming convention is that pre-install required fixtures end in
-    ``_test_plugin``; the exclusion list catches any historical outliers.
+    A fixture distribution is any directory under tests/fixtures/ (not in
+    ``EXCLUDED_FIXTURE_DIRS``) whose pyproject.toml registers at least one
+    ``firecube.plugins`` entry point. One distribution may ship several
+    modules (the unified ``firecube_test_plugins`` package ships all of
+    them); the guard in conftest imports MODULES, so the comparison set is
+    the module names from each distribution's hatch ``packages`` list.
     """
     plugins: set[str] = set()
     for path in FIXTURES_DIR.iterdir():
@@ -67,17 +69,44 @@ def _actual_fixture_plugins() -> set[str]:
             continue
         data = tomllib.loads(pyproject.read_text())
         entry_points = data.get("project", {}).get("entry-points", {}).get("firecube.plugins", {})
-        if entry_points:
-            plugins.add(path.name)
+        if not entry_points:
+            continue
+        packages = (
+            data.get("tool", {})
+            .get("hatch", {})
+            .get("build", {})
+            .get("targets", {})
+            .get("wheel", {})
+            .get("packages", [f"src/{path.name}"])
+        )
+        for pkg in packages:
+            plugins.add(pkg.rsplit("/", 1)[-1])
     return plugins
 
 
+def _actual_fixture_distributions() -> set[str]:
+    """Directories under tests/fixtures/ that must appear in install blocks:
+    any non-excluded directory whose pyproject.toml registers at least one
+    ``firecube.plugins`` entry point."""
+    dists: set[str] = set()
+    for path in FIXTURES_DIR.iterdir():
+        if not path.is_dir() or path.name in EXCLUDED_FIXTURE_DIRS:
+            continue
+        pyproject = path / "pyproject.toml"
+        if not pyproject.exists():
+            continue
+        data = tomllib.loads(pyproject.read_text())
+        if data.get("project", {}).get("entry-points", {}).get("firecube.plugins", {}):
+            dists.add(path.name)
+    return dists
+
+
 def _conftest_required_plugins() -> set[str]:
-    """Names in tests/conftest.py's required_plugins tuple (first element
-    of each tuple pair)."""
+    """Module names in tests/conftest.py's required_plugins tuple."""
     conftest = (REPO_ROOT / "tests" / "conftest.py").read_text()
-    matches = re.findall(r'\(\s*"([^"]+)"\s*,\s*"[^"]+"\s*\)', conftest)
-    return set(matches)
+    match = re.search(r"required_plugins = \((.*?)\)", conftest, re.S)
+    assert match is not None, "required_plugins tuple not found in tests/conftest.py"
+    return set(re.findall(r'"([A-Za-z0-9_]+)"', match.group(1)))
 
 
 def _install_block_plugins(path: Path) -> set[str]:
@@ -99,7 +128,7 @@ def test_conftest_lists_match_actual_fixtures() -> None:
 
 
 def test_test_md_install_block_matches_actual_fixtures() -> None:
-    actual = _actual_fixture_plugins()
+    actual = _actual_fixture_distributions()
     listed = _install_block_plugins(REPO_ROOT / "plans" / "TEST.md")
     missing = actual - listed
     assert not missing, (
@@ -114,7 +143,7 @@ def test_test_md_install_block_matches_actual_fixtures() -> None:
     [".github/workflows/ci.yml", ".github/workflows/publish.yml"],
 )
 def test_workflow_install_blocks_match_actual_fixtures(workflow: str) -> None:
-    actual = _actual_fixture_plugins()
+    actual = _actual_fixture_distributions()
     listed = _install_block_plugins(REPO_ROOT / workflow)
     missing = actual - listed
     assert not missing, (
@@ -125,7 +154,7 @@ def test_workflow_install_blocks_match_actual_fixtures(workflow: str) -> None:
 
 
 def test_agents_md_install_block_matches_actual_fixtures() -> None:
-    actual = _actual_fixture_plugins()
+    actual = _actual_fixture_distributions()
     listed = _install_block_plugins(REPO_ROOT / "AGENTS.md")
     missing = actual - listed
     assert not missing, (
