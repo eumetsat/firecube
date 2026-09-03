@@ -181,8 +181,8 @@ See also: firecube plugins install, firecube plugins describe
 @click.option("--license", help="license type (e.g. MIT, Apache-2.0)")
 @click.option(
     "--template",
-    type=click.Choice(["base", "zarr", "parquet"]),
-    help="ingestor template to use",
+    type=click.Choice(["zarr", "parquet", "base"]),
+    help="ingestor template to use (default: zarr)",
 )
 @click.option(
     "--write-strategy",
@@ -218,8 +218,8 @@ def create_plugin(
         if not template:
             template = click.prompt(
                 "Template",
-                default="base",
-                type=click.Choice(["base", "zarr", "parquet"]),
+                default="zarr",
+                type=click.Choice(["zarr", "parquet", "base"]),
             )
         if template == "zarr" and not write_strategy:
             write_strategy = click.prompt(
@@ -232,7 +232,7 @@ def create_plugin(
     author = author or "Firecube Developer"
     email = email or "dev@example.com"
     license = license or "MIT"
-    template = template or "base"
+    template = template or "zarr"
 
     # Resolve zarr template variant based on write strategy
     resolved_template = template

@@ -42,7 +42,7 @@ declare `IntegerAxis`; see the
 
 ## Implement The Plugin
 
-Follow [Create a Plugin](create-a-plugin.md), choose the `zarr` template, and keep the generated registration and product name. Replace the `index_spec`, `inspect_item`, `zarr_schema`, and `build_write_intents` stubs.
+Follow [Create a Plugin](create-a-plugin.md), choose the `zarr` template with the `zarr-python` write strategy, and keep the generated registration and product name. The generated plugin is the listing below with `read_product_item` unimplemented; adapt `index_spec` and `zarr_schema` to the product's time axis and arrays.
 
 The example ingests NetCDF granules that each carry one observation time and
 four sample values. Only `read_product_item` knows that format: swap its body

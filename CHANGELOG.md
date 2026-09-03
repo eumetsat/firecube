@@ -158,6 +158,26 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Changed
 
+- `firecube plugins create` generates a complete plugin with one reader
+  function unimplemented instead of hook stubs that raise. Each template is
+  its guide's own listing: `write_product_item` (base), `read_dataset` (zarr),
+  `read_table` (parquet), and `read_product_item` (DirectZarr) raise
+  `NotImplementedError` naming the file they were called for; every hook is
+  already wired to them. On a fresh DirectZarr scaffold `firecube zarr slots`,
+  `preallocate`, and `plugins describe` work immediately, and `ingest` fails
+  at the reader. The empty `PluginConfig` subclass is gone (attach one when
+  the product needs typed options), the generated `pyproject.toml` carries
+  `[tool.ruff]`, `[tool.pyright]`, and a commented `[tool.uv.sources]` hint
+  for a local Firecube checkout, the generated test file holds one real
+  registration test instead of guidance text, and the generated README states
+  that the project has its own environment. Scaffolding tests now render
+  every template, drive the hooks, and lint and typecheck the rendered
+  project with its own config, so the templates cannot drift from the API
+  unnoticed.
+- `firecube plugins create` defaults to the `zarr` template (with the `xarray`
+  write strategy) instead of `base`, both at the interactive prompt and with
+  `--non-interactive`; `base` is the advanced custom-pipeline choice and must
+  now be requested explicitly.
 - `EngineConfig` rejects `pipeline_workers < 1` and `pipeline_batch_size < 1`
   at construction instead of accepting them silently.
 - `ResolvedIndexConflictError` message now includes a field-level diff (groups symmetric difference, per-group axis changes, top-level name/scalar changes) alongside the two truncated hashes -- no more hash-only conflict messages.
@@ -193,6 +213,15 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Fixed
 
+- `firecube plugins create --template zarr --write-strategy zarr-python` no
+  longer generates a plugin that crashes at startup: the DirectZarr scaffold
+  passed the removed `end=` keyword to `RegularTimeAxis` (now `end_date=`),
+  which every engine startup and `firecube zarr slots`/`preallocate` call hit
+  before the author had written a line. Scaffolded plugins now depend on
+  `firecube>=0.1.5`, the first release carrying the API the templates use;
+  the old `>=0.1.0` floor let `uv sync` resolve a release without
+  `IndexedWrite`/`TimeAxis`, so the plugin failed to import and silently
+  disappeared from `firecube plugins list`.
 - Float-dtype arrays with a finite fill value (for example `-999.0` sentinels)
   are no longer unopenable by xarray: the stamped `_FillValue` attribute now
   carries the base64-encoded IEEE-754 form xarray decodes for float dtypes,

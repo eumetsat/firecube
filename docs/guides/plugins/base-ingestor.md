@@ -34,9 +34,10 @@ Parquet templates. See [Plugin Extensions](extensions.md) before choosing
 ## Implement The Batch Boundary
 
 Follow [Create a Plugin](create-a-plugin.md), select `base`, then
-[install the plugin](install-a-plugin.md). Replace the generated
-`_process_batch` stub. The example writer copies each granule into a local
-target directory; swap `write_product_item` for the product's real writer:
+[install the plugin](install-a-plugin.md). Implement the generated
+`write_product_item` writer that `_process_batch` calls. The example below
+copies each granule into a local target directory; swap its body for the
+product's real writer:
 
 ```python
 import shutil
