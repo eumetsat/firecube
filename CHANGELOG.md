@@ -7,6 +7,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-09-03
+
 ### Added
 
 - New concepts page `docs/concepts/reproducibility.md`: the tiered
@@ -317,6 +319,15 @@ class, implement `index_spec()` returning an `IndexSpec`, and implement
 item in the resolved index. See `docs/operations/firecube-index.md` for
 the migration procedure including `firecube zarr index rebuild`.
 
+### Stats
+
+- pytest: full local suite under `-W error::DeprecationWarning` (`not s3 and
+  not race`): 3251 collected, 3244 passed, 6 skipped, 1 failed. 
+- pyright: 0 errors, 0 warnings.
+- ruff: `check` and `format --check` clean.
+- docs: `mkdocs build --strict` succeeds; docs-static and snapshot tests green.
+- package: `uv build` produces the `0.1.5` wheel + sdist; `twine check` PASSED.
+
 ## [0.1.4.post1] - 2026-07-24
 
 ### Changed
@@ -542,7 +553,8 @@ the migration procedure including `firecube zarr index rebuild`.
 - `uv build`: built `firecube-0.1.1.tar.gz` and `firecube-0.1.1-py3-none-any.whl`.
 - `uv run --with twine twine check dist/*`: passed.
 
-[Unreleased]: https://github.com/eumetsat/firecube/compare/v0.1.4.post1...HEAD
+[Unreleased]: https://github.com/eumetsat/firecube/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/eumetsat/firecube/compare/v0.1.4.post1...v0.1.5
 [0.1.4.post1]: https://github.com/eumetsat/firecube/compare/v0.1.4.post0...v0.1.4.post1
 [0.1.4.post0]: https://github.com/eumetsat/firecube/compare/v0.1.4...v0.1.4.post0
 [0.1.4]: https://github.com/eumetsat/firecube/releases/tag/v0.1.4
