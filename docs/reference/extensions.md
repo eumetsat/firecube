@@ -16,6 +16,7 @@ require the `firecube[healpix]` extra.
     "grid_xarray_dataset",
     "aggregate_by_position",
     "DuckDbMixin",
+    "parse_pattern",
 ]) }}
 
 ## HEALPix Regridding
@@ -55,6 +56,10 @@ cooperative `batch_setup`/`batch_teardown` lifecycle hooks.
           - setup_duckdb
           - teardown_duckdb
           - prepare_duckdb_schema
+
+## String Patterns
+
+::: firecube.ingestor.extensions.parse_pattern
 
 ## See Also
 

@@ -129,7 +129,7 @@ indexed array may begin at length zero, and Firecube grows it when an intent
 targets a later index. Static arrays are created at their declared shape.
 
 A fixed, preallocated global extent is required only when the plugin opts into
-slot-range parallelism; see [Parallel Zarr Writes](parallel-writes.md) for
+slot-range parallelism; see [How Parallel Zarr Writes Stay Safe](parallel-writes.md) for
 that safety model.
 
 ## When To Use It
@@ -146,9 +146,9 @@ surface.
 
 - **[`DirectZarrIngestor` Guide](../../../guides/plugins/direct-zarr.md)** —
   implement the axis, schema, and write-intent hooks
-- **[Parallel Zarr Writes](parallel-writes.md)** — understand the slot-range
+- **[How Parallel Zarr Writes Stay Safe](parallel-writes.md)** — understand the slot-range
   safety model
 - **[GenericZarrIngestor (Append)](generic-append.md)** — compare the complete
   dataset contract
-- **[DirectZarrIngestor (Region) Tutorial](../../../tutorials/direct-zarr-parallel.md)** —
-  build and run a slot-capable plugin
+- **[Slot-Based Parallelism: MTG FCI L1C](../../../showcase/mtg-fci-l1c-benchmarks.ipynb)** —
+  run a public plugin with parallel slot workers

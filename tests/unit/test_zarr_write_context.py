@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,7 +25,6 @@ from firecube.ingestor.runtime.zarr.write_context import _VALID_SCHEDULERS, Zarr
 class TestZarrWriteContextValidation:
     def test_rejects_invalid_scheduler(self):
         ctx = ZarrWriteContext(
-            write_lock=threading.Lock(),
             configured_scheduler="bogus",
         )
         with pytest.raises(ConfigurationError, match="Invalid dask_scheduler='bogus'"):
@@ -34,7 +32,6 @@ class TestZarrWriteContextValidation:
 
     def test_rejects_mutually_exclusive_threads_and_async(self):
         ctx = ZarrWriteContext(
-            write_lock=threading.Lock(),
             write_threads=4,
             async_concurrency=20,
         )
@@ -42,43 +39,20 @@ class TestZarrWriteContextValidation:
             ctx.__enter__()
 
     def test_accepts_write_threads_with_default_async(self):
-        lock = threading.Lock()
         ctx = ZarrWriteContext(
-            write_lock=lock,
             write_threads=4,
             async_concurrency=10,
         )
         with ctx:
-            assert not lock.acquire(blocking=False), "lock should be held"
-        assert lock.acquire(blocking=False), "lock should be released"
-        lock.release()
+            pass
 
     @pytest.mark.parametrize("scheduler", sorted(_VALID_SCHEDULERS))
     def test_accepts_all_valid_schedulers(self, scheduler: str):
         ctx = ZarrWriteContext(
-            write_lock=threading.Lock(),
             configured_scheduler=scheduler,
         )
         with ctx:
             pass
-
-
-class TestZarrWriteContextLocking:
-    def test_acquires_and_releases_lock(self):
-        lock = threading.Lock()
-        ctx = ZarrWriteContext(write_lock=lock)
-        with ctx:
-            assert not lock.acquire(blocking=False)
-        assert lock.acquire(blocking=False)
-        lock.release()
-
-    def test_releases_lock_on_exception(self):
-        lock = threading.Lock()
-        ctx = ZarrWriteContext(write_lock=lock)
-        with pytest.raises(RuntimeError, match="boom"), ctx:
-            raise RuntimeError("boom")
-        assert lock.acquire(blocking=False)
-        lock.release()
 
 
 class TestZarrWriteContextDaskConfig:
@@ -90,7 +64,6 @@ class TestZarrWriteContextDaskConfig:
             mock_set.return_value = mock_cm
 
             ctx = ZarrWriteContext(
-                write_lock=threading.Lock(),
                 write_threads=8,
             )
             with ctx:
@@ -106,7 +79,6 @@ class TestZarrWriteContextDaskConfig:
             mock_set.return_value = mock_cm
 
             ctx = ZarrWriteContext(
-                write_lock=threading.Lock(),
                 configured_scheduler="synchronous",
             )
             with ctx:
@@ -115,7 +87,7 @@ class TestZarrWriteContextDaskConfig:
             mock_set.assert_called_with(scheduler="synchronous")
 
     def test_no_scheduler_uses_nullcontext(self):
-        ctx = ZarrWriteContext(write_lock=threading.Lock())
+        ctx = ZarrWriteContext()
         with ctx:
             pass
 
@@ -124,7 +96,6 @@ class TestZarrWriteContextZarrConfig:
     def test_synchronous_forces_async_concurrency_1(self):
         with patch("zarr.config.set") as mock_zarr_set:
             ctx = ZarrWriteContext(
-                write_lock=threading.Lock(),
                 configured_scheduler="synchronous",
             )
             with ctx:
@@ -135,7 +106,6 @@ class TestZarrWriteContextZarrConfig:
     def test_write_threads_forces_async_concurrency_1(self):
         with patch("zarr.config.set") as mock_zarr_set:
             ctx = ZarrWriteContext(
-                write_lock=threading.Lock(),
                 write_threads=4,
             )
             with ctx:
@@ -146,7 +116,6 @@ class TestZarrWriteContextZarrConfig:
     def test_default_uses_configured_async_concurrency(self):
         with patch("zarr.config.set") as mock_zarr_set:
             ctx = ZarrWriteContext(
-                write_lock=threading.Lock(),
                 async_concurrency=32,
             )
             with ctx:

@@ -175,8 +175,9 @@ def test_resume_not_broken_by_encoding(tmp_path: Path, monkeypatch: pytest.Monke
 
     assert first.exit_code == 0, first.output
     assert second.exit_code != 0
-    assert second.exception is not None
-    assert "Completed spans overlap" in str(second.exception)
+    # ResumeConflictError is now a known user error wrapped as ClickException,
+    # so the message surfaces in .output (stderr), not raw in .exception.
+    assert "Completed spans overlap" in second.output
     dirs = _run_dirs(target_path)
     assert [path.name for path in dirs].count(
         "phase33_unsafe_group_plugin-host-phase33resume__group=grp%2Fwith%2Fslash__slot=0-100"

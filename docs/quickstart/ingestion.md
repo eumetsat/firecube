@@ -5,12 +5,12 @@ confirm the data cube looks the way you expect.
 
 ## Prerequisites
 
-- The quickstart virtual environment is active.
+- Firecube is installed in the quickstart `.venv`, and that environment is active.
 - The `quickstart_plugin` plugin from
   [Install the Example Plugin](plugins.md) is installed.
 - The four files from [Prepare Source Data](source-data.md) exist under
   `sample_data/`.
-- Commands run from the `firecube-quickstart-plugin/` directory.
+- Commands run from the `firecube-quickstart/` directory.
 
 ## Run The Ingestion
 
@@ -88,6 +88,7 @@ staged source data, and produced a Zarr cube you can open with `xarray`.
 
 ## Next Steps
 
+- **[Showcase](../showcase/index.md)**: explore ingestion workflows in notebooks.
 - **[Configure S3 Access](../operations/s3-access.md)**: repeat this workflow
   against S3 or an S3-compatible service.
 - **[Storage Drivers](../reference/storage-drivers.md)**: choose a different

@@ -95,7 +95,6 @@ class TestAppendTimestampStateEnsureExisting:
             chunk_len=2,
             cached=None,
             resume_cache_key=None,
-            preexisting_values=None,
         )
 
         ds = xr.open_zarr(str(store_path), group="G1", consolidated=False)
@@ -114,7 +113,6 @@ class TestAppendTimestampStateEnsureExisting:
             chunk_len=2,
             cached=cached,
             resume_cache_key=None,
-            preexisting_values=None,
         )
 
         ds = xr.open_zarr(str(store_path), group="G1", consolidated=False)
@@ -133,7 +131,6 @@ class TestAppendTimestampStateEnsureExisting:
             chunk_len=3,
             cached=None,
             resume_cache_key=cache_key,
-            preexisting_values=frozenset(),
         )
 
         entry = get_resume_cache_entry(cache_key)
@@ -150,5 +147,4 @@ class TestAppendTimestampStateEnsureExisting:
             chunk_len=2,
             cached=None,
             resume_cache_key=None,
-            preexisting_values=None,
         )

@@ -13,11 +13,10 @@ this quickstart does not require you to source real data.
 
 ## Create The Example Files
 
-Run this command from the `firecube-quickstart-plugin/` directory, with the
-quickstart virtual environment active:
+Run this command from `firecube-quickstart/`:
 
 ```bash
-python scripts/generate_sample_data.py
+python firecube-quickstart-plugin/scripts/generate_sample_data.py
 ```
 
 ## Verify The Source Data

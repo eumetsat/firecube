@@ -32,7 +32,7 @@ import pytest
 from firecube.core.controlplane import ChunkManager, SpanCoverage
 from firecube.core.controlplane.deletion import DeletionEngine
 from firecube.core.controlplane.repo import ManifestRepository
-from firecube.core.controlplane.types import ChunkInfo
+from firecube.core.controlplane.types import STATE_DELETED_BY_FIRECUBE, ChunkInfo
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
@@ -108,6 +108,7 @@ def _span(
         timestamp=1.0,
         manifest_path="",
         record={"span": spec},
+        meta={"group": "data"},
     )
 
 
@@ -134,12 +135,50 @@ class TestSpanTimeDimResolution:
         assert not _chunk_path(tmp_path).exists()
 
     def test_state_array_discovery_resolves_custom_cube(self, tmp_path: Path) -> None:
-        _make_store(tmp_path, dim="time", with_state_array=True)
+        """State-array discovery routes deletion through region-fill along the
+        discovered time-dim and marks the state array.
+
+        Store-effect proof that the discovered ``dim="time"`` (axis 0) was used
+        and NOT the wrong ``"x"`` axis:
+
+        * ``data/counts`` row 0 (time=0) reads back as the array's fill value;
+          row 1 keeps its original data. A wrong-dim resolution would fill
+          column 0 across both rows instead of row 0.
+        * ``data/firecube_timestamp_state`` slot 0 flips to
+          ``STATE_DELETED_BY_FIRECUBE`` (=2); slot 1 stays at its pre-run value.
+        * ``deleted_keys == 0`` and ``region_filled_spans == 1`` confirm the
+          region-fill path (not the chunk-key ``fs.rm`` path).
+        """
+        import zarr
+
+        store_root = _make_store(tmp_path, dim="time", with_state_array=True)
         span = _span(state_array="data/firecube_timestamp_state")
-        result = _delete(_engine(tmp_path), span)
+        # Override _delete's update_state=False so state transitions land on-store.
+        result = _engine(tmp_path).delete_spans(
+            [span],
+            dry_run=False,
+            update_manifest=False,
+            update_state=True,
+        )
         assert result["errors"] == []
-        assert result["deleted_keys"] == 1
-        assert not _chunk_path(tmp_path).exists()
+        assert result["deleted_keys"] == 0
+        assert result["deleted_spans"] == 1
+        assert result["region_filled_spans"] == 1
+
+        root = zarr.open_group(store=str(store_root), mode="r", zarr_format=3)
+        counts_arr: Any = root["data/counts"]  # pyright: ignore[reportIndexIssue]
+        state_arr: Any = root["data/firecube_timestamp_state"]  # pyright: ignore[reportIndexIssue]
+        counts_fill = counts_arr.fill_value
+        counts = np.asarray(counts_arr[:])
+        state = np.asarray(state_arr[:])
+
+        # dim="time" is axis 0 in dimension_names=(dim, "x"); a wrong-dim
+        # resolution would fill column 0 across both rows instead of row 0.
+        assert (counts[0] == counts_fill).all(), "time=0 row must be fill-value-filled"
+        assert (counts[1] == 1.0).all(), "time=1 row must retain original data"
+
+        assert int(state[0]) == STATE_DELETED_BY_FIRECUBE
+        assert int(state[1]) == 1
 
     def test_explicit_name_resolves_when_no_authority(self, tmp_path: Path) -> None:
         _make_store(tmp_path, dim="time")
@@ -247,3 +286,108 @@ class TestTimeDimNameWalRoundTrip:
             ),
         )
         assert "time_dim_name" not in spec
+
+
+class TestDeletedKeysCounterSemantics:
+    """``deleted_keys`` reports actual on-disk removals only.
+
+    ``FileNotFoundError`` from ``fs.rm`` (fill-only chunks written with
+    ``write_empty_chunks=False``, or idempotent retries) does not count as a
+    deletion — the key never existed on storage. Previously the counter was
+    incremented even in this branch, overstating the number of chunks removed.
+    """
+
+    @staticmethod
+    def _make_multi_chunk_store(tmp_path: Path, time_size: int) -> Path:
+        import zarr
+
+        store_root = tmp_path / PRODUCT
+        root = zarr.open_group(store=str(store_root), mode="w", zarr_format=3)
+        grp = root.require_group("data")
+        arr = grp.create_array(
+            "counts",
+            shape=(time_size, 2),
+            chunks=(1, 2),
+            dtype="f4",
+            dimension_names=("time", "x"),
+            overwrite=True,
+        )
+        arr[:] = np.ones((time_size, 2), dtype=np.float32)
+        return store_root
+
+    @staticmethod
+    def _span_range(end: int) -> ChunkInfo:
+        return ChunkInfo(
+            key="span_run1_b1_data",
+            product=PRODUCT,
+            chunk_type="span",
+            size=0,
+            timestamp=1.0,
+            manifest_path="",
+            record={
+                "span": {
+                    "arrays": ["data/counts"],
+                    "time_index_ranges": [[0, end]],
+                    "aligned": True,
+                    "time_dim_name": "time",
+                }
+            },
+            meta={"group": "data"},
+        )
+
+    @staticmethod
+    def _is_chunk_path(uri: StorageUri) -> bool:
+        return "/data/counts/c/" in str(uri)
+
+    def test_file_not_found_does_not_count_toward_deleted_keys(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._make_multi_chunk_store(tmp_path, time_size=5)
+        engine = _engine(tmp_path)
+
+        real_fs, base_uri = engine.repo._get_fs(engine.repo.base_uri)
+        original_rm = real_fs.rm
+        chunk_rm_calls: list[str] = []
+
+        def fake_rm(uri: StorageUri, recursive: bool = False) -> None:
+            if self._is_chunk_path(uri):
+                chunk_rm_calls.append(str(uri))
+                if len(chunk_rm_calls) == 3:
+                    raise FileNotFoundError(f"simulated fill-only chunk: {uri}")
+            original_rm(uri, recursive=recursive)
+
+        monkeypatch.setattr(real_fs, "rm", fake_rm)
+        monkeypatch.setattr(engine.repo, "_get_fs", lambda _uri: (real_fs, base_uri))
+
+        result = _delete(engine, self._span_range(end=4))
+
+        assert result["errors"] == []
+        assert len(chunk_rm_calls) == 5
+        assert result["deleted_keys"] == 4
+        assert result["deleted_spans"] == 1
+
+    def test_all_file_not_found_yields_zero_deleted_keys(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._make_multi_chunk_store(tmp_path, time_size=3)
+        engine = _engine(tmp_path)
+
+        real_fs, base_uri = engine.repo._get_fs(engine.repo.base_uri)
+        original_rm = real_fs.rm
+        chunk_rm_calls: list[str] = []
+
+        def all_chunks_missing(uri: StorageUri, recursive: bool = False) -> None:
+            if self._is_chunk_path(uri):
+                chunk_rm_calls.append(str(uri))
+                raise FileNotFoundError(f"simulated fill-only chunk: {uri}")
+            original_rm(uri, recursive=recursive)
+
+        monkeypatch.setattr(real_fs, "rm", all_chunks_missing)
+        monkeypatch.setattr(engine.repo, "_get_fs", lambda _uri: (real_fs, base_uri))
+
+        result = _delete(engine, self._span_range(end=2))
+
+        assert result["errors"] == []
+        assert len(chunk_rm_calls) == 3
+        assert result["deleted_keys"] == 0
+        assert result["deleted_spans"] == 1

@@ -18,9 +18,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 
+from firecube.core.filesystem.protocol import StorageFilesystem
 from tests.helpers.storage import make_local_session
 
 
@@ -53,6 +55,7 @@ def _validate(store: Path, group: str, **kwargs):
     from firecube.core.zarr.validation import validate_group_with_fs
 
     session = make_local_session(str(store))
+    kwargs.setdefault("time_dim_name", "timestamp")
     return validate_group_with_fs(session.fs(), session.product.product_uri, group, **kwargs)
 
 
@@ -77,3 +80,142 @@ def test_no_budget_processes_all(tmp_path):
     report = _validate(store, group)
     assert report.budget_exceeded is False
     assert report.chunks_processed == 0  # budget not active, counter not tracked
+
+
+class _FakeFs:
+    pass
+
+
+class _RaisingRoot:
+    def __init__(self, exc: BaseException) -> None:
+        self._exc = exc
+
+    def __getitem__(self, key):
+        raise self._exc
+
+
+def test_open_zarr_root_from_fs_returns_none_and_warns_on_expected_error(monkeypatch, caplog):
+    import zarr
+
+    from firecube.core.storage.uri import StorageUri
+    from firecube.core.zarr import validation
+
+    def _raise(**kwargs):
+        raise FileNotFoundError("no such array")
+
+    monkeypatch.setattr(zarr, "open_group", _raise)
+    uri = StorageUri.parse("file:///tmp/nonexistent-a11.zarr")
+    fs = cast(StorageFilesystem, _FakeFs())
+
+    with caplog.at_level("WARNING", logger="firecube.core.zarr.validation"):
+        result = validation._open_zarr_root_from_fs(fs, uri)
+
+    assert result is None
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert warnings, "expected a WARNING log record"
+    joined = " ".join(r.getMessage() for r in warnings)
+    assert "no such array" in joined
+    assert any(r.exc_info is not None for r in warnings)
+
+
+def test_open_zarr_root_from_fs_propagates_unexpected(monkeypatch):
+    import zarr
+
+    from firecube.core.storage.uri import StorageUri
+    from firecube.core.zarr import validation
+
+    def _raise(**kwargs):
+        raise RuntimeError("weird")
+
+    monkeypatch.setattr(zarr, "open_group", _raise)
+    uri = StorageUri.parse("file:///tmp/nonexistent-a11.zarr")
+    fs = cast(StorageFilesystem, _FakeFs())
+
+    with pytest.raises(RuntimeError, match="weird"):
+        validation._open_zarr_root_from_fs(fs, uri)
+
+
+def test_zarr_array_at_returns_none_and_warns_on_keyerror(caplog):
+    from firecube.core.zarr import validation
+
+    root = _RaisingRoot(KeyError("missing arr"))
+
+    with caplog.at_level("WARNING", logger="firecube.core.zarr.validation"):
+        result = validation._zarr_array_at(root, "arr")
+
+    assert result is None
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert warnings
+    joined = " ".join(r.getMessage() for r in warnings)
+    assert "missing arr" in joined
+    assert "'arr'" in joined
+
+
+def test_zarr_array_at_propagates_unexpected():
+    from firecube.core.zarr import validation
+
+    root = _RaisingRoot(RuntimeError("boom"))
+    with pytest.raises(RuntimeError, match="boom"):
+        validation._zarr_array_at(root, "arr")
+
+
+def test_zarr_array_at_returns_none_when_root_is_none():
+    from firecube.core.zarr import validation
+
+    assert validation._zarr_array_at(None, "arr") is None
+
+
+def test_candidate_time_dim_accepts_matching_explicit_state_dimension():
+    from firecube.core.zarr import validation
+
+    arrays = [
+        validation._ArrayInfo(
+            path="G/firecube_timestamp_state",
+            dim_names=["acquisition_time"],
+            shape=[3],
+            chunk_shape=[3],
+        )
+    ]
+
+    result = validation._candidate_time_dim(arrays, time_dim_name="acquisition_time")
+
+    assert result == "acquisition_time"
+
+
+def test_candidate_time_dim_rejects_contradicting_explicit_state_dimension():
+    from firecube.core.zarr import validation
+
+    arrays = [
+        validation._ArrayInfo(
+            path="G/firecube_timestamp_state",
+            dim_names=["timestamp"],
+            shape=[3],
+            chunk_shape=[3],
+        )
+    ]
+
+    with pytest.raises(ValueError, match=r"time.*timestamp"):
+        validation._candidate_time_dim(arrays, time_dim_name="time")
+
+
+def test_candidate_time_dim_logs_when_explicit_name_absent(caplog):
+    from firecube.core.zarr import validation
+
+    arrays = [
+        validation._ArrayInfo(
+            path="G/firecube_timestamp_state",
+            dim_names=["timestamp"],
+            shape=[3],
+            chunk_shape=[3],
+        )
+    ]
+
+    with caplog.at_level("INFO", logger="firecube.core.zarr.validation"):
+        result = validation._candidate_time_dim(arrays)
+
+    assert result == "timestamp"
+    assert [
+        record
+        for record in caplog.records
+        if "No explicit time dimension name provided" in record.getMessage()
+    ]

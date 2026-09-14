@@ -25,6 +25,7 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import wrap_user_facing_errors
+from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._product import require_full_uri, resolve_product_identity
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import (
@@ -116,6 +117,7 @@ See also: firecube zarr slots, firecube zarr validate
         "Interpreted by the plugin."
     ),
 )
+@input_filters_option
 @click.option(
     "--slot-start",
     "slot_start",
@@ -160,6 +162,7 @@ def preallocate(
     storage_driver: str,
     write_mode: str,
     input_data: str | None,
+    input_filters: list[str] | None,
     slot_start: int | None,
     slot_end: int | None,
     option: tuple[tuple[str, object], ...],
@@ -171,6 +174,8 @@ def preallocate(
     this command is a no-op. If arrays exist with mismatched schema, exits non-zero
     with a diff showing expected vs found values. Safe to re-run.
     """
+
+    input_filters = resolve_input_filters(ctx, plugin, input_filters)
 
     from firecube.core.controlplane.manager import check_legacy_index_record
     from firecube.core.errors import LegacyIndexRecordError
@@ -246,6 +251,7 @@ def preallocate(
             target=target,
             source=input_data or "",
             options=option,
+            input_filters=input_filters,
             run_id="zarr-preallocate",
         )
 

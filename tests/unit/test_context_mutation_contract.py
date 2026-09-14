@@ -51,7 +51,7 @@ def test_run_does_not_mutate_caller_context(tmp_path):
         source=str(source),
         target=str(target),
         output_format="zarr",
-        options={"run_id": "caller-run-id"},
+        options={"run_id": "caller-run-id", "allow_empty_source": True},
         storage=storage,
     )
     options_before = dict(ctx.options)

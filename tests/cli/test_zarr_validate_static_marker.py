@@ -38,16 +38,24 @@ def _store_with_array(tmp_path: Path, name: str, *, dimension_names: tuple[str, 
     return store
 
 
+def _invoke_validate_with_time_dim(store: Path, group: str, time_dim: str = "timestamp"):
+    return CliRunner().invoke(
+        cli,
+        ["zarr", "validate", "-p", store.as_uri(), "-g", group, "--time-dim", time_dim],
+    )
+
+
 def test_validate_reports_missing_static_marker(tmp_path: Path) -> None:
     store = _store_with_array(tmp_path, "lat", dimension_names=("lat",))
 
-    result = _invoke_validate(store, "lat")
+    result = _invoke_validate_with_time_dim(store, "lat")
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output
     payload = json.loads(result.output)
     assert payload["static_marker_failures"] == [
         {"array": "lat", "reason": "missing_or_false_static_marker"}
     ]
+    assert payload["is_valid"] is False
 
 
 def test_validate_passes_when_all_static_markers_present(tmp_path: Path) -> None:
@@ -55,7 +63,7 @@ def test_validate_passes_when_all_static_markers_present(tmp_path: Path) -> None
     root = zarr.open_group(str(store), mode="a")
     root["lat"].attrs[FIRECUBE_STATIC_WRITTEN_ATTR] = True
 
-    result = _invoke_validate(store, "lat")
+    result = _invoke_validate_with_time_dim(store, "lat")
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -65,8 +73,12 @@ def test_validate_passes_when_all_static_markers_present(tmp_path: Path) -> None
 def test_validate_ignores_time_indexed_arrays(tmp_path: Path) -> None:
     store = _store_with_array(tmp_path, "temperature", dimension_names=("timestamp",))
 
-    result = _invoke_validate(store, "temperature")
+    result = CliRunner().invoke(
+        cli,
+        ["zarr", "validate", "-p", store.as_uri(), "-g", "temperature", "--time-dim", "timestamp"],
+    )
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output
     payload = json.loads(result.output)
+    assert payload["is_valid"] is False
     assert payload["static_marker_failures"] == []

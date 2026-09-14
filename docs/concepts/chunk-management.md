@@ -41,7 +41,7 @@ inspect, recover, delete, rebuild snapshots, or migrate a product.
 Start with inspection:
 
 ```bash
-uv run firecube chunks list \
+firecube chunks list \
   --product-name file:///data/products/MY_PRODUCT.zarr
 ```
 

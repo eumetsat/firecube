@@ -20,19 +20,21 @@ and return candidate input file URIs (ZIP, HDF5, NetCDF, ...).
 
 from __future__ import annotations
 
-import contextlib
 import fnmatch
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
+from firecube.core.formats._input_filters import split_input_filters
 from firecube.core.formats.hdf5 import looks_like_hdf5
 from firecube.core.uris import is_remote_target, parse_uri
 
-# All file extensions recognised by the firecube ecosystem.
-# The first three are the defaults for ``discover_input_files``; additional
-# formats (e.g. ``.tgm``) must be requested explicitly via *include_suffixes*.
-KNOWN_EXTENSIONS: frozenset[str] = frozenset({".zip", ".h5", ".nc", ".tgm"})
+# All file extensions recognised by the firecube ecosystem. See
+# DEFAULT_INCLUDE_SUFFIXES for the defaults used by ``discover_input_files``;
+# other formats must be requested explicitly via *include_suffixes*.
+KNOWN_EXTENSIONS: frozenset[str] = frozenset({".zip", ".h5", ".nc", ".nc4", ".hdf", ".he5", ".tgm"})
+
+DEFAULT_INCLUDE_SUFFIXES: tuple[str, ...] = (".zip", ".h5", ".nc", ".nc4", ".hdf", ".he5")
 
 
 def _path_matches_any_glob(
@@ -41,7 +43,7 @@ def _path_matches_any_glob(
     """Return True when any candidate path matches any glob pattern."""
     normalized_candidates = {path, *candidates}
     return any(
-        fnmatch.fnmatch(candidate, pattern)
+        fnmatch.fnmatchcase(candidate, pattern)
         for pattern in patterns
         for candidate in normalized_candidates
     )
@@ -56,17 +58,13 @@ def _filter_discovered_paths(
     recursive: bool,
     sniff_hdf5: bool,
     exclude: Iterable[str] | None,
-    fs: Any,
     root: str,
 ) -> list[str]:
     """Filter discovered filesystem paths down to candidate input files."""
     remote_source = is_remote_target(source_uri)
     suffixes = {s.lower() for s in include_suffixes}
-    preferred_patterns = tuple(preferred_globs or ())
-    excluded_patterns = tuple(exclude or ())
-    source_is_dir = False
-    with contextlib.suppress(Exception):
-        source_is_dir = bool(fs.isdir(root))
+    preferred_patterns, negated_patterns = split_input_filters(preferred_globs)
+    excluded_patterns = (*tuple(exclude or ()), *negated_patterns)
 
     root_prefix = root.rstrip("/")
     resolved: list[str] = []
@@ -99,7 +97,7 @@ def _filter_discovered_paths(
             include_by_sniff = looks_like_hdf5(Path(normalized))
 
         include_by_glob = False
-        if preferred_patterns and source_is_dir:
+        if preferred_patterns:
             include_by_glob = _path_matches_any_glob(
                 normalized, preferred_patterns, candidates=glob_candidates
             )
@@ -115,7 +113,7 @@ def discover_input_files(
     source: str | Path,
     *,
     storage_config: Any | None = None,
-    include_suffixes: Sequence[str] = (".zip", ".h5", ".nc"),
+    include_suffixes: Sequence[str] = DEFAULT_INCLUDE_SUFFIXES,
     preferred_globs: Iterable[str] | None = None,
     recursive: bool = True,
     sniff_hdf5: bool = True,
@@ -126,34 +124,51 @@ def discover_input_files(
     Selection is intentionally conservative and format-agnostic:
 
     - Accept files matching ``include_suffixes``.
-    - Optionally accept extensionless files that look like HDF5.
-    - Optionally add files matched by ``preferred_globs``. Patterns add to
-      the suffix selection; they do not replace it.
-    - Drop anything matching ``exclude`` before selection runs, so an
-      excluded path is never considered by suffix, sniffing, or patterns.
+    - Optionally accept local files with unselected suffixes (including no
+      suffix) that look like HDF5.
+    - Add files matched by positive ``preferred_globs`` entries. These add
+      to the suffix selection; they do not replace it.
+    - Entries starting with ``!`` exclude matches. They and ``exclude`` win
+      over every inclusion rule, regardless of order, before content sniffing.
+      For example, ``["!*", "*.csv"]`` selects nothing.
 
     Glob patterns in ``preferred_globs`` and ``exclude`` are matched against
     the file's base name, its path relative to ``source``, and its full
     path or URI, so both ``"*.nc4"`` and ``"subdir/*.nc4"`` are usable.
+    Matching is case-sensitive on every platform, including for explicit
+    file sources. Wildcards follow ``fnmatch`` grammar: ``*`` can cross
+    directory separators, dotfiles are ordinary names, and ``**`` has no
+    special meaning. A leading backslash before ``!`` escapes a literal
+    positive filename: pass ``r"\\!measurement.nc"``. Strip exclusion markers
+    once, so ``!!measurement.nc`` excludes the literal ``!measurement.nc``.
+    Spaces within entries are preserved. Filters do not prune directory
+    traversal or supply readers for newly selected file types.
 
     Args:
         source: Discovery root: a local path or a remote URI such as
             ``s3://bucket/prefix``.
         storage_config: Storage settings used to reach a remote ``source``.
-        include_suffixes: File suffixes accepted by default.
-        preferred_globs: Extra glob patterns whose matches are added.
+        include_suffixes: File suffixes accepted, case-insensitively. Defaults to
+            ``.zip``, ``.h5``, ``.nc``, ``.nc4``, ``.hdf``, and ``.he5``.
+        preferred_globs: Filename filters; positive entries add matches and
+            ``!`` entries exclude them. Empty strings and bare ``!`` are
+            invalid. ``None`` or an empty iterable retains the suffix and
+            content selection. Plugin discovery hooks can pass
+            ``self.engine_config.input_filters`` here.
         recursive: Search below ``source``; when ``False``, only entries
             directly in ``source`` are returned.
-        sniff_hdf5: Accept extensionless files whose content looks like
-            HDF5. Applies to local sources only.
-        exclude: Glob patterns whose matches are dropped.
+        sniff_hdf5: Accept files whose content looks like HDF5 when their suffix
+            is absent or not in ``include_suffixes``. Local sources only.
+        exclude: Additional case-sensitive exclusion globs. These entries
+            are used literally as globs; no leading-marker parsing is applied.
 
     Returns:
         URI/path strings (for example ``/tmp/data/file.nc`` or
         ``s3://bucket/prefix/file.nc``), sorted for deterministic batching.
 
     Raises:
-        ValueError: If ``source`` cannot be opened or listed.
+        ValueError: If ``source`` cannot be opened or listed, or a filter
+            is empty, a bare ``!``, or not a string.
     """
     from firecube.core.filesystem.ops import _open_fsspec_url
     from firecube.core.uris import is_remote_target, parse_uri
@@ -183,6 +198,5 @@ def discover_input_files(
         recursive=recursive,
         sniff_hdf5=sniff_hdf5 and not is_remote,
         exclude=exclude,
-        fs=fs,
         root=root,
     )

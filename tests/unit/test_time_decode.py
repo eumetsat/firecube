@@ -19,7 +19,9 @@
 import numpy as np
 import pytest
 
-from firecube.core.zarr.time_decode import decode_time_array
+from firecube.core.zarr.time_decode import decode_or_passthrough, decode_time_array
+
+pytestmark = pytest.mark.unit
 
 
 def test_datetime64_passthrough_preserves_resolution() -> None:
@@ -110,3 +112,48 @@ def test_unsupported_dtype_raises() -> None:
 
     with pytest.raises(ValueError, match=r"complex64"):
         decode_time_array(values, {})
+
+
+class TestDecodeOrPassthrough:
+    """Six permutations of (dtype, attrs.units) covering the dispatch table."""
+
+    def test_datetime64_no_units(self) -> None:
+        values = np.array(["2023-12-01"], dtype="datetime64[ns]")
+        out = decode_or_passthrough(values, {})
+        assert out.dtype.kind == "M"
+        assert out[0] == np.datetime64("2023-12-01", "ns")
+
+    def test_datetime64_units_without_since(self) -> None:
+        values = np.array(["2023-12-01"], dtype="datetime64[ns]")
+        out = decode_or_passthrough(values, {"units": "kelvin"})
+        assert out.dtype.kind == "M"
+
+    def test_datetime64_units_with_since(self) -> None:
+        values = np.array(["2023-12-01"], dtype="datetime64[ns]")
+        out = decode_or_passthrough(values, {"units": "seconds since 1970-01-01"})
+        assert out.dtype.kind == "M"
+        assert out[0] == np.datetime64("2023-12-01", "ns")
+
+    def test_numeric_no_units_passthrough(self) -> None:
+        values = np.array([1.0, 2.0, 3.0], dtype="float64")
+        out = decode_or_passthrough(values, {})
+        assert out.dtype.kind == "f"
+        assert out[0] == 1.0
+
+    def test_numeric_units_without_since_raises(self) -> None:
+        values = np.array([1.0, 2.0, 3.0], dtype="float64")
+        with pytest.raises(ValueError, match="since"):
+            decode_or_passthrough(values, {"units": "kelvin"})
+
+    def test_numeric_units_with_since_decodes(self) -> None:
+        values = np.array([0.0, 1.0], dtype="float64")
+        out = decode_or_passthrough(
+            values, {"units": "days since 2000-01-01", "calendar": "standard"}
+        )
+        assert out.dtype.kind == "M"
+        assert str(out[0])[:10] == "2000-01-01"
+
+    def test_numeric_units_with_since_but_malformed_raises(self) -> None:
+        values = np.array([1.0, 2.0], dtype="float64")
+        with pytest.raises(ValueError):
+            decode_or_passthrough(values, {"units": "days since not-a-real-date"})

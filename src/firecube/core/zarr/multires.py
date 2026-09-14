@@ -23,10 +23,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from firecube.core.config import StorageConfig
-from firecube.core.controlplane import ChunkManager
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.product.target import ProductTarget
 from firecube.core.storage.binding import StorageBinding
@@ -34,6 +33,9 @@ from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.layers import build_multires_layers
+
+if TYPE_CHECKING:
+    from firecube.core.controlplane import ChunkManager
 
 log = logging.getLogger("firecube.core.zarr.multires")
 
@@ -87,6 +89,8 @@ class ZarrMultiresBuilder:
         # The sentinel bypasses the product-name short-circuit in
         # _ControlRootResolver. ChunkManager is currently instantiated but not
         # used in build(); it is reserved here for future control-plane hooks.
+        from firecube.core.controlplane import ChunkManager
+
         self.chunk_manager = chunk_manager or ChunkManager(
             binding=StorageBinding(
                 identity=ProductIdentity.from_uri(

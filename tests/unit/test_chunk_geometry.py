@@ -21,6 +21,7 @@ import pytest
 from firecube.core.zarr.chunk_geometry import (
     axis_selection_is_chunk_aligned,
     chunk_axis_range,
+    chunk_index_to_region,
     physical_chunk_keys_for_region,
 )
 
@@ -60,6 +61,26 @@ def test_axis_selection_is_chunk_aligned_boundaries() -> None:
     assert axis_selection_is_chunk_aligned(0, 4, 4, 2) is True
     assert axis_selection_is_chunk_aligned(1, 3, 4, 2) is False
     assert axis_selection_is_chunk_aligned(2, 2, 4, 2) is True
+
+
+def test_chunk_index_to_region_clamps_last_chunk() -> None:
+    region = chunk_index_to_region((3,), (3,), (10,))
+
+    assert region == (slice(9, 10),)
+
+
+def test_chunk_index_to_region_multi_dim() -> None:
+    region = chunk_index_to_region((1, 2), (4, 3), (10, 10))
+
+    assert region == (slice(4, 8), slice(6, 9))
+
+
+def test_chunk_index_to_region_matches_prior_inline_computation() -> None:
+    for chunk_idx, chunk_shape, array_shape, expected in [
+        ((0, 0), (5, 5), (10, 10), (slice(0, 5), slice(0, 5))),
+        ((1, 1), (5, 5), (10, 10), (slice(5, 10), slice(5, 10))),
+    ]:
+        assert chunk_index_to_region(chunk_idx, chunk_shape, array_shape) == expected
 
 
 def test_physical_chunk_keys_match_indexed_region_disjoint_cases() -> None:

@@ -17,11 +17,10 @@
 from __future__ import annotations
 
 import contextlib
-import threading
 from abc import abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import xarray as xr
 
@@ -40,11 +39,19 @@ from firecube.ingestor.api import (
     PipelineResult,
     PipelineRunState,
     PluginContext,
+    RuntimeIngestContext,
     WriteDomain,
     ZarrTemplateConfig,
 )
 from firecube.ingestor.extensions.duck import DuckDbMixin
 from firecube.ingestor.runtime.zarr import batch_runner
+from firecube.ingestor.runtime.zarr.alignment import AlignmentMonitor
+from firecube.ingestor.runtime.zarr.append_failure import AppendBatchFailed
+from firecube.ingestor.runtime.zarr.append_order import AppendOrder
+from firecube.ingestor.runtime.zarr.ordered_gate import ExclusiveSection, OrderedWriteGate
+from firecube.ingestor.templates._parquet import relative_data_path
+from firecube.ingestor.templates.config import validate_zarr_writer_dict
+from firecube.ingestor.types import write_mode_policy
 
 
 def _ctx_output_session(ctx: PluginContext) -> Any | None:
@@ -77,6 +84,18 @@ def _runtime_reingest_options(ctx: PluginContext) -> tuple[bool, bool]:
     return resume_existing, force_reingest
 
 
+def _batch_write_index(batch: PipelineBatch) -> int | None:
+    """Return the planner position stamped by ``BatchPlanner``, or ``None``.
+
+    Batches built outside the planner (direct ``_process_batch`` calls) carry
+    no index and are admitted to the write gate in arrival order.
+    """
+    value = batch.metadata.get("batch_index")
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return None
+
+
 def _resolve_zarr_batch_targets(
     ingestor: Any, ctx: PluginContext, write_mode: str
 ) -> tuple[str, str | None]:
@@ -101,18 +120,27 @@ def _build_zarr_batch_runtime(
     force_reingest: bool,
     write_mode: str,
 ) -> tuple[Any, Any, Any]:
+    append_read_target_uri = final_target_uri
+    if (
+        write_mode_policy(write_mode).seeds_staged_metadata
+        and final_target_uri is not None
+        and store_uri != final_target_uri
+    ):
+        # Staged mode seeds final-target metadata into the workspace before
+        # every batch. Append reads must use that workspace so batches append
+        # to prior staged writes instead of repeatedly re-reading the stale
+        # final target.
+        append_read_target_uri = None
+
     claim_for_group = batch_runner.build_claim_closure_for_append(
         chunk_manager=ingestor._chunk_manager,
         product=_ctx_product_name(ctx, ingestor.name),
         run_id=str(ctx.run_id or ctx.option("run_id", "unknown")),
     )
-    write_ctx_mgr = batch_runner.build_zarr_write_context(
-        zarr_config=zarr_config,
-        write_lock=ingestor._write_lock,
-    )
+    write_ctx_mgr = batch_runner.build_zarr_write_context(zarr_config=zarr_config)
     strategy = batch_runner.build_append_strategy(
         store_uri=store_uri,
-        final_target_uri=final_target_uri,
+        final_target_uri=append_read_target_uri,
         zarr_config=zarr_config,
         resume_existing=resume_existing,
         force_reingest=force_reingest,
@@ -120,6 +148,11 @@ def _build_zarr_batch_runtime(
         chunk_manager=ingestor._chunk_manager,
         session=_ctx_output_session(ctx),
         logger=ingestor._log,
+        alignment=ingestor._alignment,
+        order=ingestor._append_order,
+        pipeline_write_mode=write_mode,
+        staged_final_target_uri=final_target_uri,
+        preflight_compare_target_uri=final_target_uri,
     )
     return write_ctx_mgr, claim_for_group, strategy
 
@@ -131,13 +164,42 @@ class GenericZarrIngestor(BaseIngestor):
     logic to ``AppendStrategy.write_groups()``.
 
     Subclasses implement ``build_dataset(group, items, ctx) -> xr.Dataset | None``.
+
+    Appends commit in planner batch order through an ``OrderedWriteGate``:
+    with ``pipeline_workers > 1`` the workers parallelise ``prepare_batch_data``
+    only, and the time axis stays monotonic. The host stops at the first
+    failed batch (``stop_on_batch_failure``) so no batch appends past a gap;
+    later batches are reported as not attempted.
     """
 
     template_config_class = ZarrTemplateConfig
+    stop_on_batch_failure: ClassVar[bool] = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._write_lock = threading.Lock()
+        self._write_gate = OrderedWriteGate()
+        self._alignment = AlignmentMonitor()
+        self._append_order = AppendOrder()
+
+    @property
+    def write_lock(self) -> ExclusiveSection:
+        """Serialise plugin store access with the engine's batch writes.
+
+        Use it in hooks that open the target store from the main thread
+        (typically ``on_batch_success`` bookkeeping) so the access never
+        overlaps a worker's append. It waits for the current batch write to
+        finish, holds the writer slot for the block, and does not change the
+        batch order.
+
+        Returns:
+            A context manager holding exclusive access during its block.
+
+        Examples:
+            with self.write_lock:
+                root = zarr.open_group(target, mode="a", use_consolidated=False)
+                root.attrs["receipts"] = receipts
+        """
+        return self._write_gate.exclusive()
 
     def _validate_duckdb_persistence_contract(self) -> None:
         """Fail fast when persistent DuckDB mode is requested without required hooks."""
@@ -150,10 +212,13 @@ class GenericZarrIngestor(BaseIngestor):
     def on_pipeline_start(self, ctx: PluginContext, state: PipelineRunState) -> None:
         """Initialize pipeline resources (including persistent DuckDB)."""
         super().on_pipeline_start(ctx, state)
+        self._write_gate.reset()
+        self._alignment = AlignmentMonitor()
+        self._append_order = AppendOrder()
         if state.pipeline_workers > 1:
             self._log.warning(
-                "Pipeline configured with workers=%d, but Zarr writes are serialized by a global lock. "
-                "Parallelism accelerates preprocessing only.",
+                "Pipeline configured with workers=%d: appends commit in batch order through "
+                "the ordered write gate; workers parallelise prepare_batch_data only.",
                 state.pipeline_workers,
             )
 
@@ -179,6 +244,22 @@ class GenericZarrIngestor(BaseIngestor):
             finally:
                 self.teardown_duckdb()
 
+    def _aggregate_metrics(
+        self, ctx: RuntimeIngestContext, state: PipelineRunState
+    ) -> dict[str, Any]:
+        """Merge batch metrics and close the run's alignment monitor.
+
+        Runs once per run, before the engine raises on failed batches, so the
+        alignment summary is logged and ``metrics["zarr"]["unaligned_batches"]``
+        is set whether or not the run succeeded.
+        """
+        merged = dict(super()._aggregate_metrics(ctx, state))
+        self._alignment.emit_summary(self._log)
+        zarr_metrics = merged.get("zarr")
+        if isinstance(zarr_metrics, dict):
+            zarr_metrics["unaligned_batches"] = self._alignment.unaligned_total
+        return merged
+
     @abstractmethod
     def build_dataset(self, group: str, items: list[Any], ctx: PluginContext) -> xr.Dataset | None:
         """Convert a sub-batch of items into an Xarray Dataset for the given group.
@@ -190,7 +271,11 @@ class GenericZarrIngestor(BaseIngestor):
         dimension, ordered on that dimension, with values that do not
         overlap another batch; it is appended along that dimension.
         Variables, dimensions, coordinates, and data types must remain
-        compatible across batches.
+        compatible across batches. Every time-aligned coordinate must be
+        supplied on append and overwrite. Timestamps must be unique within
+        each batch, and append-only batches must follow the stored maximum.
+        Declare datetime encoding precise enough for all batches when the
+        first batch alone cannot establish the required resolution.
 
         Examples:
             Build one dataset per batch from the discovered items:
@@ -211,7 +296,25 @@ class GenericZarrIngestor(BaseIngestor):
         """
 
     def get_zarr_config(self, ctx: PluginContext) -> dict[str, Any]:
-        """Return Zarr storage options from validated template config."""
+        """Return writer options, optionally deriving a layout at runtime.
+
+        The default maps validated ``ZarrTemplateConfig`` fields to writer
+        keys. Override this hook for dynamic layouts; start with
+        ``super().get_zarr_config(ctx)`` to retain configured defaults.
+
+        Args:
+            ctx: Read-only context for the current run.
+
+        Returns:
+            Writer options with keys ``chunk_shape``, ``compression``,
+            ``zarr_codecs``, ``consolidate``, ``time_encoding``,
+            ``async_concurrency``, ``write_empty_chunks``, ``dask_scheduler``,
+            ``write_threads``, ``shard_shape``, and ``sharding``. These are
+            writer keys, not the ``zarr_*`` CLI option names. The default
+            returns an empty mapping if no Zarr template config is bound.
+            ``time_encoding`` must be ``None`` or empty; non-empty values
+            are rejected as not implemented. Set encoding on the dataset.
+        """
         cfg = self.template_config  # Validated ZarrTemplateConfig
         if not isinstance(cfg, ZarrTemplateConfig):
             return {}
@@ -231,8 +334,14 @@ class GenericZarrIngestor(BaseIngestor):
             "sharding": cfg.zarr_sharding,
         }
 
+    def _bind_index_at_startup(self, ctx: PluginContext) -> None:
+        super()._bind_index_at_startup(ctx)
+        validate_zarr_writer_dict(self.get_zarr_config(ctx))
+
     def _process_batch(self, batch: PipelineBatch, ctx: PluginContext) -> PipelineResult:
         self.batch_setup(ctx)
+        write_turn = self._write_gate.turn(_batch_write_index(batch))
+        store_uri: str | None = None
 
         try:
             telemetry = getattr(ctx, "telemetry", None)
@@ -244,9 +353,22 @@ class GenericZarrIngestor(BaseIngestor):
             if not groups:
                 groups = ["default"]
             zarr_config = self.get_zarr_config(ctx)
+            validate_zarr_writer_dict(zarr_config)
             write_mode = self.engine_config.write_mode
             resume_existing, force_reingest = _runtime_reingest_options(ctx)
             store_uri, final_target_uri = _resolve_zarr_batch_targets(self, ctx, write_mode)
+            time_dim_name = self._resolve_time_dim_name()
+            batch_runner.prepare_staged_append_metadata(
+                ctx=ctx,
+                store_uri=store_uri,
+                final_target_uri=final_target_uri,
+                groups=groups,
+                resume_existing=resume_existing,
+                force_reingest=force_reingest,
+                write_mode=write_mode,
+                logger=self._log,
+                time_dim_name=time_dim_name,
+            )
             write_ctx_mgr, claim_for_group, strategy = _build_zarr_batch_runtime(
                 self,
                 ctx,
@@ -260,18 +382,30 @@ class GenericZarrIngestor(BaseIngestor):
             )
 
             zarr_metrics: dict[str, Any] = {}
-            with (
-                write_ctx_mgr,
-                _telemetry_span(
-                    telemetry, "firecube.batch.zarr_write", {"firecube.store_uri": str(store_uri)}
-                ),
-            ):
-                zarr_metrics = strategy.write_groups(
-                    group_to_timestamps=dict.fromkeys(groups, files),
-                    dataset_for_batch=lambda g, items: self.build_dataset(g, list(items), ctx),
-                    batch_size=len(files),
-                    claim_for_group=claim_for_group,
-                )
+            with write_turn as admitted:
+                if not admitted:
+                    return PipelineResult(
+                        batch=batch,
+                        outputs=OutputPaths(primary=Path("")),
+                        success=False,
+                        attempted=False,
+                        error="not attempted: run halted after an earlier batch failed",
+                    )
+                with (
+                    write_ctx_mgr,
+                    _telemetry_span(
+                        telemetry,
+                        "firecube.batch.zarr_write",
+                        {"firecube.store_uri": str(store_uri)},
+                    ),
+                ):
+                    zarr_metrics = strategy.write_groups(
+                        group_to_timestamps=dict.fromkeys(groups, files),
+                        dataset_for_batch=lambda g, items: self.build_dataset(g, list(items), ctx),
+                        batch_size=len(files),
+                        claim_for_group=claim_for_group,
+                        is_final_batch=bool(batch.metadata.get("is_last", False)),
+                    )
 
             final_metrics = batch_runner.assemble_batch_metrics(
                 prep_metrics=prep_metrics,
@@ -287,6 +421,32 @@ class GenericZarrIngestor(BaseIngestor):
                 success=True,
             )
 
+        except AppendBatchFailed as exc:
+            # The append path repaired the failed group and reports what the
+            # store now holds: earlier groups stay committed, the failed
+            # group's region slots carry state 3, later groups were not
+            # attempted. The result carries all of it so the failure hook
+            # records one truthful span per group. Raised inside the write
+            # turn, so the gate already released this index as failed.
+            self._log.exception("Batch processing failed")
+            outcome = exc.outcome
+            return PipelineResult(
+                batch=batch,
+                outputs=OutputPaths(primary=str(store_uri or ""), zarr=str(store_uri or "")),
+                metrics={
+                    "zarr": dict(outcome.counters),
+                    "coverage": list(outcome.committed),
+                    "failed_coverage": (
+                        [outcome.failed_entry] if outcome.failed_entry is not None else []
+                    ),
+                    "failed_group": outcome.failed_group,
+                    "not_attempted_groups": list(outcome.not_attempted_groups),
+                    "repair": outcome.repair.to_dict(),
+                },
+                success=False,
+                error=str(exc),
+            )
+
         except Exception as exc:
             self._log.exception("Batch processing failed")
             return PipelineResult(
@@ -297,6 +457,10 @@ class GenericZarrIngestor(BaseIngestor):
             )
 
         finally:
+            # A batch that failed before its write turn still owns a slot in
+            # the ordered sequence; releasing it as failed halts later batches
+            # instead of stalling them.
+            write_turn.forfeit()
             try:
                 self.cleanup_batch_data(batch, ctx)
             except Exception as exc:
@@ -305,9 +469,18 @@ class GenericZarrIngestor(BaseIngestor):
 
 
 class GenericParquetIngestor(BaseIngestor):
-    """Generic Pipelined Ingestor for Parquet outputs."""
+    """Write independent Parquet parts into a fresh product target.
+
+    Existing product data or previous runs are refused, including when
+    ``resume_existing`` or ``force_reingest`` is requested. Use a new target
+    for each run until the template supports stable slice identity and replay.
+    A run owns the target through completion; batches can write distinct
+    relative paths concurrently inside that run.
+    """
 
     template_config_class = ParquetTemplateConfig
+    requires_fresh_target: ClassVar[bool] = True
+    fresh_target_format_label: ClassVar[str] = "Parquet"
 
     @abstractmethod
     def build_dataset(self, group: str, batch: PipelineBatch, ctx: PluginContext) -> Any | None:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -347,7 +520,11 @@ class GenericParquetIngestor(BaseIngestor):
         return ["default"]
 
     def output_relpath(self, group: str, batch: PipelineBatch, ctx: PluginContext) -> str:
-        """Return a relative output path (within the dataset root) for a group/batch."""
+        """Return a unique relative data path for this group and batch.
+
+        Paths must stay inside the dataset root and outside ``.firecube``.
+        Reusing a path within the run is refused before overwriting its file.
+        """
         _ = ctx
         chunk_name = f"part-{batch.batch_id}.parquet"
         if group and group != "default":
@@ -434,7 +611,7 @@ class GenericParquetIngestor(BaseIngestor):
                 if dataset is None:
                     continue
 
-                rel = self.output_relpath(group, batch, ctx)
+                rel = relative_data_path(self.output_relpath(group, batch, ctx))
                 if is_remote_target(base_uri):
                     output_path = f"{base_uri.rstrip('/')}/{rel.lstrip('/')}"
                 else:
@@ -458,6 +635,14 @@ class GenericParquetIngestor(BaseIngestor):
                     domain=domain,
                     owner_id=f"{run_id}:{rel}",
                 ):
+                    storage_config = self._chunk_manager.storage_config
+                    if storage_config is None:
+                        raise ConfigurationError("Parquet writing requires output storage.")
+                    fs, path = create_filesystem_for_uri(
+                        output_path, storage_config, format="parquet"
+                    )
+                    if fs.exists(path):
+                        raise ConfigurationError(f"Parquet output already exists: {output_path}")
                     rows_written_total += self.write_parquet(
                         dataset, output_path=output_path, storage_options=storage_options, ctx=ctx
                     )

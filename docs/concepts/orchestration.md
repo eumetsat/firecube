@@ -28,7 +28,7 @@ should work whether it is started by a local shell, a container entry point, or
 a larger workflow system:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \

@@ -14,7 +14,7 @@ Run one `firecube ingest` invocation for one product target. Fan out across
 products, dates, regions, or other independent work at the external job level.
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
@@ -51,7 +51,7 @@ Use `resume_existing=true` when a workflow is meant to resume rather than start
 from scratch:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
@@ -104,7 +104,7 @@ Staged writes need local scratch space. In containers, set an explicit workspace
 and clean it up on successful runs:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target s3://bucket/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \

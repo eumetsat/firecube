@@ -22,7 +22,7 @@ import xarray as xr
 import zarr
 
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.ingestor.errors import ResumeConflictError
+from firecube.ingestor.errors import InsertRefusedError
 from firecube.ingestor.runtime.zarr.append import _read_existing_append_values, append_time_groups
 from tests.helpers.storage import local_zarr_handle, make_local_session
 
@@ -165,7 +165,7 @@ def test_append_time_groups_raises_on_spatial_chunk_mismatch(tmp_path):
 
 
 @pytest.mark.unit
-def test_append_time_groups_raises_on_resume_overlap(tmp_path):
+def test_append_time_groups_state1_overlap_silently_filtered(tmp_path):
     store = tmp_path / "overlap.zarr"
     group = "F024"
 
@@ -188,17 +188,19 @@ def test_append_time_groups_raises_on_resume_overlap(tmp_path):
             coords={"timestamp": batch_ts, "lat": np.arange(2), "lon": np.arange(3)},
         )
 
-    with pytest.raises(ResumeConflictError, match="overlapping resume append"):
-        append_time_groups(
-            store=str(store),
-            zarr_store=local_zarr_handle(store),
-            session=make_local_session(str(store)),
-            group_to_timestamps={group: list(ts_overlap)},
-            dataset_for_batch=dataset_for_batch,
-            arrays_for_group=lambda g: [f"{g}/FWI"],
-            resume_existing=True,
-            batch_size=10,
-        )
+    metrics = append_time_groups(
+        store=str(store),
+        zarr_store=local_zarr_handle(store),
+        session=make_local_session(str(store)),
+        group_to_timestamps={group: list(ts_overlap)},
+        dataset_for_batch=dataset_for_batch,
+        arrays_for_group=lambda g: [f"{g}/FWI"],
+        resume_existing=True,
+        batch_size=10,
+    )
+
+    assert metrics["timestamps_skipped"] == 2
+    assert metrics["batch_processing"]["timestamps_written"] == 0
 
 
 @pytest.mark.unit
@@ -241,13 +243,23 @@ def test_append_time_groups_resume_accepts_strictly_new_timestamps(tmp_path):
 
 @pytest.mark.unit
 def test_append_time_groups_resume_target_uri_reads_cursor_from_final_target(tmp_path):
+    """When ``resume_zarr_store`` is supplied, the cursor is read from that store.
+
+    The resulting coverage index range 10..11 proves the cursor came from
+    ``final_store`` (which has 10 pre-existing timestamps); if the cursor
+    were read from the empty ``temp_store`` the range would be [[0, 1]].
+    """
     final_store = tmp_path / "final.zarr"
     temp_store = tmp_path / "temp.zarr"
     group = "F024"
 
     existing_ts = pd.date_range("2024-01-01", periods=10, freq="h")
     existing_ds = xr.Dataset(
-        {"FWI": (("timestamp", "lat", "lon"), np.zeros((10, 2, 3), dtype=np.float32))},
+        {
+            "FWI": (("timestamp", "lat", "lon"), np.zeros((10, 2, 3), dtype=np.float32)),
+            # The final (resume) target is a Firecube store, so it carries the state array.
+            "firecube_timestamp_state": (("timestamp",), np.ones(10, dtype=np.uint8)),
+        },
         coords={"timestamp": existing_ts, "lat": np.arange(2), "lon": np.arange(3)},
     )
     existing_ds.to_zarr(
@@ -264,16 +276,10 @@ def test_append_time_groups_resume_target_uri_reads_cursor_from_final_target(tmp
             coords={"timestamp": batch_ts, "lat": np.arange(2), "lon": np.arange(3)},
         )
 
-    with (
-        patch(
-            "firecube.ingestor.runtime.zarr.append.write_dataset_to_zarr",
-            autospec=True,
-        ) as mock_write,
-        patch(
-            "firecube.ingestor.runtime.zarr.append._read_existing_append_values",
-            wraps=_read_existing_append_values,
-        ) as mock_read_values,
-    ):
+    with patch(
+        "firecube.ingestor.runtime.zarr.append.write_dataset_to_zarr",
+        autospec=True,
+    ) as mock_write:
         metrics = append_time_groups(
             store=str(temp_store),
             zarr_store=local_zarr_handle(temp_store),
@@ -287,12 +293,17 @@ def test_append_time_groups_resume_target_uri_reads_cursor_from_final_target(tmp
         )
 
     assert mock_write.call_count == 1
-    assert mock_read_values.call_args.kwargs["store_uri"] == str(final_store)
     assert metrics["coverage"][0]["time_index_ranges"] == [[10, 11]]
 
 
 @pytest.mark.unit
 def test_append_time_groups_without_resume_target_uri_keeps_store_uri_reads(tmp_path):
+    """Without ``resume_zarr_store``, the cursor is read from the write store.
+
+    The coverage index range 3..4 proves the cursor came from ``store``
+    (which has 3 pre-existing timestamps); if reads had gone elsewhere the
+    range would not match.
+    """
     store = tmp_path / "resume_target_default.zarr"
     group = "F024"
 
@@ -315,22 +326,17 @@ def test_append_time_groups_without_resume_target_uri_keeps_store_uri_reads(tmp_
             coords={"timestamp": batch_ts, "lat": np.arange(2), "lon": np.arange(3)},
         )
 
-    with patch(
-        "firecube.ingestor.runtime.zarr.append._read_existing_append_values",
-        wraps=_read_existing_append_values,
-    ) as mock_read_values:
-        metrics = append_time_groups(
-            store=str(store),
-            zarr_store=local_zarr_handle(store),
-            session=make_local_session(str(store)),
-            group_to_timestamps={group: list(new_ts)},
-            dataset_for_batch=dataset_for_batch,
-            arrays_for_group=lambda g: [f"{g}/FWI"],
-            resume_existing=True,
-            batch_size=10,
-        )
+    metrics = append_time_groups(
+        store=str(store),
+        zarr_store=local_zarr_handle(store),
+        session=make_local_session(str(store)),
+        group_to_timestamps={group: list(new_ts)},
+        dataset_for_batch=dataset_for_batch,
+        arrays_for_group=lambda g: [f"{g}/FWI"],
+        resume_existing=True,
+        batch_size=10,
+    )
 
-    assert mock_read_values.call_args.kwargs["store_uri"] == str(store)
     assert metrics["coverage"][0]["time_index_ranges"] == [[3, 4]]
 
 
@@ -367,8 +373,12 @@ def test_append_time_groups_reader_uses_storage_driver_factory_for_default_sessi
 
 
 @pytest.mark.unit
-def test_append_time_groups_resume_allows_non_overlapping_earlier_window(tmp_path):
-    store = tmp_path / "resume_earlier_ok.zarr"
+def test_append_time_groups_resume_refuses_earlier_window_as_insert(tmp_path):
+    """A batch below the stored axis end would append out of order.
+
+    Refusing it keeps the axis monotonic; the store is left unchanged.
+    """
+    store = tmp_path / "resume_earlier_refused.zarr"
     group = "F024"
 
     ts0 = pd.date_range("2024-06-10", periods=3, freq="h")
@@ -390,22 +400,25 @@ def test_append_time_groups_resume_allows_non_overlapping_earlier_window(tmp_pat
             coords={"timestamp": batch_ts, "lat": np.arange(2), "lon": np.arange(3)},
         )
 
-    metrics = append_time_groups(
-        store=str(store),
-        zarr_store=local_zarr_handle(store),
-        session=make_local_session(str(store)),
-        group_to_timestamps={group: list(ts1)},
-        dataset_for_batch=dataset_for_batch,
-        arrays_for_group=lambda g: [f"{g}/FWI"],
-        resume_existing=True,
-        batch_size=10,
-    )
+    with pytest.raises(InsertRefusedError) as exc_info:
+        append_time_groups(
+            store=str(store),
+            zarr_store=local_zarr_handle(store),
+            session=make_local_session(str(store)),
+            group_to_timestamps={group: list(ts1)},
+            dataset_for_batch=dataset_for_batch,
+            arrays_for_group=lambda g: [f"{g}/FWI"],
+            resume_existing=True,
+            batch_size=10,
+        )
 
-    assert metrics["coverage"][0]["time_index_ranges"] == [[3, 4]]
+    assert exc_info.value.reason == "insert"
+    stored = xr.open_zarr(str(store), group=group, consolidated=False)
+    assert stored.sizes["timestamp"] == 3
 
 
 @pytest.mark.unit
-def test_append_time_groups_resume_uses_preexisting_baseline_not_same_run_data(tmp_path):
+def test_append_time_groups_resume_refuses_values_below_stored_max_from_baseline(tmp_path):
     store = tmp_path / "resume_baseline_only.zarr"
     group = "F024"
 
@@ -442,18 +455,24 @@ def test_append_time_groups_resume_uses_preexisting_baseline_not_same_run_data(t
             coords={"timestamp": batch_ts, "lat": np.arange(2), "lon": np.arange(3)},
         )
 
-    metrics = append_time_groups(
-        store=str(store),
-        zarr_store=local_zarr_handle(store),
-        session=make_local_session(str(store)),
-        group_to_timestamps={group: list(ts_second)},
-        dataset_for_batch=ds_for_second,
-        arrays_for_group=lambda g: [f"{g}/FWI"],
-        resume_existing=True,
-        batch_size=10,
-    )
+    # Both values sort below the stored maximum (June): resume classification
+    # compares against the store baseline, not the run's own data, and refuses
+    # the insert rather than appending out of order.
+    with pytest.raises(InsertRefusedError) as exc_info:
+        append_time_groups(
+            store=str(store),
+            zarr_store=local_zarr_handle(store),
+            session=make_local_session(str(store)),
+            group_to_timestamps={group: list(ts_second)},
+            dataset_for_batch=ds_for_second,
+            arrays_for_group=lambda g: [f"{g}/FWI"],
+            resume_existing=True,
+            batch_size=10,
+        )
 
-    assert metrics["coverage"][0]["time_index_ranges"] == [[3, 4]]
+    assert exc_info.value.reason == "insert"
+    stored = xr.open_zarr(str(store), group=group, consolidated=False)
+    assert stored.sizes["timestamp"] == 3
 
 
 @pytest.mark.unit

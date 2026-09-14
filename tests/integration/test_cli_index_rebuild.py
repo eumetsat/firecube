@@ -289,6 +289,8 @@ def test_rebuild_success_allows_next_ingest(
             "fsspec",
             "--write-mode",
             "direct",
+            "--option",
+            "allow_empty_source=true",
         ],
     )
 

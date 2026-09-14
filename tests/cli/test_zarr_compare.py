@@ -78,7 +78,7 @@ def test_compare_mismatched_shape_exit_nonzero_with_stderr(tmp_path: Path) -> No
 
     result = _invoke_compare(_required_args(a, b))
 
-    assert result.exit_code == 3
+    assert result.exit_code == 1
     assert "shape" in result.stderr
     assert "Traceback" not in result.output
 

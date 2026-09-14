@@ -174,13 +174,15 @@ def test_seed_staged_store_metadata_rejects_storage_options(tmp_path):
         )
 
 
-def test_seed_staged_store_metadata_strict_wraps_unexpected_exception(tmp_path):
+@pytest.mark.parametrize("exc_type", [RuntimeError, ValueError])
+def test_seed_staged_store_metadata_strict_wraps_unexpected_exception(tmp_path, exc_type):
+    """Strict mode wraps any non-OSError failure as StagedMetadataError, cause chained."""
     final = tmp_path / "final.zarr"
     temp = tmp_path / "temp.zarr"
     broken_session = MagicMock(spec=StorageSession)
-    broken_session.fs.side_effect = RuntimeError("boom")
+    broken_session.fs.side_effect = exc_type("boom")
 
-    with pytest.raises(StagedMetadataError, match="boom"):
+    with pytest.raises(StagedMetadataError, match="boom") as exc_info:
         seed_staged_store_metadata(
             temp_store_uri=str(temp),
             final_target_uri=str(final),
@@ -188,6 +190,7 @@ def test_seed_staged_store_metadata_strict_wraps_unexpected_exception(tmp_path):
             session=broken_session,
             strict=True,
         )
+    assert isinstance(exc_info.value.__cause__, exc_type)
 
 
 def test_seed_strict_raises_on_existing_target_failure(tmp_path, monkeypatch: pytest.MonkeyPatch):

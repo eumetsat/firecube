@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -71,7 +71,12 @@ class BatchPlanner:
     """Service that creates batches from discovered source files."""
 
     def create_batches(
-        self, host: BatchPlanHost, ctx: PluginContext, batch_size: int
+        self,
+        host: BatchPlanHost,
+        ctx: PluginContext,
+        batch_size: int,
+        *,
+        items: Sequence[Any] | None = None,
     ) -> Iterator[PipelineBatch]:
         """Yield batches via hooks (iter -> filter -> batch).
 
@@ -79,17 +84,29 @@ class BatchPlanner:
             host: The host object providing hooks and source files.
             ctx: The ingestion context.
             batch_size: Maximum number of items per batch.
+            items: Optional pre-discovered items to batch. When provided, the
+                planner skips ``host.discover_source_files`` and consumes the
+                sequence directly (used by callers that filter or cache the
+                item list upstream).
 
         Yields:
-            PipelineBatch objects containing the items to be processed.
+            PipelineBatch objects containing the items to be processed. Every
+            batch carries ``metadata["batch_index"]`` (its 0-based planner
+            position) and ``metadata["is_last"]`` (``True`` only for the final
+            batch of the stream). Batch ids and ``files_hash`` do not depend
+            on either field.
         """
-        items_iter = host.discover_source_files(ctx)
+        items_iter: Iterable[Any] = (
+            iter(items) if items is not None else host.discover_source_files(ctx)
+        )
 
         current_batch_items: list[Any] = []
         current_size = 0
         batch_idx = 0
 
-        def _yield_batch(b_items: list[Any], b_size: int, b_idx: int) -> PipelineBatch:
+        def _yield_batch(
+            b_items: list[Any], b_size: int, b_idx: int, *, is_last: bool
+        ) -> PipelineBatch:
             # Deterministic grouping is enforced by the host contract,
             # but we trust the host to return a stable list.
             groups = host.get_batch_groups(b_items, ctx)
@@ -133,11 +150,22 @@ class BatchPlanner:
                     "item_uris_preview_limit": preview_limit,
                     "item_uris_truncated": item_uris_truncated,
                     "files_hash": item_uris_hash,
+                    # Planner position (0-based) and last-batch flag. The
+                    # ordered write gate commits appends in ``batch_index``
+                    # order; ``is_last`` lets alignment checks treat the
+                    # final short batch as a legitimate tail.
+                    "batch_index": b_idx,
+                    "is_last": is_last,
                 },
                 size_bytes=b_size,
                 files_count=len(b_items),
                 groups=groups,
             )
+
+        # One-batch lookahead: a full batch is held back until the planner
+        # knows whether anything follows it, so ``is_last`` can be stamped
+        # without materialising the whole item stream.
+        pending: tuple[list[Any], int] | None = None
 
         for item in items_iter:
             if not host.filter_item(item, ctx):
@@ -152,10 +180,17 @@ class BatchPlanner:
             current_size += size
 
             if len(current_batch_items) >= batch_size:
-                yield _yield_batch(current_batch_items, current_size, batch_idx)
-                batch_idx += 1
+                if pending is not None:
+                    yield _yield_batch(pending[0], pending[1], batch_idx, is_last=False)
+                    batch_idx += 1
+                pending = (current_batch_items, current_size)
                 current_batch_items = []
                 current_size = 0
 
         if current_batch_items:
-            yield _yield_batch(current_batch_items, current_size, batch_idx)
+            if pending is not None:
+                yield _yield_batch(pending[0], pending[1], batch_idx, is_last=False)
+                batch_idx += 1
+            yield _yield_batch(current_batch_items, current_size, batch_idx, is_last=True)
+        elif pending is not None:
+            yield _yield_batch(pending[0], pending[1], batch_idx, is_last=True)

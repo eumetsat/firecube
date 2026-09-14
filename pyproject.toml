@@ -29,14 +29,17 @@ dependencies = [
     "opentelemetry-sdk>=1.37.0",
     "opentelemetry-exporter-otlp>=1.44.0",
     "click>=8.2.1",
+    "packaging>=24.2",
 ]
 
 [project.optional-dependencies]
 obstore = ["obstore>=0.4.0"]
 tensogram = ["tensogram>=0.22.0,<0.23", "tensogram-xarray>=0.22.0,<0.23", "tensogram-zarr>=0.22.0,<0.23"]
 healpix = ["healpix-geo>=0.2.1"]
+patterns = ["trollsift>=1.0.1,<2"]
 virtualzarr = ["virtualizarr>=2.7.0,<3"]
 test = [
+    "trollsift>=1.0.1,<2",
     "tensogram>=0.22.0,<0.23",
     "tensogram-xarray>=0.22.0,<0.23",
     "tensogram-zarr>=0.22.0,<0.23",
@@ -82,6 +85,7 @@ docs = [
     "mkdocs-click>=0.9.0",
     "mkdocs-macros-plugin>=1.0,<2.0",
     "mike>=2.1",
+    "mkdocs-jupyter>=0.26.3",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -110,6 +114,10 @@ ignore = [
     "E203",    # Whitespace before ':' (conflicts with formatter)
     "SIM108",  # Use ternary operator (can reduce readability)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# IPython defines _exit_code after a `!command` cell line; ruff cannot see it.
+"docs/showcase/*.ipynb" = ["F821"]
 
 [tool.ruff.format]
 quote-style = "double"

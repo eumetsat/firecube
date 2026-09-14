@@ -61,7 +61,7 @@ def test_pipeline_manifest_creation(tmp_path, pipeline_workers):
         options={
             "pipeline_workers": pipeline_workers,
             "pipeline_batch_size": 1,
-            "include_patterns": ["*.nc"],
+            "input_filters": ["*.nc"],
             "write_mode": "direct",
         },
     )

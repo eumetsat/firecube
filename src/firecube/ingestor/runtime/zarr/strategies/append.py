@@ -27,11 +27,13 @@ from typing import TYPE_CHECKING, Any, cast
 import xarray as xr
 
 from firecube.core.uris import storage_uri_from_target
+from firecube.ingestor.runtime.zarr.append_order import AppendOrder
 
 if TYPE_CHECKING:
     from firecube.core.config import StorageConfig
     from firecube.core.filesystem.store_factory import ZarrStoreHandle
     from firecube.core.storage.session import StorageSession
+    from firecube.ingestor.runtime.zarr.alignment import AlignmentMonitor
 
 
 def _session_for_store(store_uri: str, storage_config: StorageConfig) -> StorageSession:
@@ -75,18 +77,29 @@ class AppendStrategy:
         zarr_codecs: list[dict] | None = None,
         consolidate: bool = False,
         resume_existing: bool = False,
+        force_reingest: bool = False,
         append_dim: str = "timestamp",
         state_var_name: str = "firecube_timestamp_state",
         state_deleted_value: int = 2,
         logger: logging.Logger | None = None,
         storage_config: StorageConfig | None = None,
         session: StorageSession | None = None,
+        alignment: AlignmentMonitor | None = None,
+        order: AppendOrder | None = None,
+        pipeline_write_mode: str | None = None,
+        final_target_uri: str | None = None,
+        preflight_compare_target_uri: str | None = None,
     ) -> None:
         # NOTE: append_dim is the already-resolved time dim name supplied by
         # the caller (typically GenericZarrIngestor via _resolve_time_dim_name()).
         # The strategy is host-free at runtime — never looks up the dim name
         # from an ingestor object. This keeps the write protocol decoupled and
         # the strategy testable in isolation.
+        #
+        # `resume_existing` and `force_reingest` are SEPARATE flags per
+        # §7-Phase 3.1 split-bypass semantics: `resume_existing` bypasses
+        # non-terminal reservations, `force_reingest` bypasses completed
+        # reservations for state-aware region overwrite. Do NOT collapse.
         self._store = store
         self._store_uri = store_uri
         self._store_handle = store_handle
@@ -100,11 +113,20 @@ class AppendStrategy:
         self._zarr_codecs = zarr_codecs
         self._consolidate = consolidate
         self._resume_existing = resume_existing
+        self._force_reingest = force_reingest
         self._append_dim = append_dim
         self._state_var_name = state_var_name
         self._state_deleted_value = state_deleted_value
         self._logger = logger
         self._session = session
+        # Run-scoped: the host shares one monitor across every batch so the
+        # alignment warning fires once per run and the summary is emitted
+        # once at the end.
+        self._alignment = alignment
+        self._order = order if order is not None else AppendOrder()
+        self._pipeline_write_mode = pipeline_write_mode
+        self._final_target_uri = final_target_uri
+        self._preflight_compare_target_uri = preflight_compare_target_uri
 
     def write_groups(
         self,
@@ -113,6 +135,7 @@ class AppendStrategy:
         dataset_for_batch: Callable[[str, Sequence[Any]], xr.Dataset | None],
         batch_size: int,
         claim_for_group: Callable[[str], Any] | None = None,
+        is_final_batch: bool = False,
     ) -> dict[str, Any]:
         """Delegate to ``append_time_groups()`` and return its metrics dict."""
         from firecube.ingestor.runtime.zarr.append import append_time_groups
@@ -148,6 +171,16 @@ class AppendStrategy:
                 mode="r",
             )
 
+        preflight_compare_zarr_store: Any = None
+        if self._preflight_compare_target_uri and self._storage_config:
+            preflight_compare_session = _session_for_store(
+                self._preflight_compare_target_uri, self._storage_config
+            )
+            preflight_compare_zarr_store = preflight_compare_session.zarr.create_store(
+                uri=storage_uri_from_target(self._preflight_compare_target_uri),
+                mode="r",
+            )
+
         append_time_groups_fn = cast(Any, append_time_groups)
         append_dim = self._append_dim
         return append_time_groups_fn(
@@ -165,6 +198,7 @@ class AppendStrategy:
             zarr_codecs=self._zarr_codecs,
             consolidate=self._consolidate,
             resume_existing=self._resume_existing,
+            force_reingest=self._force_reingest,
             batch_size=batch_size,
             append_dim=append_dim,
             state_var_name=self._state_var_name,
@@ -172,4 +206,10 @@ class AppendStrategy:
             logger=self._logger,
             claim_for_group=claim_for_group,
             session=effective_session,
+            is_final_batch=is_final_batch,
+            alignment=self._alignment,
+            order=self._order,
+            pipeline_write_mode=self._pipeline_write_mode,
+            final_target_uri=self._final_target_uri,
+            preflight_compare_zarr_store=preflight_compare_zarr_store,
         )

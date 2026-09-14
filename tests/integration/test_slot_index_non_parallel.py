@@ -31,7 +31,6 @@ from firecube.core.controlplane.types import (
     RESOLVED_INDEX_IDENTITY_HASH_ATTR,
     canonical_index_bytes,
 )
-from firecube.core.errors import ResolvedIndexConflictError
 from firecube.core.index_resolve import resolve_index_spec
 from firecube.core.index_spec import IndexSpec, RegularTimeAxis
 from firecube.ingestor.registry import loader as _loader
@@ -184,17 +183,17 @@ def test_divergent_epoch_raises_conflict(tmp_path: Path, monkeypatch: pytest.Mon
         "index_spec",
         different_epoch_index_spec,
     )
-    with pytest.raises(ResolvedIndexConflictError):
-        CliRunner().invoke(
-            cli,
-            _ingest_args(
-                "direct_zarr_capable_test_plugin",
-                "direct_zarr_capable_test_product",
-                target_path,
-                resume_existing=True,
-            ),
-            catch_exceptions=False,
-        )
+    result = CliRunner().invoke(
+        cli,
+        _ingest_args(
+            "direct_zarr_capable_test_plugin",
+            "direct_zarr_capable_test_product",
+            target_path,
+            resume_existing=True,
+        ),
+    )
+    assert result.exit_code != 0, result.output
+    assert "incompatible resolved index" in result.output, result.output
 
 
 def test_non_declaring_plugin_unchanged(tmp_path: Path) -> None:

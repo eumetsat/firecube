@@ -19,12 +19,18 @@ Dispatches on (dtype, attrs) — firecube's vocabulary for encoded time arrays.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import numpy as np
 
-__all__ = ["decode_time_array"]
+__all__ = ["decode_or_passthrough", "decode_time_array", "encode_time_array"]
+
+
+def _xarray_time_codecs() -> tuple[Callable[..., Any], Callable[..., Any]]:
+    from xarray.coding.times import decode_cf_datetime, encode_cf_datetime
+
+    return decode_cf_datetime, encode_cf_datetime
 
 
 def decode_time_array(values: np.ndarray, attrs: Mapping[str, Any]) -> np.ndarray:
@@ -59,8 +65,7 @@ def decode_time_array(values: np.ndarray, attrs: Mapping[str, Any]) -> np.ndarra
                 "does not contain 'since'. Expected a reference-epoch string like "
                 "'seconds since 1970-01-01'."
             )
-        from xarray.coding.times import decode_cf_datetime
-
+        decode_cf_datetime, _ = _xarray_time_codecs()
         calendar = str(attrs.get("calendar", "standard"))
         decoded = decode_cf_datetime(values, units=units_str, calendar=calendar)
         return np.asarray(decoded)
@@ -69,3 +74,45 @@ def decode_time_array(values: np.ndarray, attrs: Mapping[str, Any]) -> np.ndarra
         f"Cannot decode time array with dtype {values.dtype!r}: not a datetime64 or "
         "a numeric type with 'units' containing 'since'."
     )
+
+
+def decode_or_passthrough(values: np.ndarray, attrs: Mapping[str, Any]) -> np.ndarray:
+    """Decode CF-encoded time values; return numeric arrays unchanged when they lack a CF units.
+
+    Dispatch rules:
+
+    * ``datetime64`` (dtype kind ``"M"``) → return as-is (already time).
+    * Numeric (kind ``"f"``, ``"i"``, ``"u"``) with a non-``None`` ``units``
+      attr → :func:`decode_time_array`; malformed units (missing ``"since"``
+      or a bad reference date) propagate as :class:`ValueError`.
+    * Numeric with ``units`` absent → passthrough (bare numeric counter).
+    * Other dtypes → passthrough.
+    """
+
+    values = np.asarray(values)
+    if values.dtype.kind == "M":
+        return values
+    if values.dtype.kind in ("f", "i", "u"):
+        units = attrs.get("units") if attrs else None
+        if units is not None:
+            return decode_time_array(values, attrs)
+    return values
+
+
+def encode_time_array(values: np.ndarray, attrs: dict[str, Any]) -> tuple[np.ndarray, str, str]:
+    """Return CF-encoded datetime values using the stored time-array *attrs*.
+
+    Malformed ``units`` or ``calendar`` attributes propagate as ``ValueError``
+    from xarray so callers cannot silently accept a lossy or invalid encoding.
+    """
+
+    values = np.asarray(values)
+    units = attrs.get("units")
+    calendar = attrs.get("calendar")
+    _, encode_cf_datetime = _xarray_time_codecs()
+    encoded, encoded_units, encoded_calendar = encode_cf_datetime(
+        values,
+        units=str(units) if units is not None else None,
+        calendar=str(calendar) if calendar is not None else None,
+    )
+    return np.asarray(encoded), str(encoded_units), str(encoded_calendar)

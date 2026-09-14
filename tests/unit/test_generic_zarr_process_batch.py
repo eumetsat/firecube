@@ -22,6 +22,11 @@ import pytest
 
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.runtime.zarr import batch_runner
+from firecube.ingestor.runtime.zarr.append_failure import (
+    AppendBatchFailed,
+    AppendBatchOutcome,
+    RepairOutcome,
+)
 from firecube.ingestor.templates import generic as generic_module
 from firecube.ingestor.templates.generic import GenericZarrIngestor
 from firecube.ingestor.types.context import (
@@ -45,8 +50,16 @@ class _FakeStrategy:
         self._metrics = metrics or {"coverage": ["F024"]}
         self._exc = exc
 
-    def write_groups(self, *, group_to_timestamps, dataset_for_batch, batch_size, claim_for_group):
-        _ = (group_to_timestamps, dataset_for_batch, batch_size, claim_for_group)
+    def write_groups(
+        self,
+        *,
+        group_to_timestamps,
+        dataset_for_batch,
+        batch_size,
+        claim_for_group,
+        is_final_batch=False,
+    ):
+        _ = (group_to_timestamps, dataset_for_batch, batch_size, claim_for_group, is_final_batch)
         if self._exc is not None:
             raise self._exc
         return self._metrics
@@ -137,6 +150,48 @@ def test_process_batch_preserves_exception_path_cleanup(monkeypatch: pytest.Monk
     assert result.success is False
     assert "boom" in str(result.error)
     cleanup.assert_called_once_with(batch, ctx)
+
+
+@pytest.mark.unit
+def test_process_batch_reports_append_failure_outcome_in_result_metrics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An ``AppendBatchFailed`` becomes a failed result carrying the store outcome."""
+    ingestor, batch, ctx = _make_subject(monkeypatch)
+    committed = {"group": "A", "arrays": ["A/v"], "time_index_ranges": [[5, 6]]}
+    failed_entry = {
+        "group": "B",
+        "arrays": ["B/v"],
+        "time_index_ranges": [[0, 1]],
+        "write_strategy": "append_failed",
+    }
+    repair = RepairOutcome(state_marked_ranges=[[0, 1]])
+    outcome = AppendBatchOutcome(
+        committed=[committed],
+        failed_group="B",
+        failed_entry=failed_entry,
+        repair=repair,
+        not_attempted_groups=["C"],
+        counters={"batch_processing": {"batches_written": 1}},
+    )
+    exc = AppendBatchFailed(outcome, RuntimeError("injected tail append failure"))
+    strategy_mock = MagicMock(return_value=_FakeStrategy(exc=exc))
+    monkeypatch.setattr(batch_runner, "build_append_strategy", strategy_mock)
+    _route_legacy_append_strategy(monkeypatch, strategy_mock)
+
+    result = ingestor._process_batch(batch, ctx)
+
+    assert result.success is False
+    assert result.attempted is True
+    assert result.error == "append failed in group 'B': injected tail append failure"
+    assert str(result.outputs.primary) == str(result.outputs.zarr) != ""
+    assert result.metrics["coverage"] == [committed]
+    assert result.metrics["failed_coverage"] == [failed_entry]
+    assert result.metrics["failed_group"] == "B"
+    assert result.metrics["not_attempted_groups"] == ["C"]
+    assert result.metrics["repair"] == repair.to_dict()
+    assert result.metrics["zarr"] == {"batch_processing": {"batches_written": 1}}
+    assert ingestor._write_gate.halted is True
 
 
 @pytest.mark.unit

@@ -22,7 +22,18 @@ from datetime import datetime
 from typing import Any
 
 from firecube.core.controlplane import ChunkManager, SpanCoverage
+from firecube.core.controlplane.ranges import (
+    intersect_index_ranges as _intersect_index_ranges,
+)
+from firecube.core.controlplane.ranges import merge_index_ranges as _merge_index_ranges
+from firecube.core.controlplane.ranges import (
+    normalize_index_ranges as _normalize_index_ranges,
+)
+from firecube.core.controlplane.ranges import (
+    subtract_index_ranges as _subtract_index_ranges,
+)
 from firecube.core.errors import ManifestError
+from firecube.ingestor.runtime._metrics_helpers import _extract_timestamps_skipped
 from firecube.ingestor.types.context import (
     IngestResult,
     PipelineBatch,
@@ -99,9 +110,13 @@ class SpanRecorder:
         if time_max:
             meta["time_max"] = time_max
 
+        timestamps_skipped = _extract_timestamps_skipped(result.metrics)
+        if timestamps_skipped > 0:
+            meta["timestamps_skipped"] = timestamps_skipped
+
         storage_bytes: int = 0
         storage_summary = result.metrics.storage
-        if storage_summary is not None:
+        if storage_summary is not None and storage_summary.bytes is not None:
             storage_bytes = storage_summary.bytes
 
         self._chunk_manager.record_run_terminal(
@@ -117,6 +132,8 @@ class SpanRecorder:
         )
         post_terminal_events_recorded = False
         prior_spans: list[Any] = []
+        replaced_span_keys: list[str] = []
+        overwrites_by_coverage: dict[int, list[list[int]]] = {}
 
         if ctx.force_reingest:
             prior_spans = _list_prior_active_spans_for_replacement(
@@ -132,16 +149,22 @@ class SpanRecorder:
                     "This would erase active coverage. "
                     f"Abandon the run first: firecube chunks runs abandon {run_id}"
                 )
+            replaced_span_keys, overwrites_by_coverage = _replacement_plan(
+                prior_spans=prior_spans,
+                coverage=coverage,
+            )
 
         if record_spans and coverage:
             base_meta = dict(meta)
             base_meta["run_id"] = run_id
-            for cov in coverage:
+            for cov_index, cov in enumerate(coverage):
                 span_meta = dict(base_meta)
                 if cov.time_min:
                     span_meta["time_min"] = cov.time_min
                 if cov.time_max:
                     span_meta["time_max"] = cov.time_max
+                if overwrites := overwrites_by_coverage.get(cov_index):
+                    span_meta["overwrites_index_ranges"] = overwrites
                 self._chunk_manager.record_span(
                     product=product,
                     run_id=str(run_id),
@@ -152,13 +175,24 @@ class SpanRecorder:
                     meta=span_meta,
                 )
             post_terminal_events_recorded = True
+        elif coverage and overwrites_by_coverage:
+            post_terminal_events_recorded = (
+                _record_overwrite_metadata_for_existing_spans(
+                    self._chunk_manager,
+                    product=product,
+                    run_id=run_id,
+                    coverage=coverage,
+                    overwrites_by_coverage=overwrites_by_coverage,
+                )
+                or post_terminal_events_recorded
+            )
 
-        if ctx.force_reingest and prior_spans:
+        if ctx.force_reingest and replaced_span_keys:
             self._chunk_manager.record_replacement_committed(  # pyright: ignore[reportAttributeAccessIssue]
                 product=product,
                 run_id=run_id,
                 replacing_run_id=run_id,
-                replaced_span_keys=[span.key for span in prior_spans],
+                replaced_span_keys=replaced_span_keys,
             )
             post_terminal_events_recorded = True
 
@@ -224,6 +258,123 @@ class SpanRecorder:
                 )
             return
 
+        self._record_active_spans(
+            coverage_list, batch=batch, base_meta=base_meta, run_id=run_id, product=product
+        )
+
+    def record_batch_failure(
+        self,
+        ctx: PluginContext,
+        batch: PipelineBatch,
+        result: PipelineResult,
+        slice_meta: dict[str, Any],
+        run_id: str,
+        product: str,
+    ) -> None:
+        """Record one failed batch, one span per group the batch involved.
+
+        A plain failure (no append outcome in ``result.metrics``) records a
+        ``failed`` span for every group of the batch. A failure reported by
+        the append path records what the store now holds: an ``active`` span
+        for each group committed before the failure, a ``failed`` span with
+        the touched index ranges and ``meta["repair"]`` for the failed group,
+        and a ``failed`` span with a ``not_attempted`` reason for each group
+        that was never written.
+
+        Args:
+            ctx: Plugin-facing run context (unused).
+            batch: The batch that failed.
+            result: The failed batch result; ``error`` carries the cause.
+            slice_meta: Canonical slice metadata for the run.
+            run_id: Identifier of the run.
+            product: Product the spans belong to.
+        """
+        _ = ctx
+        error = result.error
+        self._log.error("Batch %s failed: %s", batch.batch_id, error)
+
+        base_meta = dict(slice_meta)
+        base_meta["run_id"] = run_id
+        reason = str(error or "Unknown error")
+        metrics = result.metrics
+        failed_group = metrics.get("failed_group") if metrics is not None else None
+        if not isinstance(failed_group, str):
+            for group in batch.groups or ["unknown"]:
+                self._chunk_manager.record_span(
+                    product=product,
+                    run_id=run_id,
+                    batch_id=batch.batch_id,
+                    group=group,
+                    status="failed",
+                    reason=reason,
+                    meta=base_meta,
+                )
+            return
+
+        context = f"failed batch {batch.batch_id}"
+        committed = _span_coverage_from_metrics(metrics, logger=self._log, context=context)
+        if committed:
+            self._record_active_spans(
+                committed, batch=batch, base_meta=base_meta, run_id=run_id, product=product
+            )
+
+        failed_meta = dict(base_meta)
+        repair = metrics.get("repair")
+        if isinstance(repair, dict):
+            failed_meta["repair"] = dict(repair)
+        failed_coverage = _span_coverage_from_metrics(
+            metrics, key="failed_coverage", logger=self._log, context=context
+        )
+        if failed_coverage:
+            for cov in failed_coverage:
+                meta = dict(failed_meta)
+                if cov.time_min:
+                    meta["time_min"] = cov.time_min
+                if cov.time_max:
+                    meta["time_max"] = cov.time_max
+                self._chunk_manager.record_span(
+                    product=product,
+                    run_id=run_id,
+                    batch_id=batch.batch_id,
+                    group=cov.group,
+                    status="failed",
+                    reason=reason,
+                    coverage=cov,
+                    meta=meta,
+                )
+        else:
+            self._chunk_manager.record_span(
+                product=product,
+                run_id=run_id,
+                batch_id=batch.batch_id,
+                group=failed_group,
+                status="failed",
+                reason=reason,
+                meta=failed_meta,
+            )
+
+        not_attempted = metrics.get("not_attempted_groups")
+        for group in not_attempted if isinstance(not_attempted, list) else []:
+            self._chunk_manager.record_span(
+                product=product,
+                run_id=run_id,
+                batch_id=batch.batch_id,
+                group=str(group),
+                status="failed",
+                reason=f"not_attempted; group {failed_group} failed: {reason}",
+                meta=base_meta,
+            )
+
+    def _record_active_spans(
+        self,
+        coverage_list: list[SpanCoverage],
+        *,
+        batch: PipelineBatch,
+        base_meta: dict[str, Any],
+        run_id: str,
+        product: str,
+    ) -> None:
+        """Record one ``active`` span per coverage entry of a batch."""
         for cov in coverage_list:
             meta = dict(base_meta)
             if cov.time_min:
@@ -238,32 +389,6 @@ class SpanRecorder:
                 status="active",
                 coverage=cov,
                 meta=meta,
-            )
-
-    def record_batch_failure(
-        self,
-        ctx: PluginContext,
-        batch: PipelineBatch,
-        error: str | None,
-        slice_meta: dict[str, Any],
-        run_id: str,
-        product: str,
-    ) -> None:
-        """Record one failed batch as failed span records."""
-        _ = ctx
-        self._log.error("Batch %s failed: %s", batch.batch_id, error)
-
-        base_meta = dict(slice_meta)
-        base_meta["run_id"] = run_id
-        for group in batch.groups or ["unknown"]:
-            self._chunk_manager.record_span(
-                product=product,
-                run_id=run_id,
-                batch_id=batch.batch_id,
-                group=group,
-                status="failed",
-                reason=str(error or "Unknown error"),
-                meta=base_meta,
             )
 
 
@@ -303,7 +428,14 @@ def _list_prior_active_spans_for_replacement(
     run_id: str,
     slice_meta: dict[str, Any],
 ) -> list[Any]:
-    """Return current active spans for the same slice, excluding this run."""
+    """Return current active spans for the same slice, excluding this run.
+
+    Calls ``chunk_manager.repo.list_chunks(...)`` directly to bypass the
+    facade's active-span dedupe. The replacement recorder MUST see EVERY
+    prior active span for the slice — including duplicates that dedupe
+    would otherwise hide — so that every prior span is marked replaced
+    when this run commits.
+    """
     query_meta = {
         key: value
         for key, value in slice_meta.items()
@@ -324,9 +456,137 @@ def _list_prior_active_spans_for_replacement(
 
     return [
         span
-        for span in chunk_manager.list_chunks(**query_kwargs)
+        for span in chunk_manager.repo.list_chunks(**query_kwargs)
         if str((span.meta or {}).get("run_id", "") or "") != run_id
     ]
+
+
+def _replacement_plan(
+    *,
+    prior_spans: list[Any],
+    coverage: list[SpanCoverage] | None,
+) -> tuple[list[str], dict[int, list[list[int]]]]:
+    """Classify prior spans as fully replaced or partially overwritten.
+
+    Full prior-span coverage keeps the historical replacement behaviour.  A
+    partial overlap keeps the prior span active and records the overwritten
+    sub-range on the new span that wrote those slots; projection readers subtract
+    those ranges from the prior span's effective coverage.
+    """
+    if not coverage:
+        return [], {}
+
+    coverage_ranges_by_group: dict[str, list[list[int]]] = {}
+    for cov in coverage:
+        ranges = _normalize_index_ranges(cov.time_index_ranges)
+        if ranges:
+            coverage_ranges_by_group.setdefault(cov.group, []).extend(ranges)
+
+    replaced_span_keys: list[str] = []
+    overwrites_by_coverage: dict[int, list[list[int]]] = {}
+    for prior_span in prior_spans:
+        prior_ranges = _span_index_ranges(prior_span)
+        prior_group = str((prior_span.meta or {}).get("group", "") or "")
+        new_ranges = _merge_index_ranges(coverage_ranges_by_group.get(prior_group, []))
+
+        if not prior_ranges or not new_ranges:
+            replaced_span_keys.append(str(prior_span.key))
+            continue
+
+        remaining_ranges = _subtract_index_ranges(prior_ranges, new_ranges)
+        if not remaining_ranges:
+            replaced_span_keys.append(str(prior_span.key))
+            continue
+
+        for cov_index, cov in enumerate(coverage):
+            if cov.group != prior_group:
+                continue
+            intersections = _intersect_index_ranges(
+                prior_ranges,
+                _normalize_index_ranges(cov.time_index_ranges),
+            )
+            if intersections:
+                overwrites_by_coverage.setdefault(cov_index, []).extend(intersections)
+
+    return replaced_span_keys, {
+        cov_index: _merge_index_ranges(ranges)
+        for cov_index, ranges in overwrites_by_coverage.items()
+    }
+
+
+def _record_overwrite_metadata_for_existing_spans(
+    chunk_manager: ChunkManager,
+    *,
+    product: str,
+    run_id: str,
+    coverage: list[SpanCoverage],
+    overwrites_by_coverage: dict[int, list[list[int]]],
+) -> bool:
+    """Append enriched span records for spans already recorded per batch."""
+    # private-caller: reach into repo.list_chunks to see every active span
+    # for this run (the manager.list_chunks dedupe would hide siblings we
+    # must mark replaced).
+    current_run_spans = [
+        span
+        for span in chunk_manager.repo.list_chunks(
+            product=product,
+            chunk_type="span",
+            include_replaced=False,
+            meta={"run_id": run_id},
+        )
+        if span.status == "active"
+    ]
+    used_keys: set[str] = set()
+    recorded = False
+    for cov_index, overwrites in overwrites_by_coverage.items():
+        if cov_index >= len(coverage):
+            continue
+        cov = coverage[cov_index]
+        span = _match_recorded_span(current_run_spans, cov, used_keys)
+        if span is None:
+            continue
+        used_keys.add(str(span.key))
+        span_meta = dict(span.meta or {})
+        span_meta["overwrites_index_ranges"] = overwrites
+        if cov.time_min:
+            span_meta["time_min"] = cov.time_min
+        if cov.time_max:
+            span_meta["time_max"] = cov.time_max
+        chunk_manager.record_span(
+            product=product,
+            run_id=run_id,
+            batch_id=str(span_meta.get("batch_id", "single") or "single"),
+            group=cov.group,
+            status="active",
+            coverage=cov,
+            meta=span_meta,
+        )
+        recorded = True
+    return recorded
+
+
+def _match_recorded_span(
+    spans: list[Any],
+    coverage: SpanCoverage,
+    used_keys: set[str],
+) -> Any | None:
+    coverage_ranges = _normalize_index_ranges(coverage.time_index_ranges)
+    for span in spans:
+        if str(span.key) in used_keys:
+            continue
+        if str((span.meta or {}).get("group", "") or "") != coverage.group:
+            continue
+        if _span_index_ranges(span) == coverage_ranges:
+            return span
+    return None
+
+
+def _span_index_ranges(span: Any) -> list[list[int]]:
+    record = span.record if isinstance(getattr(span, "record", None), dict) else {}
+    payload = record.get("span") if isinstance(record, dict) else None
+    if not isinstance(payload, dict):
+        return []
+    return _normalize_index_ranges(payload.get("time_index_ranges"))
 
 
 def _rewrite_terminal_run_metadata(
@@ -342,21 +602,21 @@ def _rewrite_terminal_run_metadata(
     repo._writers.pop((product, run_id), None)
 
 
-def _coverage_from_nested_mapping(metrics: Any) -> Any | None:
+def _coverage_from_nested_mapping(metrics: Any, *, key: str = "coverage") -> Any | None:
     """Locate span coverage in a metrics mapping.
 
-    Checks the batch-level top-level ``coverage`` key first, then the run-level
-    ``zarr.coverage`` / ``pipeline.coverage`` nested locations that
+    Checks the batch-level top-level ``key`` first, then the run-level
+    ``zarr.<key>`` / ``pipeline.<key>`` nested locations that
     `merge_batch_metrics` and the pipeline summary populate. Works for
     both plain dicts and the mapping-compatible `ResultMetrics`.
     """
-    coverage = metrics.get("coverage")
+    coverage = metrics.get(key)
     if coverage:
         return coverage
-    for key in ("zarr", "pipeline"):
-        candidate = metrics.get(key)
+    for nested_key in ("zarr", "pipeline"):
+        candidate = metrics.get(nested_key)
         if isinstance(candidate, dict):
-            nested = candidate.get("coverage")
+            nested = candidate.get(key)
             if nested:
                 return nested
     return None
@@ -365,24 +625,38 @@ def _coverage_from_nested_mapping(metrics: Any) -> Any | None:
 def _span_coverage_from_metrics(
     metrics: ResultMetrics | dict[str, Any] | None,
     *,
+    key: str = "coverage",
     logger: logging.Logger | None = None,
     context: str = "batch",
 ) -> list[SpanCoverage] | None:
-    """Extract SpanCoverage objects from typed result metrics."""
+    """Extract SpanCoverage objects from typed result metrics.
+
+    Args:
+        metrics: Batch- or run-level metrics.
+        key: Metrics key holding the coverage list; ``"coverage"`` for
+            committed spans, ``"failed_coverage"`` for the slots a failed
+            append batch touched.
+        logger: Receives a debug line when no coverage is present.
+        context: Names the caller in that debug line.
+
+    Returns:
+        The coverage entries as `SpanCoverage`, or ``None`` when absent.
+    """
     coverage: Any | None = None
     if metrics is None:
         coverage = None
     elif isinstance(metrics, ResultMetrics):
-        coverage = metrics.pipeline.coverage if metrics.pipeline else None
+        if key == "coverage":
+            coverage = metrics.pipeline.coverage if metrics.pipeline else None
         if not coverage:
             # Run-level aggregation (merge_batch_metrics) stores coverage under
             # ``metrics["zarr"]["coverage"]``; the typed ``pipeline.coverage``
             # only carries per-batch coverage and is empty for run-level metrics
             # (the pipeline field holds the run summary, which has no coverage).
             # Fall back to the nested location so run registration sees it.
-            coverage = _coverage_from_nested_mapping(metrics)
+            coverage = _coverage_from_nested_mapping(metrics, key=key)
     elif isinstance(metrics, dict):
-        coverage = _coverage_from_nested_mapping(metrics)
+        coverage = _coverage_from_nested_mapping(metrics, key=key)
 
     if not coverage:
         if logger:
@@ -412,6 +686,7 @@ def _span_coverage_from_metrics(
                     region_spec=item.get("region_spec"),
                     write_strategy=item.get("write_strategy"),
                     time_dim_name=item.get("time_dim_name"),
+                    chunk_len_used=item.get("chunk_len_used"),
                 )
             )
     if spans:

@@ -27,7 +27,7 @@ import threading
 
 
 class ResumeCacheEntry:
-    __slots__ = ("chunk_len", "cursor", "preexisting_values", "state_initialized")
+    __slots__ = ("chunk_len", "cursor", "state_initialized")
 
     def __init__(
         self,
@@ -35,12 +35,10 @@ class ResumeCacheEntry:
         cursor: int,
         chunk_len: int | None,
         state_initialized: bool,
-        preexisting_values: frozenset[object] | None = None,
     ) -> None:
         self.cursor = int(cursor)
         self.chunk_len = int(chunk_len) if chunk_len is not None else None
         self.state_initialized = bool(state_initialized)
-        self.preexisting_values = preexisting_values
 
 
 _RESUME_CACHE: dict[tuple[str, str, str], ResumeCacheEntry] = {}
@@ -69,6 +67,12 @@ def put_resume_cache_entry(key: tuple[str, str, str], entry: ResumeCacheEntry) -
     with _RESUME_CACHE_LOCK:
         _evict_cache_if_needed()
         _RESUME_CACHE[key] = entry
+
+
+def drop_resume_cache_entry(key: tuple[str, str, str]) -> None:
+    """Forget one entry, e.g. after the group it describes was deleted."""
+    with _RESUME_CACHE_LOCK:
+        _RESUME_CACHE.pop(key, None)
 
 
 def clear_resume_cache(run_id: str | None = None) -> int:

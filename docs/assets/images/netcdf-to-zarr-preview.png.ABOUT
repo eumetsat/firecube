@@ -1,0 +1,7 @@
+name: netcdf-to-zarr-preview.png
+description: Six generated daily temperature fields ingested in two arrivals into one Zarr cube. Blue points show the first arrival; orange points show appended data.
+copyright: Copyright 2026 EUMETSAT
+license: Apache-2.0
+license_url: https://www.apache.org/licenses/LICENSE-2.0
+date: 2026-09-13
+about_resource: netcdf-to-zarr-preview.png

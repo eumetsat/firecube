@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import logging
-import threading
 from types import SimpleNamespace
 from unittest.mock import ANY, MagicMock, patch
 
@@ -84,27 +83,20 @@ def test_assemble_batch_metrics_coverage_extracted_from_zarr() -> None:
 
 
 def test_build_zarr_write_context_creates_correct_instance() -> None:
-    lock = threading.Lock()
-
     result = build_zarr_write_context(
         zarr_config={"dask_scheduler": "synchronous", "write_threads": 2, "async_concurrency": 5},
-        write_lock=lock,
     )
 
     assert isinstance(result, ZarrWriteContext)
-    assert result._write_lock is lock
     assert result._configured_scheduler == "synchronous"
     assert result._write_threads == 2
     assert result._async_concurrency == 5
 
 
 def test_build_zarr_write_context_defaults() -> None:
-    lock = threading.Lock()
-
-    result = build_zarr_write_context(zarr_config={}, write_lock=lock)
+    result = build_zarr_write_context(zarr_config={})
 
     assert isinstance(result, ZarrWriteContext)
-    assert result._write_lock is lock
     assert result._configured_scheduler is None
     assert result._write_threads == 0
     assert result._async_concurrency == 10

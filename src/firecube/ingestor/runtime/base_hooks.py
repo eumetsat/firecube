@@ -55,11 +55,26 @@ class BaseIngestorHookMixin:
     _span_recorder: Any
 
     def slice_meta_keys(self) -> list[str]:
-        """Option keys that define a logical slice for this plugin."""
+        """Name supplied options to include in the logical slice identity.
+
+        Returns:
+            Option keys consumed by the default ``slice_meta`` implementation.
+            Keys absent from ``ctx.options`` are omitted, even when a typed
+            config supplies a default. Override ``slice_meta`` for derived
+            metadata or identity that includes validated defaults.
+        """
         return []
 
     def slice_meta(self, ctx: PluginContext) -> dict[str, Any]:
-        """Return canonical slice metadata for this run."""
+        """Return canonical slice metadata for this run's resume identity.
+
+        Args:
+            ctx: Run context containing the supplied options snapshot.
+
+        Returns:
+            Canonicalized values for ``slice_meta_keys()`` present in
+            ``ctx.options``. Does not derive values or insert typed defaults.
+        """
         meta: dict[str, Any] = {}
         for key in self.slice_meta_keys():
             if key in ctx.options:
@@ -122,7 +137,7 @@ class BaseIngestorHookMixin:
         self._span_recorder.record_batch_failure(
             ctx=ctx,
             batch=batch,
-            error=result.error,
+            result=result,
             slice_meta=slice_meta,
             run_id=run_id,
             product=product,

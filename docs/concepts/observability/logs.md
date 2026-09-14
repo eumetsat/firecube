@@ -45,7 +45,7 @@ Firecube ignores generic `LOG_LEVEL`, `LOG_FORMAT`, and
 `--option no_progress=true` suppresses coarse pipeline progress messages:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \

@@ -93,6 +93,10 @@ Move interrupting sections to their canonical owner and link them.
 
 - Start with the reader's question and dominant need.
 - Use public CLI flags and public SDK imports only.
+- Default terminal examples to an activated virtual environment: show
+  `source .venv/bin/activate` in setup, then use `firecube` and `python` directly.
+  Installation may mention `uv run firecube` as an alternative to activation.
+  Jupyter cells use the running kernel's environment.
 - Link to internals only after the user-facing path is complete.
 - Keep section names consistent across related public pages. When a recurring
   section has an established heading, reuse it instead of inventing synonyms.

@@ -100,7 +100,7 @@ def test_generic_write_context_applies_scoped_config(monkeypatch: pytest.MonkeyP
 
     monkeypatch.setattr(zarr.config, "set", spy_config_set)
 
-    with ZarrWriteContext(write_lock=contextlib.nullcontext(), write_empty_chunks=True):  # type: ignore[arg-type]
+    with ZarrWriteContext(write_empty_chunks=True):
         assert entered is True
 
     assert {"array.write_empty_chunks": True} in calls

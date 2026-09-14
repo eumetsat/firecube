@@ -30,8 +30,17 @@ T = TypeVar("T", bound="PluginConfig")
 class PluginConfig:
     """Base configuration for all Firecube ingestors.
 
-    Subclasses should define fields as dataclass fields.
-    Use `from_options` to parse and validate a raw dictionary.
+    Decorate subclasses that add fields with ``@dataclass`` and attach the
+    class to the plugin as ``plugin_config_class``. Hooks read the validated
+    instance through ``self.plugin_config``. Explicit caller options override
+    dataclass defaults, including explicit values equal to a core default.
+
+    Engine and template settings are available through ``self.engine_config``
+    and ``self.template_config`` respectively. ``PluginContext.options`` is
+    an immutable copy of runtime options, including supplied values and
+    engine-added values such as ``run_id``. It does not contain every typed
+    default; ``ctx.option(key, default)`` uses its fallback for absent keys.
+    Use ``from_options`` to parse and validate a raw dictionary outside a run.
 
     Attributes:
         _allow_unknown: Class-level escape hatch for plugins that intentionally

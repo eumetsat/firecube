@@ -56,7 +56,7 @@ See also: firecube chunks delete, firecube chunks runs list,
     "--time-range",
     "time_range",
     default=None,
-    help="filter spans by time range START:END (ISO8601); matches spans overlapping the window",
+    help="spans overlapping data-time range START:END (ISO 8601)",
 )
 @click.option("--type", "chunk_type", help="filter by chunk type (chunk, meta)")
 @click.option(
@@ -84,6 +84,14 @@ See also: firecube chunks delete, firecube chunks runs list,
     is_flag=True,
     help="include span coverage payload (time_index_ranges, arrays, alignment) in output",
 )
+@click.option(
+    "--include-replaced",
+    is_flag=True,
+    help=(
+        "list every recorded span, including replaced spans and spans of failed runs; "
+        "the default shows the current state projected from completed runs only"
+    ),
+)
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
@@ -98,6 +106,7 @@ def list_cmd(
     output_format,
     limit,
     include_span,
+    include_replaced,
 ) -> None:
     """list tracked chunk records
 
@@ -123,6 +132,7 @@ def list_cmd(
                 chunk_type=chunk_type,
                 meta=meta,
                 time_overlaps=time_range_dt,
+                include_replaced=include_replaced,
             )
             chunks.extend(entries)
         deduped = []
@@ -141,6 +151,7 @@ def list_cmd(
             chunk_type=chunk_type,
             meta=meta,
             time_overlaps=time_range_dt,
+            include_replaced=include_replaced,
         )
 
     if limit:
@@ -149,9 +160,10 @@ def list_cmd(
     def _span_payload(chunk) -> dict | None:
         if not include_span:
             return None
-        if not isinstance(chunk.record, dict):
+        record = chunk.record
+        if not isinstance(record, dict):
             return None
-        span = chunk.record.get("span")
+        span = record.get("span")
         if not isinstance(span, dict):
             return None
         return span
@@ -161,8 +173,10 @@ def list_cmd(
         return str(chunk.timestamps_written) if chunk.timestamps_written else ""
 
     if output_format == "json":
-        data = [
-            {
+        data = []
+        for chunk in all_chunks:
+            span = _span_payload(chunk)
+            row: dict[str, object] = {
                 "product": chunk.product,
                 "key": chunk.key,
                 "type": chunk.chunk_type,
@@ -172,10 +186,11 @@ def list_cmd(
                 "datetime": chunk.datetime.isoformat(),
                 "manifest": str(chunk.manifest_path),
                 "meta": chunk.meta,
-                **({"span": span} if (span := _span_payload(chunk)) else {}),
             }
-            for chunk in all_chunks
-        ]
+            if span is not None:
+                row["chunk_len_used"] = span.get("chunk_len_used")
+                row["span"] = span
+            data.append(row)
         click.echo(json.dumps(data, indent=2))
         return
 

@@ -22,6 +22,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from firecube.ingestor.runtime.zarr.alignment import AlignmentMonitor
 from firecube.ingestor.runtime.zarr.append_services import (
     AppendCoverageBuilder,
     AppendResumeService,
@@ -80,11 +81,12 @@ class TestAppendServicesCustomDim:
             logger=logging.getLogger(__name__),
             write_fn=fake_write,
             time_dim_name="time",
+            alignment=AlignmentMonitor(),
         )
 
         svc.execute(ds=_make_ds(), group="G1", mode="a")
 
-        assert captured["append_dim"] == "time"
+        assert captured["time_dim"] == "time"
 
     def test_resume_service_uses_constructor_time_dim(self, monkeypatch):
         svc = AppendResumeService(
@@ -96,6 +98,7 @@ class TestAppendServicesCustomDim:
             shard_shape=None,
             sharding=False,
             logger=logging.getLogger(__name__),
+            state_var_name="firecube_timestamp_state",
             time_dim_name="time",
         )
         monkeypatch.setattr(

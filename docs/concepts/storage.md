@@ -25,7 +25,7 @@ Use a `file://` target when the product lives on local disk, mounted storage, or
 a shared filesystem:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target file:///data/products/demo.zarr \
   --product-name demo \
@@ -44,7 +44,7 @@ Use an `s3://` target when the product lives in S3 or S3-compatible object
 storage:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target s3://bucket/products/demo.zarr \
   --product-name demo \

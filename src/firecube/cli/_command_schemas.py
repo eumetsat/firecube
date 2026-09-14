@@ -61,8 +61,11 @@ class IngestCommandConfig:
 
         if self.write_mode is None:
             errors.append(
-                "--write-mode is required. No inference from target locality. "
-                "Choose: staged (workspace-first then upload) or direct (stream to target)."
+                "--write-mode is required (not inferred from the URI scheme).\n"
+                "  --write-mode staged    write to workspace first, then upload to target\n"
+                "  --write-mode direct    stream directly to target (no local copy)\n\n"
+                "For local targets (file://): use --write-mode direct\n"
+                "For S3 targets (s3://): use --write-mode staged (uploads after processing)"
             )
         elif self.write_mode not in self._VALID_WRITE_MODES:
             errors.append(

@@ -62,14 +62,16 @@ from firecube.ingestor.api import GenericZarrIngestor, PluginContext, register_i
 
 
 @register_ingestor("my_plugin")
-class MyPlugin(GenericZarrIngestor):
-    PRODUCT_NAME: ClassVar[str] = "my_product"
+class MyPluginIngestor(GenericZarrIngestor):
+    PRODUCT_NAME: ClassVar[str] = "my_plugin"
 
     def build_dataset(self, group: str, items: list[object], ctx: PluginContext):
         ...
 ```
 
-Explain only the public API facts required to perform this task. Link complete
+Use the names `firecube plugins create my-plugin` generates (`MyPluginIngestor`,
+`my_plugin`, `read_dataset`, `TIME_DIM`), so readers can map the example onto
+their scaffold. Explain only the public API facts required to perform this task. Link complete
 signatures, fields, defaults, and constraints to Reference.
 
 ## Verify

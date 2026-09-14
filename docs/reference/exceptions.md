@@ -81,4 +81,4 @@ All three inherit from `ConfigurationError`.
 
 - [Discovery failure modes](parallelism.md#firecube.ingestor.api.TimeAxis.discovered)
 - [`build_write_intents`](templates.md#firecube.ingestor.api.DirectZarrIngestor.build_write_intents)
-- [Implement DirectZarrIngestor](../guides/plugins/direct-zarr.md)
+- [Declare The Schema And Index](../guides/plugins/direct-zarr.md)

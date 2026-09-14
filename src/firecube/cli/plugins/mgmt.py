@@ -135,6 +135,10 @@ def install_plugin(packages: tuple[str, ...], editable: bool) -> None:
     _run_uv_pip(args)
     reset_plugin_discovery_cache()
 
+    mode_label = "editable" if editable else "copy"
+    for pkg in packages:
+        click.echo(f"Installed '{pkg}' ({mode_label})")
+
     # Verify in a fresh interpreter: an editable install writes a .pth file that
     # this process has not loaded, so in-process discovery can spuriously report
     # the plugin as missing even though the install succeeded.

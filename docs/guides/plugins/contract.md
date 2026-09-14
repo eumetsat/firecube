@@ -33,9 +33,9 @@ class so the decorator runs.
 ## Verify Registration
 
 ```bash
-uv run firecube plugins list
-uv run firecube plugins describe my_plugin
-uv run firecube ingest my_plugin --show-options
+firecube plugins list
+firecube plugins describe my_plugin
+firecube ingest my_plugin --show-options
 ```
 
 Before publishing, run the plugin's tests, lint and format checks, and one local

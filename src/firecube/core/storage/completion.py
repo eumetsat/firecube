@@ -133,8 +133,20 @@ class StorageCompleter:
         storage_config: StorageConfig,
         final_target_uri: str,
     ) -> StorageWriteResult:
+        """Describe a direct S3 write without staging anything.
+
+        A plugin-reported ``result.metrics.storage`` summary is trusted only
+        when it carries counts (``files`` or ``bytes`` not ``None``); the
+        engine-seeded block that holds just ``control_root``/``latest_pointer``
+        has none and must not be mistaken for a zero-byte write. Otherwise the
+        target is listed with ``path_stats``. That listing cost is paid only
+        for the returned ``storage_result``: the manifest's upload counters
+        stay null for every direct run because no staged upload happened.
+        """
         storage_summary = result.metrics.storage
-        if storage_summary is not None:
+        if storage_summary is not None and (
+            storage_summary.files is not None or storage_summary.bytes is not None
+        ):
             return StorageWriteResult(
                 path=str(storage_summary.path or final_target_uri),
                 bytes_written=int(storage_summary.bytes or 0),

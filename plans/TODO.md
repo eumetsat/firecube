@@ -5,6 +5,32 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 ## Active Work
 
+### Generic numeric flag helpers (2026-09-12)
+
+**Status**: FUTURE; no implementation in the current core-readiness work.
+
+Explore domain-agnostic numeric flag construction only after agreeing concrete caller contracts. Thresholds, bit meanings, missing-value rules, and published metadata remain caller-owned. Require behavior tests against caller-supplied rules; do not embed product conventions or change aggregation counts.
+
+The same readiness scope defers `firecube.testing`, numeric aggregation counts, composite-source APIs, a new extraction lifecycle API, universal item-time filtering, new group/layout/slice hooks, and plugin-specific write ordering.
+
+### Pattern parser adoption (2026-09-12)
+
+**Status**: OPEN; intended first consumers are plugins that parse filename fields with their own code. No plugin migration is included in core readiness.
+
+Replace each plugin's explicit filename-field parser with `parse_pattern` after verifying its accepted names, field values, and failure behavior. Keep timestamp selection, timezone policy, and source filtering in the plugin. Adoption must remove the replaced parsing code; the two-consumer duplication-removal condition is not yet met, so this is an optional utility addition, not a completed promotion.
+
+### Typed Zarr codec entries (2026-09-14)
+
+**Status**: FUTURE; not part of the plugin scaffolding fixes.
+
+Zarr v3 codec objects are bare `dict` everywhere: `ZarrTemplateConfig.zarr_codecs` (`list[dict]`), `ZarrArraySpec.filters`/`serializer`/`compressors`, the codec pipeline, and the Zarr writer. Editors show their keys and values as `Unknown`. Validation already fixes the shape (`name` required, `configuration` an object when present, no other keys).
+
+Leaning: a public `ZarrCodec` `TypedDict` (`name: str`, `configuration: dict[str, Any]`) applied to every codec field and signature, exported from `firecube.ingestor.api` with a reference entry. A `TypedDict` keeps the plain-dict runtime shape that JSON, TOML, and `coerce_cli_value` produce; a dataclass would need conversion wherever codecs flow. Overturn it if a runtime-validation library is adopted for configuration first.
+
+Decide before implementing:
+- Whether `configuration` is required. Validation treats it as optional, but the writer fails every batch without it (confirmed in the 2026-09-14 plugin-guide validation). Either require it in validation and the type, or normalize entries before writing and type it `NotRequired`.
+- How the generated `ZarrStorageConfig` example names the type. An override must repeat the parent's exact type or pyright reports an incompatible override, and a live import is unused while the example stays commented.
+
 ---
 
 ### §36 `ZarrWriteContext` async-concurrency leak — convert to scoped config
@@ -23,7 +49,7 @@ restored when the write context exits.
 
 ### §33 DirectZarr slot-range parallelism - roadmap
 
-- **Landed:** `IndexSpec` + `RegularTimeAxis` + `ResolvedIndex`; byte parity for FCI and OPERA; recursion defect fixed.
+- **Landed:** `IndexSpec` + `RegularTimeAxis` + `ResolvedIndex`; byte parity for the existing production parallel plugins; recursion defect fixed.
 - **Landed:** `IntegerAxis` + engine-owned `.firecube/index/current.json` record (`ResolvedIndexRecord`); `firecube zarr index show/verify/rebuild` CLI; atomic reader migration path documented.
 - **Landed:** `IrregularTimeAxis` + `AUTO` sentinel + content-addressed item manifest; `--dry-run` for preallocate; `--derived` for index show; closes #27 spirit. See DONE.md 2026-08-24.
 - **Landed:** `IndexedWrite` high-level abstraction, merged into a single `build_write_intents` contract accepting mixed `WriteIntent | IndexedWrite` lists; documented in `docs/guides/plugins/direct-zarr.md` and the API reference. See DONE.md 2026-08-24 and its 2026-09-02 amendment.
@@ -150,7 +176,7 @@ power in the default test loop.
 
 **Verified evidence (from review)**: `DirectZarrIngestor.claim_for_group()` used to build `WriteDomain(product=product, category="zarr_group", name=str(group_name))` — per-group granularity only. §7-DIRECT changed this to schema and per-slot `zarr_region` claims. The remaining safe-parallelism gap is the planner/orchestrator layer that assigns deterministic, disjoint index ranges before dispatch.
 
-**Recommended safe model today:** Append writes serialize to one writer per `(product, group)`. DirectZarr writes may run concurrently only across pods with pre-planned disjoint slot/group ranges via the `firecube zarr slots` planner. Do not rely on intra-pod `pipeline_workers > 1` for write parallelism on DirectZarr templates: the per-slot claim has no retry loop, so any same-slot collision between in-flight batches fails hard (empirically reproduced 2026-07-12). For large per-slot payload plugins (e.g. MTG FCI FDHSI: ~14.8 GiB/slot measured), scale via `pipeline_workers=1` × N disjoint-range pods; total cluster memory is unchanged but sized per-pod it fits standard nodes.
+**Recommended safe model today:** Append writes serialize to one writer per `(product, group)`. DirectZarr writes may run concurrently only across pods with pre-planned disjoint slot/group ranges via the `firecube zarr slots` planner. Do not rely on intra-pod `pipeline_workers > 1` for write parallelism on DirectZarr templates: the per-slot claim has no retry loop, so any same-slot collision between in-flight batches fails hard (empirically reproduced 2026-07-12). For large per-slot payload plugins (~14.8 GiB/slot measured for the largest so far), scale via `pipeline_workers=1` × N disjoint-range pods; total cluster memory is unchanged but sized per-pod it fits standard nodes.
 
 **§7-sub / Phase 3 planner — DONE (2026-05-28):** See DONE.md (section 7-sub) for full deliverables. Engine/template-level planner with deterministic time-to-index mappings, chunk-aligned ranges, `firecube zarr slots` JSON output, `firecube zarr preallocate` schema preflight, `--slot-start/--slot-end/--slot-size` CLI flags, K8s env discovery, 6-row ResumeGuard conflict matrix, and per-pod `run_id` derivation are all shipped. (These commands originally shipped as `firecube plan` / `firecube zarr setup-schema` and were later renamed.)
 
@@ -230,6 +256,7 @@ These items identify areas where the system used greedy logic to guess user inte
 
 - **BASENAME heuristics — DONE:** `output_name` is no longer guessed from the target path basename. `ProductIdentity.from_uri` hard-fails without an explicit product name, and the `default_output_name` config key is rejected at parse time.
 - **Magic output detection — DONE:** the CLI and engine read typed `PipelineResult.outputs` / `result.output_path` attributes; no dict key sniffing remains. The legacy `output_path=` constructor kwarg was removed entirely (DONE.md 2026-06-11).
+- **ingest `dry_run` — OPEN:** implement or remove the option. `EngineConfig.dry_run` only sets `RuntimeFlags.dry_run`; no write path reads it, so `firecube ingest --option dry_run=true` writes normally. The docstring marks it reserved and points at the maintenance commands' `--dry-run` for previews (2026-09-12).
 - **Explicit safety — OPEN:** refusal to upload `HOME` or `/` is hardcoded in the engine's upload-source resolution; should be documented or configurable.
 - **Free-form option overload — DONE (2026-06-11):** keys owned by dedicated `firecube ingest` flags (`write_mode`, `slot_start`, `slot_end`, `slot_size`, `slot_group`) are hard-rejected at `--option` parse time with remediation naming the owning flag (`_TYPED_FLAG_OWNED_KEYS` in `cli/_typed_options.py`); the silent post-resolution override is closed. All other typed flags were never config fields and were already rejected as unknown keys. Engine options without a dedicated flag (`force_reingest`, `no_progress`, ...) remain the sanctioned `--option` surface.
 
@@ -268,22 +295,11 @@ These items identify areas where the system used greedy logic to guess user inte
 ### §12.4 Plugin Heuristics
 
 - **Option aliases — DONE (2026-06-11):** `zarr_chunk` deleted (no shim, per STYLE.md); `zarr_chunk_shape` is the single chunking option and `zarr_chunk` now fails strict unknown-key rejection. Locked by `tests/unit/test_zarr_chunk_alias_removed.py`.
-- **Regex guessing — FIXED in-repo:** no filename-regex horizon extraction or `F*` folder discovery remains in core or templates. The msg_frm occurrences live in the external plugin repository.
+- **Regex guessing — FIXED in-repo:** no filename-regex horizon extraction or `F*` folder discovery remains in core or templates. Remaining occurrences live in an external plugin repository.
 - **Hardcoded defaults — DONE (2026-06-11):** lat/lon soft limits gone; multires `(1.0, 0.5)` single-sourced as `DEFAULT_MULTIRES_RESOLUTIONS` (no silent fallback); `group="FWI"` fallback removed from `core/zarr/layers.py`; `"fire_risk.duckdb"` default removed from `extensions/duck.py`. Evidence: `tests/unit/test_domain_defaults_removed.py`.
 - **Typed-vs-free-form drift — DONE (2026-06-11):** strict unknown-key rejection enforced on all declared typed configs; `x_*` experimental namespace implemented — keys matching `x_*` pass through without rejection. Evidence: `tests/unit/test_experimental_options.py`.
-- **Discovery knobs unreachable from config — OPEN:**
-  `discover_input_files` in `src/firecube/core/formats/discovery.py` accepts
-  `exclude`, `include_suffixes`, `recursive`, and `sniff_hdf5`, but
-  `EngineConfig` in `src/firecube/ingestor/config/engine.py` exposes only
-  `include_patterns` (additive `preferred_globs`). The default
-  `discover_source_files` hook in `src/firecube/ingestor/runtime/base.py`
-  therefore offers no way to exclude files or narrow the accepted suffix set
-  without overriding the hook. Decide whether exclusion belongs in
-  `EngineConfig` as a typed option (e.g. `exclude_patterns`) and expose it
-  through CLI discovery and coercion alongside `include_patterns`.
-  Acceptance: excluding a file that the default suffix set would otherwise
-  pick up requires no plugin code; `--show-options` lists the key; public
-  discovery documentation describes the same surface.
+- **Discovery exclusions — DONE (2026-09-13):** Native `--input-filters` combines additive globs and `!` exclusions in one list on ingest, slots, and preallocate. Configuration uses `input_filters`; `include_patterns` is rejected with migration guidance. CLI introspection and the discovery guide show the native flag. Evidence: `tests/unit/test_input_filters.py` and `tests/integration/test_input_filters_cli.py`.
+- **Other discovery controls — DEFERRED:** `include_suffixes`, `recursive`, and `sniff_hdf5` remain Python helper arguments. No additional CLI flags or engine options are selected for implementation. Custom discovery hooks retain responsibility for applying filters to their source items.
 
 ---
 
@@ -393,7 +409,7 @@ These items address gaps and bugs surfaced after §4a landed. They are sequenced
 
 See DONE.md §21 for details.
 
-Follow-up: Check `firecube-msg-frm` external plugin for `ZarrWriteStrategy` import and migrate — out of scope for Phase 1.
+Follow-up: Check external plugins for `ZarrWriteStrategy` import and migrate — out of scope for Phase 1.
 
 ---
 
@@ -429,7 +445,7 @@ See DONE.md §23-AUTO for details.
 
 See DONE.md §25 for details.
 
-Follow-up: Check `firecube-msg-frm` external plugin for `zarr_multi_res` usage and update if needed — out of scope for this PR.
+Follow-up: Check external plugins for `zarr_multi_res` usage and update if needed — out of scope for this PR.
 
 ---
 
@@ -451,7 +467,7 @@ See DONE.md §27 for details.
 
 **Current state:** `RegionZarrWriter.ensure_timestamp_slot` skips an array from the `ts_index < shape[0]` bounds check only if its name is in `coord_names` (constructor param, default `{"y","x","channel"}`) or it is scalar (`ndim == 0`). It does **not** consult the schema's `ZarrArraySpec.time_indexed=False` flag. The strategy builds `coord_names_by_group` from `spec.coord_names` only.
 
-**Bug it caused:** A DirectZarr plugin (OPERA SEVIRI/NORDLIS) declared static 2-D `lat`/`lon` and 1-D `ny`/`nx` projection coords with `time_indexed=False` but did not also list them in `coord_names`. `ensure_timestamp_slot` then read each static coord's dim-0 (the grid size, e.g. 1072/1332) as a time axis and raised "ts_index out of bounds" for any `ts_index` beyond it — i.e. any day far from the reference epoch (slot ~622080 for a 2023 day against a 2018 epoch). Latent for any multi-day ingest; was masked earlier by the axis-size error. The plugin worked around it by adding the names to `coord_names`.
+**Bug it caused:** A DirectZarr plugin declared static 2-D `lat`/`lon` and 1-D `ny`/`nx` projection coords with `time_indexed=False` but did not also list them in `coord_names`. `ensure_timestamp_slot` then read each static coord's dim-0 (the grid size, e.g. 1072/1332) as a time axis and raised "ts_index out of bounds" for any `ts_index` beyond it — i.e. any day far from the reference epoch (slot ~622080 for a 2023 day against a 2018 epoch). Latent for any multi-day ingest; was masked earlier by the axis-size error. The plugin worked around it by adding the names to `coord_names`.
 
 **Direction:** Fold every `time_indexed=False` array into the writer's coord-skip set (the schema already knows which arrays have no time axis), as a union with the existing `spec.coord_names`. Then `time_indexed=False` alone is sufficient and a plugin never has to *also* name the array in `coord_names`.
 
@@ -459,11 +475,15 @@ See DONE.md §27 for details.
 - A DirectZarr group whose static coords are declared only via `time_indexed=False` (not in `coord_names`) ingests a high-`ts_index` timestamp without a spurious "ts_index out of bounds" error.
 - `coord_names` remains honored for back-compat (union, not replacement).
 
-**Surfaced by:** OPERA plugin fix declaring `lat`/`lon`/`ny`/`nx` in `coord_names` (plugin commit `bb9cf7a`).
+**Surfaced by:** a plugin fix declaring `lat`/`lon`/`ny`/`nx` in `coord_names`.
 
 See: DONE.md "DirectZarr plugin parity — core fixes" (2026-06-25).
 
 ---
+
+## Parquet slice identity and replay
+
+The fresh-target safety fix deliberately limits `GenericParquetIngestor` to fresh targets. Do not remove the target guard merely after adding run IDs to part names. Before supporting resume or force-reingest, define a stable, plugin-declared logical slice identity independent of batching and temporary paths; specify physical part ownership, replay deduplication, exact-slice replacement, and failure-safe promotion/recording through `ChunkManager` and the selected driver. Tests must verify rows and active spans across disjoint runs, repeated inputs, changed batch sizes, partial replacement, and failed promotion. The current target guard is covered by `tests/integration/test_parquet_target_safety.py`.
 
 ## Zarr migration framework (deferred from CF-1.8 plan)
 

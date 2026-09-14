@@ -401,9 +401,19 @@ class ManifestRepository:
         )
 
     def mark_chunks_replaced(
-        self, chunk_keys: list[str], product: str, replacement_timestamp: float
+        self,
+        chunk_keys: list[str],
+        product: str,
+        replacement_timestamp: float,
+        *,
+        meta_updates_by_key: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        return self._wal_writer.mark_chunks_replaced(chunk_keys, product, replacement_timestamp)
+        return self._wal_writer.mark_chunks_replaced(
+            chunk_keys,
+            product,
+            replacement_timestamp,
+            meta_updates_by_key=meta_updates_by_key,
+        )
 
     def remove_from_manifest(
         self, manifest_uri: str, chunks_to_remove: list[ChunkInfo]

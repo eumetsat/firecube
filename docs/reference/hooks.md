@@ -6,7 +6,7 @@ subclass `BaseIngestor` directly and implement `_process_batch`.
 
 DirectZarr plugins add the index contract on the template page. See
 [Plugin Templates](templates.md#directzarringestor) and
-[Parallel Zarr Writes](parallelism.md).
+[Index Specification](parallelism.md).
 
 Firecube does not yet expose a public storage-writer protocol for custom
 output code. A new external custom pipeline cannot be implemented using only
@@ -149,5 +149,5 @@ across runs.
 - [Custom pipeline plugins](../guides/plugins/base-ingestor.md)
 - [Plugin extensions](../guides/plugins/extensions.md)
 - [Context & Results](context.md)
-- [Parallel Zarr Writes](parallelism.md)
+- [Index Specification](parallelism.md)
 - [Package and Register a Plugin](../guides/plugins/contract.md)

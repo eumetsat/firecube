@@ -126,3 +126,56 @@ def test_parse_time_range_accepts_iso_datetimes_with_colons():
         "2024-03-15T00:00:00",
         "2024-03-15T23:59:59",
     )
+
+
+def test_chunks_list_json_calls_span_payload_once_per_row(monkeypatch):
+    class _CountingChunk:
+        def __init__(self, inner: ChunkInfo) -> None:
+            self._inner = inner
+            self.record_reads = 0
+
+        @property
+        def record(self):
+            self.record_reads += 1
+            return self._inner.record
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+    counting = _CountingChunk(_span_chunk())
+    monkeypatch.setattr(
+        "firecube.cli.chunks._list.resolve_manager",
+        lambda *args, **kwargs: _FakeManager([counting]),  # type: ignore[list-item]
+    )
+
+    result = CliRunner().invoke(list_cmd, ["--format", "json", "--include-span"], obj={})
+
+    assert result.exit_code == 0, result.output
+    assert counting.record_reads == 1, (
+        f"_span_payload should read chunk.record once per row, got {counting.record_reads}"
+    )
+
+
+def test_chunks_list_include_replaced_requests_history_from_manager(monkeypatch):
+    """The flag is forwarded to the control plane so failed-run spans are listed."""
+    seen: dict[str, object] = {}
+
+    class _RecordingManager(_FakeManager):
+        def list_chunks(self, **kwargs):
+            seen.update(kwargs)
+            return super().list_chunks(**kwargs)
+
+    runner = CliRunner()
+    monkeypatch.setattr(
+        "firecube.cli.chunks._list.resolve_manager",
+        lambda *args, **kwargs: _RecordingManager([_span_chunk()]),
+    )
+
+    result = runner.invoke(list_cmd, ["--format", "json", "--include-replaced"], obj={})
+
+    assert result.exit_code == 0, result.output
+    assert seen.get("include_replaced") is True
+
+    result = runner.invoke(list_cmd, ["--format", "json"], obj={})
+    assert result.exit_code == 0, result.output
+    assert seen.get("include_replaced") is False

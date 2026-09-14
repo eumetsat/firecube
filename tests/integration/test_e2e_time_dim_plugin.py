@@ -214,7 +214,7 @@ def test_e2e_time_dim_plugin_delete_span(tmp_path: Path) -> None:
 
     dry = _delete_span(target, "--dry-run")
     assert dry.returncode == 0, f"dry-run failed\nstdout: {dry.stdout}\nstderr: {dry.stderr}"
-    assert "would delete 1 chunk keys" in dry.stdout, f"unexpected dry-run output: {dry.stdout}"
+    assert "would NaN-fill 1 spans" in dry.stdout, f"unexpected dry-run output: {dry.stdout}"
 
     conflict = _delete_span(target, "--time-dim", "timestamp", "--dry-run")
     assert conflict.returncode != 0, (
@@ -234,4 +234,4 @@ def test_e2e_time_dim_plugin_delete_span(tmp_path: Path) -> None:
     assert deleted.returncode == 0, (
         f"delete-span failed\nstdout: {deleted.stdout}\nstderr: {deleted.stderr}"
     )
-    assert "Deleted 1 chunk keys" in deleted.stdout, f"unexpected output: {deleted.stdout}"
+    assert "NaN-filled 1 spans" in deleted.stdout, f"unexpected output: {deleted.stdout}"

@@ -345,10 +345,13 @@ class PluginContext:
     def options(self) -> dict[str, Any]:
         """Plugin options for this run as an immutable mapping.
 
-        A detached copy of the caller's options (including ``--option``
-        CLI overrides) wrapped in `types.MappingProxyType` when the
-        context is created: it cannot be mutated, and later changes to
-        engine state are not reflected in it.
+        The runtime context stores options in a mutable dictionary. This
+        property exposes a detached copy wrapped in `types.MappingProxyType`,
+        including supplied options and engine-added values such as ``run_id``.
+        Its entries cannot be assigned or removed; later runtime dictionary
+        changes are not reflected in it. Typed configuration defaults
+        are not inserted into this mapping; use the ingestor's validated
+        engine, template, and plugin configuration instances for those.
         """
         return self._options  # type: ignore[return-value]
 
@@ -373,7 +376,10 @@ class PluginContext:
         """Ensure a source file is available locally and return its path.
 
         Remote sources (e.g. S3 URIs) are downloaded into the per-run cache
-        under `temp_root`; already-local paths are returned directly.
+        under `temp_root`; already-local paths are returned directly. This
+        materializes one file without opening or extracting archives. Cached
+        paths have a per-run lifetime; readers must finish before workspace
+        cleanup. Local source files remain caller-owned.
 
         Args:
             source: A local path, URI string, or source-file object.
@@ -483,6 +489,7 @@ class PipelineResult:
     metrics: ResultMetrics = field(default_factory=ResultMetrics)
     success: bool = True
     error: str | None = None
+    attempted: bool = True
 
     def __init__(
         self,
@@ -496,6 +503,7 @@ class PipelineResult:
         success: bool = True,
         error: str | None = None,
         output_format: str = "zarr",
+        attempted: bool = True,
     ) -> None:
         self.batch = batch
         self.output_format = output_format
@@ -506,6 +514,10 @@ class PipelineResult:
         self.metrics = _coerce_result_metrics(metrics)
         self.success = success
         self.error = error
+        # False when the host refused to run the batch because the run had
+        # already halted after an earlier failure; such results are
+        # neither successes nor failures and never reach the batch hooks.
+        self.attempted = attempted
 
     @property
     def output_path(self) -> Path | str | None:
@@ -521,6 +533,10 @@ class PipelineRunState:
     counters, and (once available) per-batch results and aggregated totals.
     Instances are frozen: hooks such as ``on_pipeline_start`` observe the
     state but cannot mutate it.
+
+    ``results`` holds one entry per attempted batch. Batches the runner did
+    not attempt because the host halted after an earlier failure are listed
+    in ``batches_not_attempted`` instead.
     """
 
     product: str
@@ -538,7 +554,9 @@ class PipelineRunState:
     hook_failures: int = 0
     cpu_time_total: float = 0.0
     io_time_total: float = 0.0
+    batches_not_attempted: tuple[PipelineBatch, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "batches", tuple(self.batches))
         object.__setattr__(self, "results", tuple(self.results))
+        object.__setattr__(self, "batches_not_attempted", tuple(self.batches_not_attempted))

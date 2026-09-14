@@ -26,6 +26,8 @@ from typing import Any
 
 from firecube.core.controlplane.types import WriteDomain
 from firecube.core.product import write_mode_policy
+from firecube.ingestor.runtime.zarr.alignment import AlignmentMonitor
+from firecube.ingestor.runtime.zarr.append_order import AppendOrder
 from firecube.ingestor.runtime.zarr.strategies.append import AppendStrategy
 from firecube.ingestor.runtime.zarr.write_context import ZarrWriteContext
 
@@ -107,14 +109,42 @@ def seed_staged_metadata_pre_batch(
     )
 
 
+def prepare_staged_append_metadata(
+    *,
+    ctx: Any,
+    store_uri: str,
+    final_target_uri: str | None,
+    groups: list[str],
+    resume_existing: bool,
+    force_reingest: bool,
+    write_mode: str,
+    logger: logging.Logger,
+    time_dim_name: str,
+) -> None:
+    """Runtime-owned staged metadata preparation for append-template batches."""
+    seed_staged_metadata_for_batch(
+        ctx=ctx,
+        store_uri=store_uri,
+        final_target_uri=final_target_uri,
+        groups=groups,
+        resume_existing=resume_existing,
+        force_reingest=force_reingest,
+        write_mode=write_mode,
+        logger=logger,
+        coordinate_arrays=[time_dim_name],
+    )
+
+
 def build_zarr_write_context(
     *,
     zarr_config: dict[str, Any],
-    write_lock: Any,
 ) -> ZarrWriteContext:
-    """Build the Zarr write context from template config and the ingestor lock."""
+    """Build the Zarr write context from template config.
+
+    Serialisation is not part of this context: the template holds the
+    batch's turn at its ``OrderedWriteGate`` around the whole write section.
+    """
     return ZarrWriteContext(
-        write_lock=write_lock,
         configured_scheduler=zarr_config.get("dask_scheduler"),
         write_threads=int(zarr_config.get("write_threads", 0)),
         async_concurrency=int(zarr_config.get("async_concurrency", 10)),
@@ -152,6 +182,11 @@ def build_append_strategy(
     chunk_manager: Any,
     session: Any,
     logger: logging.Logger,
+    alignment: AlignmentMonitor | None = None,
+    order: AppendOrder | None = None,
+    pipeline_write_mode: str | None = None,
+    staged_final_target_uri: str | None = None,
+    preflight_compare_target_uri: str | None = None,
 ) -> AppendStrategy:
     """Build the append strategy with the same static arguments as _process_batch."""
     return AppendStrategy(
@@ -165,10 +200,16 @@ def build_append_strategy(
         zarr_codecs=zarr_config.get("zarr_codecs"),
         consolidate=bool(zarr_config.get("consolidate")),
         resume_existing=bool(resume_existing and not force_reingest),
+        force_reingest=bool(force_reingest),
         append_dim=append_dim,
         logger=logger,
         storage_config=chunk_manager.storage_config,
         session=session,
+        alignment=alignment,
+        order=order,
+        pipeline_write_mode=pipeline_write_mode,
+        final_target_uri=staged_final_target_uri,
+        preflight_compare_target_uri=preflight_compare_target_uri,
     )
 
 

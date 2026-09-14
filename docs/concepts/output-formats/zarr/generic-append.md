@@ -68,9 +68,8 @@ replace the append cursor with absolute indexes supplied by the plugin.
   implement and verify the dataset hook
 - **[DirectZarrIngestor (Region)](direct-region.md)** — compare explicit array placement
   with dataset appends
-- **[Quickstart](../../../quickstart/index.md)** — create and run a complete
-  `GenericZarrIngestor` example
-- **[NetCDF To Zarr Plugin](../../../tutorials/weather-netcdf.md)** — inspect
+- **[Quickstart](../../../quickstart/index.md)** — run an installed NetCDF-to-Zarr plugin
+- **[Firecube 101: NetCDF To Zarr](../../../showcase/netcdf-to-zarr.ipynb)** — inspect
   the example plugin and verify its stored values
 - **[Parallelism](../../parallelism.md)** — compare write domains across output
   formats

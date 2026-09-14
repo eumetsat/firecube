@@ -1,4 +1,4 @@
-# Implement DirectZarrIngestor (Auto)
+# Discover The Time Axis
 
 ## Goal
 
@@ -143,7 +143,7 @@ A discovered axis needs no extra commands for a serial run; discovery happens
 inside the normal ingest:
 
 ```bash
-uv run firecube ingest my_plugin \
+firecube ingest my_plugin \
   --input-data ./path/to/input \
   --target file:///tmp/my_product.zarr \
   --product-name my_product \
@@ -157,7 +157,7 @@ Then confirm the stored coordinate holds every source timestamp in sorted
 order:
 
 ```bash
-uv run python -c "
+python -c "
 import zarr
 root = zarr.open_group('/tmp/my_product.zarr', mode='r')
 print(root['data/timestamp'][:])
@@ -189,8 +189,7 @@ workflow.
 
 ## Next Steps
 
-- **[DirectZarrIngestor (Auto) Tutorial](../../tutorials/direct-zarr-auto.md)** — build and run this plugin end to end
 - **[`TimeAxis.discovered` Reference](../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.discovered)** — exact constructor contract and failure modes
 - **[DirectZarrIngestor (Region)](../../concepts/output-formats/zarr/direct-region.md)** — how each axis regime owns the coordinate array
-- **[Implement DirectZarrIngestor](direct-zarr.md)** — the full plugin contract this page builds on
+- **[Declare The Schema And Index](direct-zarr.md)** — the full plugin contract this page builds on
 - **[Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md)** — preallocate, plan, and launch workers

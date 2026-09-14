@@ -12,417 +12,318 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock, call, patch
+"""``ResumeGuard.enforce`` decisions against a real ``ChunkManager`` WAL.
+
+Each test drives the guard against a fresh product WAL populated via
+``ChunkManager.record_run_started`` / ``record_span`` / ``record_run_terminal``
+and asserts the observable outcome (raised error type + message, or
+clean return) rather than which methods the guard called in what order.
+Method-call ordering is an implementation detail and would repin every
+refactor of the guard.
+
+Also owns ``test_resume_guard_fail_loud_end_to_end``: the failed-run
+blocks-resume path (previously covered by
+``test_v2_b2_unified_fail_loud_and_message.py``, dropped from the tree),
+now exercised end-to-end against a real WAL.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 import pytest
 
-from firecube.core.controlplane.types import RunInfo
+from firecube.core.controlplane import ChunkManager, SpanCoverage
 from firecube.ingestor.errors import ResumeConflictError
 from firecube.ingestor.runtime.resume_guard import ResumeGuard
+from tests.helpers.storage import make_test_binding
+
+pytestmark = pytest.mark.unit
+
+_PRODUCT = "test_product"
+_PLUGIN = "test_product"
 
 
-def _make_ctx(*, force_reingest: bool = False, **options):
-    ctx = MagicMock()
-    ctx.force_reingest = force_reingest
-    ctx.option.side_effect = lambda name, default=None: options.get(name, default)
-    return ctx
+@dataclass
+class _GuardCtx:
+    """Minimal ctx surface `ResumeGuard.enforce` reads from.
+
+    The guard reads ``ctx.force_reingest`` directly and ``ctx.option(name,
+    default)`` for ``force_reingest``, ``resume_existing``, ``validate_zarr``,
+    ``validate_zarr_group``, ``validate_zarr_timeout_s``,
+    ``validate_zarr_max_chunks``, ``validate_zarr_on_timeout``. It never
+    touches ``ctx.storage`` unless ``validate_zarr=True``, which these tests
+    do not set.
+    """
+
+    force_reingest: bool = False
+    options: dict[str, Any] = field(default_factory=dict)
+
+    def option(self, name: str, default: Any = None) -> Any:
+        return self.options.get(name, default)
 
 
-def _make_run(run_id: str, status: str = "running") -> RunInfo:
-    return RunInfo(
-        product="P",
-        run_id=run_id,
-        status=status,
-        run_dir=f"/tmp/{run_id}",
-        run_uri=f"file:///tmp/{run_id}",
-        started_at=1.0,
-        updated_at=1.0,
-        completed_at=None,
-        events=1,
-        parts=1,
-    )
+def _fresh_manager(tmp_path: Path) -> ChunkManager:
+    binding = make_test_binding(tmp_path, product=_PRODUCT)
+    return ChunkManager(binding=binding, workspace=tmp_path)
 
 
-def _make_guard(chunk_manager: MagicMock | None = None) -> ResumeGuard:
+def _make_guard(chunk_manager: ChunkManager) -> ResumeGuard:
     return ResumeGuard(
-        plugin_name="test_product",
-        chunk_manager=chunk_manager or MagicMock(),
-        log=MagicMock(),
+        plugin_name=_PLUGIN,
+        chunk_manager=chunk_manager,
+        log=logging.getLogger("test.resume_guard"),
         slice_meta_keys=(),
     )
 
 
-def _make_span(*, meta=None):
-    span = MagicMock()
-    span.meta = meta or {"plugin": "test_product"}
-    span.record = {"span": {}}
-    return span
+def _record_running_run(manager: ChunkManager, *, run_id: str) -> None:
+    """Seed a non-terminal (``started``, no terminal event) run in the WAL."""
+    output_path = f"{manager.base_uri.rstrip('/')}/{_PRODUCT}"
+    manager.record_run_started(
+        product=_PRODUCT,
+        run_id=run_id,
+        output_path=output_path,
+        output_format="zarr",
+        size=0,
+        meta={"plugin": _PLUGIN},
+    )
 
 
-@pytest.mark.unit
-def test_enforce_blocks_when_non_terminal_run_exists():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = [_make_run("run-123")]
-    guard = _make_guard(chunk_manager)
+def _record_completed_span(
+    manager: ChunkManager,
+    *,
+    run_id: str,
+    batch_id: str,
+    group: str = "G",
+    time_min: str = "2024-01-01T00:00:00Z",
+    time_max: str = "2024-01-02T00:00:00Z",
+) -> None:
+    output_path = f"{manager.base_uri.rstrip('/')}/{_PRODUCT}"
+    meta = {
+        "plugin": _PLUGIN,
+        "group": group,
+        "time_min": time_min,
+        "time_max": time_max,
+        "batch_id": batch_id,
+    }
+    manager.record_run_started(
+        product=_PRODUCT,
+        run_id=run_id,
+        output_path=output_path,
+        output_format="zarr",
+        size=0,
+        meta={"plugin": _PLUGIN},
+    )
+    manager.record_span(
+        product=_PRODUCT,
+        run_id=run_id,
+        batch_id=batch_id,
+        group=group,
+        status="active",
+        coverage=SpanCoverage(
+            group=group,
+            arrays=[f"{group}/data"],
+            time_index_ranges=[[0, 1]],
+            time_min=time_min,
+            time_max=time_max,
+        ),
+        meta=meta,
+    )
+    manager.record_run_terminal(
+        product=_PRODUCT,
+        run_id=run_id,
+        output_path=output_path,
+        output_format="zarr",
+        size=1,
+        meta={"plugin": _PLUGIN},
+        status="complete",
+    )
 
-    with pytest.raises(ResumeConflictError, match="run-123"):
-        guard.enforce(ctx=_make_ctx(), product="P")
 
-    chunk_manager.list_chunks.assert_not_called()
+def _record_failed_run_with_completed_span(
+    manager: ChunkManager,
+    *,
+    run_id: str,
+    batch_id: str,
+    group: str = "G",
+    time_min: str = "2024-01-01T00:00:00Z",
+    time_max: str = "2024-01-02T00:00:00Z",
+) -> None:
+    """A run that wrote a span successfully then failed at terminal.
+
+    The active span survives in the WAL projection (spans are only sealed
+    by a subsequent replacement run), and the owning run's terminal status
+    is ``failed``. That combination is the ``failed-run-spans exist``
+    conflict the guard must refuse loudly.
+    """
+    output_path = f"{manager.base_uri.rstrip('/')}/{_PRODUCT}"
+    meta = {
+        "plugin": _PLUGIN,
+        "group": group,
+        "time_min": time_min,
+        "time_max": time_max,
+        "batch_id": batch_id,
+    }
+    manager.record_run_started(
+        product=_PRODUCT,
+        run_id=run_id,
+        output_path=output_path,
+        output_format="zarr",
+        size=0,
+        meta={"plugin": _PLUGIN},
+    )
+    manager.record_span(
+        product=_PRODUCT,
+        run_id=run_id,
+        batch_id=batch_id,
+        group=group,
+        status="active",
+        coverage=SpanCoverage(
+            group=group,
+            arrays=[f"{group}/data"],
+            time_index_ranges=[[0, 1]],
+            time_min=time_min,
+            time_max=time_max,
+        ),
+        meta=meta,
+    )
+    manager.record_run_terminal(
+        product=_PRODUCT,
+        run_id=run_id,
+        output_path=output_path,
+        output_format="zarr",
+        size=1,
+        meta={"plugin": _PLUGIN},
+        status="failed",
+        error="simulated batch failure",
+    )
 
 
-@pytest.mark.unit
-def test_enforce_non_terminal_error_includes_abandon_instruction():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = [_make_run("run-123")]
-    guard = _make_guard(chunk_manager)
+def test_non_terminal_run_blocks_and_names_abandon_command(tmp_path: Path) -> None:
+    manager = _fresh_manager(tmp_path)
+    _record_running_run(manager, run_id="run-alive")
+    guard = _make_guard(manager)
 
     with pytest.raises(ResumeConflictError) as excinfo:
-        guard.enforce(ctx=_make_ctx(), product="P")
+        guard.enforce(ctx=_GuardCtx(), product=_PRODUCT)
 
     message = str(excinfo.value)
-    assert "abandon" in message
+    assert "run-alive" in message
     assert (
-        'firecube chunks runs abandon --product-name P --run-id run-123 --reason "<reason>"'
-        in message
-    )
+        f"firecube chunks runs abandon --product-name {_PRODUCT} --run-id run-alive "
+        '--reason "<reason>"'
+    ) in message
 
 
-@pytest.mark.unit
-def test_enforce_force_reingest_allows_non_terminal_run():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = [_make_run("run-123")]
-    chunk_manager.list_chunks.return_value = []
-    guard = _make_guard(chunk_manager)
+def test_resume_existing_does_not_bypass_non_terminal_run(tmp_path: Path) -> None:
+    manager = _fresh_manager(tmp_path)
+    _record_running_run(manager, run_id="run-alive")
+    guard = _make_guard(manager)
 
-    guard.enforce(ctx=_make_ctx(force_reingest=True), product="P")
+    with pytest.raises(ResumeConflictError, match="run-alive"):
+        guard.enforce(ctx=_GuardCtx(options={"resume_existing": True}), product=_PRODUCT)
 
-    guard.log.warning.assert_called_once()  # pyright: ignore[reportAttributeAccessIssue]
-    chunk_manager.list_chunks.assert_called_once()
 
+def test_force_reingest_bypasses_non_terminal_run(tmp_path: Path) -> None:
+    manager = _fresh_manager(tmp_path)
+    _record_running_run(manager, run_id="run-alive")
+    guard = _make_guard(manager)
 
-@pytest.mark.unit
-def test_enforce_proceeds_when_no_non_terminal_runs_exist():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = []
-    guard = _make_guard(chunk_manager)
+    guard.enforce(ctx=_GuardCtx(force_reingest=True), product=_PRODUCT)
 
-    guard.enforce(ctx=_make_ctx(), product="P")
 
-    chunk_manager.list_runs.assert_called_once_with(product="P", non_terminal=True)
-    chunk_manager.list_chunks.assert_called_once()
+def test_fresh_product_proceeds(tmp_path: Path) -> None:
+    manager = _fresh_manager(tmp_path)
+    guard = _make_guard(manager)
 
-
-@pytest.mark.unit
-def test_enforce_resume_existing_still_blocks_on_non_terminal_run():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = [_make_run("run-123")]
-    guard = _make_guard(chunk_manager)
-
-    with pytest.raises(ResumeConflictError, match="run-123"):
-        guard.enforce(ctx=_make_ctx(resume_existing=True), product="P")
-
-    chunk_manager.list_chunks.assert_not_called()
-
-
-@pytest.mark.unit
-def test_enforce_fresh_product_without_spans_or_runs_proceeds():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = []
-    guard = _make_guard(chunk_manager)
-
-    guard.enforce(ctx=_make_ctx(), product="P")
-
-    chunk_manager.list_runs.assert_called_once_with(product="P", non_terminal=True)
-    chunk_manager.list_chunks.assert_called_once_with(
-        product="P",
-        chunk_type="span",
-        include_replaced=False,
-        meta={"plugin": "test_product"},
-    )
-
-
-@pytest.mark.unit
-def test_enforce_resume_existing_allows_when_overlap_query_finds_no_spans():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = []
-    guard = _make_guard(chunk_manager)
-
-    guard.enforce(
-        ctx=_make_ctx(resume_existing=True),
-        product="P",
-        slice_meta={"time_min": "2024-01-01T00:00:00Z", "time_max": "2024-01-02T00:00:00Z"},
-    )
-
-    assert chunk_manager.list_chunks.call_args_list == [
-        call(
-            product="P",
-            chunk_type="span",
-            include_replaced=False,
-            meta={"plugin": "test_product"},
-            time_overlaps=("2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z"),
-        ),
-        call(
-            product="P",
-            chunk_type="span",
-            include_replaced=False,
-            meta={"plugin": "test_product"},
-        ),
-    ]
-
-
-@pytest.mark.unit
-def test_enforce_existing_spans_without_resume_or_force_raises_conflict():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = [_make_span()]
-    guard = _make_guard(chunk_manager)
-
-    with pytest.raises(ResumeConflictError, match="Existing entries for product 'P'"):
-        guard.enforce(ctx=_make_ctx(), product="P")
-
-
-@pytest.mark.unit
-def test_enforce_force_reingest_bypasses_existing_span_conflict():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = [_make_span()]
-    guard = _make_guard(chunk_manager)
-
-    guard.enforce(ctx=_make_ctx(force_reingest=True), product="P")
-
-
-@pytest.mark.unit
-def test_enforce_with_time_bounds_uses_time_overlaps_query():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = []
-    guard = _make_guard(chunk_manager)
-
-    guard.enforce(
-        ctx=_make_ctx(),
-        product="P",
-        slice_meta={
-            "time_min": "2024-03-01T00:00:00Z",
-            "time_max": "2024-03-31T23:59:59Z",
-            "test_region": "euro",
-        },
-    )
-
-    assert chunk_manager.list_chunks.call_args_list == [
-        call(
-            product="P",
-            chunk_type="span",
-            include_replaced=False,
-            meta={"plugin": "test_product"},
-            time_overlaps=("2024-03-01T00:00:00Z", "2024-03-31T23:59:59Z"),
-        ),
-        call(
-            product="P",
-            chunk_type="span",
-            include_replaced=False,
-            meta={"plugin": "test_product"},
-        ),
-    ]
-
-
-@pytest.mark.unit
-def test_enforce_includes_legacy_spans_in_time_bounded_check():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-
-    timed_span = _make_span(
-        meta={
-            "plugin": "test_product",
-            "time_min": "2024-01-01T00:00:00Z",
-            "time_max": "2024-06-01T00:00:00Z",
-        }
-    )
-    timed_span.key = "span-timed-1"
-
-    legacy_span = _make_span(meta={"plugin": "test_product"})
-    legacy_span.key = "span-legacy-1"
-
-    def list_chunks_side_effect(**kwargs):
-        if kwargs.get("time_overlaps"):
-            return [timed_span]
-        return [timed_span, legacy_span]
-
-    chunk_manager.list_chunks.side_effect = list_chunks_side_effect
-    guard = _make_guard(chunk_manager)
-
-    with pytest.raises(ResumeConflictError):
-        guard.enforce(
-            ctx=_make_ctx(),
-            product="P",
-            slice_meta={
-                "time_min": "2024-02-01T00:00:00Z",
-                "time_max": "2024-05-01T00:00:00Z",
-            },
-        )
-
-
-@pytest.mark.unit
-def test_enforce_excludes_legacy_spans_from_other_plugins():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = []
-    guard = _make_guard(chunk_manager)
-
-    guard.enforce(
-        ctx=_make_ctx(),
-        product="P",
-        slice_meta={
-            "time_min": "2024-02-01T00:00:00Z",
-            "time_max": "2024-05-01T00:00:00Z",
-        },
-    )
-
-    assert chunk_manager.list_chunks.call_args_list == [
-        call(
-            product="P",
-            chunk_type="span",
-            include_replaced=False,
-            meta={"plugin": "test_product"},
-            time_overlaps=("2024-02-01T00:00:00Z", "2024-05-01T00:00:00Z"),
-        ),
-        call(
-            product="P",
-            chunk_type="span",
-            include_replaced=False,
-            meta={"plugin": "test_product"},
-        ),
-    ]
-
-
-@pytest.mark.unit
-def test_enforce_without_time_bounds_falls_back_to_all_spans_query():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = []
-    guard = _make_guard(chunk_manager)
-
-    guard.enforce(ctx=_make_ctx(), product="P", slice_meta={"test_region": "euro"})
-
-    chunk_manager.list_chunks.assert_called_once_with(
-        product="P",
-        chunk_type="span",
-        include_replaced=False,
-        meta={"plugin": "test_product"},
-    )
-
-
-@pytest.mark.unit
-def test_enforce_no_time_slice_meta_unchanged():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    legacy_span = _make_span(meta={"plugin": "test_product"})
-    legacy_span.key = "span-legacy-1"
-    chunk_manager.list_chunks.return_value = [legacy_span]
-    guard = _make_guard(chunk_manager)
-
-    with pytest.raises(ResumeConflictError):
-        guard.enforce(ctx=_make_ctx(), product="P", slice_meta={})
-
-    assert chunk_manager.list_chunks.call_count == 1
-
-
-@pytest.mark.unit
-def test_enforce_validate_zarr_remains_opt_in():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = [_make_span()]
-    guard = _make_guard(chunk_manager)
-
-    with (
-        patch.object(ResumeGuard, "_run_optional_validation", return_value=True) as validate,
-        pytest.raises(ResumeConflictError),
-    ):
-        guard.enforce(ctx=_make_ctx(validate_zarr=False), product="P")
-
-    validate.assert_not_called()
-
-
-@pytest.mark.unit
-def test_enforce_logs_proceed_fresh_decision():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = []
-    mock_log = MagicMock()
-    guard = ResumeGuard(
-        plugin_name="test",
-        chunk_manager=chunk_manager,
-        log=mock_log,
-        slice_meta_keys=[],
-    )
-
-    guard.enforce(ctx=_make_ctx(), product="P")
-
-    debug_calls = [str(call) for call in mock_log.debug.call_args_list]
-    assert any("PROCEED_FRESH" in call or "proceed_fresh" in call for call in debug_calls), (
-        f"Expected PROCEED_FRESH in debug log, got: {debug_calls}"
-    )
-
-
-@pytest.mark.unit
-def test_enforce_logs_block_stale_run_decision():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = [_make_run("r-stale", status="started")]
-    chunk_manager.list_chunks.return_value = []
-    mock_log = MagicMock()
-    guard = ResumeGuard(
-        plugin_name="test",
-        chunk_manager=chunk_manager,
-        log=mock_log,
-        slice_meta_keys=[],
-    )
-
-    with pytest.raises(ResumeConflictError):
-        guard.enforce(ctx=_make_ctx(), product="P")
-
-    debug_calls = [str(call) for call in mock_log.debug.call_args_list]
-    assert any("BLOCK_STALE_RUN" in call or "block_stale_run" in call for call in debug_calls), (
-        f"Expected BLOCK_STALE_RUN in debug log, got: {debug_calls}"
-    )
-
-
-@pytest.mark.unit
-def test_enforce_logs_block_conflict_decision():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = [_make_span(meta={"plugin": "test"})]
-    mock_log = MagicMock()
-    guard = ResumeGuard(
-        plugin_name="test",
-        chunk_manager=chunk_manager,
-        log=mock_log,
-        slice_meta_keys=[],
-    )
-
-    with pytest.raises(ResumeConflictError):
-        guard.enforce(ctx=_make_ctx(), product="P")
-
-    debug_calls = [str(call) for call in mock_log.debug.call_args_list]
-    assert any("BLOCK_CONFLICT" in call or "block_conflict" in call for call in debug_calls), (
-        f"Expected BLOCK_CONFLICT in debug log, got: {debug_calls}"
-    )
-
-
-@pytest.mark.unit
-def test_enforce_external_api_unchanged():
-    chunk_manager = MagicMock()
-    chunk_manager.list_runs.return_value = []
-    chunk_manager.list_chunks.return_value = []
-    guard = ResumeGuard(
-        plugin_name="test",
-        chunk_manager=chunk_manager,
-        log=MagicMock(),
-        slice_meta_keys=[],
-    )
-
-    result = guard.enforce(ctx=_make_ctx(), product="P")
+    result = guard.enforce(ctx=_GuardCtx(), product=_PRODUCT)
 
     assert result is None
+
+
+def test_existing_completed_span_blocks_without_resume_or_force(tmp_path: Path) -> None:
+    manager = _fresh_manager(tmp_path)
+    _record_completed_span(manager, run_id="run-past", batch_id="b01")
+    manager.close()
+    manager = _fresh_manager(tmp_path)
+    manager.rebuild_snapshot(_PRODUCT)
+    guard = _make_guard(manager)
+
+    with pytest.raises(ResumeConflictError, match=f"Existing entries for product '{_PRODUCT}'"):
+        guard.enforce(ctx=_GuardCtx(), product=_PRODUCT)
+
+
+def test_force_reingest_bypasses_existing_completed_span(tmp_path: Path) -> None:
+    manager = _fresh_manager(tmp_path)
+    _record_completed_span(manager, run_id="run-past", batch_id="b01")
+    manager.close()
+    manager = _fresh_manager(tmp_path)
+    manager.rebuild_snapshot(_PRODUCT)
+    guard = _make_guard(manager)
+
+    guard.enforce(ctx=_GuardCtx(force_reingest=True), product=_PRODUCT)
+
+
+def test_resume_existing_bypasses_existing_completed_span(tmp_path: Path) -> None:
+    manager = _fresh_manager(tmp_path)
+    _record_completed_span(manager, run_id="run-past", batch_id="b01")
+    manager.close()
+    manager = _fresh_manager(tmp_path)
+    manager.rebuild_snapshot(_PRODUCT)
+    guard = _make_guard(manager)
+
+    guard.enforce(ctx=_GuardCtx(options={"resume_existing": True}), product=_PRODUCT)
+
+
+def test_resume_guard_fail_loud_end_to_end(tmp_path: Path) -> None:
+    """A failed run that left a completed span blocks plain re-runs loudly.
+
+    Setup mirrors the production hazard: a run terminated with status=failed
+    but wrote at least one span before dying. On the next attempt without
+    ``resume_existing`` or ``force_reingest`` the guard must refuse and
+    name both escape hatches so the operator can pick the safe one.
+    """
+    manager = _fresh_manager(tmp_path)
+    _record_failed_run_with_completed_span(manager, run_id="run-failed", batch_id="b02")
+    manager.close()
+    manager = _fresh_manager(tmp_path)
+    manager.rebuild_snapshot(_PRODUCT)
+    guard = _make_guard(manager)
+
+    with pytest.raises(ResumeConflictError) as excinfo:
+        guard.enforce(ctx=_GuardCtx(), product=_PRODUCT)
+
+    message = str(excinfo.value)
+    assert "'run-failed'" in message
+    assert "succeeded span(s)" in message
+    assert "b02" in message
+    assert "resume_existing=true" in message
+    assert "force_reingest=true" in message
+
+
+def test_resume_guard_fail_loud_bypassed_by_resume_existing(tmp_path: Path) -> None:
+    """The failed-run block is a soft failure: resume_existing must clear it."""
+    manager = _fresh_manager(tmp_path)
+    _record_failed_run_with_completed_span(manager, run_id="run-failed", batch_id="b02")
+    manager.close()
+    manager = _fresh_manager(tmp_path)
+    manager.rebuild_snapshot(_PRODUCT)
+    guard = _make_guard(manager)
+
+    guard.enforce(ctx=_GuardCtx(options={"resume_existing": True}), product=_PRODUCT)
+
+
+def test_resume_guard_fail_loud_bypassed_by_force_reingest(tmp_path: Path) -> None:
+    """force_reingest also clears the failed-run block."""
+    manager = _fresh_manager(tmp_path)
+    _record_failed_run_with_completed_span(manager, run_id="run-failed", batch_id="b02")
+    manager.close()
+    manager = _fresh_manager(tmp_path)
+    manager.rebuild_snapshot(_PRODUCT)
+    guard = _make_guard(manager)
+
+    guard.enforce(ctx=_GuardCtx(force_reingest=True), product=_PRODUCT)

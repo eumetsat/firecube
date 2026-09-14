@@ -89,8 +89,9 @@ Public import: `from firecube.core.api import StorageConfig`
 
 Public import: `from firecube.ingestor.api import EngineConfig`
 
-These fields are accepted as common `--option key=value` settings and plugin
-defaults under `[plugins.<name>]`.
+See [Discover Source Data](../guides/plugins/source-discovery.md)
+for input-filter commands and
+[Configuration Model](../concepts/configuration.md) for configuration precedence.
 
 ::: firecube.ingestor.api.EngineConfig
     options:

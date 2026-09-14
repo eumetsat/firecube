@@ -221,14 +221,29 @@ def ensure_timestamp_state_array(
 
 def update_timestamp_state(
     *,
-    store_uri: str,
+    store_uri: str | None = None,
     array_path: str,
     time_index_ranges: Sequence[Any],
     value: int,
     storage_config: StorageConfig | None = None,
     storage_options: dict[str, Any] | None = None,
+    zarr_store: ZarrStoreHandle | None = None,
 ) -> None:
-    """Best-effort update of a per-timestamp state array (uint8)."""
+    """Best-effort update of a per-timestamp state array (uint8).
+
+    Args:
+        store_uri: Store location; required unless ``zarr_store`` is given.
+        array_path: Path of the state array inside the store (``group/name``).
+        time_index_ranges: Inclusive ``[start, end]`` index pairs to update.
+        value: State value written over the ranges.
+        storage_config: Driver-aware opener for ``store_uri``.
+        storage_options: fsspec options used when opening ``store_uri`` directly.
+        zarr_store: Already-resolved store handle; opened without consolidated
+            metadata so a stale ``zarr.json`` cannot hide the array.
+
+    Raises:
+        ValueError: If neither ``zarr_store`` nor ``store_uri`` is given.
+    """
     normalized = _normalize_time_index_ranges(time_index_ranges)
     if not normalized:
         return
@@ -239,7 +254,13 @@ def update_timestamp_state(
     except Exception as exc:
         raise RuntimeError("zarr+numpy required for timestamp state updates") from exc
 
-    if storage_config is not None:
+    if zarr_store is not None:
+        root = zarr.open_group(
+            **zarr_store.zarr_kwargs(), mode="a", zarr_format=3, use_consolidated=False
+        )
+    elif store_uri is None:
+        raise ValueError("update_timestamp_state requires store_uri or zarr_store")
+    elif storage_config is not None:
         handle = _session_zarr_store(store_uri=store_uri, storage_config=storage_config, mode="a")
         root = zarr.open_group(**handle.zarr_kwargs(), mode="a", zarr_format=3)
     else:

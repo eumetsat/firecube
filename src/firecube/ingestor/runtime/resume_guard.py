@@ -51,6 +51,23 @@ def _ranges_overlap_inclusive_vs_halfopen(
     return inc_start < ho_end and ho_start <= inc_end
 
 
+def _span_batch_id(span: Any) -> str:
+    meta = getattr(span, "meta", None) or {}
+    if isinstance(meta, dict):
+        batch_id = meta.get("batch_id")
+        if batch_id:
+            return str(batch_id)
+    return str(getattr(span, "key", "unknown") or "unknown")
+
+
+def _summarise_span_batches(spans: Sequence[Any], *, limit: int = 8) -> str:
+    batch_ids = [_span_batch_id(span) for span in spans]
+    shown = ", ".join(batch_ids[:limit])
+    if len(batch_ids) > limit:
+        shown = f"{shown}, ..."
+    return shown or "unknown"
+
+
 @dataclass(slots=True)
 class ResumeGuard:
     """Enforce resume / overwrite safety before an ingest run starts.
@@ -83,6 +100,7 @@ class ResumeGuard:
     chunk_manager: Any
     log: logging.Logger
     slice_meta_keys: Sequence[str]
+    time_dim_name: str = "timestamp"
     last_metrics: ResumeGuardMetrics | None = None
 
     def _log_decision(self, decision: ResumeDecision) -> None:
@@ -232,6 +250,23 @@ class ResumeGuard:
 
         metrics.spans_scanned = len(existing_records)
 
+        failed_keys: set[Any] = set()
+        if not force_reingest and not resume_existing:
+            failed_run_spans = self._active_failed_run_spans(
+                product=product,
+                plugin_filter=plugin_filter,
+                time_overlaps=(run_time_min, run_time_max)
+                if run_time_min and run_time_max
+                else None,
+            )
+            if failed_run_spans:
+                failed_keys = {getattr(span, "key", None) for span in failed_run_spans}
+                existing_keys = {getattr(span, "key", None) for span in existing_records}
+                for span in failed_run_spans:
+                    if getattr(span, "key", None) not in existing_keys:
+                        existing_records.append(span)
+                metrics.spans_scanned = len(existing_records)
+
         if self.slice_meta_keys and not (run_time_min and run_time_max):
             missing_ctx_keys = [k for k in self.slice_meta_keys if k not in slice_meta]
             if missing_ctx_keys and existing_records:
@@ -289,7 +324,7 @@ class ResumeGuard:
             self._log_decision(
                 ResumeDecision(
                     verdict=ResumeVerdict.PROCEED_RESUME,
-                    reason="force_reingest=True",
+                    reason="append (overwrite in place): force_reingest=True",
                 )
             )
             return
@@ -305,10 +340,30 @@ class ResumeGuard:
             self._log_decision(
                 ResumeDecision(
                     verdict=ResumeVerdict.PROCEED_RESUME,
-                    reason="resume_existing=True",
+                    reason="append (skip existing timestamps): resume_existing=True",
                 )
             )
             return
+
+        failed_conflicts = [
+            span for span in existing_records if getattr(span, "key", None) in failed_keys
+        ]
+        if failed_conflicts:
+            failed_run_id = self._failed_run_id_for_span(failed_conflicts[0])
+            span_summary = _summarise_span_batches(failed_conflicts)
+            self._log_decision(
+                ResumeDecision(
+                    verdict=ResumeVerdict.BLOCK_CONFLICT,
+                    reason="Failed-run spans exist, no resume flag",
+                )
+            )
+            raise ResumeConflictError(
+                f"Pipeline run {failed_run_id!r} left {len(failed_conflicts)} succeeded span(s) in the store "
+                f"(batches: {span_summary}). "
+                "A plain re-run is refused while spans from a failed run exist. "
+                "Re-run with --option resume_existing=true to keep the succeeded batches, "
+                "or --option force_reingest=true to redo them."
+            )
 
         if validate_zarr:
             has_chunks = self._run_optional_validation(
@@ -378,6 +433,40 @@ class ResumeGuard:
             f"Cube {target}{group_suffix} is sealed "
             f"(consolidated at {latest.timestamp_iso}). Further ingest is blocked."
         )
+
+    def _failed_run_ids(self, *, product: str) -> set[str]:
+        failed_runs = self.chunk_manager.list_runs(product=product, status="failed")
+        if not failed_runs:
+            return set()
+        return {str(getattr(run, "run_id", "") or "") for run in failed_runs}
+
+    def _active_failed_run_spans(
+        self,
+        *,
+        product: str,
+        plugin_filter: dict[str, Any],
+        time_overlaps: tuple[Any, Any] | None = None,
+    ) -> list[Any]:
+        failed_run_ids = self._failed_run_ids(product=product)
+        if not failed_run_ids:
+            return []
+        kwargs: dict[str, Any] = {
+            "product": product,
+            "chunk_type": "span",
+            "status": "active",
+            "include_replaced": True,
+            "meta": plugin_filter,
+        }
+        if time_overlaps is not None:
+            kwargs["time_overlaps"] = time_overlaps
+        spans = self.chunk_manager.list_chunks(**kwargs)
+        return [span for span in spans if self._failed_run_id_for_span(span) in failed_run_ids]
+
+    def _failed_run_id_for_span(self, span: Any) -> str:
+        meta = getattr(span, "meta", None) or {}
+        if isinstance(meta, dict):
+            return str(meta.get("run_id", "unknown") or "unknown")
+        return "unknown"
 
     def _check_non_terminal_runs(
         self,
@@ -562,13 +651,14 @@ class ResumeGuard:
                 timeout_s=_timeout_s,
                 max_chunks=_max_chunks,
                 on_timeout=_on_timeout,
+                time_dim_name=self.time_dim_name,
             )
             has_chunks = any(v >= 0 for v in report.max_indices.values())
-            if warn_only and (report.extra_chunks or report.missing_indices):
+            if warn_only and (report.extra_chunks or report.absent_chunk_indices):
                 self.log.warning(
                     "validate_zarr detected structural issues (extra=%d, missing=%d) for product=%s group=%s",
                     len(report.extra_chunks),
-                    sum(len(v) for v in report.missing_indices.values()),
+                    sum(len(v) for v in report.absent_chunk_indices.values()),
                     product,
                     group or "/",
                 )

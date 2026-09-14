@@ -20,19 +20,20 @@ from typing import Any, cast
 
 import pytest
 
+from firecube.core.errors import ConfigurationError
 from firecube.ingestor.templates.config import ZarrTemplateConfig
 
 pytestmark = pytest.mark.contract
 
 
 def test_string_value_rejected_as_non_bool() -> None:
-    with pytest.raises(ValueError, match="zarr_compression must be bool"):
+    with pytest.raises(ConfigurationError, match="zarr_compression must be bool"):
         ZarrTemplateConfig(zarr_compression=cast(Any, "zstd"))
 
 
 @pytest.mark.parametrize("value", [1, 0, 1.0, None])
 def test_non_bool_values_raise(value: Any) -> None:
-    with pytest.raises(ValueError, match="zarr_compression"):
+    with pytest.raises(ConfigurationError, match="zarr_compression"):
         ZarrTemplateConfig(zarr_compression=value)
 
 

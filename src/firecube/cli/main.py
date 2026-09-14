@@ -34,6 +34,7 @@ from firecube.cli._formatter import (
     FirecubeGroup,
     install_option_groups_patch,
 )
+from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._product import require_full_uri
 from firecube.cli._rename_hints import install_rename_hints
 from firecube.cli._shared_options import (
@@ -41,7 +42,11 @@ from firecube.cli._shared_options import (
     storage_type_option,
     write_mode_option,
 )
-from firecube.cli._typed_options import TypedOptionsParam, coerce_options_for_plugin
+from firecube.cli._typed_options import (
+    _TYPED_FLAG_OWNED_KEYS,
+    TypedOptionsParam,
+    coerce_options_for_plugin,
+)
 from firecube.cli.advise import advise as advise_group
 from firecube.cli.archive import archive as archive_group
 from firecube.cli.catalog import catalog as catalog_group
@@ -92,7 +97,13 @@ OPTION_GROUPS.update(
         "firecube ingest": [
             {
                 "name": "Input",
-                "options": ["--input-data", "--target", "--product-name", "--output-format"],
+                "options": [
+                    "--input-data",
+                    "--input-filters",
+                    "--target",
+                    "--product-name",
+                    "--output-format",
+                ],
             },
             {
                 "name": "Execution",
@@ -176,6 +187,7 @@ OPTION_GROUPS.update(
                     "--start-date",
                     "--end-date",
                     "--range",
+                    "--time-range",
                 ],
             },
             {
@@ -289,6 +301,10 @@ OPTION_GROUPS.update(
                 ],
             },
             {
+                "name": "Input",
+                "options": ["--input-data", "--input-filters"],
+            },
+            {
                 "name": "Options",
                 "options": ["--slot-size", "--no-resume", "--format"],
             },
@@ -316,7 +332,7 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Input",
-                "options": ["--input-data"],
+                "options": ["--input-data", "--input-filters"],
             },
             {
                 "name": "Advanced",
@@ -527,6 +543,7 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
     required=False,
     help="Raw plugin input data: local path, file:///abs/path, or s3:// prefix. Interpreted by the plugin.",
 )
+@input_filters_option
 @click.option(
     "-t",
     "--target",
@@ -631,6 +648,7 @@ def ingest(
     ctx: click.Context,
     plugin: str,
     input_data: str | None,
+    input_filters: list[str] | None,
     target: str | None,
     product_name: str | None,
     storage_type: str | None,
@@ -725,6 +743,9 @@ def ingest(
             cfg = load_config_file(explicit_config, strict=explicit_config is not None)
             assert ingest_cfg is not None
             options = get_plugin_defaults(cfg, plugin)
+            resolved_filters = resolve_input_filters(ctx, plugin, input_filters, defaults=options)
+            if resolved_filters is not None:
+                options["input_filters"] = resolved_filters
             from firecube.cli._slot_env import resolve_slot_range_from_env
 
             resolved_slot_start, resolved_slot_end, resolved_slot_group = (
@@ -886,7 +907,11 @@ def _print_plugin_options(plugin_name: str, ingestor_cls: type) -> None:
 
         click.echo(f"[{tier}]")
         for key in keys:
-            click.echo(f"  --option {key}")
+            owning_flag = _TYPED_FLAG_OWNED_KEYS.get(key)
+            if owning_flag is not None:
+                click.echo(f"  {owning_flag}")
+            else:
+                click.echo(f"  --option {key}")
         click.echo("")
 
 

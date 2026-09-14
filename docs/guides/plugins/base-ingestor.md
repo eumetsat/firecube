@@ -105,6 +105,10 @@ not provide an output writer or write coordination.
 See [Plugin Extensions](extensions.md#custom-pipeline-lifecycle) for the call
 shape and compatibility limits.
 
+For temporary readers, use [Discover Zipped Data](discover-zipped-data.md).
+A custom pipeline owns its cleanup boundary, including resources acquired before
+setup fails. The engine does not automatically manage a `BatchResourceRegistry`.
+
 ## Verify
 
 After implementing the writer, run one representative batch with the output
@@ -112,7 +116,7 @@ format and write mode that the writer supports. A custom Zarr command has this
 shape:
 
 ```bash
-uv run firecube ingest my_plugin \
+firecube ingest my_plugin \
   --input-data ./path/to/input \
   --target file:///tmp/my_product.zarr \
   --product-name my_product \

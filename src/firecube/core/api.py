@@ -99,7 +99,7 @@ from firecube.core.zarr.chunk_geometry import (
     physical_chunk_keys_for_region,
 )
 from firecube.core.zarr.region_writer import RegionZarrWriterProtocol
-from firecube.core.zarr.time_decode import decode_time_array
+from firecube.core.zarr.time_decode import decode_time_array, encode_time_array
 from firecube.core.zarr.validation import (
     ZarrCompareReport,
     compare_zarr_stores,
@@ -160,6 +160,7 @@ __all__ = [
     "delete_path",
     "describe_control_plane",
     "discover_input_files",
+    "encode_time_array",
     "ensure_directory",
     "ensure_product_uri",
     "epoch_s_to_iso",

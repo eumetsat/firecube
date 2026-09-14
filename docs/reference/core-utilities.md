@@ -139,5 +139,5 @@ materializes; `firecube zarr consolidate-time-coord` stamps
 
 ## See Also
 
-- [Slot-Range Parallelism](parallelism.md)
+- [Index Specification](parallelism.md)
 - [Storage Drivers](storage-drivers.md)

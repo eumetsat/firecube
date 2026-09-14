@@ -1,4 +1,4 @@
-# Implement DirectZarrIngestor
+# Declare The Schema And Index
 
 ## Goal
 
@@ -18,6 +18,21 @@ The plugin contract is four hooks:
 Firecube resolves the declared index once, sizes arrays from
 `resolved_index(ctx).size(group)`, and then applies the emitted write intents.
 
+## Prerequisites
+
+This guide assumes the vocabulary of indexed writes. Read these first, in
+this order:
+
+1. [DirectZarrIngestor write model](../../concepts/output-formats/zarr/direct-region.md) — time axes, coordinate ownership, and what a write intent is.
+2. [Index Specification](../../reference/parallelism.md) — `TimeAxis`, `IndexSpec`, and `ItemInfo`.
+3. [Parallelism](../../concepts/parallelism.md) — when slot-range workers are the right model.
+4. [ChunkManager Records](../../concepts/chunk-management.md) — the claims that keep workers apart.
+
+Running several workers, preallocating the store, and planning slot ranges is
+an operator workflow: [Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md).
+A plugin created with `firecube plugins create --template zarr --write-strategy zarr-python`
+and installed as in [Install Your Plugin](install-a-plugin.md) is the starting point.
+
 ## Choose The Time Axis
 
 Declare the axis with a `TimeAxis` constructor. Pick the row that matches your
@@ -32,7 +47,7 @@ product:
 
 The first row is the common case and is what the example below uses. The
 last row has its own guide:
-[DirectZarrIngestor (Auto)](direct-zarr-auto.md). To
+[Discover The Time Axis](direct-zarr-auto.md). To
 understand what each choice means for the stored coordinate values and for
 write verification, read the
 [DirectZarrIngestor write model](../../concepts/output-formats/zarr/direct-region.md).
@@ -155,7 +170,10 @@ index, raises `IndexedWriteCompilationError` for any timestamp it cannot map,
 and emits the slot's time-coordinate verify-write for you. Append
 `WriteIntent.static(...)` items to the same list for arrays that never move
 with the time axis, such as latitude and longitude grids. Every element must
-target a declared group and array.
+target a declared group and array. To write more than one group, declare one
+`ZarrGroupSpec` per group and name the group on each write; Firecube derives
+the group set from the schema, so `get_batch_groups` is not overridden on
+this template.
 
 ### Choose A Write Factory
 
@@ -191,7 +209,7 @@ the full contract.
 Run one ingest against a small input and confirm the store is written:
 
 ```bash
-uv run firecube ingest my_plugin \
+firecube ingest my_plugin \
   --input-data ./path/to/input \
   --target file:///tmp/my_product.zarr \
   --product-name my_product \
@@ -209,8 +227,8 @@ The serial run above is the smoke test. The payoff is the parallel workflow:
 preallocate the store, plan chunk-aligned slot ranges, then start one ingest
 worker per range. That is an operator workflow with its own page:
 [Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md). The
-[DirectZarrIngestor (Region) tutorial](../../tutorials/direct-zarr-parallel.md)
-walks it end to end with real data.
+[MTG FCI L1C benchmark notebook](../../showcase/mtg-fci-l1c-benchmarks.ipynb)
+reproduces the parallel setup with a public plugin and real observations.
 
 ## Common Mistakes
 
@@ -226,7 +244,7 @@ walks it end to end with real data.
 ## Next Steps
 
 - **[Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md)** - preallocate, slot planning, and worker fan-out
-- **[DirectZarrIngestor (Region) Tutorial](../../tutorials/direct-zarr-parallel.md)** - complete tutorial with real timestamps
+- **[Slot-Based Parallelism: MTG FCI L1C](../../showcase/mtg-fci-l1c-benchmarks.ipynb)** - reproduce a parallel ingestion benchmark
 - **[DirectZarrIngestor (Region)](../../concepts/output-formats/zarr/direct-region.md)** - the write model, time-axis regimes, and coordinate ownership
 - **[Index Specification Reference](../../reference/parallelism.md)** - `TimeAxis`, `IndexSpec`, and `ResolvedIndex` types
 - **[Plugin Templates](../../reference/templates.md)** - full template surface

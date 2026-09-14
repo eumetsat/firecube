@@ -176,3 +176,154 @@ def test_extract_all_from_zips_every_input_lands_in_one_mapping(
 def test_extract_all_from_zips_rejects_invalid_workers(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="workers must be >= 1"):
         extract_all_from_zips([], lambda p: tmp_path, workers=0)
+
+
+@pytest.mark.parametrize("workers", [1, 4])
+@pytest.mark.parametrize("unsafe", [False, True])
+def test_failure_preserves_existing_destination(tmp_path, workers, unsafe):
+    archive = tmp_path / "bad.zip"
+    if unsafe:
+        _write_zip(archive, {"../escape": b"bad"})
+    else:
+        archive.write_bytes(b"corrupt")
+    dest = tmp_path / "existing"
+    dest.mkdir()
+    (dest / "sentinel").write_text("keep")
+    good = tmp_path / "good.zip"
+    _write_zip(good, {"data": b"good"})
+
+    extracted, failures = extract_all_from_zips(
+        [archive, good], lambda p: dest if p == archive else tmp_path / "good", workers=workers
+    )
+
+    assert set(failures) == {archive}
+    assert extracted[good].is_dir()
+    assert (dest / "sentinel").read_text() == "keep"
+
+
+@pytest.mark.parametrize("workers", [1, 4])
+@pytest.mark.parametrize("layout", ["same", "nested", "alias", "normalized"])
+def test_failure_preserves_overlapping_success(tmp_path, workers, layout):
+    good, bad = tmp_path / "good.zip", tmp_path / "bad.zip"
+    _write_zip(good, {"payload": b"keep"})
+    bad.write_bytes(b"corrupt")
+    root = tmp_path / "output"
+    good_dest = root / "child" if layout == "nested" else root
+    bad_dest = root
+    if layout == "alias":
+        alias = tmp_path / "alias"
+        alias.symlink_to(tmp_path, target_is_directory=True)
+        bad_dest = alias / "output"
+    elif layout == "normalized":
+        bad_dest = root / ".." / "output"
+
+    extracted, failures = extract_all_from_zips(
+        [good, bad], lambda p: good_dest if p == good else bad_dest, workers=workers
+    )
+
+    assert set(failures) == {bad}
+    assert (extracted[good] / "payload").read_bytes() == b"keep"
+
+
+def _write_late_failure_zip(path):
+    # Stored payload corruption fails its CRC only after the first member writes.
+    _write_zip(path, {"first": b"partial", "second": b"UNIQUE_PAYLOAD"})
+    path.write_bytes(path.read_bytes().replace(b"UNIQUE_PAYLOAD", b"BROKEN_PAYLOAD"))
+
+
+@pytest.mark.parametrize("workers", [1, 4])
+@pytest.mark.parametrize("existing", [False, True])
+def test_late_failure_cleanup_boundary(tmp_path, workers, existing):
+    bad, good = tmp_path / "bad.zip", tmp_path / "good.zip"
+    _write_late_failure_zip(bad)
+    _write_zip(good, {"data": b"good"})
+    dest = tmp_path / "parent" / "bad"
+    if existing:
+        dest.mkdir(parents=True)
+        (dest / "sentinel").write_bytes(b"keep")
+    extracted, failures = extract_all_from_zips(
+        [bad, good], lambda p: dest if p == bad else tmp_path / "good", workers=workers
+    )
+    assert "CRC" in failures[bad]
+    assert extracted[good].is_dir()
+    assert dest.parent.is_dir()
+    if existing:
+        assert (dest / "sentinel").read_bytes() == b"keep"
+        assert (dest / "first").read_bytes() == b"partial"
+    else:
+        assert not dest.exists()
+
+
+@pytest.mark.parametrize("state", ["new", "empty", "populated"])
+def test_success_keeps_destination_and_overwrite_behavior(tmp_path, state):
+    archive = tmp_path / "good.zip"
+    _write_zip(archive, {"payload": b"new"})
+    dest = tmp_path / "out"
+    if state != "new":
+        dest.mkdir()
+    if state == "populated":
+        (dest / "payload").write_bytes(b"old")
+        (dest / "sentinel").write_bytes(b"keep")
+    extracted, failures = extract_all_from_zips([archive], lambda p: dest)
+    assert extracted == {archive: dest}
+    assert failures == {}
+    assert (dest / "payload").read_bytes() == b"new"
+    if state == "populated":
+        assert (dest / "sentinel").read_bytes() == b"keep"
+
+
+@pytest.mark.parametrize("workers", [1, 4])
+def test_repeated_archive_destination_is_nonexclusive(tmp_path, workers):
+    archive = tmp_path / "bad.zip"
+    _write_late_failure_zip(archive)
+    dest = tmp_path / "out"
+    calls = []
+
+    def destination(path):
+        # All destination callbacks run before any extraction starts.
+        assert not dest.exists()
+        calls.append(path)
+        return dest
+
+    extracted, failures = extract_all_from_zips([archive, archive], destination, workers=workers)
+    assert calls == [archive, archive]
+    assert extracted == {}
+    assert set(failures) == {archive}
+    assert (dest / "first").read_bytes() == b"partial"
+
+
+def test_destination_created_by_another_caller_is_not_owned(tmp_path, monkeypatch):
+    archive = tmp_path / "bad.zip"
+    archive.write_bytes(b"corrupt")
+    dest = tmp_path / "out"
+    original_mkdir = Path.mkdir
+    raced = False
+
+    def racing_mkdir(path, *args, **kwargs):
+        nonlocal raced
+        if path == dest and not raced:
+            raced = True
+            original_mkdir(path)
+            (path / "sentinel").write_text("other caller")
+        return original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", racing_mkdir)
+    extracted, failures = extract_all_from_zips([archive], lambda p: dest)
+    assert extracted == {}
+    assert set(failures) == {archive}
+    assert (dest / "sentinel").read_text() == "other caller"
+
+
+def test_unusable_destination_does_not_abort_other_archives(tmp_path):
+    good, bad = tmp_path / "good.zip", tmp_path / "bad.zip"
+    _write_zip(good, {"data": b"good"})
+    _write_zip(bad, {"data": b"bad"})
+    parent_file = tmp_path / "file"
+    parent_file.write_text("keep")
+    extracted, failures = extract_all_from_zips(
+        [bad, good],
+        lambda p: parent_file / "child" if p == bad else tmp_path / "out",
+    )
+    assert set(failures) == {bad}
+    assert (extracted[good] / "data").read_bytes() == b"good"
+    assert parent_file.read_text() == "keep"

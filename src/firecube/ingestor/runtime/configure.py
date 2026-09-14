@@ -38,6 +38,7 @@ import click
 
 from firecube.core.config import DATABASE_DUCKDB_KEYS
 from firecube.core.controlplane import ChunkManager
+from firecube.core.formats._input_filters import reject_legacy_input_patterns
 from firecube.ingestor.config.engine import (
     SYSTEM_KEYS,
     EngineConfig,
@@ -94,6 +95,7 @@ class TierConfigurator:
         self, ctx: IngestContext
     ) -> tuple[EngineConfig, TemplateConfig | None, PluginConfig | None]:
         options = ctx.options or {}
+        reject_legacy_input_patterns(options)
 
         if "output_name" in options:
             raise click.UsageError(

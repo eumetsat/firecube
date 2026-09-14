@@ -29,15 +29,206 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from collections.abc import Coroutine
+from typing import TYPE_CHECKING, Any, cast
+
+import numpy as np
+import zarr
+from zarr.core.sync import sync
 
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.errors import StagedMetadataError
+from firecube.core.zarr.chunk_geometry import chunk_index_to_region
+from firecube.ingestor.errors import SeedingFailedError, StagedMetadataError
 
 if TYPE_CHECKING:
     from firecube.core.storage.session import StorageSession
 
 log = logging.getLogger(__name__)
+
+
+def seed_touched_data_chunks(
+    *,
+    temp_store_uri: str,
+    final_target_uri: str,
+    touched_chunks: dict[str, dict[str, list[tuple[int, ...]]]],
+    session: StorageSession,
+) -> None:
+    """Seed data-array chunks from the final target into the workspace store.
+
+    For each (group, array, chunk_index_tuple) in touched_chunks:
+    - Detect whether the array is sharded (check zarr array metadata for shard codec).
+    - Resolve the write-unit: SHARD for sharded arrays, CHUNK for non-sharded.
+    - Deduplicate: multiple touched chunks in the same shard → one write-unit entry.
+    - Check workspace store for write-unit key existence via Store.contains().
+    - If EXISTS → skip (already seeded or written by a prior batch; re-seeding would clobber).
+    - If NOT exists → copy write-unit region from final target to workspace via zarr API.
+
+    All-or-abort: on any copy failure, delete workspace root via session.fs().rm()
+    and raise SeedingFailedError.
+
+    Stateless: no cache parameter. The workspace store IS the cache.
+    Correct across batches within one run and on retry.
+    Runs under the per-(product, group) append claim opened by build_claim_closure_for_append.
+    """
+    from firecube.core.uris import storage_uri_from_target
+
+    ws_handle = session.zarr.create_store(uri=storage_uri_from_target(temp_store_uri), mode="a")
+    ws_root = zarr.open_group(**ws_handle.zarr_kwargs(), mode="a", zarr_format=3)
+    try:
+        target_handle = session.zarr.create_store(
+            uri=storage_uri_from_target(final_target_uri), mode="r"
+        )
+        target_root = zarr.open_group(
+            **target_handle.zarr_kwargs(),
+            mode="r",
+            zarr_format=3,
+            use_consolidated=False,
+        )
+    except FileNotFoundError:
+        return
+
+    try:
+        for group_name, arrays in touched_chunks.items():
+            ws_group = _get_child(ws_root, group_name)
+            target_group = _get_child(target_root, group_name)
+            if ws_group is None or target_group is None:
+                continue
+
+            for array_name, chunk_indices in arrays.items():
+                if not chunk_indices:
+                    continue
+                ws_arr = _get_child(ws_group, array_name)
+                target_arr = _get_child(target_group, array_name)
+                if ws_arr is None or target_arr is None:
+                    continue
+
+                chunk_shape = _chunk_shape(ws_arr)
+                write_unit_shape = _write_unit_shape(ws_arr)
+                array_shape = tuple(int(i) for i in ws_arr.shape)
+                write_unit_indices = {
+                    _chunk_idx_to_write_unit_idx(chunk_idx, chunk_shape, write_unit_shape)
+                    for chunk_idx in chunk_indices
+                }
+
+                for write_unit_idx in sorted(write_unit_indices):
+                    if _write_unit_exists(ws_arr, write_unit_idx):
+                        log.debug(
+                            "Skipping seed for write-unit %s/%s/%s — already in workspace",
+                            group_name,
+                            array_name,
+                            write_unit_idx,
+                        )
+                        continue
+                    region = _write_unit_region(write_unit_idx, write_unit_shape, array_shape)
+                    try:
+                        ws_arr[region] = np.asarray(target_arr[region])
+                    except Exception as exc:
+                        _delete_workspace(session=session, temp_store_uri=temp_store_uri)
+                        raise SeedingFailedError(
+                            f"Failed to seed {group_name}/{array_name} write-unit {write_unit_idx}: {exc}"
+                        ) from exc
+    except SeedingFailedError:
+        raise
+    except Exception as exc:
+        _delete_workspace(session=session, temp_store_uri=temp_store_uri)
+        raise SeedingFailedError(f"Failed to seed touched data chunks: {exc}") from exc
+
+
+def _get_child(parent: Any, name: str) -> Any | None:
+    try:
+        if name not in parent:
+            return None
+        return parent[name]
+    except KeyError:
+        return None
+
+
+def _is_sharded(arr: zarr.Array) -> bool:
+    """Return True if the zarr array uses a sharding codec."""
+    return getattr(arr, "shards", None) is not None
+
+
+def _chunk_shape(arr: zarr.Array) -> tuple[int, ...]:
+    chunks = getattr(arr.metadata, "chunks", None)
+    if chunks is None:
+        chunks = arr.chunks
+    return tuple(int(i) for i in chunks)
+
+
+def _shard_shape(arr: zarr.Array) -> tuple[int, ...]:
+    """Return the shard shape for a sharded array."""
+    shards = getattr(arr, "shards", None)
+    if shards is not None:
+        return tuple(int(i) for i in shards)
+    metadata_shards = getattr(arr.metadata, "shards", None)
+    if metadata_shards is not None:
+        return tuple(int(i) for i in metadata_shards)
+    return tuple(int(i) for i in arr.chunks)
+
+
+def _write_unit_shape(arr: zarr.Array) -> tuple[int, ...]:
+    """Return the write-unit shape: shard shape for sharded, chunk shape for non-sharded."""
+    if _is_sharded(arr):
+        return _shard_shape(arr)
+    return tuple(int(i) for i in arr.chunks)
+
+
+def _chunk_idx_to_write_unit_idx(
+    chunk_idx: tuple[int, ...],
+    chunk_shape: tuple[int, ...],
+    write_unit_shape: tuple[int, ...],
+) -> tuple[int, ...]:
+    """Map a chunk index to the enclosing write-unit index."""
+    return tuple(
+        (chunk_idx[i] * chunk_shape[i]) // write_unit_shape[i] for i in range(len(chunk_idx))
+    )
+
+
+def _write_unit_region(
+    wu_idx: tuple[int, ...],
+    wu_shape: tuple[int, ...],
+    array_shape: tuple[int, ...],
+) -> tuple[slice, ...]:
+    """Return the slice tuple for a write-unit region."""
+    return chunk_index_to_region(wu_idx, wu_shape, array_shape)
+
+
+def _write_unit_exists(arr: zarr.Array, write_unit_idx: tuple[int, ...]) -> bool:
+    key = _write_unit_store_key(arr, write_unit_idx)
+    store = arr.store
+    exists = getattr(store, "exists", None)
+    if callable(exists):
+        return bool(sync(cast(Coroutine[Any, Any, bool], exists(key))))
+    raise RuntimeError(
+        f"Store {type(store).__name__!r} does not expose async exists; "
+        "cannot verify write-unit existence"
+    )
+
+
+def _write_unit_store_key(arr: zarr.Array, write_unit_idx: tuple[int, ...]) -> str:
+    metadata = cast(Any, arr.metadata)
+    encoding = metadata.chunk_key_encoding
+    encode_chunk_key = getattr(encoding, "encode_chunk_key", None)
+    if callable(encode_chunk_key):
+        chunk_key = str(encode_chunk_key(write_unit_idx))
+    else:
+        separator = str(getattr(encoding, "separator", "/"))
+        chunk_key = f"c{separator}{separator.join(str(i) for i in write_unit_idx)}"
+    prefix = f"{arr.path}/" if arr.path else ""
+    return f"{prefix}{chunk_key}"
+
+
+def _delete_workspace(*, session: StorageSession, temp_store_uri: str) -> None:
+    from firecube.core.uris import is_remote_target, local_path_from_target
+
+    try:
+        if is_remote_target(temp_store_uri):
+            uri = StorageUri.parse(temp_store_uri)
+        else:
+            uri = StorageUri.from_local_path(local_path_from_target(temp_store_uri))
+        session.fs().rm(uri, recursive=True)
+    except Exception:
+        log.warning("Failed to delete workspace after data seeding failure", exc_info=True)
 
 
 def seed_staged_store_metadata(
@@ -81,6 +272,13 @@ def seed_staged_store_metadata(
         groups = _discover_zarr_groups(session, final_target_uri)
 
     results: dict[str, Any] = {}
+    if coordinate_arrays:
+        _seed_root_metadata(
+            session=session,
+            temp_store_uri=temp_store_uri,
+            final_target_uri=final_target_uri,
+            strict=strict,
+        )
 
     for group in groups:
         results[group] = {"seeded": False, "files": 0}
@@ -105,6 +303,7 @@ def seed_staged_store_metadata(
                 )
         except StagedMetadataError:
             raise
+        # Boundary: strict mode wraps any failure as StagedMetadataError (docstring contract).
         except Exception as e:
             if strict:
                 raise StagedMetadataError(
@@ -113,6 +312,41 @@ def seed_staged_store_metadata(
             log.warning("Staged metadata seeding skipped for group %s: %s", group, e)
 
     return results
+
+
+def _seed_root_metadata(
+    *,
+    session: StorageSession,
+    temp_store_uri: str,
+    final_target_uri: str,
+    strict: bool,
+) -> None:
+    """Copy root Zarr group metadata needed for handle-based reads of seeded groups."""
+    from firecube.core.uris import is_remote_target, local_path_from_target
+
+    fs = session.fs()
+    if is_remote_target(final_target_uri):
+        final_uri = StorageUri.parse(final_target_uri)
+    else:
+        final_uri = StorageUri.from_local_path(local_path_from_target(final_target_uri))
+
+    temp_root = local_path_from_target(temp_store_uri)
+    for name in ("zarr.json", ".zgroup"):
+        src_uri = final_uri.join(name)
+        if not fs.exists(src_uri):
+            continue
+        dst_path = temp_root / name
+        try:
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            with fs.open(src_uri, "rb") as fh:
+                dst_path.write_bytes(fh.read())
+        # Boundary: strict mode wraps any failure as StagedMetadataError (docstring contract).
+        except Exception as e:
+            if strict:
+                raise StagedMetadataError(
+                    f"Failed to seed staged root metadata {src_uri.to_str()} -> {dst_path}: {e}"
+                ) from e
+            log.warning("Failed to seed staged root metadata %s: %s", src_uri.to_str(), e)
 
 
 def _discover_zarr_groups(session: StorageSession, uri: str) -> list[str]:

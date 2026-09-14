@@ -160,6 +160,7 @@ def list_cmd(
                         "parts": run.parts,
                         "stale": run.stale,
                         "error": run.error,
+                        "timestamps_skipped": run.timestamps_skipped,
                     }
                     for run in runs
                 ],
@@ -172,11 +173,19 @@ def list_cmd(
         click.echo(f"No runs found for {product_name}.")
         return
 
-    click.echo(f"{'Run ID':<36} {'Status':<10} {'State':<8} {'Parts':<5} {'Events':<6}")
-    click.echo("-" * 80)
+    show_skipped = any(run.timestamps_skipped > 0 for run in runs)
+    header = f"{'Run ID':<36} {'Status':<10} {'State':<8} {'Parts':<5} {'Events':<6}"
+    if show_skipped:
+        header = f"{header} {'Skipped':<7}"
+    click.echo(header)
+    click.echo("-" * (87 if show_skipped else 80))
+
     for run in runs:
         state = "stale" if run.stale else "active"
-        click.echo(f"{run.run_id:<36} {run.status:<10} {state:<8} {run.parts:<5} {run.events:<6}")
+        row = f"{run.run_id:<36} {run.status:<10} {state:<8} {run.parts:<5} {run.events:<6}"
+        if show_skipped:
+            row = f"{row} {run.timestamps_skipped:<7}"
+        click.echo(row)
 
 
 @runs_group.command(

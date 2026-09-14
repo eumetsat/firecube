@@ -14,6 +14,7 @@ files, so this quickstart does not require you to write any plugin code.
 
 - Firecube installed in a Python environment.
 - The environment activated with `source .venv/bin/activate`.
+- Run commands from the `firecube-quickstart/` directory created during installation.
 - `git` installed.
 
 ## Steps
@@ -22,18 +23,19 @@ files, so this quickstart does not require you to write any plugin code.
 
 ```bash
 git clone https://github.com/eumetsat/firecube-quickstart-plugin.git
-cd firecube-quickstart-plugin
 ```
 
-Stay in this directory for the rest of the quickstart. The virtual environment
-you activated earlier stays active regardless of your current directory.
+Keep running commands from `firecube-quickstart/`, one level above the cloned
+plugin, with the same environment active throughout.
 
 ### Install The Plugin
 
-Install the cloned project into the active environment in editable mode:
+Install the cloned project into the quickstart environment. Use `--editable` for
+development (source changes take effect immediately without reinstalling).
+Copy mode (the default) is safer for production deployments.
 
 ```bash
-firecube plugins install .
+firecube plugins install --editable firecube-quickstart-plugin
 ```
 
 Expected output ends with:

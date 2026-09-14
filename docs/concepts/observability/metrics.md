@@ -76,7 +76,7 @@ Metric metadata becomes Prometheus labels only when the key is allowlisted.
 Good labels are bounded and low-cardinality:
 
 ```python
-meta={"group": "default", "status": "success"}
+meta = {"group": "default", "status": "success"}
 ```
 
 Avoid labels with unbounded values:
@@ -107,6 +107,6 @@ metric schema. The same table is also available in the
 ## Next Steps
 
 - **[Observability Reference](../../reference/observability.md)** — complete metric, label, grouping, and environment-variable reference
-- **[NetCDF To Zarr: Observability](../../tutorials/observability.md)** — add one custom metric to a plugin
+- **[Add Plugin Telemetry](../../guides/plugins/observability.md)** — add one custom metric to a plugin
 - **[Logs](logs.md)** — structured logs and stdout/stderr behavior
 - **[Traces](traces.md)** — OTLP setup and span correlation

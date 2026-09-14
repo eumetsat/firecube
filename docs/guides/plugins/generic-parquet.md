@@ -1,4 +1,4 @@
-# Implement GenericParquetIngestor
+# Write Tables To Parquet
 
 ## Goal
 
@@ -10,6 +10,11 @@ Use this class when rows are the product's natural write unit. The source file
 format does not determine the class. Read
 [Parquet](../../concepts/output-formats/parquet.md) for the persisted dataset
 layout and write model.
+
+Use a fresh, empty target for each run. This template refuses targets containing
+data or previous runs, including with `resume_existing` or `force_reingest`.
+Those options cannot safely identify which Parquet rows to retain or replace.
+After a failed run, choose a new target and keep the old one for inspection.
 
 ## Edit The Plugin Class
 
@@ -60,8 +65,8 @@ class MyPlugin(GenericParquetIngestor):
 
 See the [Plugin Templates](../../reference/templates.md#genericparquetingestor)
 for the exact hook signature and optional group, path, and writer
-customizations, or [Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md#3-read-the-mwir-detections)
-for a complete, runnable version of this example.
+customizations, or [Sentinel-3 Fire Detections](../../showcase/sentinel3-fire-detections.ipynb)
+for a notebook that creates a plugin and writes detection tables to Parquet.
 
 ## Verify
 
@@ -69,14 +74,14 @@ First check registration and configuration:
 
 ```bash
 cd firecube-my-plugin
-uv run firecube plugins describe my_plugin
-uv run firecube ingest my_plugin --show-options
+firecube plugins describe my_plugin
+firecube ingest my_plugin --show-options
 ```
 
 Then ingest a small, representative input supported by the product reader:
 
 ```bash
-uv run firecube ingest my_plugin \
+firecube ingest my_plugin \
   --input-data ./path/to/input \
   --target file:///tmp/my_product.parquet \
   --product-name my_product \
@@ -91,7 +96,7 @@ least one known value. Treat the target as a dataset root containing part files,
 not as one output file.
 
 If built-in discovery does not include the product's source names, pass
-`include_patterns` or customize discovery before verifying ingestion.
+`--input-filters` or customize discovery before verifying ingestion.
 
 ## Common Mistakes
 
@@ -100,11 +105,12 @@ If built-in discovery does not include the product's source names, pass
 | Treating `batch` as a list | Read source items from `batch.items`. |
 | Returning an unsupported object | Return a `pyarrow.Table`, a `pandas.DataFrame`, or `None`. |
 | Expecting one output file | Treat the target as a Parquet dataset root containing parts. |
+| Returning the same path for two batches or groups | Give each part a unique relative path outside `.firecube`. |
 | Passing a remote URI to a local-only reader | Resolve each item with `ctx.materialize(item)`. |
 
 ## Next Steps
 
 - **[Parquet](../../concepts/output-formats/parquet.md)** — understand the persisted dataset layout
-- **[Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md)** — download and ingest a real EUMETSAT product end to end, once `build_dataset` is in place
+- **[Sentinel-3 Fire Detections](../../showcase/sentinel3-fire-detections.ipynb)** — download detections, create a plugin, and inspect the Parquet output
 - **[Add Plugin Configuration Options](add-config-options.md)** — declare typed plugin options for the reader you just implemented
 - **[Plugin Templates](../../reference/templates.md)** — look up the public template types

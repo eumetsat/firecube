@@ -70,7 +70,8 @@ def test_on_pipeline_start_warns_when_parallel_writes_are_serialized(caplog, tmp
         ingestor.on_pipeline_start(ctx, state)
 
     assert any(
-        "Zarr writes are serialized by a global lock" in rec.message for rec in caplog.records
+        "appends commit in batch order" in rec.message and "prepare_batch_data" in rec.message
+        for rec in caplog.records
     )
 
 

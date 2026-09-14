@@ -153,8 +153,8 @@ def test_delete_spans_creates_audit_run_record(tmp_path):
 
         spans = manager.list_chunks(product=product, chunk_type="span")
         assert len(spans) == 1
-        result = manager.delete_spans(spans, dry_run=True)
-        assert result["dry_run"] is True
+        result = manager.delete_spans(spans, dry_run=False)
+        assert result["dry_run"] is False
 
         runs = manager.list_runs(product=product)
         maintenance_runs = [r for r in runs if r.run_id.startswith("maintenance-delete-spans-")]

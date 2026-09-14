@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Optional plugin extensions: spatial regridding and DuckDB batch support.
+"""Optional plugin extensions: parsing, spatial regridding and DuckDB batch support.
 
 Plugins may import from this package in addition to ``firecube.ingestor.api``
 and ``firecube.core.api``. Symbols are imported lazily so that importing the
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
         grid_data_to_healpix,
         grid_xarray_dataset_to_healpix,
     )
+    from firecube.ingestor.extensions.patterns import parse_pattern
 
 __all__ = [
     "DuckDbMixin",
@@ -52,6 +53,7 @@ __all__ = [
     "grid_data_to_latlon",
     "grid_xarray_dataset",
     "grid_xarray_dataset_to_healpix",
+    "parse_pattern",
 ]
 
 _LAZY_EXPORTS = {
@@ -66,6 +68,7 @@ _LAZY_EXPORTS = {
     "grid_data_to_latlon": "firecube.ingestor.extensions.grid",
     "grid_xarray_dataset": "firecube.ingestor.extensions.grid",
     "grid_xarray_dataset_to_healpix": "firecube.ingestor.extensions.healpix",
+    "parse_pattern": "firecube.ingestor.extensions.patterns",
 }
 
 

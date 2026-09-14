@@ -56,7 +56,7 @@ def test_storage_type_smart_default_uses_uri_scheme_mapping() -> None:
 
 def test_write_mode_required_not_inferred_from_local_target() -> None:
     """A local file target still requires explicit --write-mode."""
-    with pytest.raises(click.UsageError, match="No inference from target locality"):
+    with pytest.raises(click.UsageError, match="not inferred from the URI scheme"):
         IngestCommandConfig(
             plugin="cli_test_plugin",
             input_data=None,

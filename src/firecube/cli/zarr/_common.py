@@ -39,6 +39,7 @@ def _configure_ingestor_for_cli(
     run_id: str,
     source: str = "",
     storage: Any = None,
+    input_filters: list[str] | None = None,
 ) -> PluginContext:
     """Build and configure a PluginContext for CLI zarr commands.
 
@@ -48,12 +49,15 @@ def _configure_ingestor_for_cli(
     and returns the `PluginContext`.
     """
     coerced_options = coerce_options_for_plugin(ingestor.name, tuple(options))
+    resolved_options = dict(coerced_options)
+    if input_filters is not None:
+        resolved_options["input_filters"] = input_filters
     ingest_ctx = IngestContext(
         source=source,
         target=target,
         in_memory=True,
         output_format="zarr",
-        options=dict(coerced_options),
+        options=resolved_options,
         storage=storage,
         run_id=run_id,
     )

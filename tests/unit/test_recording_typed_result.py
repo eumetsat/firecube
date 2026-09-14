@@ -17,8 +17,10 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from firecube.core.controlplane import SpanCoverage
-from firecube.ingestor.runtime.recording import SpanRecorder
+from firecube.ingestor.runtime.recording import SpanRecorder, _extract_timestamps_skipped
 from firecube.ingestor.types.context import IngestResult, RuntimeIngestContext
 from firecube.ingestor.types.result_metrics import (
     OutputPaths,
@@ -127,3 +129,66 @@ def test_recording_reads_outputs_primary(tmp_path) -> None:
     )
 
     assert chunk_manager.record_run_terminal.call_args.kwargs["output_path"] == "/tmp/x"
+
+
+@pytest.mark.unit
+def test_timestamps_skipped_stored_in_run_meta_when_nonzero(tmp_path) -> None:
+    recorder, chunk_manager = _make_recorder()
+    ctx = _make_context(tmp_path)
+    metrics = ResultMetrics(pipeline=PipelineMetrics(timestamps_skipped=5))
+    result = IngestResult(
+        output_format="zarr",
+        outputs=OutputPaths(primary="/tmp/out.zarr"),
+        metrics=metrics,
+    )
+
+    recorder.register_run(
+        ctx=ctx,
+        result=result,
+        run_id="run-ts",
+        product="product",
+        slice_meta={"plugin": "test"},
+        record_spans=False,
+    )
+
+    call_meta = chunk_manager.record_run_terminal.call_args.kwargs["meta"]
+    assert call_meta.get("timestamps_skipped") == 5
+
+
+@pytest.mark.unit
+def test_timestamps_skipped_not_stored_in_run_meta_when_zero(tmp_path) -> None:
+    recorder, chunk_manager = _make_recorder()
+    ctx = _make_context(tmp_path)
+    result = IngestResult(
+        output_format="zarr",
+        outputs=OutputPaths(primary="/tmp/out.zarr"),
+        metrics=ResultMetrics(),
+    )
+
+    recorder.register_run(
+        ctx=ctx,
+        result=result,
+        run_id="run-ts-zero",
+        product="product",
+        slice_meta={"plugin": "test"},
+        record_spans=False,
+    )
+
+    call_meta = chunk_manager.record_run_terminal.call_args.kwargs["meta"]
+    assert "timestamps_skipped" not in call_meta
+
+
+@pytest.mark.unit
+def test_extract_timestamps_skipped_from_pipeline_metrics() -> None:
+    metrics = ResultMetrics(pipeline=PipelineMetrics(timestamps_skipped=7))
+    assert _extract_timestamps_skipped(metrics) == 7
+
+
+@pytest.mark.unit
+def test_extract_timestamps_skipped_returns_zero_when_pipeline_unset() -> None:
+    assert _extract_timestamps_skipped(ResultMetrics()) == 0
+
+
+@pytest.mark.unit
+def test_extract_timestamps_skipped_none() -> None:
+    assert _extract_timestamps_skipped(None) == 0

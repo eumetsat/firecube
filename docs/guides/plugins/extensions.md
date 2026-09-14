@@ -1,8 +1,12 @@
 # Plugin Extensions
 
-Firecube extensions add optional processing capabilities to a plugin without
-changing its output contract. Use a mixin for lifecycle behavior and call a
-utility extension directly for a data transformation.
+## Goal
+
+Add an optional processing capability to an existing plugin without changing
+its output contract: a managed DuckDB connection for batch processing, or a
+gridding function that bins irregular samples onto a regular latitude/longitude
+or HEALPix axis. Use a mixin for lifecycle behavior and call a utility extension
+directly for a data transformation.
 
 | Extension | Use it when |
 |---|---|
@@ -50,14 +54,13 @@ class MyPlugin(DuckDbMixin, GenericParquetIngestor):
 
         for item in batch.items:
             path = ctx.materialize(item)
-            self.con.execute(
-                "INSERT INTO records SELECT * FROM read_csv_auto(?)", [str(path)]
-            )
+            self.con.execute("INSERT INTO records SELECT * FROM read_csv_auto(?)", [str(path)])
         return self.con.execute("SELECT * FROM records").arrow()
 ```
 
-`GenericZarrIngestor` and `GenericParquetIngestor` drive the mixin's connection
-lifecycle through the cooperative `batch_setup()`/`batch_teardown()` hooks; see
+`GenericZarrIngestor`, `GenericParquetIngestor`, and `DirectZarrIngestor` drive
+the mixin's connection lifecycle through the cooperative
+`batch_setup()`/`batch_teardown()` hooks; see
 [`DuckDbMixin`](../../reference/extensions.md#firecube.ingestor.extensions.DuckDbMixin)
 for the exact sequence. Use `self.con` only while the batch hook is active.
 
@@ -79,9 +82,16 @@ def _process_batch(self, batch: PipelineBatch, ctx: PluginContext) -> PipelineRe
         self.batch_teardown(ctx)
 ```
 
-`DirectZarrIngestor` does not call these hooks around
-`build_write_intents()`. Do not add `DuckDbMixin` to that class expecting an
-automatic connection lifecycle.
+All three templates call teardown after batch processing, including failures,
+once setup has succeeded. If `batch_setup()` itself raises, it must release
+any resources it acquired before the error.
+
+## Manage Temporary Readers
+
+Reading archives is covered in [Discover Zipped Data](discover-zipped-data.md).
+For resources that must outlive one function call, register an `ExitStack`
+with [`BatchResourceRegistry`](../../reference/core-utilities.md#firecube.core.api.BatchResourceRegistry)
+so readers close before their scratch files are removed.
 
 ## Use The Gridding Extensions
 
@@ -112,13 +122,23 @@ uv add 'firecube[healpix]'
 Use `target_cells` when every batch must share one HEALPix cell axis. Without
 it, `build_healpix_binner()` derives the occupied cells from the input.
 
+## Common Mistakes
+
+| Mistake | Fix |
+|---|---|
+| Listing `DuckDbMixin` after the template in the class bases | Put the mixin before the template, as shown above. |
+| Using `self.con` outside the batch hooks | The connection exists only between `batch_setup()` and `batch_teardown()`. |
+| A custom `_process_batch()` that never tears down | Call `batch_setup()` and `batch_teardown()` yourself, with teardown in `finally`. |
+| Gridding without `bounds` when batches must share one grid | Pass `bounds`, or `target_cells` for HEALPix, so every batch uses the same axis. |
+| Importing the HEALPix helpers without the extra | Add `firecube[healpix]` to the plugin project first. |
+
 ## Next Steps
 
 - **[Custom Pipeline Plugins](base-ingestor.md)** — own the complete batch
   result and output coordination
-- **[`GenericZarrIngestor` (Append)](generic-zarr.md)** — use DuckDB while
+- **[Append Datasets To Zarr](generic-zarr.md)** — use DuckDB while
   producing ordered datasets
-- **[`GenericParquetIngestor` (Tabular)](generic-parquet.md)** — use DuckDB
+- **[Write Tables To Parquet](generic-parquet.md)** — use DuckDB
   while producing tables
 - **[Extensions](../../reference/extensions.md)** — exact signatures and
   fields for `DuckDbMixin`, the gridding functions, and `HealpixBinner`

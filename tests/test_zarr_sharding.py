@@ -37,10 +37,12 @@ def _local_handle(path: str, mode: str = "w"):
 
 
 def make_dataset(nt=2, ny=20, nx=20, dtype="float32"):
-    return xr.Dataset(
+    ds = xr.Dataset(
         {"var1": (["timestamp", "ny", "nx"], np.random.rand(nt, ny, nx).astype(dtype))},
         coords={"timestamp": pd.date_range("2023-12-01", periods=nt, freq="5min")},
     )
+    ds.timestamp.encoding.update(dtype="int64", units="seconds since 1970-01-01")
+    return ds
 
 
 def test_encoding_without_sharding_unchanged():
@@ -131,7 +133,7 @@ def test_append_to_sharded_store_preserves_shards(tmp_path):
         zarr_store=_local_handle(store, mode="a"),
         group="TEST",
         mode="a",
-        append_dim="timestamp",
+        time_dim="timestamp",
         compression=True,
     )
     ds_read = xr.open_zarr(store, group="TEST", consolidated=False)

@@ -693,3 +693,62 @@ def test_full_state_machine(temp_workspace):
     assert summary[0]["span_count"] == 1
     assert summary[0]["time_min"] == "2024-01-01T00:00:00Z"
     assert summary[0]["time_max"] == "2024-01-02T00:00:00Z"
+
+
+def test_replacement_independent_of_run_id_ordering(temp_workspace):
+    """Dedupe winner must be the run with the highest ``started_at``, NOT the
+    lexicographically-greatest ``run_id``.
+
+    Regression: ``_dedupe_active_spans`` previously compared ``run_id``
+    strings, so a newer run with an earlier-sorting id (e.g. "aaa" after
+    "zzz") was silently discarded from ``list_chunks`` output. The
+    replacement recorder also went through the deduped facade, so the
+    prior span it should mark replaced was hidden and never sealed. This
+    test uses run_ids that sort in the reverse of temporal order to prove
+    the fix is temporal-based, not lex-based.
+    """
+    product = "test_product"
+    output_path = str(temp_workspace / product)
+    manager = ChunkManager(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
+    recorder = SpanRecorder(manager)
+
+    prior_key = _record_completed_span_run(
+        manager,
+        product=product,
+        run_id="zzz-older",
+        group="F024",
+        time_min="2024-01-01T00:00:00Z",
+        time_max="2024-01-02T00:00:00Z",
+    )
+
+    _start_run(manager, product=product, run_id="aaa-newer", output_path=output_path)
+    recorder.register_run(
+        ctx=_make_runtime_ctx(run_id="aaa-newer", target=output_path, force_reingest=True),
+        result=_make_result(
+            output_path=output_path,
+            group="F024",
+            time_min="2024-01-01T00:00:00Z",
+            time_max="2024-01-02T00:00:00Z",
+        ),
+        run_id="aaa-newer",
+        product=product,
+        slice_meta={"plugin": "test_product", "group": "F024"},
+    )
+
+    replacement_events = _replacement_events(temp_workspace, product=product, run_id="aaa-newer")
+    assert len(replacement_events) == 1
+    assert prior_key in replacement_events[0]["record"]["replaced_span_keys"]
+
+    manager.close()
+    manager = ChunkManager(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
+    manager.rebuild_snapshot(product)
+
+    current = _current_state(manager, product=product)
+    assert current[prior_key]["status"] == "replaced"
+    assert current[prior_key]["replaced_by"] == "aaa-newer"
+    assert current["span_aaa-newer_single_F024"]["status"] == "active"
+
+    final_spans = manager.list_chunks(product=product, chunk_type="span")
+    assert [span.key for span in final_spans] == ["span_aaa-newer_single_F024"]
+    assert final_spans[0].status == "active"
+    assert (final_spans[0].meta or {})["run_id"] == "aaa-newer"

@@ -21,8 +21,10 @@ import click
 from firecube.cli._errors import UnknownOptionError
 from firecube.cli._shared_options import format_option as display_format_option
 from firecube.cli.plugins.registry import PluginConfigSchemas, resolve_plugin_configs
+from firecube.core.formats._input_filters import LEGACY_INPUT_PATTERNS_MESSAGE
 from firecube.ingestor.config.coercion import coerce_cli_value
 from firecube.ingestor.config.engine import is_experimental_option_key
+from firecube.ingestor.errors import ConfigurationError
 
 __all__ = [
     "TypedOptionsParam",
@@ -65,6 +67,7 @@ def output_path_option(
 # happens after typed-flag resolution and would silently override the explicit
 # flag. Hard-reject at parse time.
 _TYPED_FLAG_OWNED_KEYS: dict[str, str] = {
+    "input_filters": "--input-filters",
     "write_mode": "--write-mode",
     "slot_start": "--slot-start",
     "slot_end": "--slot-end",
@@ -107,6 +110,9 @@ class TypedOptionsParam(click.ParamType):
         if raw_value == "":
             self.fail(f"Option value for '{key}' cannot be empty.", param, ctx)
 
+        if key == "include_patterns":
+            self.fail(LEGACY_INPUT_PATTERNS_MESSAGE, param, ctx)
+
         owning_flag = _TYPED_FLAG_OWNED_KEYS.get(key)
         if owning_flag is not None:
             self.fail(
@@ -134,7 +140,7 @@ class TypedOptionsParam(click.ParamType):
                 if target_type is not None:
                     try:
                         return key, coerce_cli_value(raw_value, target_type, key)
-                    except (TypeError, ValueError) as exc:
+                    except (ConfigurationError, TypeError, ValueError) as exc:
                         self.fail(str(exc), param, ctx)
             except (ImportError, AttributeError, KeyError):
                 pass
