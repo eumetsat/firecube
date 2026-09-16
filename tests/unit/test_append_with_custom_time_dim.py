@@ -22,6 +22,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from firecube.ingestor.runtime.zarr.alignment import AlignmentMonitor
 from firecube.ingestor.runtime.zarr.append import append_time_groups
 from firecube.ingestor.templates.generic import _build_zarr_batch_runtime
 from tests.helpers.storage import local_zarr_handle, make_local_session
@@ -86,7 +87,8 @@ def test_generic_zarr_runtime_passes_host_time_dim_to_append_strategy():
     ingestor = SimpleNamespace(
         _log=SimpleNamespace(debug=lambda *args, **kwargs: None),
         _chunk_manager=SimpleNamespace(storage_config=object()),
-        _write_lock=object(),
+        _alignment=AlignmentMonitor(),
+        _append_order=None,
         name="test-product",
         _resolve_time_dim_name=lambda: "time",
     )
@@ -123,3 +125,4 @@ def test_generic_zarr_runtime_passes_host_time_dim_to_append_strategy():
         )
 
     assert build_append_strategy.call_args.kwargs["append_dim"] == "time"
+    assert build_append_strategy.call_args.kwargs["alignment"] is ingestor._alignment

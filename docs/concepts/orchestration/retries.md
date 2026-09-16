@@ -18,7 +18,7 @@ a retry does not blindly overwrite or overlap product state.
 At that point, inspect the product before retrying again:
 
 ```bash
-uv run firecube chunks runs list \
+firecube chunks runs list \
   --product-name file:///data/products/MY_PRODUCT.zarr
 ```
 
@@ -31,7 +31,7 @@ Use `resume_existing=true` when the retry should continue work that has already
 started:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
@@ -51,7 +51,7 @@ Pass a stable `--option run_id=...` when you need Firecube run records to line u
 with the external orchestrator job:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data /data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \

@@ -14,8 +14,12 @@ uv venv --python 3.12
 source .venv/bin/activate
 ```
 
-Keep this shell open for the rest of the quickstart. If you open a new shell,
-return to `firecube-quickstart/` and run `source .venv/bin/activate` again.
+Keep this environment active and run the remaining commands from
+`firecube-quickstart/`. In a new shell, return to that directory and run
+`source .venv/bin/activate` again.
+
+Alternatively, stay in that directory and use `uv run firecube` and
+`uv run python` without activating the environment. The examples below use activation.
 
 ## Install Firecube
 
@@ -25,8 +29,8 @@ Install Firecube from PyPI:
 uv pip install firecube
 ```
 
-The next step creates and installs a local plugin in this environment so the
-Firecube CLI can discover it.
+The next step installs the existing Quickstart plugin in this environment so
+the Firecube CLI can discover it.
 
 ## Verify The Installation
 

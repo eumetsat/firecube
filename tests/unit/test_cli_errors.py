@@ -20,8 +20,6 @@ from click.testing import CliRunner
 from firecube.cli._errors import (  # pyright: ignore[reportMissingImports]
     MissingProductNameError,
     MissingStorageDriverError,
-    MissingStorageTypeError,
-    MissingWriteModeError,
     UnknownOptionError,
 )
 
@@ -48,16 +46,6 @@ def test_missing_product_name_error_message_and_type() -> None:
     assert "PRODUCT_NAME" in msg
 
 
-def test_missing_storage_type_error_message_and_type() -> None:
-    err = MissingStorageTypeError("s3://bucket/x")
-
-    assert isinstance(err, click.UsageError)
-    msg = str(err)
-    assert "s3://bucket/x" in msg
-    assert "--storage-type" in msg
-    assert "local|s3" in msg
-
-
 def test_missing_storage_driver_error_message_and_type() -> None:
     err = MissingStorageDriverError("file:///tmp/x")
 
@@ -65,16 +53,6 @@ def test_missing_storage_driver_error_message_and_type() -> None:
     msg = str(err)
     assert "file:///tmp/x" in msg
     assert "--storage-driver" in msg
-
-
-def test_missing_write_mode_error_message_and_type() -> None:
-    err = MissingWriteModeError()
-
-    assert isinstance(err, click.UsageError)
-    msg = str(err)
-    assert "--write-mode" in msg
-    assert "staged" in msg
-    assert "direct" in msg
 
 
 def test_unknown_option_error_exit_code_2() -> None:

@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import click
 
@@ -34,10 +33,7 @@ from firecube.cli._uri_policy import (
     parse_product_uri,
     validate_uri_storage_coherence,
 )
-from firecube.core.api import (
-    FIRECUBE_STATIC_WRITTEN_ATTR,
-    compare_zarr_stores,
-)
+from firecube.core.api import compare_zarr_stores
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
@@ -85,6 +81,19 @@ See also: firecube chunks list, firecube parquet validate
     show_default=True,
     help="behavior when budget is exceeded: warn returns partial report, fail raises an error",
 )
+@click.option(
+    "--time-dim",
+    "time_dim",
+    default=None,
+    show_default=False,
+    help=(
+        "time-dimension name used to classify arrays for the static-marker "
+        "check; must match the cube's ``BaseIngestor.time_dim_name`` ClassVar. "
+        "When omitted, the name is auto-detected from the stored "
+        "``firecube_timestamp_state`` array. Pass this flag explicitly when "
+        "the plugin uses a non-default dimension name (e.g. ``--time-dim time``)."
+    ),
+)
 @storage_driver_option(required=False)
 @storage_type_option(required=False)
 @click.pass_context
@@ -96,6 +105,7 @@ def validate(
     timeout_s: float | None,
     max_chunks: int | None,
     on_timeout: str,
+    time_dim: str | None,
     storage_driver: str | None,
     storage_type: str | None,
 ) -> None:
@@ -132,24 +142,15 @@ def validate(
             timeout_s=timeout_s,
             max_chunks=max_chunks,
             on_timeout=on_timeout,
+            time_dim_name=time_dim,
         )
     except FileNotFoundError as exc:
         raise click.ClickException(f"Group '{group_path}' not found in Zarr product.") from exc
     except ValueError as exc:
-        report = _validate_first_array_child(
-            fs,
-            identity.product_uri,
-            group_path,
-            timeout_s=timeout_s,
-            max_chunks=max_chunks,
-            on_timeout=on_timeout,
-            original_error=exc,
-        )
-    output = report.to_dict()
-    output["static_marker_failures"] = _static_marker_failures(
-        fs, identity.product_uri, report.group
-    )
-    click.echo(json.dumps(output, indent=2))
+        raise click.ClickException(str(exc)) from exc
+    click.echo(json.dumps(report.to_dict(), indent=2))
+    if not report.is_valid:
+        raise click.exceptions.Exit(1)
 
 
 @click.command(
@@ -157,6 +158,7 @@ def validate(
     context_settings={"help_option_names": ["-h", "--help"]},
     epilog="""\b
 Examples:
+  firecube zarr compare file:///data/a.zarr file:///data/b.zarr
   firecube zarr compare file:///data/a.zarr file:///data/b.zarr \\
       --storage-type local --storage-driver fsspec
 """,
@@ -166,88 +168,58 @@ Examples:
 @click.option(
     "--storage-type",
     "storage_type",
-    required=True,
+    required=False,
+    default=None,
     type=click.Choice(["local", "s3"], case_sensitive=False),
-    help="Storage locality for both store URIs.",
+    help="Storage locality for both store URIs (inferred from URI scheme when omitted).",
 )
 @click.option(
     "--storage-driver",
     "storage_driver",
-    required=True,
+    required=False,
+    default=None,
     type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
-    help="Storage driver for both store URIs.",
+    help="Storage driver for both store URIs (defaults to fsspec when omitted).",
 )
 @wrap_user_facing_errors
-def compare(a_uri: str, b_uri: str, storage_type: str, storage_driver: str) -> None:
-    """Compare two Zarr stores and exit 3 when they differ."""
+def compare(
+    a_uri: str,
+    b_uri: str,
+    storage_type: str | None,
+    storage_driver: str | None,
+) -> None:
+    """Compare two Zarr stores; exit 0 when equivalent or layout-only differences.
+
+    Exits 1 when content mismatches are found (different values, shapes, dtypes,
+    attrs, or missing arrays).  Layout-only differences (chunk shape, codecs) emit
+    a WARNING to stderr and exit 0 — the stores are value-equivalent.
+
+    Storage flags are optional: --storage-type is inferred from the URI scheme
+    (file:// → local, s3:// → s3) and --storage-driver defaults to fsspec.
+    """
     for uri in (a_uri, b_uri):
         require_full_uri(uri, option_name="store URI")
-        validate_uri_storage_coherence(parse_product_uri(uri), storage_type)
+    parsed_a = parse_product_uri(a_uri)
+    resolved_storage_type = apply_smart_default(parsed_a, storage_type)
+    for uri in (a_uri, b_uri):
+        validate_uri_storage_coherence(parse_product_uri(uri), resolved_storage_type)
+    resolved_storage_driver = storage_driver.lower() if storage_driver is not None else "fsspec"
     report = compare_zarr_stores(
         a_uri,
         b_uri,
-        storage_type=storage_type.lower(),
-        storage_driver=storage_driver.lower(),
+        storage_type=resolved_storage_type,
+        storage_driver=resolved_storage_driver,
     )
     if report.equivalent:
         return
-    for mismatch in report.mismatches:
-        click.echo(mismatch, err=True)
-    raise click.exceptions.Exit(3)
-
-
-def _validate_first_array_child(
-    fs: Any,
-    store_uri: Any,
-    group_path: str,
-    *,
-    timeout_s: float | None,
-    max_chunks: int | None,
-    on_timeout: str,
-    original_error: ValueError,
-) -> Any:
-    """Validate the first array below a requested container group."""
-    prefix_uri = store_uri.join(group_path)
-    prefix = prefix_uri.to_str().rstrip("/") + "/"
-    for entry in fs.find(prefix_uri):  # pyright: ignore[reportArgumentType]
-        entry_path = entry.to_str() if hasattr(entry, "to_str") else str(entry)
-        if not entry_path.endswith("/zarr.json"):
-            continue
-        with fs.open(entry, "r") as handle:
-            metadata = json.load(handle)
-        if metadata.get("node_type") != "array":
-            continue
-        child_group = entry_path[: -len("/zarr.json")].removeprefix(prefix).strip("/")
-        if not child_group:
-            continue
-        return validate_group_with_fs(
-            fs,
-            store_uri,
-            f"{group_path.strip('/')}/{child_group}",
-            timeout_s=timeout_s,
-            max_chunks=max_chunks,
-            on_timeout=on_timeout,
-        )
-    raise click.ClickException(str(original_error)) from original_error
-
-
-def _static_marker_failures(fs: Any, store_uri: Any, array_path: str) -> list[dict[str, str]]:
-    """Return static-array marker failures for the validated array, read-only."""
-    meta_uri = store_uri.join(array_path).join("zarr.json")
-    try:
-        with fs.open(meta_uri, "r") as handle:  # pyright: ignore[reportArgumentType]
-            metadata = json.load(handle)
-    except (AttributeError, FileNotFoundError):
-        return []
-
-    dimension_names = metadata.get("dimension_names")
-    if not dimension_names:
-        return []
-    first_dimension = str(dimension_names[0])
-    if first_dimension in {"timestamp", "time", "firecube_timestamp_state"}:
-        return []
-
-    attrs = metadata.get("attributes") or {}
-    if attrs.get(FIRECUBE_STATIC_WRITTEN_ATTR):
-        return []
-    return [{"array": array_path, "reason": "missing_or_false_static_marker"}]
+    if report.content_mismatches:
+        for mismatch in report.content_mismatches:
+            click.echo(mismatch, err=True)
+        raise click.exceptions.Exit(1)
+    # Layout-only differences: values are equivalent, warn and exit 0.
+    layout_detail = "\n".join(report.layout_mismatches)
+    click.echo(
+        f"WARNING: layout differences only (chunks/codecs differ, values equivalent). "
+        f"Use separate encoding options to realign.\n{layout_detail}",
+        err=True,
+    )

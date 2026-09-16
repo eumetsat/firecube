@@ -205,12 +205,22 @@ class RunEventWriter:
         self._event_index = 0
         self._write_run_meta()
 
-    def finalize(self, *, status: str, error: str | None = None) -> None:
+    def finalize(
+        self,
+        *,
+        status: str,
+        error: str | None = None,
+        timestamps_skipped: int = 0,
+    ) -> None:
         """Flush remaining events, mark the run as terminal, and write final metadata."""
         self._status = status
         self._updated_at = time.time()
         self.flush()
-        self._write_run_meta(error=error, completed=True)
+        self._write_run_meta(
+            error=error,
+            completed=True,
+            timestamps_skipped=timestamps_skipped,
+        )
 
     def _discover_next_part_index(self) -> int:
         try:
@@ -241,7 +251,13 @@ class RunEventWriter:
         except FileExistsError:
             return
 
-    def _write_run_meta(self, *, error: str | None = None, completed: bool = False) -> None:
+    def _write_run_meta(
+        self,
+        *,
+        error: str | None = None,
+        completed: bool = False,
+        timestamps_skipped: int = 0,
+    ) -> None:
         payload: dict[str, Any] = {
             "schema_version": SCHEMA_VERSION,
             "product": self._product,
@@ -258,6 +274,7 @@ class RunEventWriter:
             payload["error"] = error
         if completed:
             payload["completed_at"] = self._updated_at
+            payload["timestamps_skipped"] = int(timestamps_skipped)
         if self._slot_range is not None:
             payload["slot_range"] = [int(self._slot_range[0]), int(self._slot_range[1])]
         if self._slot_group is not None:

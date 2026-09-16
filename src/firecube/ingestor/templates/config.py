@@ -24,6 +24,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, TypeVar, cast, get_type_hints
 
+from firecube.core.errors import ConfigurationError
 from firecube.ingestor.config.engine import config_keys
 
 T = TypeVar("T", bound="TemplateConfig")
@@ -38,29 +39,31 @@ def _validate_zarr_codecs(codecs: list[dict] | None) -> None:
     if codecs is None:
         return
     if not isinstance(codecs, list):
-        raise ValueError("zarr_codecs must be a list of codec entries")
+        raise ConfigurationError("zarr_codecs must be a list of codec entries")
     if len(codecs) == 0:
-        raise ValueError("zarr_codecs must contain at least one codec entry")
+        raise ConfigurationError("zarr_codecs must contain at least one codec entry")
 
     allowed_keys = {"name", "configuration"}
     for index, entry in enumerate(codecs):
         if not isinstance(entry, dict):
-            raise ValueError(
+            raise ConfigurationError(
                 f"zarr_codecs[{index}] must be an object with keys {{'name', 'configuration'}}"
             )
         extra = set(entry.keys()) - allowed_keys
         if extra:
-            raise ValueError(
+            raise ConfigurationError(
                 f"zarr_codecs[{index}] has unexpected keys: {extra!r}; allowed keys: {allowed_keys!r}"
             )
         if "name" not in entry:
-            raise ValueError(f"zarr_codecs[{index}].name is required")
+            raise ConfigurationError(f"zarr_codecs[{index}].name is required")
         if not isinstance(entry["name"], str):
-            raise ValueError(
+            raise ConfigurationError(
                 f"zarr_codecs[{index}].name must be a string, got {type(entry['name']).__name__}"
             )
         if "configuration" in entry and not isinstance(entry["configuration"], dict):
-            raise ValueError(f"zarr_codecs[{index}].configuration must be an object when present")
+            raise ConfigurationError(
+                f"zarr_codecs[{index}].configuration must be an object when present"
+            )
 
     from firecube.core.zarr.codec_pipeline import split_zarr_codecs
 
@@ -86,10 +89,113 @@ def _validate_zarr_codecs(codecs: list[dict] | None) -> None:
     try:
         codecs_from_list(resolved_codecs)
     except Exception as exc:
-        raise ValueError(
+        raise ConfigurationError(
             "zarr_codecs entries must form a valid Zarr codec pipeline in order "
             f"(serializer before compressors, filters before serializer): {exc}"
         ) from exc
+
+
+_TEMPLATE_ONLY_KEYS = ("compression", "sharding", "chunk_shape", "shard_shape")
+_WRITER_ONLY_KEYS = ("zarr_compression", "zarr_sharding", "zarr_chunk_shape", "zarr_shard_shape")
+
+
+def _validate_zarr_common(
+    *,
+    compression: Any,
+    codecs: Any,
+    region_write_concurrency: int,
+    sharding: bool,
+    chunk_shape: Any,
+    shard_shape: Any,
+) -> None:
+    if type(compression) is not bool:
+        raise ConfigurationError(
+            f"zarr_compression must be bool, got {type(compression).__name__}: {compression!r}"
+        )
+
+    if not compression and codecs is not None:
+        raise ConfigurationError(
+            f"zarr_compression=False conflicts with zarr_codecs={codecs!r}: "
+            "specifying a codec requires compression to be enabled.\n"
+            "Either enable compression and keep the codec:\n"
+            "  zarr_compression = true\n"
+            '  zarr_codecs = [{"name": "...", "configuration": {...}}]\n'
+            "Or remove zarr_codecs for uncompressed output."
+        )
+
+    if region_write_concurrency < 1:
+        raise ConfigurationError("zarr_region_write_concurrency must be >= 1")
+
+    _validate_zarr_codecs(codecs)
+
+    if sharding and chunk_shape is not None and shard_shape is None:
+        raise ConfigurationError(
+            "zarr_sharding=true requires zarr_shard_shape when zarr_chunk_shape is set. "
+            "Provide zarr_shard_shape to complete the sharding configuration. "
+            'Example: --option \'zarr_shard_shape={"time":10,"lat":100,"lon":100}\''
+        )
+
+    if shard_shape is not None and chunk_shape is not None:
+        bad_dims = []
+        for dim, chunk_size in chunk_shape.items():
+            shard_size = shard_shape.get(dim)
+            if shard_size is None:
+                continue
+            if shard_size < chunk_size or shard_size % chunk_size != 0:
+                bad_dims.append(f"{dim}: shard={shard_size}, chunk={chunk_size}")
+        if bad_dims:
+            raise ConfigurationError(
+                "zarr_shard_shape must be a multiple of zarr_chunk_shape per dimension; got "
+                + ", ".join(bad_dims)
+            )
+
+
+def validate_zarr_template_config(cfg: dict[str, Any]) -> None:
+    """Validate a template-tier Zarr config dict (user-facing ``zarr_*`` keys)."""
+    for key in _TEMPLATE_ONLY_KEYS:
+        if key in cfg:
+            raise ConfigurationError(
+                f"{key!r} is a writer-dict key; use {'zarr_' + key!r} at the template tier."
+            )
+
+    for key in ("zarr_time_encoding", "time_encoding"):
+        if cfg.get(key) not in (None, ""):
+            raise ConfigurationError(
+                f"{key} is not implemented; set time encoding explicitly in your plugin."
+            )
+
+    _validate_zarr_common(
+        compression=cfg.get("zarr_compression", True),
+        codecs=cfg.get("zarr_codecs"),
+        region_write_concurrency=cfg.get("zarr_region_write_concurrency", 1),
+        sharding=bool(cfg.get("zarr_sharding", False)),
+        chunk_shape=cfg.get("zarr_chunk_shape"),
+        shard_shape=cfg.get("zarr_shard_shape"),
+    )
+
+
+def validate_zarr_writer_dict(cfg: dict[str, Any]) -> None:
+    """Validate an internal Zarr writer-dict (bare ``compression``/``sharding`` keys)."""
+    for key in _WRITER_ONLY_KEYS:
+        if key in cfg:
+            raise ConfigurationError(
+                f"{key!r} is a template key; the writer dict uses {key.removeprefix('zarr_')!r}."
+            )
+
+    for key in ("zarr_time_encoding", "time_encoding"):
+        if cfg.get(key) not in (None, ""):
+            raise ConfigurationError(
+                f"{key} is not implemented; set time encoding explicitly in your plugin."
+            )
+
+    _validate_zarr_common(
+        compression=cfg.get("compression", True),
+        codecs=cfg.get("zarr_codecs"),
+        region_write_concurrency=cfg.get("region_write_concurrency", 1),
+        sharding=bool(cfg.get("sharding", False)),
+        chunk_shape=cfg.get("chunk_shape"),
+        shard_shape=cfg.get("shard_shape"),
+    )
 
 
 def validate_zarr_specs_against_template(
@@ -103,7 +209,7 @@ def validate_zarr_specs_against_template(
     ``getattr`` with ``None`` defaults.
 
     Raises:
-        ValueError: If any spec declares codec fields while
+        ConfigurationError: If any spec declares codec fields while
             ``template.zarr_compression`` is False.
     """
     if template.zarr_compression:
@@ -117,7 +223,7 @@ def validate_zarr_specs_against_template(
         if getattr(spec, "compressors", None) is not None:
             declared_fields.append("compressors")
         if declared_fields:
-            raise ValueError(
+            raise ConfigurationError(
                 f"ZarrArraySpec {spec.name!r} declares codec fields "
                 f"({', '.join(declared_fields)}) but ZarrTemplateConfig.zarr_compression=False. "
                 "Either set zarr_compression=True and declare per-array codecs, "
@@ -135,6 +241,12 @@ class TemplateConfig:
     the template. Instances are built from raw caller options via
     `from_options`, which rejects unknown keys and coerces values to
     the annotated field types.
+
+    Subclass the matching template config to declare static plugin defaults,
+    then attach it as the plugin's ``template_config_class``. Explicit caller
+    settings override those defaults. Hooks read ``self.template_config``;
+    the default values are not inserted into ``ctx.options``. For dynamic
+    append layouts, override ``GenericZarrIngestor.get_zarr_config``.
     """
 
     @classmethod
@@ -191,7 +303,9 @@ class ZarrTemplateConfig(TemplateConfig):
             instead of zarr's default. Structural validation happens here;
             codec-specific resolution happens later.
         zarr_consolidate: Consolidate Zarr metadata after writes.
-        zarr_time_encoding: Optional time encoding override.
+        zarr_time_encoding: Not implemented. Non-empty values raise
+            ``ConfigurationError`` during validation. Set time encoding
+            explicitly in the plugin instead.
         zarr_async_concurrency: Async write concurrency used by Zarr.
         zarr_region_write_concurrency: Region write concurrency used by Zarr.
         zarr_write_empty_chunks: Pass through Zarr's array write-empty-chunks
@@ -214,26 +328,7 @@ class ZarrTemplateConfig(TemplateConfig):
     dask_write_threads: int = 0
 
     def __post_init__(self) -> None:
-        if type(self.zarr_compression) is not bool:
-            raise ValueError(
-                "zarr_compression must be bool, got "
-                f"{type(self.zarr_compression).__name__}: {self.zarr_compression!r}"
-            )
-
-        if not self.zarr_compression and self.zarr_codecs is not None:
-            raise ValueError(
-                f"zarr_compression=False conflicts with zarr_codecs={self.zarr_codecs!r}: "
-                "specifying a codec requires compression to be enabled.\n"
-                "Either enable compression and keep the codec:\n"
-                "  zarr_compression = true\n"
-                '  zarr_codecs = [{"name": "...", "configuration": {...}}]\n'
-                "Or remove zarr_codecs for uncompressed output."
-            )
-
-        if self.zarr_region_write_concurrency < 1:
-            raise ValueError("zarr_region_write_concurrency must be >= 1")
-
-        _validate_zarr_codecs(self.zarr_codecs)
+        validate_zarr_template_config(self.__dict__)
 
 
 @dataclass

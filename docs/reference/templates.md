@@ -39,6 +39,7 @@ dimension, once per write group per batch.
           - build_dataset
           - get_batch_groups
           - get_zarr_config
+          - write_lock
 
 Options are declared through
 [`ZarrTemplateConfig`](config.md#zarrtemplateconfig).
@@ -141,10 +142,9 @@ For parallel writes across disjoint slot ranges, see
 ## See Also
 
 - [Plugin Development Overview](../guides/plugins/index.md)
-- [Customize Source Discovery](../guides/plugins/customize-source-discovery.md)
-- [Implement `GenericZarrIngestor`](../guides/plugins/generic-zarr.md)
-- [Implement `GenericParquetIngestor`](../guides/plugins/generic-parquet.md)
-- [Implement `DirectZarrIngestor`](../guides/plugins/direct-zarr.md)
-- [Implement DirectZarrIngestor](../guides/plugins/direct-zarr.md)
+- [Discover Source Data](../guides/plugins/source-discovery.md)
+- [Append Datasets To Zarr](../guides/plugins/generic-zarr.md)
+- [Write Tables To Parquet](../guides/plugins/generic-parquet.md)
+- [Declare The Schema And Index](../guides/plugins/direct-zarr.md)
 - [Hooks & Lifecycle](hooks.md)
 - [Context & Results](context.md)

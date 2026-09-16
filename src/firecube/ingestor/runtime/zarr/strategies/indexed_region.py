@@ -36,11 +36,11 @@ import numpy as np
 
 from firecube.core.errors import SchemaDriftError
 from firecube.core.uris import storage_uri_from_target
-from firecube.core.zarr.chunk_geometry import physical_chunk_keys_for_region
-from firecube.core.zarr.region_writer import (
-    RegionZarrWriter,
-    _arrays_equal_missing_aware,
+from firecube.core.zarr._drift import (
+    arrays_equal_missing_aware as _arrays_equal_missing_aware,
 )
+from firecube.core.zarr.chunk_geometry import physical_chunk_keys_for_region
+from firecube.core.zarr.region_writer import RegionZarrWriter
 from firecube.ingestor.runtime.coverage import CoverageTracker
 from firecube.ingestor.runtime.parallel_evidence import log_filter_evidence
 

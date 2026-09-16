@@ -34,16 +34,8 @@ assert isinstance(config, MyConfig)
 scale_factor = config.scale_factor
 ```
 
-`@dataclass` is required when a `PluginConfig` subclass adds fields.
-
-Use `self.plugin_config` for declared product fields. Do not treat
-`ctx.option()` as a separate CLI-only configuration channel.
-
-Use `ctx.option(key, default)` only for effective engine settings or
-experimental `x_*` values. `ctx.options` exposes the same effective values as a
-read-only mapping. See the
-[Configuration Reference](../../reference/config.md#pluginconfig) for the
-public configuration types.
+The default is `1.0`. Values supplied in a config file or with `--option`
+are validated before the hook runs.
 
 ## Full Example
 
@@ -76,9 +68,7 @@ class MyPlugin(GenericZarrIngestor):
     time_dim_name: ClassVar[str] = "time"
     plugin_config_class = MyConfig
 
-    def build_dataset(
-        self, group: str, items: list[Any], ctx: PluginContext
-    ) -> xr.Dataset | None:
+    def build_dataset(self, group: str, items: list[Any], ctx: PluginContext) -> xr.Dataset | None:
         if not items:
             return None
 
@@ -86,11 +76,11 @@ class MyPlugin(GenericZarrIngestor):
         assert isinstance(config, MyConfig)
 
         paths = [ctx.materialize(item) for item in items]
-        dataset = xr.open_mfdataset(paths, combine="by_coords")
-        return (dataset * config.scale_factor).sortby(self.time_dim_name)
+        with xr.open_mfdataset(paths, combine="by_coords") as dataset:
+            return (dataset * config.scale_factor).sortby(self.time_dim_name).load()
 ```
 
-This is the [GenericZarrIngestor guide's example](generic-zarr.md#implement-build_dataset)
+This follows the [GenericZarrIngestor guide](generic-zarr.md)
 plus the three configuration pieces: the `MyConfig` declaration, the
 `plugin_config_class` attachment, and the validated read inside the hook. The
 same three pieces work unchanged on any other ingestor template.
@@ -132,8 +122,9 @@ firecube plugins describe my_plugin
 firecube ingest my_plugin --show-options
 ```
 
-Confirm that the declared fields and defaults appear before running a small
-ingestion with one overridden value.
+Confirm that `scale_factor` appears with default `1.0`. Run the ingestion
+command above with a small input and check a known value in the output: with
+`scale_factor=0.01`, a source value of `250` should be written as `2.5`.
 
 ## Common Mistakes
 

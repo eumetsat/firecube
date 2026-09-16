@@ -136,7 +136,7 @@ def test_mark_chunks_replaced_records_replacement_event_and_hides_key(temp_works
     active = repo.list_chunks(product=product, include_replaced=False)
     assert active == []
     history = repo.list_chunks(product=product, include_replaced=True)
-    assert [chunk.status for chunk in history if chunk.key == key] == ["active", "replaced"]
+    assert [chunk.status for chunk in history if chunk.key == key] == ["replaced"]
 
 
 def test_parse_manifest_returns_projected_history_from_control_root(temp_workspace):

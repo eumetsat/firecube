@@ -23,12 +23,15 @@ Keep this separate from `firecube.core.zarr.validation`, which is read-only.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from firecube.core.controlplane import ChunkInfo, ChunkManager
 from firecube.core.filesystem import create_filesystem
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.session import StorageSession
 from firecube.core.zarr.validation import validate_group_with_fs
+
+if TYPE_CHECKING:
+    from firecube.core.controlplane import ChunkInfo
 
 
 @dataclass
@@ -107,6 +110,8 @@ def run_scrub(
             storage_errors=[],
             manifest_errors=[],
         )
+
+    from firecube.core.controlplane import ChunkInfo, ChunkManager
 
     binding = StorageBinding(identity=session.product, driver=session.driver)
     manager = ChunkManager(binding=binding, filesystem=create_filesystem(binding))

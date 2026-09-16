@@ -242,6 +242,12 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
     PRODUCT_NAME: ClassVar[str]
     time_dim_name: ClassVar[str] = "timestamp"
+    # Whether the runner stops at the first failed batch. Templates whose
+    # batches build on each other (append-style Zarr) set this to True so
+    # nothing lands past a gap; independent-batch templates keep False.
+    stop_on_batch_failure: ClassVar[bool] = False
+    requires_fresh_target: ClassVar[bool] = False
+    fresh_target_format_label: ClassVar[str] = "Output"
     name: str
 
     # Configuration Tiers (Declarative)
@@ -352,6 +358,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
         self._firecube_engine = None  # Lazy init for PipelineExecutor
         self._parallel_execution_state: _ParallelExecutionState | None = None
+        self._discovered_source_files: tuple[Any, ...] | None = None
         # True once the engine-owned resolved-index record has been ensured in
         # this pod process; fast-path in _ensure_index_record_at_startup.
         self._resolved_index_stamped: bool = False
@@ -373,10 +380,15 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         The default implementation requires ``--input-data`` (``ctx.source``)
         and raises ``ConfigurationError`` without it. It searches recursively
         below ``ctx.source`` — a local path or a remote URI reached through
-        the run's storage configuration — and collects ``.zip``, ``.h5``, and
-        ``.nc`` files plus extensionless files that look like HDF5. Patterns
-        from the ``include_patterns`` engine option add matching files to
-        that set; they do not replace it.
+        the run's storage configuration — and collects ``.zip``, ``.h5``,
+        ``.nc``, ``.nc4``, ``.hdf``, and ``.he5`` files plus local files
+        with unselected or absent suffixes whose content looks like HDF5.
+        Positive ``input_filters`` entries add files to that set; entries
+        starting with ``!`` exclude matches, overriding suffix and content
+        selection regardless of list order. Pass ``--input-filters`` as one
+        JSON list. Filters match case-sensitively, including for single-file
+        sources. Custom discovery overrides must explicitly apply filters,
+        for example by forwarding them to ``discover_input_files``.
 
         Override this hook when source layout rules cannot be expressed as
         patterns, or when sources are not file trees at all (catalogs,
@@ -384,6 +396,13 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         items flow through ``filter_item`` and batching into the build
         hooks; return path or URI strings unless the plugin's own hooks
         handle richer item objects end to end.
+
+        The engine calls this hook once per run and materialises the returned
+        iterable in full before the first batch is planned; the held items
+        are then reused for batching and never re-discovered. Returning an
+        iterator or generator is fine for large listings and avoids building
+        a second container in the plugin, but it is consumed completely up
+        front, so it cannot defer or stream discovery across batches.
         """
         if not ctx.source:
             raise ConfigurationError(
@@ -393,7 +412,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             )
         includes = None
         if getattr(self, "engine_config", None) is not None:
-            includes = getattr(self.engine_config, "include_patterns", None)
+            includes = getattr(self.engine_config, "input_filters", None)
 
         files = discover_input_files(
             ctx.source,
@@ -403,6 +422,16 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         )
 
         if not files:
+            engine_cfg: EngineConfig | None = getattr(self, "engine_config", None)
+            allow_empty = engine_cfg is not None and engine_cfg.allow_empty_source
+            in_slot_range = engine_cfg is not None and engine_cfg.slot_start is not None
+            if not allow_empty and not in_slot_range:
+                raise ConfigurationError(
+                    "No source files found after applying input filters. The default discovery looks for files ending in: "
+                    ".zip, .h5, .nc, .nc4, .hdf, .he5. To match different files, pass "
+                    "--input-filters '[\"*.csv\"]' or set "
+                    "--option allow_empty_source=true to proceed with an empty source."
+                )
             self._log.warning("No input files found in %s", ctx.source)
             return iter(())
 
@@ -414,7 +443,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
         Called once per item, after discovery and before batching.
         Returning ``False`` drops the item silently; it never reaches a
-        batch or a plugin hook. Unlike ``include_patterns``/
+        batch or a plugin hook. Unlike ``input_filters``/
         ``discover_source_files``, which control which files discovery
         finds at all, this hook filters items discovery has already found.
 
@@ -478,7 +507,19 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         return ["default"]
 
     def batch_setup(self, ctx: PluginContext) -> None:
-        """Hook for per-batch setup (e.g. DB connections). Cooperatively calls super."""
+        """Acquire per-batch resources through cooperative setup hooks.
+
+        Overrides must call ``super().batch_setup(ctx)``.
+        ``GenericZarrIngestor``, ``GenericParquetIngestor``, and
+        ``DirectZarrIngestor`` wrap batch processing in setup and teardown,
+        including dataset construction or write-intent generation. Teardown
+        runs only after successful setup; if setup raises, the acquiring
+        hook must release resources it has already acquired. Direct
+        ``BaseIngestor`` subclasses own this boundary themselves.
+
+        Args:
+            ctx: Read-only context for the current run.
+        """
         # Intentional cooperative super call:
         # this base can be used with or without mixins defining batch_setup().
         # Missing parent hook is treated as a no-op by design.
@@ -487,7 +528,15 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             super_setup(ctx)
 
     def batch_teardown(self, ctx: PluginContext) -> None:
-        """Hook for per-batch cleanup. Cooperatively calls super."""
+        """Release resources acquired by successful cooperative batch setup.
+
+        Overrides must call ``super().batch_teardown(ctx)``. Callers that
+        create a ``BatchResourceRegistry`` must explicitly drain it; this
+        hook does not automatically discover or manage registry instances.
+
+        Args:
+            ctx: Read-only context for the current run.
+        """
         # Same cooperative behavior as batch_setup(); keep teardown chain optional.
         super_teardown = getattr(super(), "batch_teardown", None)
         if callable(super_teardown):
@@ -510,7 +559,13 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     ) -> Iterable[PipelineBatch]:
         """Delegate batch creation to BatchPlanner."""
         host = cast(BatchPlanHost, self)
-        for batch in self._batch_planner.create_batches(host, PluginContext(ctx), batch_size):
+        cached_source_files = self._discovered_source_files
+        for batch in self._batch_planner.create_batches(
+            host,
+            PluginContext(ctx),
+            batch_size,
+            items=cached_source_files,
+        ):
             self._verify_existing_cube_batch_groups(ctx, batch.groups)
             yield batch
 
@@ -763,6 +818,11 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         )
         run_started_recorded = False
 
+        from firecube.ingestor.runtime.output_guard import (
+            fresh_output_run,
+            require_empty_data_target,
+        )
+
         try:
             ingest_span = (
                 runtime_ctx.telemetry.span(
@@ -779,6 +839,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 collect_filesystem_metrics() as fs_metrics,
                 collect_wal_metrics() as wal_metrics,
                 ingest_span,
+                contextlib.ExitStack() as output_ownership,
             ):
                 self._bind_index_at_startup(runtime_plugin_ctx)
 
@@ -848,6 +909,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     chunk_manager=self._chunk_manager,
                     log=self._log,
                     slice_meta_keys=self.slice_meta_keys(),
+                    time_dim_name=self._resolve_time_dim_name(),
                 )
                 resume_guard = guard
                 guard.enforce(
@@ -857,6 +919,18 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     slot_range=slot_range_for_record,
                     slot_group=self.engine_config.slot_group,
                     validation_group=self.validation_group(runtime_plugin_ctx),
+                )
+
+                self._discovered_source_files = tuple(
+                    self.discover_source_files(runtime_plugin_ctx)
+                )
+                output_ownership.enter_context(
+                    fresh_output_run(
+                        runtime_ctx,
+                        self._chunk_manager,
+                        required=self.requires_fresh_target,
+                        format_label=self.fresh_target_format_label,
+                    )
                 )
 
                 # 5. Runtime control-plane lifecycle
@@ -919,6 +993,10 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 # staged upload actually finished. If complete_output() then raised,
                 # the exception path skipped register_run_failure() because
                 # execution_result.registered was already True.
+                if self.requires_fresh_target and self.engine_config.write_mode == "staged":
+                    require_empty_data_target(
+                        ctx.storage.output, format_label=self.fresh_target_format_label
+                    )
                 execution_result = self._firecube_engine.complete_output(
                     execution_result, runtime_ctx, host=self
                 )
@@ -956,6 +1034,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             raise
 
         finally:
+            self._discovered_source_files = None
             # Teardown
             should_cleanup = (
                 self.engine_config.cleanup_workspace if hasattr(self, "engine_config") else False

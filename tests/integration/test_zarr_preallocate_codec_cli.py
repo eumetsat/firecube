@@ -49,6 +49,7 @@ from click.testing import CliRunner
 from zarr.abc.codec import BytesBytesCodec
 
 from firecube.cli.main import cli
+from firecube.core.errors import ConfigurationError
 
 pytestmark = pytest.mark.integration
 
@@ -191,11 +192,11 @@ def test_preallocate_rejects_per_array_codecs_when_compression_false(
     Behavioral parity with ``DirectZarrIngestor._setup_global_zarr_schema``
     and ``_process_batch``: when a plugin declares per-array codec fields on
     a ``ZarrArraySpec`` while the tier-coerced template sets
-    ``zarr_compression=False``, the CLI must fail fast with a ``ValueError``
-    naming the offending array. Without the preallocate-side validation,
-    incompatible arrays would be partially created on disk before the
-    mismatch was surfaced — a silent-partial-mutation regression class this
-    test guards against.
+    ``zarr_compression=False``, the CLI must fail fast with a
+    ``ConfigurationError`` naming the offending array. Without the
+    preallocate-side validation, incompatible arrays would be partially
+    created on disk before the mismatch was surfaced — a
+    silent-partial-mutation regression class this test guards against.
 
     The fixture plugin does not declare per-array codecs by default, so we
     monkeypatch ``zarr_schema`` to return a spec with ``compressors`` set and
@@ -248,11 +249,19 @@ def test_preallocate_rejects_per_array_codecs_when_compression_false(
         "preallocate must reject per-array codecs + zarr_compression=false, "
         f"but exited 0 with output:\n{result.output}"
     )
-    assert isinstance(result.exception, ValueError), (
-        f"expected ValueError from validate_zarr_specs_against_template, "
-        f"got {type(result.exception).__name__}: {result.exception!r}"
+    # ConfigurationError is a FirecubeError, so the CLI decorator
+    # ``wrap_user_facing_errors`` converts it to ``click.ClickException`` which
+    # exits ``SystemExit(1)``. The original ``ConfigurationError`` remains on
+    # the exception chain via ``ClickException.__cause__``.
+    original_exc: BaseException | None = result.exception
+    while original_exc is not None and not isinstance(original_exc, ConfigurationError):
+        original_exc = original_exc.__cause__ or original_exc.__context__
+    assert isinstance(original_exc, ConfigurationError), (
+        f"expected ConfigurationError somewhere in exception chain from "
+        f"validate_zarr_specs_against_template, got "
+        f"{type(result.exception).__name__}: {result.exception!r}"
     )
-    message = str(result.exception)
+    message = str(original_exc)
     assert "'data'" in message, f"error must name offending array 'data': {message}"
     assert "compressors" in message, (
         f"error must mention the offending codec field 'compressors': {message}"

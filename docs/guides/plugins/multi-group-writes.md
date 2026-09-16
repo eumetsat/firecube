@@ -2,62 +2,76 @@
 
 ## Goal
 
-Route one batch's items to more than one output group in the same Zarr
-store.
+Write each batch to more than one group in the same Zarr store, for example
+the measurements under `data` and their flags under `flags`.
 
-## Declare The Groups
+## Split One Dataset Into Groups
 
-[`get_batch_groups`](../../reference/hooks.md#firecube.ingestor.api.BaseIngestor.get_batch_groups)
-is a `BaseIngestor` hook. Override it to name more than the single default
-group:
+Add `get_batch_groups` to your generated plugin class and replace the
+generated `build_dataset` with the one below. Firecube calls
+`get_batch_groups` once per batch, then calls `build_dataset` once for each
+name it returned, passing the same batch every time. The last three lines keep
+only the variables that belong to the group being built:
 
 ```python
-# Stable, sorted list -> these become the zarr group paths in the store
-def get_batch_groups(self, items: Sequence[Any], ctx: PluginContext) -> list[str]:
-    return ["quality", "sst"]
+def get_batch_groups(self, items, ctx):
+    return ["data", "flags"]  # sorted, always the same: these become the group paths
+
+
+def build_dataset(self, group, items, ctx):
+    datasets = [read_dataset(ctx.materialize(item)) for item in items]
+    dataset = xr.concat(datasets, dim=TIME_DIM, data_vars="minimal", coords="minimal")
+    dataset = dataset.sortby(TIME_DIM)
+    if group == "flags":
+        return dataset[["flag"]]
+    return dataset[["value"]]
 ```
 
-Firecube calls the per-group write hook once for each name returned here,
-passing the full batch item list every time, so the plugin selects what
-belongs to the group it was called for. The list must be stable and sorted
-so the group set stays consistent across runs; each name becomes its own
-group path in the Zarr store.
+`read_dataset` and `TIME_DIM` are the ones you already set in
+[Append Datasets To Zarr](generic-zarr.md).
 
-## Route Writes Per Template
+## Groups From Separate Files
 
-Declaring the groups is the same everywhere; writing to them is
-template-specific:
+When each group has its own files, for example `data_20240101.nc` and
+`flags_20240101.nc` in the same directory, use this `build_dataset` instead.
+The first line keeps the files whose name contains the group name, so for
+`group="flags"` only the `flags_*.nc` files of the batch are read. A batch is
+cut by count, not by product, so it can hold no file for a group at all; then
+the list is empty and returning `None` skips that group for this batch:
 
-- **`GenericZarrIngestor`**: branch on `group` inside `build_dataset` — see
-  [Implement GenericZarrIngestor](generic-zarr.md).
-- **`DirectZarrIngestor`**: declare a matching `ZarrGroupSpec` per group in
-  `zarr_schema`, then tag each `WriteIntent` with the `group` it targets —
-  see [Implement DirectZarrIngestor](direct-zarr.md).
+```python
+def build_dataset(self, group, items, ctx):
+    group_items = [item for item in items if group in str(item)]
+    if not group_items:
+        return None  # this batch has no file for this group
+    datasets = [read_dataset(ctx.materialize(item)) for item in group_items]
+    dataset = xr.concat(datasets, dim=TIME_DIM, data_vars="minimal", coords="minimal")
+    return dataset.sortby(TIME_DIM)
+```
+
+`DirectZarrIngestor` works differently: it declares its groups in
+`zarr_schema` and names the group on each write. See
+[Declare The Schema And Index](direct-zarr.md).
 
 ## Verify
 
-Confirm the override returns the declared groups, without needing a
-template or a full ingest run:
+Run your plugin on a small input, then open one group and confirm it holds
+only its own variables. Swap the group name to check the next one:
 
-```bash
-uv run python -c "
-from firecube_my_plugin.ingestor import MyPlugin
-print(MyPlugin.get_batch_groups(None, [], None))
-"
+```python
+import xarray as xr
+
+print(xr.open_zarr("/tmp/my_plugin_out.zarr", group="flags", consolidated=False))
 ```
 
-Expected output:
+## Common Mistakes
 
-```text
-['quality', 'sst']
-```
-
-This confirms the override itself. Confirming that Firecube actually writes
-each group to the store needs the chosen template's own `Verify` section,
-once its writes are wired up.
+| Mistake | Fix |
+|---|---|
+| Every group ends up with every variable | `build_dataset` returned the whole dataset. Return only the group's variables, as in the last three lines above. |
+| Groups differ between runs | `get_batch_groups` must return the same sorted list every time. |
 
 ## Next Steps
 
-- **[Implement GenericZarrIngestor](generic-zarr.md)** — the template that branches on `group` in `build_dataset`
-- **[Implement DirectZarrIngestor](direct-zarr.md)** — the template that tags each `WriteIntent` with `group`
-- **[Plugin Templates](../../reference/templates.md)** — look up `zarr_schema` and `WriteIntent` fields
+- **[Append Datasets To Zarr](generic-zarr.md)** — the generated plugin these methods go into
+- **[Declare The Schema And Index](direct-zarr.md)** — groups on `DirectZarrIngestor`

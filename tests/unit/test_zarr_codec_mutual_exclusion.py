@@ -18,20 +18,23 @@ from __future__ import annotations
 
 import pytest
 
+from firecube.core.errors import ConfigurationError
 from firecube.ingestor.templates.config import ZarrTemplateConfig
 
 pytestmark = pytest.mark.unit
 
 
 def test_false_and_codecs_raises() -> None:
-    with pytest.raises(ValueError, match="zarr_compression=False conflicts with zarr_codecs"):
+    with pytest.raises(
+        ConfigurationError, match="zarr_compression=False conflicts with zarr_codecs"
+    ):
         ZarrTemplateConfig(
             zarr_compression=False, zarr_codecs=[{"name": "blosc", "configuration": {}}]
         )
 
 
 def test_error_names_both_fields() -> None:
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ConfigurationError) as exc_info:
         ZarrTemplateConfig(
             zarr_compression=False, zarr_codecs=[{"name": "blosc", "configuration": {}}]
         )

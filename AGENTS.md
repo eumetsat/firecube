@@ -66,7 +66,6 @@ mutates a single existing array in place and has no staging path).
 
 **Removed behaviors (migration required):**
 - `output_name` no longer inferred from target URI basename — use `--product-name` or plugin `PRODUCT_NAME`
-- `storage_type` no longer inferred from `s3://` vs `file://` — pass `--storage-type` explicitly
 - `write_mode` no longer defaults to `direct` for local targets — pass `--write-mode` explicitly
 - Config key `default_output_name` is rejected — use `default_product_name` instead
 
@@ -81,6 +80,12 @@ plugin; the rest are local paths).
 ## Architectural invariants
 
 Core design rules for this batch ingestor, including control-plane model and observability rules. → See [plans/DESIGN.md](plans/DESIGN.md)
+
+`GenericParquetIngestor` currently requires a fresh target with no previous runs
+or data. Resume and force-reingest do not bypass this restriction. A product
+claim covers the run through promotion and terminal recording, and duplicate
+part paths are refused. Stable Parquet slice identity and replay remain deferred
+in `plans/TODO.md`.
 
 ## Where things live
 
@@ -108,6 +113,7 @@ Core design rules for this batch ingestor, including control-plane model and obs
 - CF-1.8 Tier-1 advisor: `src/firecube/core/cf/` — check IDs (`check_ids.py`), report dataclasses (`report.py`), structural validator (`validator.py`). Surfaced via `firecube advise compliance --profile cf-18`.
 
 ### Plugin contract requirements
+- Plugins may use `firecube.ingestor.api`, `firecube.core.api`, and supported optional `firecube.ingestor.extensions` capabilities. Core utilities remain domain agnostic; plugins own product interpretation, filename conventions, grouping, coordinate meaning, quality rules, and published metadata. Pattern parsing does not select sources or interpret time fields.
 - Every concrete `BaseIngestor` subclass must declare `PRODUCT_NAME: ClassVar[str]` — enforced at class-definition time via `__init_subclass__`. Abstract templates (e.g. `GenericZarrIngestor`) are exempt.
 - `PipelineResult.metrics` is typed `ResultMetrics` (not a plain dict). `PipelineResult.outputs` is `OutputPaths` (not a plain dict). Both are importable from `firecube.ingestor.api`.
 - Plugins must not construct `PipelineResult(output_path=...)` — use `PipelineResult(outputs=OutputPaths(primary=...))`. The legacy kwarg was removed and raises `TypeError`; the read-only `result.output_path` property remains for readers.

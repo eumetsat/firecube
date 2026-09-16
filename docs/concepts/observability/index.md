@@ -49,4 +49,4 @@ plugin contract.
 - **[Logs](logs.md)** — understand stdout/stderr and JSON log fields
 - **[Traces](traces.md)** — configure OTLP tracing and run correlation
 - **[Observability Reference](../../reference/observability.md)** — complete metric, environment-variable, label, and span reference
-- **[NetCDF To Zarr: Observability](../../tutorials/observability.md)** — add one metric to the NetCDF To Zarr tutorial plugin
+- **[Add Plugin Telemetry](../../guides/plugins/observability.md)** — emit custom metrics and spans from a plugin

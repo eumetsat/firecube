@@ -57,7 +57,7 @@ Start with these checks:
 - align `pipeline_batch_size` with the Zarr time chunk size;
 - use `--write-mode staged` when S3 direct writes are dominated by per-chunk
   round trips and you have enough local scratch space;
-- use Zarr sharding when large grids create too many small objects;
+- use Zarr sharding when large grids create too many small objects (`zarr_sharding=true` requires `zarr_shard_shape` when `zarr_chunk_shape` is set; this is validated at config time);
 - choose compression from the bottleneck: disable it when CPU is the bottleneck,
   enable it when upload size is the bottleneck;
 - prefer `dask_scheduler=synchronous` when pipeline workers are already active,
@@ -65,7 +65,7 @@ Start with these checks:
 
 For the Zarr product model, see [Zarr](output-formats/zarr/index.md). For
 the same-group concurrency model, see
-[Parallel Zarr Writes](output-formats/zarr/parallel-writes.md). To execute that
+[How Parallel Zarr Writes Stay Safe](output-formats/zarr/parallel-writes.md). To execute that
 model, use [Run Parallel Zarr Writes](../operations/parallel-zarr-writes.md).
 
 ## Parquet Tuning
@@ -99,7 +99,7 @@ make uploads less chatty.
 budget when you need a bounded check:
 
 ```bash
-uv run firecube zarr validate \
+firecube zarr validate \
   --product file:///data/products/MY_PRODUCT.zarr \
   --group MY_GROUP \
   --max-chunks 10000 \

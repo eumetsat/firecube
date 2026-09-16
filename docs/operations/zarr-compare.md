@@ -10,32 +10,37 @@ exits nonzero, so it can gate a promotion step in a pipeline.
 ## Prerequisites
 
 - Both inputs are complete Zarr store URIs (`file://` or `s3://`).
-- One storage type and one storage driver apply to both stores:
-  `--storage-type local` for `file://` stores, `--storage-type s3` for
-  `s3://` stores, and `--storage-driver fsspec` or `--storage-driver obstore`.
 - For `s3://` stores, credentials are configured as in
   [Configure S3 Access](s3-access.md).
 
 ## Procedure
 
-1. Run the comparison with both required flags:
+1. Run the comparison:
 
    ```bash
-   uv run firecube zarr compare \
-     file:///data/products/before.zarr \
-     file:///data/products/after.zarr \
-     --storage-type local \
-     --storage-driver fsspec
+   firecube zarr compare \
+      file:///data/products/before.zarr \
+      file:///data/products/after.zarr
    ```
 
-2. Check the result. No output and exit status `0` mean the stores matched.
-   On mismatch, the command writes one line per difference to stderr and
-   exits with status `3`:
+2. Check the result:
 
-   ```text
-   array data/values: shape (2, 2) != (3, 2)
-   array data/lat: firecube_static_written True != None
-   ```
+   - **Exit 0, no output**: the stores are fully equivalent.
+   - **Exit 0, WARNING on stderr**: the stores have layout-only differences
+     (chunk shape or codec differences). Values are equivalent. The WARNING
+     looks like:
+
+     ```text
+     WARNING: layout differences only (chunks/codecs differ, values equivalent). Use separate encoding options to realign.
+     ```
+
+   - **Exit 1, mismatches on stderr**: content differs (values, shapes,
+     dtypes, attrs, or missing arrays). One line per difference:
+
+     ```text
+     array data/values: shape (2, 2) != (3, 2)
+     array data/lat: firecube_static_written True != None
+     ```
 
 The comparison covers array paths, shape, dtype, chunks, dimension names,
 public attrs, Firecube's static-array marker, and values. Runtime trace attrs

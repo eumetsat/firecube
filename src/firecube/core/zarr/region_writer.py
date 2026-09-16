@@ -149,37 +149,6 @@ def _fill_value_attr_value(fill_value: Any, dtype: Any) -> Any:
     return None
 
 
-_ARRAY_EQUAL_NAN_UNSAFE_KINDS = frozenset({"U", "S", "O", "V"})
-
-
-def _arrays_equal_missing_aware(a1: Any, a2: Any) -> bool:
-    """Element-wise array equality with NaN/NaT-aware semantics.
-
-    Uses ``np.array_equal(..., equal_nan=True)`` for numeric and temporal
-    dtypes (``i``, ``u``, ``b``, ``f``, ``c``, ``M``, ``m``), which treats
-    NaN==NaN as equal for float/complex and NaT==NaT as equal for
-    datetime64/timedelta64.
-
-    Falls back to plain ``np.array_equal`` for dtypes (``U``, ``S``, ``O``,
-    ``V``) where NumPy's ``equal_nan=True`` raises ``TypeError`` because
-    ``np.isnan`` has no loop for those kinds. There is no NaN concept for
-    strings/bytes/objects, and structured arrays need element-wise field
-    comparison that is out of scope here.
-
-    Both operand dtypes are checked because the on-disk dtype (``a1``) may
-    differ from the incoming intent dtype (``a2``) when one side has been
-    coerced through serialization.
-    """
-    left = np.asarray(a1)
-    right = np.asarray(a2)
-    if (
-        left.dtype.kind in _ARRAY_EQUAL_NAN_UNSAFE_KINDS
-        or right.dtype.kind in _ARRAY_EQUAL_NAN_UNSAFE_KINDS
-    ):
-        return bool(np.array_equal(left, right))
-    return bool(np.array_equal(left, right, equal_nan=True))
-
-
 def _array_path_exists(root: Any, group_path: str) -> bool:
     """Return True if ``group_path`` (e.g. ``data/counts``) resolves to an array."""
     parts = [p for p in group_path.split("/") if p]

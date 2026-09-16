@@ -33,4 +33,4 @@ For plugin implementation, see
 
 - **[GenericParquetIngestor](../../guides/plugins/generic-parquet.md)** — implement a Parquet plugin
 - **[Parallelism](../parallelism.md)** — understand independent part-file writes
-- **[Sentinel-3 FRP To Parquet](../../tutorials/sentinel3-frp.md)** — follow a Parquet plugin tutorial
+- **[Sentinel-3 Fire Detections](../../showcase/sentinel3-fire-detections.ipynb)** — create a plugin and explore its Parquet output in a notebook

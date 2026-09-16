@@ -34,7 +34,7 @@ import inspect
 import logging
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, BinaryIO, Protocol, runtime_checkable
+from typing import Any, BinaryIO, ClassVar, Protocol, runtime_checkable
 
 from firecube.core.observability.telemetry import IngestionTelemetry
 from firecube.ingestor.runtime.zarr.contracts import AppendWriteStrategy, RegionWriteStrategy
@@ -172,6 +172,16 @@ class PipelineHost(Protocol):
 
     name: str
     _log: logging.Logger
+    stop_on_batch_failure: ClassVar[bool]
+    """Whether the runner halts the run at the first failed batch.
+
+    ``True`` for hosts whose batches build on each other (append-style
+    Zarr templates): after a failure the remaining batches are not
+    attempted, so no batch lands past a gap, and they are reported as
+    ``batches_not_attempted``. ``False`` for hosts whose batches are
+    independent (Parquet files, pre-planned direct-Zarr slots): every
+    batch is attempted and failures are reported together at the end.
+    """
 
     def _create_batches(
         self, ctx: RuntimeIngestContext, batch_size: int
@@ -233,7 +243,10 @@ class PipelineHost(Protocol):
             ctx: Plugin-facing run context.
             state: Run state as of this batch.
             batch: The batch that failed.
-            result: The batch outcome; ``result.error`` carries the cause.
+            result: The batch outcome; ``result.error`` carries the cause and
+                ``result.metrics`` may carry ``coverage`` (groups committed
+                before the failure), ``failed_coverage`` (slots the failed
+                group touched), ``not_attempted_groups`` and ``repair``.
         """
         ...
 

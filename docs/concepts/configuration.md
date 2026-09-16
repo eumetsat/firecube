@@ -128,7 +128,7 @@ silently ignored.
 
 | Tier | Examples | Applies to |
 |---|---|---|
-| Engine options | `pipeline_workers`, `pipeline_batch_size`, `extract_workers`, `include_patterns`, `resume_existing` | Runtime behavior shared by plugins. |
+| Engine options | `pipeline_workers`, `pipeline_batch_size`, `extract_workers`, `input_filters`, `resume_existing` | Runtime behavior shared by plugins. |
 | Output options | `zarr_chunk_shape`, `zarr_compression`, `zarr_consolidate` | Zarr template behavior. |
 | Plugin options | `region`, thresholds, filters, product-specific switches | Options declared by the installed plugin. |
 

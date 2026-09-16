@@ -199,8 +199,14 @@ def extract_all_from_zips(
     directory; member names that could escape it (``..`` segments, absolute
     paths, Windows drive prefixes) are rejected before anything is written.
 
-    A failing archive never raises and never aborts the batch: its partially
-    extracted directory is removed and the failure is reported in the result.
+    A failing archive never raises and never aborts the batch: its failure is
+    reported in the result. Partial output is removed only for a fresh
+    destination exclusively created by that extraction and not overlapping
+    any other destination in this call (including aliases and repeated inputs).
+    Parent directories are never removed, including parents created by this
+    helper to reach the destination. Existing or shared
+    destinations are not transactionally restored: a late failure may leave
+    partially written or overwritten members. Prefer separate fresh destinations.
     Callers MUST check the returned failures mapping — an unsafe member name
     or a corrupt archive is reported there, not as an exception. ``workers=1``
     extracts serially; higher values extract concurrently with identical
@@ -244,15 +250,63 @@ def extract_all_from_zips(
 
     paths = [Path(p) for p in zip_paths]
     dests = {path: Path(dest_dir_for(path)) for path in paths}
+    # Resolve aliases before workers create anything. Keep original paths in
+    # the public mappings, and count every occurrence, including repeated inputs.
+    resolved = []
+    for path in paths:
+        try:
+            resolved.append(dests[path].resolve())
+        except (OSError, RuntimeError):
+            # Unresolvable destinations fail inside their own extraction;
+            # normalization must not abort unrelated archives.
+            resolved.append(dests[path].absolute())
+    identities = []
+    ancestor_identities = []
+    for dest in resolved:
+        ancestors = set()
+        identity = None
+        for ancestor in (dest, *dest.parents):
+            try:
+                stat = ancestor.stat()
+            except OSError:
+                continue
+            key = (stat.st_dev, stat.st_ino)
+            ancestors.add(key)
+            if ancestor == dest:
+                identity = key
+        identities.append(identity)
+        ancestor_identities.append(ancestors)
+
+    exclusive = [True] * len(paths)
+    for i, left in enumerate(resolved):
+        for j in range(i):
+            right = resolved[j]
+            if (
+                left.is_relative_to(right)
+                or right.is_relative_to(left)
+                or identities[i] in ancestor_identities[j]
+                or identities[j] in ancestor_identities[i]
+            ):
+                exclusive[i] = exclusive[j] = False
+
     extracted: dict[Path, Path] = {}
     failures: dict[Path, str] = {}
 
-    def _extract(path: Path) -> None:
+    def _extract(index: int, path: Path) -> None:
         dest = dests[path]
+        created = False
         try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                dest.mkdir()
+            except FileExistsError:
+                pass
+            else:
+                created = True
             _extract_one_zip(path, dest)
         except Exception as exc:
-            shutil.rmtree(dest, ignore_errors=True)
+            if created and exclusive[index]:
+                shutil.rmtree(dest, ignore_errors=True)
             log.warning("ZIP extraction failed for %s: %s", path, exc)
             failures[path] = str(exc)
         else:
@@ -260,11 +314,11 @@ def extract_all_from_zips(
 
     pool_size = min(int(workers), len(paths)) if paths else 0
     if pool_size <= 1:
-        for path in paths:
-            _extract(path)
+        for index, path in enumerate(paths):
+            _extract(index, path)
         return extracted, failures
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as pool:
-        for future in [pool.submit(_extract, path) for path in paths]:
+        for future in [pool.submit(_extract, index, path) for index, path in enumerate(paths)]:
             future.result()
     return extracted, failures

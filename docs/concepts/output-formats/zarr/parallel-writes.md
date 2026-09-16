@@ -1,4 +1,4 @@
-# Parallel Zarr Writes
+# How Parallel Zarr Writes Stay Safe
 
 Parallel Zarr writes are an optional capability of `DirectZarrIngestor`. They
 allow several worker processes to write one Zarr group by assigning each worker
@@ -83,8 +83,8 @@ scheduler.
   preallocate, plan, launch, verify, and recover workers
 - **[`DirectZarrIngestor` Guide](../../../guides/plugins/direct-zarr.md#implement-the-plugin)** -
   implement the index contract and write-intent hooks
-- **[DirectZarrIngestor (Region) Tutorial](../../../tutorials/direct-zarr-parallel.md)** -
-  build a complete parallel example
+- **[Slot-Based Parallelism: MTG FCI L1C](../../../showcase/mtg-fci-l1c-benchmarks.ipynb)** -
+  reproduce a parallel ingestion benchmark
 - **[Benchmarks](../../benchmarks.md#same-group-slot-scaling)** - review one
   measured slot-scaling workload
 - **[Parallelism](../../parallelism.md)** - compare concurrency across Firecube

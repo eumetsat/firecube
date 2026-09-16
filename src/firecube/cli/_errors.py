@@ -20,22 +20,30 @@ from collections.abc import Callable
 
 import click
 
-_KNOWN_USER_ERROR_TYPE_NAMES: frozenset[str] = frozenset(
+from firecube.core.errors import FirecubeError
+
+# Explicit membership for user-facing exceptions that are NOT part of the
+# ``FirecubeError`` hierarchy (built-in OS errors, third-party library errors,
+# and ingestor-runtime ``RuntimeError`` subclasses). ``FirecubeError`` and its
+# subclasses are covered by the ``isinstance`` branch in ``_is_known_user_error``
+# and must NOT be added here — reparent them under ``FirecubeError`` instead.
+_KNOWN_NON_FIRECUBE_USER_ERRORS: frozenset[str] = frozenset(
     {
-        "ConfigurationError",
-        "GroupNotFoundError",
         "FileNotFoundError",
+        "GroupNotFoundError",
         "NodeNotFoundError",
         "NotADirectoryError",
         "PathNotFoundError",
         "PermissionError",
-        "SchemaDriftError",
+        "PipelineFailedBatchesError",
     }
 )
 
 
 def _is_known_user_error(exc: BaseException) -> bool:
-    return type(exc).__name__ in _KNOWN_USER_ERROR_TYPE_NAMES
+    if isinstance(exc, FirecubeError):
+        return True
+    return type(exc).__name__ in _KNOWN_NON_FIRECUBE_USER_ERRORS
 
 
 def _is_known_user_oserror(exc: BaseException) -> bool:
@@ -46,10 +54,12 @@ def _is_known_user_oserror(exc: BaseException) -> bool:
 def wrap_user_facing_errors[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """Convert known downstream errors to ``click.ClickException`` at the CLI boundary.
 
-    Only exceptions whose class name appears in ``_KNOWN_USER_ERROR_TYPE_NAMES``
-    are wrapped; ``click.ClickException`` and ``click.exceptions.Exit`` pass
-    through unchanged, and any other exception propagates so operators see the
-    real traceback.
+    Exceptions that are ``FirecubeError`` subclasses are wrapped via the
+    ``isinstance`` branch in ``_is_known_user_error``. Non-Firecube user
+    errors whose class name appears in ``_KNOWN_NON_FIRECUBE_USER_ERRORS``
+    are also wrapped. ``click.ClickException`` and ``click.exceptions.Exit``
+    pass through unchanged, and any other exception propagates so operators
+    see the real traceback.
     """
 
     @functools.wraps(func)
@@ -89,28 +99,9 @@ class MissingProductNameError(click.UsageError):
         )
 
 
-class MissingStorageTypeError(click.UsageError):
-    def __init__(self, target_uri: str) -> None:
-        super().__init__(
-            f"Missing --storage-type for target '{target_uri}'.\n"
-            f"Storage type is no longer inferred from URI scheme. Provide explicitly:\n"
-            f"  --storage-type [local|s3]"
-        )
-
-
 class MissingStorageDriverError(click.UsageError):
     def __init__(self, target_uri: str) -> None:
         super().__init__(
             f"Missing --storage-driver for target '{target_uri}'. Provide explicitly:\n"
             f"  --storage-driver [fsspec|obstore]"
-        )
-
-
-class MissingWriteModeError(click.UsageError):
-    def __init__(self) -> None:
-        super().__init__(
-            "Missing --write-mode. Required for all targets (no local-default inference). "
-            "Choose:\n"
-            "  --write-mode staged : workspace-first, then upload\n"
-            "  --write-mode direct : stream directly to target\n"
         )

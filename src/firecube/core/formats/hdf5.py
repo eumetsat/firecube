@@ -125,6 +125,8 @@ def materialize_hdf5_path(
 
     If the input is a ZIP file, it extracts the content to a temporary directory.
     If it is already an HDF5-like file, it is returned as-is.
+    Extraction failures clean up the helper's temporary directory before
+    propagating.
 
     Args:
         file_path: Source file path.
@@ -132,7 +134,15 @@ def materialize_hdf5_path(
         logger: Optional logger.
 
     Returns:
-        Tuple of (path_to_hdf5_file, temporary_directory_object_or_None).
+        Tuple of local HDF5 path and optional temporary-directory handle.
+        The caller must call the handle's ``cleanup()`` after all readers
+        finish, including on processing failure. Non-ZIP input returns
+        ``None`` for the handle and remains caller-owned.
+
+    Raises:
+        FileNotFoundError: If the ZIP file is missing or is not a valid archive.
+        ValueError: If archive members are unsafe, no HDF5 candidate exists,
+            or multiple candidates are present.
     """
     logger = logger or log
     if file_path.suffix.lower() != ".zip":

@@ -24,6 +24,7 @@ import logging
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+import numpy as np
 import xarray as xr
 import zarr
 from zarr.abc.codec import ArrayArrayCodec, ArrayBytesCodec, BytesBytesCodec
@@ -237,17 +238,200 @@ def _build_zarr_encoding(
         compressors = list(compressor_instances) if compressor_instances else []
 
     encoding: dict[str, dict[str, object]] = {}
-    for var_name, data_array in ds.data_vars.items():
+    # E5: iterate over data_vars AND coords so chunk_shape is honored uniformly
+    # for the time coord and firecube_timestamp_state array. Otherwise xarray
+    # auto-chunks numpy-backed coords and the on-disk chunk layout diverges
+    # from data variables, breaking alignment tracking.
+    all_arrays = {**ds.data_vars, **ds.coords}
+    for var_name, data_array in all_arrays.items():
         var_name_str = str(var_name)
+        is_data_var = var_name in ds.data_vars
         var_encoding: dict[str, object] = {}
-        if compressors is not None:
+        var_dims = tuple(str(dim) for dim in data_array.dims)
+
+        if is_data_var and compressors is not None:
             var_encoding["compressors"] = compressors
-        if shard_shape is not None:
-            var_dims = tuple(str(dim) for dim in data_array.dims)
+
+        if shard_shape is not None and is_data_var:
             var_encoding["shards"] = tuple(shard_shape.get(dim, ds.sizes[dim]) for dim in var_dims)
             var_encoding["chunks"] = tuple((chunk_shape or {}).get(dim, 1) for dim in var_dims)
-        encoding[var_name_str] = var_encoding
+        elif chunk_shape is not None and any(dim in chunk_shape for dim in var_dims):
+            # Use the configured chunk size directly. Zarr v3 accepts chunks
+            # larger than the current shape; the append dimension grows across
+            # later batches.
+            var_encoding["chunks"] = tuple(
+                int(chunk_shape.get(dim, ds.sizes[dim])) for dim in var_dims
+            )
+
+        if not is_data_var and var_encoding:
+            # An explicit encoding entry replaces the variable's own encoding
+            # in xarray, which would drop the CF keys a source file carried
+            # (``dtype``, ``units``, ``calendar``) and re-encode the time
+            # coordinate as int64 with fresh units. Carry them forward.
+            for key in _INHERITED_COORD_ENCODING_KEYS:
+                if key in data_array.encoding and key not in var_encoding:
+                    var_encoding[key] = data_array.encoding[key]
+
+        if is_data_var or var_encoding:
+            encoding[var_name_str] = var_encoding
     return encoding
+
+
+def _static_data_vars(ds: xr.Dataset, *, time_dim: str) -> set[str]:
+    """Return data variables that do not carry the append/time dimension."""
+    return {str(name) for name, variable in ds.data_vars.items() if time_dim not in variable.dims}
+
+
+def _append_write_view(ds: xr.Dataset, *, time_dim: str) -> xr.Dataset:
+    """Return the append view written by xarray: no static vars, no group attrs."""
+    static_vars = _static_data_vars(ds, time_dim=time_dim)
+    view = ds.drop_vars(list(static_vars)) if static_vars else ds
+    view = view.copy(deep=False)
+    view.attrs = {}
+    return view
+
+
+def _open_preflight_compare_group(
+    *,
+    preflight_compare_zarr_store: ZarrStoreHandle,
+    group: str,
+    zarr_format: int,
+) -> Any | None:
+    try:
+        root = zarr.open_group(
+            **preflight_compare_zarr_store.zarr_kwargs(),
+            mode="r",
+            zarr_format=cast(Literal[3], zarr_format),
+            use_consolidated=False,
+        )
+        return cast(Any, root[str(group)])
+    # FileNotFoundError: fs layer when the final target doesn't exist yet
+    # (fresh staged run). KeyError: zarr group-indexing when the group doesn't
+    # exist in an existing store.
+    except (FileNotFoundError, KeyError):
+        return None
+
+
+def _preflight_compare_static_vars(
+    ds: xr.Dataset,
+    *,
+    preflight_compare_zarr_store: ZarrStoreHandle,
+    group: str,
+    time_dim: str,
+    force_reingest: bool,
+    zarr_format: int,
+) -> None:
+    """Compare non-time-indexed variables against the final target."""
+    from firecube.core.zarr._drift import chunk_by_chunk_equal
+    from firecube.ingestor.errors import (
+        STATIC_VAR_DRIFT_FORCE_REINGEST_TMPL,
+        STATIC_VAR_DRIFT_MSG_TMPL,
+        STATIC_VAR_NEW_ON_APPEND_TMPL,
+        SchemaDriftError,
+    )
+
+    final_group = _open_preflight_compare_group(
+        preflight_compare_zarr_store=preflight_compare_zarr_store,
+        group=group,
+        zarr_format=zarr_format,
+    )
+    if final_group is None:
+        return None
+
+    store_uri = str(preflight_compare_zarr_store.target_uri)
+    for var_name in sorted(_static_data_vars(ds, time_dim=time_dim)):
+        if var_name not in final_group:
+            raise SchemaDriftError(
+                STATIC_VAR_NEW_ON_APPEND_TMPL.format(name=var_name, store_uri=store_uri)
+            )
+        target_arr = cast(zarr.Array, final_group[var_name])
+        if not chunk_by_chunk_equal(target_arr, np.asarray(ds[var_name].values)):
+            template = (
+                STATIC_VAR_DRIFT_FORCE_REINGEST_TMPL
+                if force_reingest
+                else STATIC_VAR_DRIFT_MSG_TMPL
+            )
+            format_kwargs = {"name": var_name, "store_uri": store_uri}
+            if not force_reingest:
+                format_kwargs["time_dim"] = time_dim
+            raise SchemaDriftError(template.format(**format_kwargs))
+
+
+def _preflight_compare_attrs_and_warn(
+    ds: xr.Dataset,
+    *,
+    preflight_compare_zarr_store: ZarrStoreHandle,
+    group: str,
+    zarr_format: int,
+    logger: logging.Logger | None,
+) -> None:
+    """Warn when incoming group attrs differ from first-write target attrs."""
+    from firecube.core.zarr._drift import group_attrs_diff
+
+    final_group = _open_preflight_compare_group(
+        preflight_compare_zarr_store=preflight_compare_zarr_store,
+        group=group,
+        zarr_format=zarr_format,
+    )
+    if final_group is None:
+        return None
+
+    store_uri = str(preflight_compare_zarr_store.target_uri)
+    stored_attrs = dict(final_group.attrs)
+    diff = group_attrs_diff(stored_attrs, dict(ds.attrs))
+    if not diff.is_empty and logger is not None:
+        logger.warning(
+            "Group attributes differ from stored; keeping first-write values",
+            extra={
+                "added": diff.added,
+                "removed": diff.removed,
+                "changed": diff.changed,
+                "store_uri": store_uri,
+                "group": str(group),
+            },
+        )
+
+
+def _snapshot_group_attrs(
+    *,
+    zarr_store: ZarrStoreHandle,
+    group: str,
+    zarr_format: int,
+) -> dict[str, Any] | None:
+    """Snapshot attrs from the store being written, if its group exists."""
+    try:
+        root = zarr.open_group(
+            **zarr_store.zarr_kwargs(),
+            mode="r",
+            zarr_format=cast(Literal[3], zarr_format),
+            use_consolidated=False,
+        )
+        zarr_group = cast(Any, root[str(group)])
+    except (FileNotFoundError, KeyError):
+        return None
+    return dict(zarr_group.attrs)
+
+
+def _restore_group_attrs(
+    *,
+    zarr_store: ZarrStoreHandle,
+    group: str,
+    attrs: dict[str, Any],
+    zarr_format: int,
+) -> None:
+    """Restore first-write group attrs after xarray append metadata handling."""
+    root = zarr.open_group(
+        **zarr_store.zarr_kwargs(),
+        mode="r+",
+        zarr_format=cast(Literal[3], zarr_format),
+        use_consolidated=False,
+    )
+    zarr_group = cast(Any, root[str(group)])
+    zarr_group.attrs.put(attrs)
+
+
+_INHERITED_COORD_ENCODING_KEYS = ("dtype", "units", "calendar", "_FillValue")
+"""CF encoding keys a coordinate keeps when the engine adds its own zarr keys."""
 
 
 def write_dataset_to_zarr(
@@ -256,7 +440,9 @@ def write_dataset_to_zarr(
     zarr_store: ZarrStoreHandle,
     group: str,
     mode: Literal["w", "a"] = "w",
-    append_dim: str | None = None,
+    region: slice | None = None,
+    time_dim: str = "timestamp",
+    state_var_name: str = "firecube_timestamp_state",
     chunk_shape: dict[str, int] | None = None,
     shard_shape: dict[str, int] | None = None,
     sharding: bool = False,
@@ -265,13 +451,93 @@ def write_dataset_to_zarr(
     consolidate: bool = False,
     zarr_format: int = 3,
     logger: logging.Logger | None = None,
+    preflight_compare_zarr_store: ZarrStoreHandle | None = None,
+    force_reingest: bool = False,
 ) -> None:
-    """Write an xarray Dataset into a Zarr V3 group with optional append semantics."""
+    """Write an xarray Dataset into a Zarr V3 group with optional append semantics.
+
+    The caller is responsible for schema validation against the existing Zarr
+    group (see :mod:`firecube.ingestor.runtime.zarr.schema`); this function
+    does not repeat that check.
+    """
 
     if zarr_format != 3:
         raise ValueError("write_dataset_to_zarr only supports zarr_format=3")
     zarr_kwargs = zarr_store.zarr_kwargs()
     effective_store = zarr_kwargs["store"]
+
+    if region is not None:
+        from firecube.core.zarr.time_decode import decode_time_array
+        from firecube.ingestor.errors import AppendOverwriteRefused
+        from firecube.ingestor.runtime.zarr.schema import validate_time_array_schema
+
+        group_name = str(group)
+        root = zarr.open_group(
+            **zarr_kwargs,
+            mode="r+",
+            zarr_format=zarr_format,
+            use_consolidated=False,
+        )
+        zarr_group = cast(Any, root[group_name])
+
+        validate_time_array_schema(
+            ds,
+            zarr_group,
+            store_uri=zarr_store.target_uri,
+            time_dim=time_dim,
+            state_var_name=state_var_name,
+        )
+
+        time_arr = cast(Any, zarr_group[time_dim])
+        existing_coord = decode_time_array(np.asarray(time_arr[region]), dict(time_arr.attrs))
+        incoming_coord = np.asarray(ds[time_dim].values)
+        if existing_coord.shape != incoming_coord.shape or not bool(
+            np.all(existing_coord == incoming_coord)
+        ):
+            raise AppendOverwriteRefused(
+                refused_timestamps=[str(v) for v in ds[time_dim].values[:3]],
+                reason="time_coord_mismatch",
+            )
+
+        if preflight_compare_zarr_store is not None:
+            _preflight_compare_static_vars(
+                ds,
+                preflight_compare_zarr_store=preflight_compare_zarr_store,
+                group=group,
+                time_dim=time_dim,
+                force_reingest=force_reingest,
+                zarr_format=zarr_format,
+            )
+
+        ds_region = ds.drop_vars(
+            [
+                name
+                for name, variable in ds.variables.items()
+                if name in {time_dim, state_var_name} or time_dim not in variable.dims
+            ]
+        )
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Consolidated metadata is currently not part in the Zarr format 3 specification",
+            )
+            ds_region.to_zarr(
+                **zarr_kwargs,
+                group=group_name,
+                region={time_dim: region},
+                mode="r+",
+                zarr_format=zarr_format,
+                consolidated=False,
+                safe_chunks=False,
+            )
+
+        state_arr = cast(Any, zarr_group[state_var_name])
+        state_arr[region] = 1
+
+        if consolidate:
+            _consolidate_metadata_best_effort(effective_store, logger=logger)
+        return
 
     effective_shard_shape: dict[str, int] | None = shard_shape
     effective_chunk_shape: dict[str, int] | None = chunk_shape
@@ -329,20 +595,41 @@ def write_dataset_to_zarr(
                 "Dask is required for chunked Zarr export. Install dask[array] or disable chunking."
             ) from exc
 
-    encoding: dict[str, dict[str, object]] | None = None
+    ds_to_write = ds
+    pre_write_group_attrs: dict[str, Any] | None = None
     if mode == "a":
-        if not append_dim:
-            raise ValueError("append_dim is required when mode='a'")
-        append_dim_for_write = append_dim
-    else:
-        append_dim_for_write = None
+        pre_write_group_attrs = _snapshot_group_attrs(
+            zarr_store=zarr_store,
+            group=group,
+            zarr_format=zarr_format,
+        )
+        if preflight_compare_zarr_store is not None:
+            _preflight_compare_static_vars(
+                ds,
+                preflight_compare_zarr_store=preflight_compare_zarr_store,
+                group=group,
+                time_dim=time_dim,
+                force_reingest=force_reingest,
+                zarr_format=zarr_format,
+            )
+            _preflight_compare_attrs_and_warn(
+                ds,
+                preflight_compare_zarr_store=preflight_compare_zarr_store,
+                group=group,
+                zarr_format=zarr_format,
+                logger=logger,
+            )
+        ds_to_write = _append_write_view(ds, time_dim=time_dim)
+
+    encoding: dict[str, dict[str, object]] | None = None
+    if mode != "a":
         # Encoding is only supplied for initial writes; appends should reuse
         # existing store metadata for safety. Always build encoding so that
         # ``compressors=[]`` is explicit and zarr does not inject a default
         # compressor when the caller requested none (see
         # tests/unit/test_zarr_codec_api_assumptions.py::test_disable_compression_encoding_shape).
         encoding = _build_zarr_encoding(
-            ds,
+            ds_to_write,
             compression=compression,
             zarr_codecs=zarr_codecs,
             shard_shape=effective_shard_shape,
@@ -365,11 +652,19 @@ def write_dataset_to_zarr(
             message="Consolidated metadata is currently not part in the Zarr format 3 specification",
         )
         if mode == "a":
-            ds.to_zarr(**to_zarr_common, append_dim=append_dim_for_write)
+            ds_to_write.to_zarr(**to_zarr_common, append_dim=time_dim)
         elif encoding is not None:
-            ds.to_zarr(**to_zarr_common, encoding=encoding)
+            ds_to_write.to_zarr(**to_zarr_common, encoding=encoding)
         else:
-            ds.to_zarr(**to_zarr_common)
+            ds_to_write.to_zarr(**to_zarr_common)
+
+    if mode == "a" and pre_write_group_attrs is not None:
+        _restore_group_attrs(
+            zarr_store=zarr_store,
+            group=group,
+            attrs=pre_write_group_attrs,
+            zarr_format=zarr_format,
+        )
 
     if consolidate:
         _consolidate_metadata_best_effort(effective_store, logger=logger)

@@ -105,3 +105,28 @@ def test_database_duckdb_tier(
         assert "duckdb_memory_limit" not in options
         assert "duckdb_threads" not in options
         assert "duckdb_max_temp_directory_size" not in options
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("override", [None, False, True])
+def test_template_subclass_defaults_and_explicit_core_default_override(override):
+    from firecube.ingestor.api import ZarrTemplateConfig
+
+    @dataclass
+    class MeasurementLayout(ZarrTemplateConfig):
+        zarr_compression: bool = False
+
+    options = {} if override is None else {"zarr_compression": override}
+    ctx = IngestContext(source="input", options=options)
+    configurator = TierConfigurator(
+        template_config_class=MeasurementLayout,
+        plugin_config_class=None,
+        plugin_name="measurement",
+    )
+    _, template, _ = configurator.configure(ctx)
+
+    assert isinstance(template, MeasurementLayout)
+    assert template.zarr_compression is (False if override is None else override)
+    assert ctx.options == options
+    if override is None:
+        assert "zarr_compression" not in ctx.options

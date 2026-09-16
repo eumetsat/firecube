@@ -26,10 +26,10 @@ Positive (template ``True``, override lands on the array):
 
 Negative (template ``False``, ANY per-array codec is rejected by the shared
 validator ``validate_zarr_specs_against_template``):
-  * per-array ``compressors=(blosc,)`` → ``ValueError``
-  * per-array ``compressors=()``       → ``ValueError`` (empty tuple is still a declaration)
-  * per-array ``filters=(bitround,)``  → ``ValueError``
-  * per-array ``serializer={bytes}``   → ``ValueError``
+  * per-array ``compressors=(blosc,)`` → ``ConfigurationError``
+  * per-array ``compressors=()``       → ``ConfigurationError`` (empty tuple is still a declaration)
+  * per-array ``filters=(bitround,)``  → ``ConfigurationError``
+  * per-array ``serializer={bytes}``   → ``ConfigurationError``
 
 Positive cases exercise the full derivation → writer path with real zarr stores;
 negative cases only need the validator call.
@@ -44,6 +44,7 @@ import pytest
 import zarr
 from zarr.abc.codec import BytesBytesCodec
 
+from firecube.core.errors import ConfigurationError
 from firecube.core.zarr.region_writer import RegionZarrWriter
 from firecube.ingestor.runtime.zarr.write import derive_effective_codecs_for_spec
 from firecube.ingestor.templates.config import (
@@ -152,7 +153,7 @@ def test_per_array_false_template_with_compressors_raises() -> None:
         dtype="f4",
         compressors=(BLOSC_ENTRY,),
     )
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         validate_zarr_specs_against_template([spec], template)
     msg = str(excinfo.value)
     assert "'var'" in msg
@@ -164,7 +165,7 @@ def test_per_array_false_template_with_empty_compressors_raises() -> None:
     """Template False + per-array ``compressors=()`` → validator rejects (empty is still a declaration)."""
     template = ZarrTemplateConfig(zarr_compression=False)
     spec = ZarrArraySpec(name="var", shape=(8,), dtype="f4", compressors=())
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         validate_zarr_specs_against_template([spec], template)
     msg = str(excinfo.value)
     assert "'var'" in msg
@@ -181,7 +182,7 @@ def test_per_array_false_template_with_filters_raises() -> None:
         dtype="f4",
         filters=({"name": "bitround", "configuration": {"keepbits": 8}},),
     )
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         validate_zarr_specs_against_template([spec], template)
     msg = str(excinfo.value)
     assert "'var'" in msg
@@ -198,7 +199,7 @@ def test_per_array_false_template_with_serializer_raises() -> None:
         dtype="f4",
         serializer={"name": "bytes"},
     )
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         validate_zarr_specs_against_template([spec], template)
     msg = str(excinfo.value)
     assert "'var'" in msg

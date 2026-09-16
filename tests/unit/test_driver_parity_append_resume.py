@@ -67,7 +67,8 @@ def _write_initial_store(store_path: Path, group: str, n_timestamps: int) -> Non
             "FWI": (
                 ("timestamp", "lat", "lon"),
                 np.zeros((n_timestamps, 2, 3), dtype=np.float32),
-            )
+            ),
+            "firecube_timestamp_state": (("timestamp",), np.ones(n_timestamps, dtype=np.uint8)),
         },
         coords={"timestamp": ts, "lat": np.arange(2), "lon": np.arange(3)},
     )
@@ -137,6 +138,15 @@ def test_append_resume_distinct_uris_uses_resume_session(tmp_path: Path) -> None
 
     write_session = make_test_session(tmp_path, product="write_target.zarr")
     resume_session = make_test_session(tmp_path, product="resume_target.zarr")
+    from firecube.ingestor.runtime.zarr.staged_metadata import seed_staged_store_metadata
+
+    seed_staged_store_metadata(
+        temp_store_uri=str(write_target),
+        final_target_uri=str(resume_target),
+        groups=["G1"],
+        session=resume_session,
+        coordinate_arrays=["timestamp"],
+    )
     write_handle = create_zarr_store(
         uri=str(write_target),
         storage_config=StorageConfig(storage_type="local", storage_driver="fsspec"),
@@ -148,12 +158,14 @@ def test_append_resume_distinct_uris_uses_resume_session(tmp_path: Path) -> None
         mode="r",
     )
 
-    with patch(
-        "firecube.ingestor.runtime.zarr.append._read_existing_append_values",
-        wraps=__import__(
-            "firecube.ingestor.runtime.zarr.append", fromlist=["_read_existing_append_values"]
-        )._read_existing_append_values,
-    ) as read_values_spy:
+    observed_read_stores: list[Any] = []
+    original_compute = AppendResumeService.compute_state_aware_skip_set
+
+    def spy_compute(self: AppendResumeService, *, ds: Any, group: str) -> set[Any]:
+        observed_read_stores.append(self._read_zarr_store)
+        return original_compute(self, ds=ds, group=group)
+
+    with patch.object(AppendResumeService, "compute_state_aware_skip_set", spy_compute):
         append_time_groups(
             store=str(write_target),
             zarr_store=write_handle,
@@ -169,7 +181,10 @@ def test_append_resume_distinct_uris_uses_resume_session(tmp_path: Path) -> None
         )
 
     assert (write_target / "G1" / "FWI" / "zarr.json").exists()
-    assert read_values_spy.call_args.kwargs["store_uri"] == str(resume_target)
+    assert observed_read_stores, "state-aware skip was not invoked during resume"
+    assert observed_read_stores[0] is resume_handle, (
+        "state-aware skip must read via the resume handle, not the write handle"
+    )
 
 
 def test_append_resume_obstore_no_bypass(tmp_path: Path) -> None:
@@ -249,6 +264,7 @@ def test_ensure_timestamp_state_no_bypass(tmp_path: Path) -> None:
         shard_shape=None,
         sharding=False,
         logger=logging.getLogger("test-driver-parity"),
+        state_var_name="firecube_timestamp_state",
         session=session,
     )
 
@@ -314,7 +330,6 @@ def test_ensure_existing_routes_through_session_branch(tmp_path: Path) -> None:
             chunk_len=2,
             cached=None,
             resume_cache_key=None,
-            preexisting_values=None,
             storage_config=storage_config,
         )
 

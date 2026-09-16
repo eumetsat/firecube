@@ -42,6 +42,8 @@ def test_options_detached_from_runtime_context():
     rctx.options["injected"] = "after_creation"
     assert "injected" not in pctx.options
     assert pctx.option("injected") is None
+    assert pctx.options["run_id"] == rctx.run_id == "test"
+    assert "pipeline_workers" not in pctx.options
 
 
 def test_option_and_options_are_consistent():

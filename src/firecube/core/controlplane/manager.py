@@ -96,23 +96,56 @@ def _slice_dedupe_key(product: str, span_meta: dict[str, Any]) -> tuple[str, Any
     return (product, group, t_min, t_max)
 
 
-def _dedupe_active_spans(chunks: list[ChunkInfo]) -> list[ChunkInfo]:
+def _has_active_span_slice_collision(chunks: list[ChunkInfo]) -> bool:
+    """Return ``True`` when two or more active spans share a slice key.
+
+    Pre-scan used to decide whether the caller needs to build the
+    ``(product, run_id) -> started_at`` lookup at all. Without a collision
+    ``_dedupe_active_spans`` is a no-op and the lookup is unused, so we
+    can skip the ``list_runs`` WAL read entirely.
+    """
+    seen: set[tuple[str, Any, Any, Any]] = set()
+    for chunk in chunks:
+        if chunk.chunk_type != "span" or chunk.status != "active":
+            continue
+        meta = chunk.meta or {}
+        key = _slice_dedupe_key(chunk.product, meta)
+        if key is None:
+            continue
+        if key in seen:
+            return True
+        seen.add(key)
+    return False
+
+
+def _dedupe_active_spans(
+    chunks: list[ChunkInfo],
+    run_started_at_by_id: dict[tuple[str, str], float] | None = None,
+) -> list[ChunkInfo]:
     """Drop duplicate active spans that cover the same slice during force-reingest in-flight.
 
     During the brief window when a force-reingest run has emitted its new
     span (``status="active"``) but has not yet emitted
     ``replacement_committed`` for the prior span, both spans appear active.
     To avoid showing double coverage in the read models, this helper keeps
-    the span with the highest ``run_id`` per ``(product, group, time_min,
-    time_max)`` key and drops the others.  ``run_id`` values are
-    UUID/timestamp strings, so lexicographic comparison is deterministic.
+    the span whose owning run has the highest ``started_at`` per
+    ``(product, group, time_min, time_max)`` key and drops the others.
+    The most recently started run wins, matching the temporal semantics of
+    force-reingest replacement.
+
+    ``run_started_at_by_id`` is a ``(product, run_id) -> started_at`` lookup
+    supplied by the caller. When absent (or when a run_id is missing from the
+    map), ``started_at`` defaults to ``0.0``. Ties on ``started_at`` fall back
+    to ``run_id`` lexicographic ordering for determinism — never for temporal
+    correctness.
 
     Non-span chunks and spans whose status is not ``"active"`` pass through
     unchanged.  Active spans missing any of ``group``/``time_min``/
     ``time_max`` in their meta also pass through (they cannot be grouped
     into a slice key).
     """
-    winners: dict[tuple[str, Any, Any, Any], str] = {}
+    lookup = run_started_at_by_id or {}
+    winners: dict[tuple[str, Any, Any, Any], tuple[float, str]] = {}
     for chunk in chunks:
         if chunk.chunk_type != "span" or chunk.status != "active":
             continue
@@ -121,8 +154,11 @@ def _dedupe_active_spans(chunks: list[ChunkInfo]) -> list[ChunkInfo]:
         if key is None:
             continue
         run_id = str(meta.get("run_id", ""))
-        if winners.get(key, "") < run_id:
-            winners[key] = run_id
+        started_at = float(lookup.get((chunk.product, run_id), 0.0))
+        candidate = (started_at, run_id)
+        current = winners.get(key)
+        if current is None or current < candidate:
+            winners[key] = candidate
 
     deduped: list[ChunkInfo] = []
     for chunk in chunks:
@@ -134,7 +170,9 @@ def _dedupe_active_spans(chunks: list[ChunkInfo]) -> list[ChunkInfo]:
         if key is None:
             deduped.append(chunk)
             continue
-        if winners.get(key) == str(meta.get("run_id", "")):
+        run_id = str(meta.get("run_id", ""))
+        started_at = float(lookup.get((chunk.product, run_id), 0.0))
+        if winners.get(key) == (started_at, run_id):
             deduped.append(chunk)
     return deduped
 
@@ -522,11 +560,17 @@ class ChunkManager:
         ``replacement_committed`` lands).  To prevent double coverage in
         callers, this method deduplicates active spans by
         ``(product, group, time_min, time_max)``: when multiple active spans
-        share the same slice key, only the span with the highest ``run_id``
-        (lexicographic order — UUID/timestamp run_ids make this
-        deterministic) is returned.  Non-span records and
-        ``replaced``/``failed`` spans pass through unchanged, so this is a
-        no-op outside the force-reingest in-flight window.
+        share the same slice key, only the span whose owning run has the
+        highest ``started_at`` is returned (most-recently-started run wins).
+        Non-span records and ``replaced``/``failed`` spans pass through
+        unchanged, so this is a no-op outside the force-reingest in-flight
+        window.
+
+        A private in-tree caller (the replacement recorder in
+        ``firecube.ingestor.runtime.recording``) reaches through
+        ``self.repo.list_chunks(...)`` to see EVERY active span rather
+        than the dedupe winner; that bypass is intentional and marked at
+        its call site.
         """
         chunks = self.repo.list_chunks(
             pattern=pattern,
@@ -542,13 +586,56 @@ class ChunkManager:
             time_overlaps=time_overlaps,
             filter_fn=filter_fn,
         )
-        return _dedupe_active_spans(chunks)
+        run_started_at_by_id = (
+            self._build_run_started_at_lookup(chunks)
+            if _has_active_span_slice_collision(chunks)
+            else None
+        )
+        return _dedupe_active_spans(chunks, run_started_at_by_id=run_started_at_by_id)
+
+    def _build_run_started_at_lookup(self, chunks: list[ChunkInfo]) -> dict[tuple[str, str], float]:
+        """Return ``(product, run_id) -> started_at`` for products with active spans.
+
+        Only products that appear in an active span are queried, so the
+        common case (no active-span duplicates) pays at most one
+        ``list_runs`` call per distinct product in the result set. Callers
+        outside the dedupe path should not use this helper.
+
+        Emits a ``DEBUG`` log line on every invocation so operators (and
+        tests) can observe the run-started lookup miss on the ``list_chunks``
+        hot path without patching the method itself. Line count == number of
+        WAL reads triggered by the dedupe path.
+        """
+        products_with_active_spans = {
+            chunk.product
+            for chunk in chunks
+            if chunk.chunk_type == "span" and chunk.status == "active"
+        }
+        log.debug(
+            "run-started cache miss: reading WAL for run_started_at lookup across %d product(s) with active-span slice collision",
+            len(products_with_active_spans),
+        )
+        lookup: dict[tuple[str, str], float] = {}
+        for prod in products_with_active_spans:
+            for run in self.list_runs(product=prod):
+                lookup[(prod, run.run_id)] = run.started_at
+        return lookup
 
     def mark_chunks_replaced(
-        self, chunk_keys: list[str], product: str, timestamp: float
+        self,
+        chunk_keys: list[str],
+        product: str,
+        timestamp: float,
+        *,
+        meta_updates_by_key: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Mark chunk records as replaced with a timestamp."""
-        return self.repo.mark_chunks_replaced(chunk_keys, product, timestamp)
+        return self.repo.mark_chunks_replaced(
+            chunk_keys,
+            product,
+            timestamp,
+            meta_updates_by_key=meta_updates_by_key,
+        )
 
     def list_runs(
         self,
@@ -557,7 +644,11 @@ class ChunkManager:
         status: str | None = None,
         non_terminal: bool = False,
     ) -> list[RunInfo]:
-        """List runs for a product with optional status/terminal filtering."""
+        """List runs for a product with optional status/terminal filtering.
+
+        ``RunInfo.timestamps_skipped`` is read from the projected run entry
+        (``run.json``) and does not require scanning the run WAL.
+        """
         return self.repo.list_runs(product=product, status=status, non_terminal=non_terminal)
 
     def claim_coord_materialization_window(
@@ -737,6 +828,7 @@ class ChunkManager:
         *,
         meta: dict[str, Any] | None = None,
         filter_fn: Callable[[ChunkInfo], bool] | None = None,
+        time_overlaps: tuple[str, str] | None = None,
     ) -> DeletionPlan:
         """Build a deletion plan for chunks matching the given criteria."""
         return self.deletion_engine.create_deletion_plan(
@@ -749,6 +841,7 @@ class ChunkManager:
             include_metadata,
             meta=meta,
             filter_fn=filter_fn,
+            time_overlaps=time_overlaps,
         )
 
     def execute_deletion(
@@ -774,15 +867,22 @@ class ChunkManager:
         *,
         dry_run: bool = False,
         force: bool = False,
+        yes_i_really_mean_it: bool = False,
         update_manifest: bool = True,
         update_state: bool = True,
         time_dim_name: str | None = None,
     ) -> dict[str, Any]:
-        """Delete specific span records with optional dry-run and manifest updates."""
+        """Delete specific span records with optional dry-run and manifest updates.
+
+        ``yes_i_really_mean_it`` acknowledges the collateral-span guard that
+        blocks force-deletion when other active spans share the same physical
+        chunk keys. See :meth:`DeletionEngine.delete_spans`.
+        """
         return self.deletion_engine.delete_spans(
             spans,
             dry_run=dry_run,
             force=force,
+            yes_i_really_mean_it=yes_i_really_mean_it,
             update_manifest=update_manifest,
             update_state=update_state,
             time_dim_name=time_dim_name,

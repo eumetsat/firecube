@@ -78,6 +78,18 @@ def _bare(cls: type[Any]) -> Any:
     return cast(Any, object.__new__(cls))
 
 
+def _find_in_exception_chain(exc: BaseException | None, target_type: type) -> BaseException | None:
+    """Return the first exception in exc's ``__context__``/``__cause__`` chain matching target_type."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, target_type):
+            return current
+        current = current.__cause__ or current.__context__
+    return None
+
+
 def test_deterministic_ordering_produces_byte_identical_identity_hash() -> None:
     """Safety contract 1: identical source state MUST produce byte-identical identity_hash.
 
@@ -162,12 +174,20 @@ def test_freeze_then_late_arrival_refuses_via_identity_hash_mismatch(
 
     second_result = CliRunner().invoke(cli, base_args)
     assert second_result.exit_code != 0, second_result.output
-    assert isinstance(second_result.exception, ResolvedIndexConflictError)
-    failure_text = f"{type(second_result.exception).__name__}: {second_result.exception}"
+    # A10 wraps FirecubeError subclasses in ClickException at the CLI boundary,
+    # so ResolvedIndexConflictError is now nested under SystemExit -> ClickException
+    # in the exception chain rather than being the direct exception.
+    conflict = _find_in_exception_chain(second_result.exception, ResolvedIndexConflictError)
+    assert conflict is not None, (
+        f"expected ResolvedIndexConflictError in exception chain; "
+        f"got {type(second_result.exception).__name__}: {second_result.exception!r}\n"
+        f"output: {second_result.output}"
+    )
+    failure_text = second_result.output
     assert (
-        "ResolvedIndexConflictError" in failure_text
-        or "identity" in failure_text.lower()
+        "identity" in failure_text.lower()
         or "conflict" in failure_text.lower()
+        or "incompatible resolved index" in failure_text.lower()
     ), failure_text
     assert current_json.read_bytes() == first_bytes
 

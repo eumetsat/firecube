@@ -76,8 +76,8 @@ assertion-light mock tests.
    `slow`-marked regression that proves the max simultaneously-live payload
    count is bounded by the intended contract, using a synthetic plugin that
    emits multiple large data-bearing intents. Absolute RSS/memray evidence
-   belongs in a performance lane, not the default behavioral gate. For MTG FCI
-   FDHSI, the current retention floor is ~14.8 GiB/worker; any lazy-payload
+   belongs in a performance lane, not the default behavioral gate. For the largest
+   per-slot payloads measured, the current retention floor is ~14.8 GiB/worker; any lazy-payload
    change must bring this measurably below that floor.
 
 5. CoverageTracker sub-slot granularity for future sub-batching designs.

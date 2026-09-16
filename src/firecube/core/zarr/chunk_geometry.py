@@ -128,6 +128,26 @@ def chunk_axis_range(start: int, stop: int, chunk_size: int) -> range:
     return range(start // chunk_size, ((stop - 1) // chunk_size) + 1)
 
 
+def chunk_index_to_region(
+    chunk_idx: tuple[int, ...],
+    chunk_shape: tuple[int, ...],
+    array_shape: tuple[int, ...],
+) -> tuple[slice, ...]:
+    """Return the slice tuple for a chunk index, clamping the last chunk to array_shape.
+
+    Sits alongside ``chunk_axis_range`` (element-selection → chunk-index range) and
+    ``physical_chunk_keys_for_region`` (region-selection → physical chunk keys); this
+    one goes the other direction: chunk-index → element region.
+    """
+    return tuple(
+        slice(
+            chunk_idx[i] * chunk_shape[i],
+            min((chunk_idx[i] + 1) * chunk_shape[i], array_shape[i]),
+        )
+        for i in range(len(chunk_idx))
+    )
+
+
 def axis_selection_is_chunk_aligned(
     start: int,
     stop: int,
@@ -162,5 +182,6 @@ def axis_selection_is_chunk_aligned(
 __all__ = [
     "axis_selection_is_chunk_aligned",
     "chunk_axis_range",
+    "chunk_index_to_region",
     "physical_chunk_keys_for_region",
 ]

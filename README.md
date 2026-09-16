@@ -22,8 +22,9 @@ an isolated environment:
 mkdir firecube-quickstart
 cd firecube-quickstart
 uv venv --python 3.12
+source .venv/bin/activate
 uv pip install firecube
-uv run firecube --version
+firecube --version
 ```
 
 See the [Installation guide](docs/quickstart/installation.md) for the user
@@ -36,9 +37,9 @@ Install an external plugin using the package name or local checkout documented
 by that plugin:
 
 ```bash
-uv run firecube plugins install <plugin-package>
-uv run firecube plugins list
-uv run firecube plugins describe <plugin>
+firecube plugins install <plugin-package>
+firecube plugins list
+firecube plugins describe <plugin>
 ```
 
 Then follow the plugin documentation for its source data and options. Ingestion
@@ -46,7 +47,7 @@ requires a target and write mode, plus a product name from the command or plugin
 class. This example also spells out the storage and output choices:
 
 ```bash
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data ./source-data \
   --target "file://${PWD}/my_product.zarr" \
   --product-name my_product \
@@ -58,7 +59,7 @@ uv run firecube ingest <plugin> \
 
 ```bash
 # use another supported storage driver explicitly
-uv run firecube ingest <plugin> \
+firecube ingest <plugin> \
   --input-data ./source-data \
   --target "file://${PWD}/my_product.zarr" \
   --product-name my_product \
@@ -121,11 +122,11 @@ available as optional runtime extras:
 
 | dependency | version | license | copyright | home_url | comments |
 | --- | --- | --- | --- | --- | --- |
-| `duckdb` | 1.5.4 | MIT |  | https://github.com/duckdb/duckdb-python | Direct dependency. |
-| `pandas` | 3.0.3 | BSD-3-Clause |  | https://pandas.pydata.org | Direct dependency. |
-| `numpy` | 2.5.0 | BSD-3-Clause |  | https://numpy.org | Direct dependency. |
-| `pyarrow` | 24.0.0 | Apache-2.0 |  | https://arrow.apache.org/ | Direct dependency. |
-| `xarray` | 2026.4.0 | Apache-2.0 |  | https://xarray.dev/ | Direct dependency. |
+| `duckdb` | 1.5.5 | MIT |  | https://github.com/duckdb/duckdb-python | Direct dependency. |
+| `pandas` | 3.0.5 | BSD-3-Clause |  | https://pandas.pydata.org | Direct dependency. |
+| `numpy` | 2.5.0 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 |  | https://numpy.org | Direct dependency; the additional licences cover components bundled in the numpy distribution. |
+| `pyarrow` | 25.0.1 | Apache-2.0 |  | https://arrow.apache.org/ | Direct dependency. |
+| `xarray` | 2026.7.0 | Apache-2.0 |  | https://xarray.dev/ | Direct dependency. |
 | `zarr` | 3.2.1 | MIT |  | https://github.com/zarr-developers/zarr-python | Direct dependency. |
 | `psutil` | 7.2.2 | BSD-3-Clause |  | https://github.com/giampaolo/psutil | Direct dependency. |
 | `fsspec` | 2026.6.0 | BSD-3-Clause |  | https://github.com/fsspec/filesystem_spec | Direct dependency. |
@@ -135,15 +136,17 @@ available as optional runtime extras:
 | `h5netcdf` | 1.8.1 | BSD-3-Clause |  | https://h5netcdf.org | Direct dependency. |
 | `h5py` | 3.16.0 | BSD-3-Clause |  | https://www.h5py.org/ | Direct dependency. |
 | `dask` | 2026.6.0 | BSD-3-Clause |  | https://github.com/dask/dask/ | Direct dependency. |
-| `prometheus-client` | 0.25.0 | Apache-2.0 |  | https://github.com/prometheus/client_python | Direct dependency. |
+| `prometheus-client` | 0.26.0 | Apache-2.0 AND BSD-2-Clause |  | https://github.com/prometheus/client_python | Direct dependency. |
 | `opentelemetry-sdk` | 1.44.0 | Apache-2.0 |  | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-sdk | Direct dependency. |
 | `opentelemetry-exporter-otlp` | 1.44.0 | Apache-2.0 |  | https://github.com/open-telemetry/opentelemetry-python/tree/main/exporter/opentelemetry-exporter-otlp | Direct dependency. |
 | `click` | 8.4.2 | BSD-3-Clause |  | https://github.com/pallets/click | Direct dependency. |
+| `packaging` | 26.2 | Apache-2.0 OR BSD-2-Clause |  | https://github.com/pypa/packaging | Direct dependency; dual-licensed, either licence may be used. |
 | `obstore` | 0.11.0 | MIT |  | https://developmentseed.org/obstore | Direct optional `obstore` extra dependency. |
 | `tensogram` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
 | `tensogram-xarray` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
 | `tensogram-zarr` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
 | `healpix-geo` | 0.2.1 | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `healpix` extra dependency. |
+| `trollsift` | 1.0.1 | Apache-2.0 |  | https://pypi.org/project/trollsift/ | Direct optional `patterns` extra dependency. |
 | `virtualizarr` | 2.7.1 | Apache-2.0 |  | https://github.com/zarr-developers/VirtualiZarr | Direct optional `virtualzarr` extra dependency. |
 
 ### Direct Build, Edit, And Test Dependencies
@@ -154,6 +157,7 @@ documentation, or testing:
 | dependency | version | sw type | license | copyright | home_url | comments |
 | --- | --- | --- | --- | --- | --- | --- |
 | `hatchling` | 1.32.0 | Development tools | MIT |  | https://hatch.pypa.io/latest/ | Build backend dependency. |
+| `trollsift` | 1.0.1 | Development tools | Apache-2.0 |  | https://pypi.org/project/trollsift/ | Direct optional `test` extra dependency. |
 | `tensogram` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `tensogram-xarray` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `tensogram-zarr` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
@@ -162,7 +166,7 @@ documentation, or testing:
 | `moto` | 5.2.2 | Development tools | Apache-2.0 |  | https://github.com/getmoto/moto | Direct optional `test` extra dependency. |
 | `griffelib` | 2.1.0 | Development tools | ISC |  | https://pypi.org/project/griffelib/ | Direct optional `test` extra dependency; static docstring inspection for the API docs coverage test. |
 | `pytest` | 9.1.1 | Development tools | MIT |  | https://docs.pytest.org/en/latest/ | Direct `dev` dependency group entry. |
-| `ruff` | 0.15.20 | Development tools | MIT |  | https://docs.astral.sh/ruff | Direct `dev` dependency group entry. |
+| `ruff` | 0.16.5 | Development tools | MIT |  | https://docs.astral.sh/ruff | Direct `dev` dependency group entry. |
 | `pytest-cov` | 7.1.0 | Development tools | MIT |  | https://pytest-cov.readthedocs.io/en/latest/changelog.html | Direct `dev` dependency group entry. |
 | `pytest-xdist` | 3.8.0 | Development tools | MIT |  | https://github.com/pytest-dev/pytest-xdist | Direct `dev` dependency group entry. |
 | `pytest-mock` | 3.15.1 | Development tools | MIT |  | https://github.com/pytest-dev/pytest-mock/ | Direct `dev` dependency group entry. |
@@ -176,6 +180,7 @@ documentation, or testing:
 | `mkdocs-click` | 0.9.0 | Development tools | Apache-2.0 |  | https://github.com/mkdocs/mkdocs-click | Direct `docs` dependency group entry. |
 | `mkdocs-macros-plugin` | 1.5.0 | Development tools | MIT |  | https://github.com/fralau/mkdocs_macros_plugin | Direct `docs` dependency group entry. |
 | `mike` | 2.2.0 | Development tools | BSD-3-Clause |  | https://github.com/jimporter/mike | Direct `docs` dependency group entry. |
+| `mkdocs-jupyter` | 0.26.3 | Development tools | Apache-2.0 |  | https://github.com/danielfrg/mkdocs-jupyter | Direct `docs` dependency group entry. |
 
 
 ## Copyright and License

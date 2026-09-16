@@ -218,7 +218,7 @@ behavioral lane.
 
 - Rename generic control-plane test data away from historical product names when
   the name is not part of the contract.
-- Delete empty or misleading plugin/msg test scaffolding that no longer maps to
+- Delete empty or misleading product-specific plugin test scaffolding that no longer maps to
   an installed fixture plugin.
 - Refresh `tests/README.md` whenever test tree structure changes.
 

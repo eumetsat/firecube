@@ -22,7 +22,6 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from firecube.ingestor.errors import ResumeConflictError
 from firecube.ingestor.runtime.zarr.append_services import (
     AppendResumeService,
     AppendTimestampState,
@@ -80,6 +79,7 @@ def _svc(store_uri=None, resume_existing=False, chunk_shape=None, shard_shape=No
         shard_shape=shard_shape,
         sharding=False,
         logger=logging.getLogger("test"),
+        state_var_name="firecube_timestamp_state",
     )
 
 
@@ -104,7 +104,6 @@ class TestPrepareWriteNewGroup:
         assert result is True
         assert svc.mode == "w"
         assert svc.write_cursor == 0
-        assert svc.preexisting_values == frozenset()
 
     def test_new_group_infers_chunk_len_from_chunk_shape(self, tmp_path):
         store = str(tmp_path / "chunk.zarr")
@@ -196,7 +195,7 @@ class TestPrepareWriteExistingGroup:
 
 @pytest.mark.unit
 class TestOverlapDetection:
-    def test_overlap_raises_resume_conflict(self, tmp_path):
+    def test_overlap_no_longer_raises_under_state_aware_skip(self, tmp_path):
         store_path = tmp_path / "overlap.zarr"
         _write_initial_store(store_path, "G1", 4)
         store = str(store_path)
@@ -207,15 +206,18 @@ class TestOverlapDetection:
         ts_state = AppendTimestampState("firecube_timestamp_state", time_dim_name="timestamp")
         ds = ts_state.attach(ds, append_dim="timestamp")
 
-        with pytest.raises(ResumeConflictError, match="overlapping resume append"):
-            svc.prepare_write(
-                ds=ds,
-                group="G1",
-                store=store,
-                write_target_uri=store,
-                arrays_for_group=None,
-                ts_state=ts_state,
-            )
+        result = svc.prepare_write(
+            ds=ds,
+            group="G1",
+            store=store,
+            write_target_uri=store,
+            arrays_for_group=None,
+            ts_state=ts_state,
+        )
+
+        assert result is True
+        assert svc.mode == "a"
+        assert svc.write_cursor == 4
 
 
 @pytest.mark.unit

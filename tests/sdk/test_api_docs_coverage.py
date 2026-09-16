@@ -111,6 +111,7 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "SlotAxis": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",
         "SlotIndexModel": "byte-parity legacy; use IndexSpec + RegularTimeAxis; older docs versions cover this surface",
         "decode_time_array": "archive integration helper",
+        "encode_time_array": "archive integration helper",
         "describe_control_plane": "control-plane inspection helper",
         "ensure_product_uri": "engine URI helper",
         "read_chunk_grid_with_shards": "engine chunk-grid helper",

@@ -198,6 +198,7 @@ def test_delete_spans_no_bypass(tmp_path: Path) -> None:
         size=0,
         timestamp=1.0,
         manifest_path=base_uri.join(product).join(".firecube").to_str(),
+        meta={"group": "data"},
         record={
             "span": {
                 "arrays": ["data/counts"],

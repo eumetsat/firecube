@@ -47,6 +47,11 @@ class _IdentityRef:
 class BatchResourceRegistry:
     """Track closeable resources by batch and close each batch idempotently.
 
+    Callers own registration and teardown; the engine does not automatically
+    manage registry instances. Register an ``ExitStack`` to close readers
+    before removing their temporary directories. Resources must expose
+    ``close()``; a ``TemporaryDirectory`` alone does not meet that contract.
+
     The registry is intentionally small: plugin mixins may register per-batch
     resources during ``batch_setup`` and ask the registry to close everything
     for the same batch id during ``batch_teardown``. Teardown pops the batch
@@ -56,16 +61,32 @@ class BatchResourceRegistry:
     Examples:
         Register and close a per-batch resource:
 
-            >>> class Resource:
-            ...     def __init__(self):
-            ...         self.closed = False
-            ...     def close(self):
-            ...         self.closed = True
-            >>> registry = BatchResourceRegistry()
-            >>> resource = registry.register("batch-1", Resource())
-            >>> registry.teardown("batch-1")
-            >>> resource.closed
-            True
+            class Resource:
+                def __init__(self):
+                    self.closed = False
+                def close(self):
+                    self.closed = True
+
+            registry = BatchResourceRegistry()
+            resource = registry.register("batch-1", Resource())
+            registry.teardown("batch-1")
+            assert resource.closed
+
+        Register a context stack when readers must close before their scratch
+        directory is removed. The stack unwinds in reverse entry order:
+
+            from contextlib import ExitStack
+            from pathlib import Path
+            from tempfile import TemporaryDirectory
+
+            registry = BatchResourceRegistry()
+            stack = registry.register("batch-1", ExitStack())
+            try:
+                scratch = Path(stack.enter_context(TemporaryDirectory()))
+                handle = stack.enter_context((scratch / "data.bin").open("w+b"))
+                handle.write(b"measurement")
+            finally:
+                registry.teardown("batch-1")
     """
 
     def __init__(self) -> None:

@@ -67,7 +67,7 @@ def _make_ctx(tmp_path: Path):
         tmp_path,
         source=str(tmp_path / "source"),
         product="serial_unbounded_axis.zarr",
-        options={"write_mode": "direct"},
+        options={"write_mode": "direct", "allow_empty_source": True},
     )
 
 
@@ -76,7 +76,10 @@ def test_base_run_serial_unbounded_axis_accepts(tmp_path: Path) -> None:
     ingestor = _SerialUnboundedAxisIngestor(name="serial_unbounded_axis")
     ingestor._configurator = SimpleNamespace(  # type: ignore[assignment]
         configure=lambda runtime_ctx: (
-            EngineConfig(write_mode="direct"),  # NO slot_start/slot_end → serial
+            EngineConfig(
+                write_mode="direct",
+                allow_empty_source=True,
+            ),  # NO slot_start/slot_end → serial
             None,
             None,
         )

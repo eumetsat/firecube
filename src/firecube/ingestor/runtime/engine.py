@@ -46,6 +46,7 @@ from firecube.core.controlplane.repo import describe_control_plane
 from firecube.core.observability import attach_context, capture_context, detach_context
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.contracts.interfaces import PipelineHost
+from firecube.ingestor.runtime._metrics_helpers import _extract_timestamps_skipped
 from firecube.ingestor.runtime.aggregation import normalize_plugin_aggregate_metrics
 from firecube.ingestor.runtime.index_binding import (
     filter_items_by_index,
@@ -60,7 +61,7 @@ from firecube.ingestor.types.context import (
     PluginContext,
     RuntimeIngestContext,
 )
-from firecube.ingestor.types.result_metrics import OutputPaths
+from firecube.ingestor.types.result_metrics import OutputPaths, StorageMetrics
 
 if TYPE_CHECKING:
     from firecube.core.storage.session import StorageSession
@@ -69,6 +70,25 @@ if TYPE_CHECKING:
 
 class PipelineFailedBatchesError(RuntimeError):
     """Raised when finalization observes failed batch results."""
+
+
+def _failed_batches_message(
+    *, run_id: str, failed: list[PipelineResult], not_attempted: int
+) -> str:
+    """Compose a failure message without promising that retry bypasses validation."""
+    err_summary = "; ".join((res.error or "unknown").rstrip(". ") for res in failed[:3])
+    message = f"Pipeline run {run_id!r} had {len(failed)} failed batch(es): {err_summary}. "
+    if not_attempted:
+        message += (
+            f"{not_attempted} later batch(es) were not attempted: this host stops at the "
+            "first failed batch so no batch appends past a gap. "
+        )
+    return message + (
+        "Run recorded as status=failed. Recovery: resolve the batch error above before retrying. "
+        "For compatible Zarr inputs, --option resume_existing=true skips present timestamps "
+        "and refills failed slots; --option force_reingest=true overwrites existing timestamps. "
+        "Neither option can insert absent timestamps before the stored maximum or bypass schema validation."
+    )
 
 
 def _output_session(ctx: RuntimeIngestContext) -> StorageSession | None:
@@ -88,6 +108,12 @@ def _storage_completer() -> Any:
     return cast(Any, module).StorageCompleter()
 
 
+def _total_timestamps_skipped(state: PipelineRunState) -> int:
+    return sum(
+        _extract_timestamps_skipped(result.metrics) for result in state.results if result.success
+    )
+
+
 @dataclass(slots=True)
 class _PipelineRunAccumulator:
     """Main-thread-owned mutable accumulator for run progress."""
@@ -100,6 +126,7 @@ class _PipelineRunAccumulator:
     batch_creation_duration: float
     processing_start_time: float
     results: list[PipelineResult] = field(default_factory=list)
+    not_attempted: list[PipelineBatch] = field(default_factory=list)
     total_rows_processed: int = 0
     hook_failures: int = 0
     cpu_time_total: float = 0.0
@@ -112,6 +139,10 @@ class _PipelineRunAccumulator:
         self.total_rows_processed += rows_processed
         self.cpu_time_total += cpu_time_total
         self.io_time_total += io_time_total
+
+    def mark_not_attempted(self, batch: PipelineBatch) -> None:
+        """Record a batch the run halted before attempting."""
+        self.not_attempted.append(batch)
 
     def add_hook_failure(self) -> None:
         """Record a non-fatal lifecycle hook failure."""
@@ -147,6 +178,7 @@ class _PipelineRunAccumulator:
             hook_failures=self.hook_failures,
             cpu_time_total=self.cpu_time_total if cpu_time_total is None else cpu_time_total,
             io_time_total=self.io_time_total if io_time_total is None else io_time_total,
+            batches_not_attempted=tuple(self.not_attempted),
         )
 
 
@@ -192,6 +224,18 @@ def _process_batch_timed(
     result.cpu_time_s = cpu_time_s
     result.io_time_s = io_time_s
     return result
+
+
+def _log_halt(
+    ingestor: PipelineHost, product: str, failed_batch: PipelineBatch, not_attempted: int
+) -> None:
+    ingestor._log.warning(
+        "Pipeline halted product=%s after failed batch %s: %d pending batch(es) not attempted "
+        "(host stops at the first failed batch so no batch lands past a gap).",
+        product,
+        failed_batch.batch_id,
+        not_attempted,
+    )
 
 
 def run_sequential(
@@ -252,6 +296,10 @@ class PipelineRunner:
     - ``on_batch_success`` failures are treated as bookkeeping errors:
       logged and counted, while preserving successful ingest results.
     - Emit coarse progress logs unless the caller passes ``no_progress=true``.
+    - Honour ``host.stop_on_batch_failure``: after the first failed batch the
+      remaining batches are not attempted (pending futures are cancelled,
+      running ones return ``attempted=False`` from the host's closed gate)
+      and are reported in ``PipelineRunState.batches_not_attempted``.
     """
 
     @staticmethod
@@ -262,9 +310,20 @@ class PipelineRunner:
         accumulator: _PipelineRunAccumulator,
         batch: PipelineBatch,
         result: PipelineResult,
-    ) -> None:
+    ) -> bool:
+        """Record one result, drive the batch hooks, and report whether to halt.
+
+        A result with ``attempted=False`` (the host refused the batch after an
+        earlier failure) is recorded as not attempted and reaches neither
+        hook. Returns ``True`` when the run must stop attempting further
+        batches: the batch did not succeed and the host is fail-stop.
+        """
         if ctx.telemetry:
             ctx.telemetry.collect_memory_stats()
+
+        if not result.attempted:
+            accumulator.mark_not_attempted(batch)
+            return True
 
         accumulator.add_result(result)
         state = accumulator.snapshot()
@@ -279,11 +338,13 @@ class PipelineRunner:
                     exc,
                 )
                 accumulator.add_hook_failure()
-        else:
-            try:
-                ingestor.on_batch_failure(ctx=ctx, state=state, batch=batch, result=result)
-            except Exception as exc:
-                ingestor._log.error("on_batch_failure hook failed for %s: %s", batch.batch_id, exc)
+            return False
+
+        try:
+            ingestor.on_batch_failure(ctx=ctx, state=state, batch=batch, result=result)
+        except Exception as exc:
+            ingestor._log.error("on_batch_failure hook failed for %s: %s", batch.batch_id, exc)
+        return bool(getattr(ingestor, "stop_on_batch_failure", False))
 
     def run_state(
         self,
@@ -329,14 +390,14 @@ class PipelineRunner:
         completed_batches = 0
 
         if execution_mode == "sequential":
-            for batch in batches_list:
+            for position, batch in enumerate(batches_list):
                 result = _process_batch_timed(
                     ingestor,
                     batch,
                     plugin_ctx,
                     _zarr_pre_batch_hook(ingestor, plugin_ctx),
                 )
-                self._handle_completed_batch(
+                halt = self._handle_completed_batch(
                     ingestor=ingestor,
                     ctx=plugin_ctx,
                     accumulator=accumulator,
@@ -354,6 +415,12 @@ class PipelineRunner:
                         completed_batches,
                         len(batches_list),
                     )
+                if halt:
+                    remaining = batches_list[position + 1 :]
+                    for skipped in remaining:
+                        accumulator.mark_not_attempted(skipped)
+                    _log_halt(ingestor, product, batch, len(remaining))
+                    break
         else:
             # Create immutable context for workers
             worker_ctx = PluginContext(ctx)
@@ -374,7 +441,11 @@ class PipelineRunner:
                     for b in batches_list
                 }
 
+                halted = False
                 for future in concurrent.futures.as_completed(future_to_batch):
+                    if future.cancelled():
+                        # Cancelled on halt below; already marked not attempted.
+                        continue
                     batch = future_to_batch[future]
                     try:
                         result = future.result()
@@ -387,13 +458,24 @@ class PipelineRunner:
                             error=str(exc),
                         )
 
-                    self._handle_completed_batch(
+                    halt = self._handle_completed_batch(
                         ingestor=ingestor,
                         ctx=plugin_ctx,
                         accumulator=accumulator,
                         batch=batch,
                         result=result,
                     )
+                    if halt and not halted:
+                        halted = True
+                        # Pending futures never start; running ones finish on
+                        # their own (or are refused by the host's closed gate
+                        # and come back with attempted=False).
+                        cancelled = 0
+                        for pending_future, pending_batch in future_to_batch.items():
+                            if pending_future.cancel():
+                                accumulator.mark_not_attempted(pending_batch)
+                                cancelled += 1
+                        _log_halt(ingestor, product, batch, cancelled)
                     completed_batches += 1
                     if should_log_progress and (
                         completed_batches % progress_log_step == 0
@@ -532,7 +614,11 @@ def _create_batches_with_parallel_filter(
         #   fresh-managed GREEN gate is in test_preallocate_parallel_zero_loss.py.
         # The guard belongs on the preallocate side (claim_coord_materialization_window).
 
-        all_items = list(base_host.discover_source_files(plugin_ctx))
+        cached_items = base_host._discovered_source_files
+        if cached_items is None:
+            all_items = list(base_host.discover_source_files(plugin_ctx))
+        else:
+            all_items = list(cached_items)
         original_count = len(all_items)
 
         try:
@@ -573,25 +659,12 @@ def _create_batches_with_parallel_filter(
             )
             return []
 
-        from firecube.ingestor.runtime.batching import BatchPlanHost
-
-        # Wrapper overrides discover_source_files only; all other BatchPlanHost
-        # methods delegate to host via __getattr__.
-        class _FilteredSourceHost:
-            def __init__(self) -> None:
-                pass
-
-            def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
-                return iter(filtered_items)
-
-            def __getattr__(self, name: str) -> Any:
-                return getattr(host, name)
-
         batches = list(
             base_host._batch_planner.create_batches(
-                cast(BatchPlanHost, _FilteredSourceHost()),
+                host,
                 PluginContext(ctx),
                 batch_size,
+                items=filtered_items,
             )
         )
         verify = getattr(host, "_verify_existing_cube_batch_groups", None)
@@ -700,15 +773,18 @@ class PipelineExecutor:
                 logger=self._log,
                 plugin_name=host.name,
             )
-            merged_metrics["pipeline"] = derive_pipeline_summary(state, merged_metrics)
+            pipeline_summary = derive_pipeline_summary(state, merged_metrics)
+            pipeline_summary["timestamps_skipped"] = _total_timestamps_skipped(state)
+            merged_metrics["pipeline"] = pipeline_summary
 
-            failed = [res for res in state.results if not res.success]
+            failed = [res for res in state.results if res.attempted and not res.success]
             if failed:
-                err_summary = "; ".join(res.error or "unknown" for res in failed[:3])
                 raise PipelineFailedBatchesError(
-                    f"Pipeline had {len(failed)} failed batch(es): {err_summary}. "
-                    "Run recorded as status=failed. "
-                    "Recover: firecube chunks runs abandon <run-id>, then re-run."
+                    _failed_batches_message(
+                        run_id=ctx.run_id or "unknown",
+                        failed=failed,
+                        not_attempted=len(state.batches_not_attempted),
+                    )
                 )
 
             # Prefer remote path from results if any
@@ -805,13 +881,30 @@ class PipelineExecutor:
         result.storage_result = stored
         result.write_mode_applied = effective_write_mode
 
+        # Upload counters describe a staged copy into the final target. Direct
+        # runs never stage, whatever the locality, so the counters are null
+        # rather than a misleading zero (local) or a path_stats scan (S3).
+        # The same triple feeds the typed ``metrics.storage`` block and the
+        # top-level manifest keys so the two views cannot disagree; engine-
+        # seeded keys such as ``control_root``/``latest_pointer`` survive via
+        # the ``ResultMetrics._compat`` merge in ``to_dict``.
+        no_staged_upload = effective_write_mode == "direct"
+        files = None if no_staged_upload else stored.files_written
+        bytes_written = None if no_staged_upload else stored.bytes_written
+        duration_s = None if no_staged_upload else stored.duration_s
+        result.metrics.storage = StorageMetrics(
+            path=stored.path,
+            files=files,
+            bytes=bytes_written,
+            duration_s=duration_s,
+        )
         manifest = IngestManifest(
             plugin=plugin,
             output_format=result.output_format,
             stored_at=stored.path,
-            files=stored.files_written,
-            bytes=stored.bytes_written,
-            duration_s=stored.duration_s,
+            files=files,
+            bytes=bytes_written,
+            duration_s=duration_s,
             metrics=result.metrics.to_dict(),
             run_id=run_id,
             product=output_name,

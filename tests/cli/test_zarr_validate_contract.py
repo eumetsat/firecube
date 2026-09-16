@@ -75,7 +75,6 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any) -> None:
             expected_chunks={"dim0": 1},
             max_indices={"dim0": 0},
             extra_chunks=[],
-            missing_indices={},
             chunks_processed=1,
         )
 

@@ -26,6 +26,7 @@ from typing import Any, cast
 import click
 
 from firecube.cli._ctx import get_storage_config
+from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._product import require_full_uri, resolve_product_identity
 from firecube.cli._shared_options import (
     format_option,
@@ -163,6 +164,7 @@ Examples:
     default=None,
     help="Source input URI or path for AUTO discovery (optional).",
 )
+@input_filters_option
 @click.option(
     "--slot-size",
     "slot_size",
@@ -194,6 +196,7 @@ def slots(
     storage_driver: str,
     write_mode: str,
     input_data: str | None,
+    input_filters: list[str] | None,
     slot_size: int | None,
     no_resume: bool,
     output_format: str,
@@ -204,6 +207,8 @@ def slots(
     Read-only: does NOT mutate target storage or tracking state.
     JSON output is Argo withItems / Kubeflow ParallelFor compatible.
     """
+    input_filters = resolve_input_filters(ctx, plugin, input_filters)
+
     require_full_uri(target, option_name="--target")
     parsed = parse_product_uri(target)
     storage_type = apply_smart_default(parsed, storage_type)
@@ -250,6 +255,7 @@ def slots(
             ingestor,
             target=target,
             options=option,
+            input_filters=input_filters,
             source=input_data or "",
             run_id="zarr-slots",
         )

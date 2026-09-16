@@ -41,7 +41,7 @@ uv run pytest --strict-deps -m "docs_static or snapshot" -q --tb=short
 uv run pytest --strict-deps -q --tb=short -W error::DeprecationWarning
 ```
 
-The `--strict-deps` flag (registered in `tests/conftest.py`) causes pytest collection to **FAIL** with `pytest.UsageError` if any test-extra Python package is missing (`tensogram`, `obstore`, `moto`, or `healpix-geo`). This catches dependency drift at collection time instead of producing silent skips.
+The `--strict-deps` flag (registered in `tests/conftest.py`) causes pytest collection to **FAIL** with `pytest.UsageError` if any test-extra Python package is missing (`tensogram`, `obstore`, `moto`, `healpix-geo`, or `trollsift`). This catches dependency drift at collection time instead of producing silent skips.
 
 The first pytest command is the primary behavior gate for agentic workloads. The
 second command runs broad documentation/help/static drift checks separately so

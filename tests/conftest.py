@@ -58,6 +58,7 @@ def pytest_configure(config):
     if not config.getoption("--strict-deps", default=False):
         return
     required = {
+        "trollsift": "trollsift",
         "tensogram": "tensogram",
         "obstore": "obstore",
         "moto": "moto",
@@ -87,6 +88,7 @@ def pytest_sessionstart(session):
         "cli_test_plugin",
         "direct_zarr_capable_test_plugin",
         "direct_zarr_non_capable_test_plugin",
+        "e2e_zarr_test_plugin",
         "multi_group_capable_test_plugin",
         "cf_time_dim_test_plugin",
         "slot_shape_test_plugin",
@@ -97,6 +99,8 @@ def pytest_sessionstart(session):
         "regular_axis_test_plugin",
         "indexed_write_test_plugin",
         "mixed_bounded_unbounded_test_plugin",
+        "precip_daily_test_plugin",
+        "w14_single_discovery_plugin",
     )
     missing_plugins = []
 

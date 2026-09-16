@@ -43,6 +43,7 @@ def test_emitted_metric_names_stable() -> None:
         "firecube_pipeline_batch_size",
         "firecube_pipeline_batches_total",
         "firecube_pipeline_batches_failed_total",
+        "firecube_pipeline_batches_not_attempted_total",
         "firecube_pipeline_hook_failures_total",
         "firecube_files_processed_total",
         "firecube_bytes_ingested_total",

@@ -41,8 +41,15 @@ class _RecordingBatchPlanner:
         self.calls: list[dict[str, Any]] = []
         self.return_value: list[PipelineBatch] = []
 
-    def create_batches(self, host: Any, ctx: Any, batch_size: int) -> Any:
-        recorded_items = list(host.discover_source_files(ctx))
+    def create_batches(
+        self,
+        host: Any,
+        ctx: Any,
+        batch_size: int,
+        *,
+        items: Any = None,
+    ) -> Any:
+        recorded_items = list(items) if items is not None else list(host.discover_source_files(ctx))
         self.calls.append(
             {"host": host, "ctx": ctx, "batch_size": batch_size, "items": recorded_items}
         )

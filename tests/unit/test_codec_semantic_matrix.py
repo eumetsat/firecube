@@ -43,6 +43,7 @@ import zarr
 from zarr.abc.codec import BytesBytesCodec
 
 from firecube.core.config import StorageConfig
+from firecube.core.errors import ConfigurationError
 from firecube.core.filesystem.store_factory import create_zarr_store
 from firecube.core.zarr.region_writer import RegionZarrWriter
 from firecube.ingestor.runtime.zarr.write import (
@@ -153,7 +154,7 @@ def test_generic_true_declared_codecs(tmp_path) -> None:
 
 def test_generic_false_declared_codecs_raises() -> None:
     """Cell 4 (Generic): False + [blosc] → rejected at config construction."""
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         ZarrTemplateConfig(
             zarr_compression=False,
             zarr_codecs=[BLOSC_ENTRY],
@@ -227,7 +228,7 @@ def test_directzarr_true_declared_codecs(tmp_path) -> None:
 
 def test_directzarr_false_declared_codecs_raises() -> None:
     """Cell 4 (Direct): False + [blosc] → rejected at config construction (shared validator)."""
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         ZarrTemplateConfig(
             zarr_compression=False,
             zarr_codecs=[BLOSC_ENTRY],

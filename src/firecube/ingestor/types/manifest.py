@@ -34,9 +34,9 @@ class IngestManifest:
 
     # Storage Results
     stored_at: str
-    files: int
-    bytes: int
-    duration_s: float
+    files: int | None
+    bytes: int | None
+    duration_s: float | None
 
     # Schema Version (Must be after non-default fields)
     schema_version: Literal["v1"] = "v1"
@@ -49,5 +49,13 @@ class IngestManifest:
     product: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization, excluding None values."""
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        """Convert to dictionary for JSON serialization.
+
+        Upload counters are part of the v1 schema even when no upload happened;
+        direct local runs therefore serialize them as explicit JSON null values.
+        """
+        rendered = asdict(self)
+        for optional_key in ("run_id", "product"):
+            if rendered[optional_key] is None:
+                del rendered[optional_key]
+        return rendered

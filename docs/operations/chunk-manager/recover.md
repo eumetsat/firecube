@@ -1,6 +1,6 @@
 # Recover Runs And Claims
 
-Use this page when ingestion crashed, a pod was killed, or a writer left a
+Use this page when ingestion failed, a pod was killed, or a writer left a
 blocking claim behind.
 
 ## Set The Product
@@ -34,6 +34,9 @@ docs-started-run  started  active  1     1
 ```
 
 Confirm the original process is no longer active before abandoning the run.
+
+If the run is already `failed`, go to
+[Recover From A Failed Batch](#recover-from-a-failed-batch).
 
 ## Abandon A Stuck Run
 
@@ -145,7 +148,8 @@ No claims found.
 ## Resume Ingestion
 
 After the stuck run is abandoned and stale claims are cleared, rerun ingestion
-with resume enabled when that is the desired behavior:
+with `--option resume_existing=true` so the batches that already succeeded are
+kept:
 
 ```bash
 firecube ingest <plugin> \
@@ -159,6 +163,46 @@ firecube ingest <plugin> \
   --option resume_existing=true
 ```
 
+## Recover From A Failed Batch
+
+A run recorded as `failed` has already stopped and does not need to be
+abandoned. Read the ingestion error and fix its cause before retrying.
+
+For Zarr append ingestion with `--write-mode direct`, rerun the command in
+[Resume Ingestion](#resume-ingestion), keeping the original plugin settings and
+supplying all inputs needed to finish the run. With
+`--option resume_existing=true`, successfully written timestamps are kept,
+slots marked as failed are refilled, and new timestamps are appended.
+
+Use `--option force_reingest=true` instead when previously written timestamps
+also need replacement. Supply the corrected inputs for those timestamps;
+Firecube overwrites them in place.
+
+If a batch failed with `--write-mode staged`, rerun the original staged
+command with `--option force_reingest=true` and all required inputs. The failed
+run did not publish its staged data, so every batch must be written again.
+
+After the retry, verify the new run:
+
+```bash
+firecube chunks runs list \
+  --product-name "$PRODUCT_URI"
+```
+
+The new run should show `complete`. The earlier run remains `failed` in the
+history.
+
+Validate each affected Zarr group, replacing `data` with its group path:
+
+```bash
+firecube zarr validate \
+  --product "$PRODUCT_URI" \
+  --group data
+```
+
+Check that the JSON report has `is_valid: true` and the command exits 0. If it
+exits 1, resolve the reported validation issues before using the product.
+
 ## Failure Recovery
 
 | Symptom | Meaning | Recovery |
@@ -166,6 +210,9 @@ firecube ingest <plugin> \
 | `started` run blocks resume | Firecube cannot prove the old process is dead. | Verify the process is gone, then use `chunks runs abandon`. |
 | Claim remains after crash | The writer did not release its claim. | Verify no writer is active, then use `chunks claims clear`. |
 | Claim does not look stale | The heartbeat timestamp is still recent. | Use `--force` only if the writer is gone. |
+| Run ends with `status=failed` and "later batch(es) were not attempted" | Append ingestion stopped before processing all inputs. | Fix the reported error, then [recover the failed batch](#recover-from-a-failed-batch). |
+| Rerun refused: "spans from a failed run exist" | The retry needs an explicit choice about keeping earlier work. | Follow [Recover From A Failed Batch](#recover-from-a-failed-batch) for the original write mode. |
+| Append refuses an insertion | An incoming timestamp is absent from the target but earlier than its latest timestamp. | Rebuild a new target from all required inputs in chronological order. Resume, force-reingest, and span deletion cannot enable insertion into the existing time coordinate. |
 
 ## Next Steps
 

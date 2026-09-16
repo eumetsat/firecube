@@ -62,7 +62,7 @@ def resolve_manager(
         )
         manager = ChunkManager(binding=binding, workspace=base_workspace)
         ctx.call_on_close(manager.close)
-        log.info("Chunks using product URI target (product_uri=%s)", manager.base_uri)
+        log.debug("Chunks using product URI target (product_uri=%s)", manager.base_uri)
         return manager
 
     base_output = None
@@ -97,7 +97,7 @@ def resolve_manager(
     if storage_config is not None:
         config_identity = identity_from_storage_config(storage_config)
         bucket = config_identity.product_uri.authority if config_identity is not None else None
-        log.info(
+        log.debug(
             "Chunks using storage configuration (storage_type=%s, bucket=%s, base_uri=%s)",
             storage_config.storage_type,
             bucket,
@@ -111,7 +111,7 @@ def resolve_manager(
                 err=True,
             )
     else:
-        log.info("Chunks using product URI base (base_uri=%s)", manager.base_uri)
+        log.debug("Chunks using product URI base (base_uri=%s)", manager.base_uri)
 
     return manager
 

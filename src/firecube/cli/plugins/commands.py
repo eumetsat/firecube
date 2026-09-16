@@ -178,7 +178,13 @@ See also: firecube plugins install, firecube plugins describe
 )
 @click.option("--author", help="author name")
 @click.option("--email", help="author email")
-@click.option("--license", help="license type (e.g. MIT, Apache-2.0)")
+@click.option(
+    "--license",
+    help=(
+        "SPDX license identifier or expression (e.g. MIT, Apache-2.0, GPL-3.0-or-later); "
+        "other values are recorded as LicenseRef-<value>"
+    ),
+)
 @click.option(
     "--template",
     type=click.Choice(["zarr", "parquet", "base"]),
@@ -202,12 +208,21 @@ def create_plugin(
 ) -> None:
     """create a new plugin project structure"""
 
-    from firecube.ingestor.devtools.scaffolding import create_plugin_structure
+    from firecube.ingestor.devtools.scaffolding import (
+        create_plugin_structure,
+        validate_plugin_name,
+    )
+
+    def _plugin_name(value: str) -> str:
+        try:
+            return validate_plugin_name(value)
+        except ValueError as exc:
+            raise click.BadParameter(str(exc), param_hint="NAME") from exc
 
     # Interactive Wizard
     if not non_interactive:
         click.echo("Creating a new Firecube plugin.")
-        name = click.prompt("Plugin Name", default=name)
+        name = click.prompt("Plugin Name", default=name, value_proc=_plugin_name)
 
         if not author:
             author = click.prompt("Author Name", default="Firecube Developer")
@@ -227,6 +242,12 @@ def create_plugin(
                 default="xarray",
                 type=click.Choice(["xarray", "zarr-python"]),
             )
+
+    name = _plugin_name(name)
+    if write_strategy and template in ("parquet", "base"):
+        raise click.UsageError(
+            f"--write-strategy applies only to --template zarr, not --template {template}."
+        )
 
     # Apply defaults for non-interactive mode if flags weren't provided
     author = author or "Firecube Developer"
@@ -248,12 +269,18 @@ def create_plugin(
             license=license,
             template_type=resolved_template,
         )
-        click.echo(f"✨ Created plugin project: {project_path}")
-        click.echo("\nTo install for development:")
-        click.echo(f"  cd {project_path}")
-        click.echo("  uv sync")
     except Exception as exc:
         raise click.ClickException(str(exc)) from exc
+
+    ingestor_file = next((project_path / "src").glob("*/ingestor.py"))
+    click.echo(f"✨ Created plugin project: {project_path}")
+    click.echo("\nNext steps:")
+    click.echo(f"  cd {project_path}")
+    click.echo("  uv sync")
+    click.echo(f"  # implement the generated hook in {ingestor_file.relative_to(project_path)}")
+    click.echo("  # then follow README.md to test, install, and run an ingestion")
+    click.echo("\nTo install into an existing Firecube environment instead:")
+    click.echo(f"  firecube plugins install --editable {project_path}")
 
 
 plugins.add_command(install_plugin)

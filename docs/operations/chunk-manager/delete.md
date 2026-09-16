@@ -113,6 +113,20 @@ firecube chunks delete \
 timestamps. Use `chunks list --include-span` first when you need to confirm
 semantic coverage.
 
+To filter by the data time range covered by each span (rather than the record
+timestamp), use `--time-range` instead:
+
+```bash
+firecube chunks delete \
+  --product-name "$PRODUCT_URI" \
+  --time-range 2024-03-01:2024-03-02 \
+  --dry-run
+```
+
+`--time-range` deletes spans whose data-time window overlaps the given range.
+Use it when you know the data timestamps you want to remove but not the exact
+record timestamps stored in the ChunkManager.
+
 ## Delete Storage Chunks From Spans
 
 Use `delete-span` when you want batch/span-level deletion from Zarr storage.
@@ -160,7 +174,12 @@ firecube chunks delete-span \
 
 ## Reingest A Range
 
-Delete the range, then run ingestion again with `force_reingest`:
+Two approaches are available. Choose based on whether you need physical chunk
+removal or just data replacement.
+
+**Delete then reingest** — removes the physical Zarr chunks
+before writing replacement data. Use this when you want a clean slate or need
+to reclaim storage space.
 
 ```bash
 firecube chunks delete \
@@ -183,6 +202,28 @@ firecube ingest <plugin> \
   --write-mode direct \
   --option force_reingest=true
 ```
+
+**Reingest in place** — overwrites overlapping timestamps
+in-place (region overwrite) and appends any new tail timestamps. No separate
+delete step is required.
+
+```bash
+firecube ingest <plugin> \
+  --input-data ./replacement-data \
+  --target "$PRODUCT_URI" \
+  --product-name "$PRODUCT_NAME" \
+  --storage-type local \
+  --storage-driver fsspec \
+  --output-format zarr \
+  --write-mode direct \
+  --option force_reingest=true
+```
+
+Reingesting in place refuses insert attempts (timestamps that would land in the middle of
+existing data), incoming or existing duplicates, and NaT values. State=2
+(deleted) and state=3 (failed_batch) slots are refilled. Delete first when you
+need physical chunk removal or when the replacement data does not align with the
+existing coordinate range.
 
 Rebuild the snapshot after a large cleanup or reingest:
 

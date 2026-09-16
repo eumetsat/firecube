@@ -5,14 +5,15 @@ data into a product. Most plugins contain the product-specific reading and data
 shaping, while a Firecube template provides source discovery, batching,
 standard storage writes, run tracking, and recovery around that code.
 
-This guide assumes Firecube is already installed. See
+This guide assumes Firecube is installed and its environment is activated
+with `source .venv/bin/activate`. See
 [Installation](../../quickstart/installation.md) if you still need to set up
 an environment.
 
 Want a complete worked example instead? The
-[Quickstart](../../quickstart/index.md) creates and runs a local NetCDF-to-Zarr
-plugin. The [NetCDF To Zarr](../../tutorials/weather-netcdf.md) tutorial then
-explains its conversion contract and verifies the stored values.
+[Quickstart](../../quickstart/index.md) runs an installed NetCDF-to-Zarr
+plugin. [Showcase](../../showcase/index.md) has notebooks for incremental
+ingestion, real-world datasets, and parallel benchmarks.
 
 ## How Template Plugins Work
 
@@ -30,13 +31,15 @@ product.
 
 | Product contract | Start with | Your plugin supplies |
 |---|---|---|
-| Complete, ordered multidimensional datasets | [`GenericZarrIngestor` (Append)](generic-zarr.md) ([concept](../../concepts/output-formats/zarr/generic-append.md)) | One `xarray.Dataset` for each group and batch; Firecube serializes appends to a group |
-| Tables or data frames | [`GenericParquetIngestor` (Tabular)](generic-parquet.md) ([concept](../../concepts/output-formats/parquet.md)) | One table or data frame for each group and batch |
-| Zarr data with known indexed positions, especially when several workers must write one group | [`DirectZarrIngestor` (Region)](direct-zarr.md) ([concept](../../concepts/output-formats/zarr/direct-region.md)) | The array schema and write locations; for parallel workers, a fixed extent and deterministic index model |
+| Complete, ordered multidimensional datasets | [Append Datasets To Zarr](generic-zarr.md) with `GenericZarrIngestor` ([concept](../../concepts/output-formats/zarr/generic-append.md)) | One `xarray.Dataset` for each group and batch; Firecube serializes appends to a group |
+| Tables or data frames | [Write Tables To Parquet](generic-parquet.md) with `GenericParquetIngestor` ([concept](../../concepts/output-formats/parquet.md)) | One table or data frame for each group and batch |
+| Zarr data with known indexed positions, especially when several workers must write one group | [Declare The Schema And Index](direct-zarr.md) with `DirectZarrIngestor` ([concept](../../concepts/output-formats/zarr/direct-region.md)) | The array schema and write locations; for parallel workers, a fixed extent and deterministic index model |
+| The same, but the timestamps are only known after reading the files | [Discover The Time Axis](direct-zarr-auto.md) with `DirectZarrIngestor` and `TimeAxis.discovered` | The array schema and a timestamp per item; Firecube builds the axis before writing |
 | A product no template represents | [Custom Pipeline Plugins](base-ingestor.md) — the advanced, manual contract; use it when the templates above don't fit | Processing, writing, results, and coordination |
 
-The source file format does not determine the class. Choose the contract that
-matches the data your plugin can supply.
+Start with Append Datasets To Zarr unless your product is tabular or needs
+parallel workers on one group. The source file format does not determine the
+class. Choose the contract that matches the data your plugin can supply.
 
 For Zarr, the important difference is how a write position is chosen.
 `GenericZarrIngestor` finds the end of the group and appends the next complete
@@ -59,23 +62,25 @@ before implementing the plugin.
    a Python package for the selected class.
 3. **[Install the plugin](install-a-plugin.md).** Install it in development mode
    so Firecube can discover it while you edit the code.
-4. **[Discover the source data](source-discovery.md).** Know how discovery
-   selects and groups items before writing anything, and
-   [customize it](customize-source-discovery.md) if the defaults don't fit.
-5. **Implement the template hooks.** Follow the class guide linked from the
-   table.
-6. **Verify plugin discovery.** Inspect the registered plugin and its available
-   configuration.
-7. **Run ingestion.** Give the plugin source data and a product target, then
-   verify the persisted output.
+4. **[Discover the source data](source-discovery.md).** See which files
+   Firecube finds and what your plugin receives. If they are archives, read
+   [Discover Zipped Data](discover-zipped-data.md); if the date is in the file
+   name or a time step spans several files, see
+   [Parse Filename Fields](parse-filename-fields.md) and
+   [Read Paired Source Files](paired-source-files.md).
+5. **Write the output.** [Append Datasets To Zarr](generic-zarr.md) or
+   [Write Tables To Parquet](generic-parquet.md); run on a few files and check
+   the result.
+6. **Choose the Zarr layout.** For a Zarr cube, decide
+   [chunking](configure-zarr-chunking.md), and if needed sharding and
+   compression, before the first real run. A written cube keeps its layout.
+7. **[Add configuration options](add-config-options.md).** Turn hard-coded
+   values into `--option` settings.
 8. **[Package and register the plugin](contract.md).** Declare the package
-   entry point so Firecube can discover the plugin from installed metadata
-   before you publish it.
+   entry point so Firecube can discover the plugin from installed metadata.
 
-Add configuration and telemetry after the plugin's main data-conversion
-method is working; source access and discovery come first, since real
-source data almost always needs custom discovery or grouping rather than
-the template defaults.
+Several workers writing one Zarr group at the same time is a separate
+contract: [Write Zarr Regions In Parallel](direct-zarr.md).
 
 
 ## Next Steps
@@ -84,9 +89,9 @@ the template defaults.
   interactive command
 - **[Zarr Write Models](../../concepts/output-formats/zarr/index.md)** — compare
   sequential appends, direct writes, and optional parallel writes
-- **[Quickstart](../../quickstart/index.md)** — create and run a complete local
-  plugin from source files to a verified Zarr product
-- **[NetCDF To Zarr](../../tutorials/weather-netcdf.md)** — inspect that
-  plugin's conversion contract and stored values
+- **[Quickstart](../../quickstart/index.md)** — run an installed plugin from
+  source files to a verified Zarr product
+- **[Firecube 101: NetCDF To Zarr](../../showcase/netcdf-to-zarr.ipynb)** — create a reader
+  and verify its stored values
 - **[API Reference](../../reference/index.md)** — look up the public types
   used by template plugins

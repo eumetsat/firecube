@@ -30,6 +30,7 @@ from firecube.core.controlplane.types import (
     MAINTENANCE_KIND,
     MAINTENANCE_OPS,
     SCHEMA_VERSION,
+    STATE_DELETED_BY_FIRECUBE,
     IndexEnsuredEvent,
     SpanCoverage,
     build_span_entry,
@@ -113,7 +114,11 @@ class ManifestWalWriter:
             slot_group=slot_group,
         )
         writer.append(event_type, record, meta=record.get("meta") or {}, flush=True)
-        writer.finalize(status=status, error=error)
+        writer.finalize(
+            status=status,
+            error=error,
+            timestamps_skipped=int(meta.get("timestamps_skipped", 0) or 0),
+        )
         self._repo._writers.pop((product, run_id), None)
 
     def record_run_started_with_replacement(
@@ -257,10 +262,13 @@ class ManifestWalWriter:
         ranges = coverage.time_index_ranges if coverage and coverage.time_index_ranges else []
         aligned = coverage.aligned if coverage else True
         state_array = coverage.state_array if coverage else None
-        state_deleted_value = coverage.state_deleted_value if coverage else 2
+        state_deleted_value = (
+            coverage.state_deleted_value if coverage else STATE_DELETED_BY_FIRECUBE
+        )
         region_spec = coverage.region_spec if coverage else None
         write_strategy = coverage.write_strategy if coverage else None
         time_dim_name = coverage.time_dim_name if coverage else None
+        chunk_len_used = coverage.chunk_len_used if coverage else None
         record = build_span_entry(
             run_id=run_id,
             batch_id=batch_id,
@@ -276,6 +284,7 @@ class ManifestWalWriter:
             region_spec=region_spec,
             write_strategy=write_strategy,
             time_dim_name=time_dim_name,
+            chunk_len_used=chunk_len_used,
         )
         event_type = {
             "active": types.EVENT_SPAN_COMMITTED,
@@ -414,7 +423,12 @@ class ManifestWalWriter:
         return {"product": product, "run_id": run_id, "status": "abandoned", "abandoned": True}
 
     def mark_chunks_replaced(
-        self, chunk_keys: list[str], product: str, replacement_timestamp: float
+        self,
+        chunk_keys: list[str],
+        product: str,
+        replacement_timestamp: float,
+        *,
+        meta_updates_by_key: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         active_by_key = {
             chunk.key: chunk
@@ -441,6 +455,12 @@ class ManifestWalWriter:
             record["status"] = "replaced"
             record["replaced_at"] = float(replacement_timestamp)
             record["timestamp"] = float(replacement_timestamp)
+            meta_update = (meta_updates_by_key or {}).get(key)
+            if meta_update:
+                raw_meta = record.get("meta")
+                merged_meta = dict(raw_meta) if isinstance(raw_meta, dict) else {}
+                merged_meta.update(meta_update)
+                record["meta"] = merged_meta
             self._writer(product, run_id).append(
                 types.EVENT_RECORD_REPLACED,
                 record,

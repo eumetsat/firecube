@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import pytest
 
+from firecube.core.errors import ConfigurationError
 from firecube.ingestor.templates.config import (
     ZarrTemplateConfig,
     validate_zarr_specs_against_template,
@@ -32,7 +33,7 @@ def test_compression_false_with_per_array_compressors_raises() -> None:
         compressors=({"name": "blosc"},),
     )
     template = ZarrTemplateConfig(zarr_compression=False)
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         validate_zarr_specs_against_template([spec], template)
     message = str(excinfo.value)
     assert "'counts'" in message
@@ -49,7 +50,7 @@ def test_compression_false_with_per_array_filters_raises() -> None:
         filters=({"name": "bitround", "configuration": {"keepbits": 8}},),
     )
     template = ZarrTemplateConfig(zarr_compression=False)
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         validate_zarr_specs_against_template([spec], template)
     message = str(excinfo.value)
     assert "'counts'" in message
@@ -66,7 +67,7 @@ def test_compression_false_with_per_array_serializer_raises() -> None:
         serializer={"name": "bytes"},
     )
     template = ZarrTemplateConfig(zarr_compression=False)
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         validate_zarr_specs_against_template([spec], template)
     message = str(excinfo.value)
     assert "'counts'" in message
@@ -131,7 +132,7 @@ def test_multiple_specs_only_offender_name_in_error() -> None:
     )
     other_clean = ZarrArraySpec(name="longitude", shape=(10,), dtype="f4")
     template = ZarrTemplateConfig(zarr_compression=False)
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         validate_zarr_specs_against_template(
             [clean_spec, offender, other_clean],
             template,
@@ -151,5 +152,5 @@ def test_error_message_mentions_zarr_compression_false() -> None:
         compressors=({"name": "blosc"},),
     )
     template = ZarrTemplateConfig(zarr_compression=False)
-    with pytest.raises(ValueError, match="zarr_compression=False"):
+    with pytest.raises(ConfigurationError, match="zarr_compression=False"):
         validate_zarr_specs_against_template([spec], template)

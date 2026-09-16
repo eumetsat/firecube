@@ -32,7 +32,7 @@ extension of one of them, not a third plugin class.
 |---|---|---|
 | Complete `xarray.Dataset` batches, already ordered along the append dimension | [GenericZarrIngestor (Append)](generic-append.md) | Firecube finds the end of the group and serializes dataset construction and append mutations. |
 | A declared array schema and exact indexed write locations | [DirectZarrIngestor (Region)](direct-region.md) | The plugin controls placement; serial stores may grow as later indexes are written. |
-| The direct-write contract plus a fixed extent and deterministic indexes | [Parallel Zarr Writes](parallel-writes.md) | Separate processes can own disjoint, chunk-aligned ranges of one group. |
+| The direct-write contract plus a fixed extent and deterministic indexes | [How Parallel Zarr Writes Stay Safe](parallel-writes.md) | Separate processes can own disjoint, chunk-aligned ranges of one group. |
 
 Choose sequential appends when complete dataset batches represent the product
 naturally. Choose direct writes when the plugin must control individual array

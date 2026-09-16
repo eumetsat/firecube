@@ -34,7 +34,6 @@ import pytest
 import xarray as xr
 import zarr
 
-from firecube.ingestor.errors import ResumeConflictError
 from firecube.ingestor.runtime.zarr.append import append_time_groups
 from firecube.ingestor.runtime.zarr.resume_cache import (
     ResumeCacheEntry,
@@ -243,15 +242,14 @@ def test_resume_cache_used_when_available(tmp_path):
     store = str(tmp_path / "cache_hit.zarr")
     group = "G1"
 
-    existing_ts = _write_initial_store(tmp_path / "cache_hit.zarr", group, n_timestamps=5)
+    _write_initial_store(tmp_path / "cache_hit.zarr", group, n_timestamps=5)
     cache_key = (store, group, "timestamp")
     put_resume_cache_entry(
         cache_key,
         ResumeCacheEntry(
             cursor=5,
             chunk_len=2,
-            state_initialized=True,
-            preexisting_values=frozenset(pd.to_datetime(existing_ts).to_pydatetime()),  # type: ignore[union-attr]
+            state_initialized=False,
         ),
     )
 
@@ -281,25 +279,28 @@ def test_resume_cache_used_when_available(tmp_path):
 
 
 @pytest.mark.unit
-def test_overlap_detection_raises(tmp_path):
-    """Overlapping timestamps with resume_existing raises ResumeConflictError."""
+def test_overlap_state1_silent_filter_no_raise(tmp_path):
+    """Overlapping state=1 timestamps under resume_existing are silently skipped (T25/E3)."""
     store = str(tmp_path / "overlap.zarr")
     group = "G1"
 
     _write_initial_store(tmp_path / "overlap.zarr", group, n_timestamps=4)
     overlap_ts = pd.date_range("2024-01-01T02:00:00", periods=2, freq="h")
 
-    with pytest.raises(ResumeConflictError, match="overlapping resume append"):
-        append_time_groups(
-            store=store,
-            zarr_store=local_zarr_handle(store),
-            session=make_local_session(store),
-            group_to_timestamps={group: list(overlap_ts)},
-            dataset_for_batch=_dataset_factory(),
-            arrays_for_group=lambda g: [f"{g}/FWI"],
-            resume_existing=True,
-            batch_size=10,
-        )
+    metrics = append_time_groups(
+        store=store,
+        zarr_store=local_zarr_handle(store),
+        session=make_local_session(store),
+        group_to_timestamps={group: list(overlap_ts)},
+        dataset_for_batch=_dataset_factory(),
+        arrays_for_group=lambda g: [f"{g}/FWI"],
+        resume_existing=True,
+        batch_size=10,
+    )
+
+    assert metrics["timestamps_skipped"] == 2
+    assert metrics["batch_processing"]["timestamps_skipped"] == 2
+    assert metrics["batch_processing"]["timestamps_written"] == 0
 
 
 # ===========================================================================
@@ -489,21 +490,18 @@ def test_timestamp_state_on_resume_legacy_store(tmp_path):
 
 
 @pytest.mark.unit
-def test_resume_append_tolerates_clamped_first_write_chunk(tmp_path):
-    """Resume must not reject a store whose first write clamped its chunks.
+def test_resume_append_tolerates_configured_oversized_chunks(tmp_path):
+    """Resume must not reject a store with oversized configured chunks.
 
-    dask clamps a configured chunk down to the data extent on the initial write
-    (a chunk cannot exceed the array size). So when the first batch is smaller
-    than the configured chunk in any dimension -- a small first batch on the
-    append dim, or a configured spatial chunk larger than the grid -- the
-    stored chunk differs from the raw configured value. A later resume must
-    still append, not raise a chunk-shape mismatch.
+    The first write preserves the configured chunk shape even when it exceeds
+    the initial data extent. A later resume must validate that stored chunk
+    metadata and append successfully.
     """
     import zarr
 
     store = str(tmp_path / "clamped_chunk.zarr")
     # lon chunk (1000) >> grid (3) and timestamp chunk (24) >> first batch (2):
-    # both are clamped on the initial write.
+    # both remain as configured on the initial write.
     chunk_shape = {"timestamp": 24, "lat": 2, "lon": 1000}
 
     first = pd.date_range("2024-01-01", periods=2, freq="h")
@@ -517,9 +515,9 @@ def test_resume_append_tolerates_clamped_first_write_chunk(tmp_path):
         batch_size=10,
     )
 
-    # Precondition: the oversized configured chunks were clamped to the data.
+    # Precondition: the oversized configured chunks were preserved.
     stored = zarr.open_array(store, path="G1/FWI", mode="r")
-    assert tuple(stored.chunks) == (2, 2, 3)
+    assert tuple(stored.chunks) == (24, 2, 1000)
 
     # Simulate a fresh run: no in-process resume cache, so the resume path
     # reads stored metadata and validates chunks (this is the bug's trigger).

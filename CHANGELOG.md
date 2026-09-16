@@ -7,6 +7,181 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Showcase notebooks for Sentinel-3 fire detections, a Firecube 101 NetCDF-to-Zarr
+  walkthrough, and MTG FCI L1C parallel ingestion benchmarks, with saved outputs
+  and downloadable notebooks.
+- Optional `firecube[patterns]` extra and
+  `firecube.ingestor.extensions.parse_pattern(pattern, text)` helper for parsing
+  filename fields with Trollsift, preserving field names and types.
+- `GenericZarrIngestor.write_lock` context manager for plugin hooks that read
+  the target store while batches are being written.
+- Run metrics report skipped timestamps and batches not attempted after a
+  failure. Dashboards calculating batch totals must include
+  `batches_not_attempted` alongside succeeded and failed batches.
+- Optional coverage fields record the stored chunk length and the ranges and
+  repair results of failed writes. Readers of control-plane event files must
+  tolerate absent `chunk_len_used`, `time_index_ranges`, and `meta.repair` fields.
+
+### Changed
+
+- `firecube plugins create` rejects plugin names that do not start with a letter
+  or that contain characters other than letters, digits, `-`, and `_`. Class names
+  derive from the snake-case plugin ID, so `MyCoolPlugin` becomes
+  `MyCoolPluginIngestor` and `HTTPServer` becomes `HttpServerIngestor`.
+  `--write-strategy` with `--template parquet` or `base` is a usage error.
+- Generated plugin projects declare `license` as an SPDX expression string, and
+  their registration test loads the `firecube.plugins` entry point. The Zarr
+  templates include a `ZarrStorageConfig` class with commented chunking,
+  compression, and sharding settings, and the generated README covers input
+  filters, reruns, output groups, and, for DirectZarr, parallel slot writes.
+- The generated `GenericZarrIngestor` declares the time dimension once as an empty
+  `TIME_DIM` constant, and ingestion stops with `NotImplementedError` until the
+  author sets it. Its `read_dataset` reader carries a commented two-line NetCDF
+  example, and it links the guides for zip archives, filename fields, and paired
+  files, which now target that reader.
+- Development tooling uses ruff 0.16.5, which also formats Python code blocks in
+  Markdown.
+- `GenericParquetIngestor` requires a fresh target for each run. Resume and
+  force-reingest are refused; preserve existing targets and write to a new URI.
+  Runs retain exclusive ownership through promotion, and duplicate or
+  out-of-product part paths are rejected.
+- Source discovery uses `--input-filters` on ingestion, slot planning, and
+  preallocation. Positive patterns add files to built-in discovery; `!` patterns
+  exclude files and always take precedence. Explicit patterns are case-sensitive,
+  including for single-file inputs; built-in suffix matching remains
+  case-insensitive. CLI filters replace saved filters, and `--input-filters '[]'`
+  restores the defaults.
+- `GenericZarrIngestor` commits batches in order and stops after the first failed
+  batch to avoid appending past a gap. With `pipeline_workers>1`, batch
+  preparation runs in parallel. Failed and unattempted batches are reported
+  separately.
+- Retrying a failed run requires `--option resume_existing=true` to keep
+  successful writes and retry incomplete data, or `--option force_reingest=true`
+  to overwrite matching timestamps. Neither option bypasses timestamp or schema
+  constraints.
+- Sharding configurations with `zarr_sharding=true` and `zarr_chunk_shape` now
+  require `zarr_shard_shape`. Add a shard shape or disable sharding.
+- Non-empty `zarr_time_encoding` settings, including `time_encoding` returned by
+  `get_zarr_config()`, raise a configuration error because they are unsupported.
+- `zarr compare` returns exit code 1 instead of 3 for data mismatches.
+  Layout-only differences produce a warning and exit code 0. Update wrappers
+  that check the previous mismatch code.
+- Direct-mode run summaries report null upload counters (`files_written`,
+  `bytes_written`, and `duration_s`), including in `metrics.storage`.
+  Consumers must handle these values as optional; staged runs report upload
+  measurements.
+- Chunk-alignment warnings appear once per group and chunk length, followed by
+  a run summary. The final short write is exempt only on the last batch.
+- The Tutorials navigation section is now Showcase. Plugin-author guides cover
+  source discovery and filters, archive and paired-file readers, and Zarr
+  layout configuration. Examples now live under Showcase.
+- Firecube now requires `packaging>=24.2` for SPDX license validation.
+
+### Removed
+
+- `include_patterns` CLI, configuration, and SDK settings. Replace
+  `--option 'include_patterns=["*.csv"]'` with `--input-filters '["*.csv"]'`
+  and rename the configuration or SDK key to `input_filters`. Custom discovery
+  hooks must apply these filters explicitly, for example by forwarding
+  `self.engine_config.input_filters` to
+  `discover_input_files(..., preferred_globs=...)`.
+- The private `GenericZarrIngestor._write_lock` attribute. Plugin hooks must use
+  the public `write_lock` context manager.
+
+### Fixed
+
+- Generated plugin projects pass `ruff check` with current ruff, and quotes in
+  `--author` or `--license` no longer produce an invalid `pyproject.toml`.
+- The generated Zarr ingestor raises when `read_dataset()` returns data without
+  the `time_dim_name` dimension instead of writing a mostly empty cube, the
+  generated DirectZarr ingestor fills unwritten slots with NaN instead of 0.0, and
+  the generated base ingestor refuses a missing or remote target instead of
+  writing to the current directory.
+- Staged ingestion now publishes every batch to local and S3 targets. Previously,
+  only the last batch reached the target, causing data loss.
+- Staged appends into a chunk that already holds data keep the existing slots.
+  Previously, appending or force-reingesting one slot of a multi-slot chunk in
+  staged mode replaced its neighbours with fill values and reset their state
+  markers.
+- Variables without the time dimension, such as bounds, are stored once instead
+  of being copied onto every time step. Generated plugins pin
+  `data_vars="minimal"`, `coords="minimal"`, `compat="equals"`, and
+  `join="exact"` in `xr.concat`. A later run whose static variable differs
+  from the stored values, or adds a new one, raises `SchemaDriftError` naming
+  the variable, on append and on force-reingest alike; add the time dimension
+  to the variable or create a new store.
+- Group attributes keep their first-write values across appends. The second
+  batch of a fresh staged run previously wrote empty attributes. When a later
+  append batch carries different attributes, the run logs one warning listing
+  the changed keys and keeps the stored values; tuple-valued attributes no
+  longer trigger that warning.
+- Chunk seeding is idempotent for arrays that use the dot chunk-key separator
+  as well as the default slash form.
+- The post-write integrity check verifies the coordinate values of touched
+  slots as well as their state markers, so a store whose timestamp coordinate
+  was overwritten no longer promotes silently.
+- `GenericZarrIngestor` force-reingest overwrites matching timestamps in place,
+  refills deleted or failed slots, and appends new tail timestamps. Resume skips
+  present timestamps and refills incomplete slots, including batches that combine
+  overlap with new data.
+- Failed append batches mark overwritten slots as failed, truncate partial
+  tails, remove incomplete new groups, and restore the resume position.
+  Successfully committed groups remain available, and retries recover both the
+  overwritten region and appended tail.
+- Append and overwrite operations include time-aligned auxiliary coordinates
+  and reject missing or extra arrays before writing. Datetime values that cannot
+  round-trip through the stored encoding are rejected.
+- Append operations reject duplicate, missing, or unsorted timestamps and
+  non-contiguous overlaps. New timestamps must follow the committed maximum,
+  including earlier batches in the same staged run; insertion into an existing
+  time axis is refused.
+- Legacy stores missing the timestamp-state array now report a typed refusal
+  with recovery guidance. A direct run with `--option resume_existing=true`
+  upgrades the group; read-only use treats existing timestamps as present and
+  logs a warning.
+- Coordinates retain their source CF encoding when chunk settings are applied.
+  The configured time chunk length also applies to the time coordinate and
+  timestamp-state array in non-sharded writes.
+- Coverage and deletion alignment use stored chunk sizes. Split overwrite and
+  append batches produce one coverage record per batch and group.
+- `zarr validate` returns exit code 1 for invalid stores, inspects every array
+  in the requested group, and accepts unwritten slots in sparse DirectZarr
+  stores. Omitted fill-only chunks are reported as informational.
+- Failed ZIP extraction preserves pre-existing and shared destination
+  directories. Cleanup removes partial output only from fresh destinations
+  owned exclusively by the failed extraction; existing or shared directories
+  may retain partial writes.
+- Span replacement chooses the most recently started run and tolerates omitted
+  fill-only chunk keys. `chunks list --include-replaced` includes failed-run
+  spans and removes duplicate history records.
+- Chunk deletion lists other affected spans before deleting shared chunks and
+  requires `--yes-i-really-mean-it`. Completed region fills are skipped unless
+  `--force` is passed. Invalid state ranges are reported as errors and leave
+  the affected span active.
+- Region deletion reads current array metadata, so stale consolidated metadata
+  no longer hides arrays. Staged metadata initialization reports unexpected
+  failures consistently.
+- `chunks delete --time-range` filters by data timestamps. Help and no-match
+  messages distinguish data time from record time and show the accepted date
+  range format.
+- `zarr compare` accepts inferred storage settings without explicit storage
+  flags.
+- Built-in discovery includes `.hdf`, `.he5`, and `.nc4` files. Empty inputs
+  raise a configuration error before ingestion unless empty sources are allowed
+  or a slot range is active. Discovery runs once per ingestion run.
+- Plugin scaffolds honor author and license arguments and recommend editable
+  installation. License values are normalized using SPDX identifiers and
+  expressions; unknown values receive a `LicenseRef-` prefix. Plugin installation
+  output identifies copied and editable installs.
+- CLI errors provide valid JSON-list examples, required write-mode guidance,
+  and actionable recovery options for failed runs. Routine schema checks and
+  chunk listings produce less log noise.
+- Ingestion no longer implies support for `--option dry_run=true`: ingestion
+  writes normally. Use `--dry-run` on supported deletion and preallocation
+  commands to preview those operations.
+
 ## [0.1.5] - 2026-09-03
 
 ### Added

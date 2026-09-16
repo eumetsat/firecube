@@ -27,6 +27,12 @@ from firecube.core.controlplane._event_processor import (
     sorted_complete_runs,
 )
 from firecube.core.controlplane._snapshot import load_current_state, read_snapshot_records
+from firecube.core.controlplane.ranges import (
+    normalize_index_ranges as _normalize_index_ranges,
+)
+from firecube.core.controlplane.ranges import (
+    subtract_index_ranges as _subtract_index_ranges,
+)
 from firecube.core.controlplane.repo_utils import (
     deserialize_slot_group,
     deserialize_slot_range,
@@ -35,6 +41,61 @@ from firecube.core.controlplane.repo_utils import (
 from firecube.core.controlplane.types import CONTROL_DIRNAME, ChunkInfo, RunInfo
 from firecube.core.errors import ManifestError
 from firecube.core.storage.uri import StorageUri
+
+
+def _apply_overwrite_ranges_to_active_coverage(
+    records: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Subtract replacing-span overwrite ranges from prior active span coverage."""
+    active_spans = [
+        record
+        for record in records.values()
+        if record.get("type") == "span" and record.get("status") == "active"
+    ]
+    active_spans.sort(
+        key=lambda record: (
+            float(record.get("timestamp", 0.0) or 0.0),
+            str(record.get("key", "") or ""),
+        )
+    )
+
+    prior_by_group: dict[str, list[dict[str, Any]]] = {}
+    for record in active_spans:
+        raw_meta = record.get("meta")
+        meta: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
+        group = str(meta.get("group", "") or "")
+        run_id = str(meta.get("run_id", "") or "")
+        overwrites = _normalize_index_ranges(meta.get("overwrites_index_ranges"))
+        if overwrites:
+            for prior in prior_by_group.get(group, []):
+                raw_prior_meta = prior.get("meta")
+                prior_meta: dict[str, Any] = (
+                    raw_prior_meta if isinstance(raw_prior_meta, dict) else {}
+                )
+                if str(prior_meta.get("run_id", "") or "") == run_id:
+                    continue
+                _subtract_from_span_payload(prior, overwrites)
+        prior_by_group.setdefault(group, []).append(record)
+    return records
+
+
+def _subtract_from_span_payload(record: dict[str, Any], overwrites: list[list[int]]) -> None:
+    payload = record.get("span")
+    if not isinstance(payload, dict):
+        return
+    ranges = _normalize_index_ranges(payload.get("time_index_ranges"))
+    if not ranges:
+        return
+    remaining = _subtract_index_ranges(ranges, overwrites)
+    if remaining == ranges:
+        return
+    payload["time_index_ranges"] = remaining
+    payload["timestamps_written"] = sum(end - start + 1 for start, end in remaining)
+
+
+def _run_entry_wal_order(entry: dict[str, Any]) -> tuple[float, str]:
+    """Sort key placing run entries in the order their WAL segments were opened."""
+    return (float(entry.get("started_at", 0.0) or 0.0), str(entry.get("run_id", "")))
 
 
 class ManifestProjection:
@@ -115,11 +176,13 @@ class ManifestProjection:
             if not item:
                 continue
             current_only = not include_replaced and status is None
-            records = (
-                list(self._load_current_state(item).values())
-                if current_only
-                else self._load_history_records(item)
-            )
+            if current_only:
+                records = list(self._load_current_state(item).values())
+            else:
+                # ``include_replaced`` asks for the latest state of every key,
+                # not every WAL record: a replaced span otherwise appears twice
+                # (its active record and the "replaced" copy written later).
+                records = self._load_history_records(item, latest_per_key=include_replaced)
             control_uri = StorageUri.parse(self._repo._manifest_uri_for_product(item))
             for record in records:
                 chunk = record_to_chunk_info(item, record, control_uri)
@@ -168,7 +231,7 @@ class ManifestProjection:
     def _load_current_state(self, product: str) -> dict[str, dict[str, Any]]:
         self._repo._ensure_bound()
         assert self._repo._fs is not None
-        return load_current_state(
+        current = load_current_state(
             product,
             product_control_exists_fn=self._repo._product_control_exists,
             list_run_entries_fn=self._repo._list_run_entries,
@@ -177,16 +240,38 @@ class ManifestProjection:
             resolver=self._repo._resolver,
             log=self._repo.log,
         )
+        return _apply_overwrite_ranges_to_active_coverage(current)
 
-    def _load_history_records(self, product: str) -> list[dict[str, Any]]:
+    def _load_history_records(
+        self, product: str, *, latest_per_key: bool = False
+    ) -> list[dict[str, Any]]:
+        """Return keyed WAL records for ``product`` sorted by record timestamp.
+
+        With ``latest_per_key`` only the last record per key survives, in WAL
+        order (run entries by ``started_at`` then event order), mirroring the
+        upsert-by-key invariant of `apply_events`. WAL order, not the record
+        timestamp, decides: a replacement record carries the caller-supplied
+        replacement time, which need not be later than the active record's.
+        """
         if not self._repo._product_control_exists(product):
             return []
+        run_entries = self._repo._list_run_entries(product)
+        if latest_per_key:
+            run_entries = sorted(run_entries, key=_run_entry_wal_order)
         events: list[dict[str, Any]] = []
-        for run_entry in self._repo._list_run_entries(product):
+        latest: dict[str, dict[str, Any]] = {}
+        for run_entry in run_entries:
             for event in self._repo._read_run_events(product, run_entry):
                 record = record_from_event(event, self._repo.log)
-                if record.get("key"):
+                key = record.get("key")
+                if not key:
+                    continue
+                if latest_per_key:
+                    latest[str(key)] = record
+                else:
                     events.append(record)
+        if latest_per_key:
+            events = list(latest.values())
         events.sort(key=lambda item: float(item.get("timestamp", 0.0) or 0.0))
         return events
 
@@ -207,7 +292,7 @@ class ManifestProjection:
         for run_entry in sorted_complete_runs(eligible):
             product = str(run_entry.get("product", "")) or ""
             apply_events(current, self._repo._read_run_events(product, run_entry), self._repo.log)
-        return current
+        return _apply_overwrite_ranges_to_active_coverage(current)
 
     def _read_snapshot_records(self, latest: dict[str, Any]) -> list[dict[str, Any]]:
         self._repo._ensure_bound()
@@ -250,4 +335,5 @@ class ManifestProjection:
             ),
             slot_range=slot_range,
             slot_group=slot_group,
+            timestamps_skipped=int(payload.get("timestamps_skipped", 0) or 0),
         )

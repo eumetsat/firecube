@@ -51,7 +51,7 @@ Speculative ideas only. Items here are not accepted scope. Promote to [TODO.md](
     - Promote only after cross-repo tests and operational soak.
 - **Validation notes (when implemented):**
 - Core: `uv run ruff check .`, `uv run pyright`, and `uv run pytest`.
-  - Plugin (`firecube-msg-frm`): install local core checkout, then run plugin lint/tests.
+  - External plugin: install local core checkout, then run plugin lint/tests.
   - Runtime smoke: plugin discovery + lightweight ingest path with dependency checks.
 - **References discussed:**
   - Dependent arrays proposal: `https://github.com/d-v-b/dependent-arrays`
@@ -128,27 +128,27 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
 
 - Idea 2: SUPERSEDED (2026-08-18) - the mixin path was replaced by the `IndexSpec` clean cut. Ideas 1 and 3 remain UNDECIDED.
 
-- **Origin:** Surfaced while reviewing `firecube-opera-seviri-nordlis` and
-  `firecube-mtg-fci-l1c`. Both plugins now opt into
+- **Origin:** Surfaced while reviewing two production parallel-capable plugins.
+  Both plugins now opt into
   `SUPPORTS_SLOT_RANGE_PARALLELISM` and independently implement the same generic
   slot-anchor machinery (the data-physics differences are legitimate; the
   *generic* anchor/epoch/shard scaffolding is what's duplicated).
 - **Idea 1 — epoch/ISO↔seconds helpers as a shared util.** Both plugins convert
-  between ISO timestamps and Unix seconds (OPERA used a private `_epoch.py`,
-  since deleted in favour of the new `firecube.core.api` epoch helpers; MTG uses
+  between ISO timestamps and Unix seconds (one used a private `_epoch.py`,
+  since deleted in favour of the new `firecube.core.api` epoch helpers; the other uses
   inline `datetime` math). The core helpers (`iso_to_epoch_s`/`epoch_s_to_iso`/
-  `normalize_epoch_iso`) already cover OPERA; confirm MTG adopts them too so
+  `normalize_epoch_iso`) already cover the first; confirm the second adopts them too so
   there's one implementation.
 - **Idea 2 — a core `SlotIndexModel` / `SlotRangeSupport` mixin.** Superseded
   by the `IndexSpec` clean cut. The engine now owns `IndexSpec` and `ResolvedIndex`.
   Keep this note only as history for the cross-plugin dedup question.
-- **Idea 3 — expose `read_chunk_grid_with_shards` on the public API.** OPERA's
+- **Idea 3 — expose `read_chunk_grid_with_shards` on the public API.** One plugin's
   former `compat.py` hand-read shard layout (a real bug source, now deleted);
   the canonical `firecube.core.zarr.validation.read_chunk_grid_with_shards`
   lives below the public `firecube.core.api` line, so any plugin needing
   shard-aware layout must deep-import it. Promoting it (or having core own
   existing-store compat end-to-end) removes the second shard reader.
-- **Status:** Plugin-side cleanup is already done (OPERA deleted `compat.py`/
+- **Status:** Plugin-side cleanup is already done (that plugin deleted `compat.py`/
   `_epoch.py`, made `zarr_schema` pure, added `slot_index_model`). These three
   items are *core-side* promotions, only worth doing if a second/third
   parallel-capable plugin keeps the duplication alive — which is now the case.
@@ -157,12 +157,12 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
 
 - RESOLVED (2026-06-25)
 
-- **Origin:** Trying to pre-size an OPERA store for long-horizon parallel
+- **Origin:** Trying to pre-size a cadence-based plugin's store for long-horizon parallel
   appends (axis can't grow in parallel mode, so it must be allocated up front).
   `firecube zarr preallocate` is the intended tool but currently does not work
-  for `firecube-opera-seviri-nordlis`; the working stand-in is ingest-side
-  over-allocation (`--option expected_timesteps_per_group`, wrapped as
-  `opera-ingest.sh --horizon YYYYMMDD`).
+  for that plugin; the working stand-in is ingest-side
+  over-allocation (`--option expected_timesteps_per_group`, wrapped in a
+  plugin-side ingest script).
 - **Gap 1 — preallocate ignores plugin `--option`.** `cli/zarr/_preallocate.py:preallocate`
   coerces `--option` pairs into `IngestContext.options` but never builds/applies
   the plugin's typed `plugin_config` from them (unlike `firecube ingest`). So
@@ -192,7 +192,7 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
 
 - DEFERRED-V2+
 
-- **Problem:** Plugins wanting a "write-once time-indexed array" must currently use `time_indexed=False` + `kind="static"` as a workaround. The `time_indexed=False` declaration forces an explicit `shape=(N,)` and opts the array out of time-axis preallocation sizing. The TODO §30 union fix (commit 7ff079c) makes this safe: the `time_indexed=False` array is correctly excluded from the time-axis bounds check, and xarray still joins it with `time_indexed=True` data arrays on the shared `time` dim name. Two production callers (MTG FCI L1c and OPERA) both work fine today.
+- **Problem:** Plugins wanting a "write-once time-indexed array" must currently use `time_indexed=False` + `kind="static"` as a workaround. The `time_indexed=False` declaration forces an explicit `shape=(N,)` and opts the array out of time-axis preallocation sizing. The TODO §30 union fix (commit 7ff079c) makes this safe: the `time_indexed=False` array is correctly excluded from the time-axis bounds check, and xarray still joins it with `time_indexed=True` data arrays on the shared `time` dim name. Two production callers both work fine today.
 - **What a pure model would look like:** `time_indexed=True` + `kind="static"` — "this array IS time-indexed (its size grows with the time horizon), but its values are deterministic and written once". The `firecube_static_written` marker would still gate write-once semantics: marker absent means write and stamp; marker present means replay-or-raise.
 - **Why deferred:** The `time_indexed=False` workaround is non-invasive and self-documenting. No third plugin has surfaced the confusion yet, and no OOM or preallocation mismatch has been observed in practice.
 - **Trigger conditions (when to revisit):**
@@ -273,6 +273,16 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
 - **Impact:** pinned-axis workflows (the sanctioned cross-granule append pattern per `_binning.py`) can silently lose edge samples, or produce differently-shaped axes from nominally identical bounds. No known production incident yet.
 - **Why not TODO yet:** the fixes change output grid shape/coverage for existing cubes (a `linspace` fix can alter N for previously-jittered grids), so remediation needs a compat/design discussion before acceptance.
 - **Cross-links:** TODO.md §33 design constraint 1 cites this bug class as the anti-pattern the slot mixin must exclude by construction (integer-only slot math).
+
+### §39 Decode outside the append write gate
+
+- UNDECIDED
+
+- **Origin:** Surfaced 2026-09-12 when the ordered write gate replaced the append lock (DONE.md 2026-09-12). Today `build_dataset` runs inside a batch's write turn, so with `pipeline_workers>1` only `prepare_batch_data` overlaps; every decode of a batch waits for the previous batch's commit.
+- **Goal:** Run `build_dataset` in parallel across workers and keep only the append itself behind the gate, committing in batch order. Decode-heavy plugins (NetCDF/HDF5 with per-granule preprocessing) would overlap decode with the previous batch's write.
+- **Constraint:** Appends must still commit in planner batch order and the time axis must stay monotonic, so the gate stays; only the section inside it shrinks. A dataset built outside the gate is built without knowing the group's cursor or the resolved existing layout, so anything that today reads the store during `build_dataset` (cursor-dependent coordinates, existing-group probes) has to move to the write section or be forbidden. Failure semantics stay per `(batch, group)`: a decode that fails before its turn still forfeits the turn and stops the run.
+- **Trade-off:** Higher throughput for decode-bound plugins against holding several fully built datasets in memory at once (one per in-flight worker) and a wider window in which a later batch has decoded before an earlier one has failed, all of which then count as not attempted. Memory ceiling and the store-read-in-`build_dataset` audit need a decision before this leaves IDEAS.
+- **Cross-links:** DESIGN.md "Append failure and ordering?"; DONE.md 2026-09-12; the parallelism figure in `docs/concepts/output-formats/zarr/generic-append.md` would change.
 
 ## Notes
 

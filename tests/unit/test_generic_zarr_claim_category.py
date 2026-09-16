@@ -50,8 +50,16 @@ class _FakeAppendStrategy:
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
-    def write_groups(self, *, group_to_timestamps, dataset_for_batch, batch_size, claim_for_group):
-        _ = (group_to_timestamps, dataset_for_batch, batch_size)
+    def write_groups(
+        self,
+        *,
+        group_to_timestamps,
+        dataset_for_batch,
+        batch_size,
+        claim_for_group,
+        is_final_batch=False,
+    ):
+        _ = (group_to_timestamps, dataset_for_batch, batch_size, is_final_batch)
         claim_for_group("F024")
         return {"coverage": ["F024"]}
 

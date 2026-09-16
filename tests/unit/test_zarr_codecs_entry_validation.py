@@ -20,6 +20,7 @@ from typing import cast
 
 import pytest
 
+from firecube.core.errors import ConfigurationError
 from firecube.ingestor.templates.config import ZarrTemplateConfig
 
 pytestmark = pytest.mark.unit
@@ -81,7 +82,7 @@ def test_zarr_codecs_entry_validation(
         assert cfg.zarr_codecs == codecs
         return
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ConfigurationError) as excinfo:
         ZarrTemplateConfig(zarr_compression=True, zarr_codecs=cast(list[dict] | None, input_value))
     assert expected_error_substring in str(excinfo.value)
 
@@ -103,7 +104,7 @@ def test_out_of_order_pipeline_rejected() -> None:
         {"name": "bytes", "configuration": {}},
     ]
 
-    with pytest.raises(ValueError, match=r"[Cc]odec|order|pipeline"):
+    with pytest.raises(ConfigurationError, match=r"[Cc]odec|order|pipeline"):
         ZarrTemplateConfig(zarr_compression=True, zarr_codecs=codecs)
 
 

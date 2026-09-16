@@ -236,7 +236,7 @@ recovery commands.
 
 ## Next Steps
 
-- **[Parallel Zarr Writes](../concepts/output-formats/zarr/parallel-writes.md)** - understand the slot safety model
-- **[DirectZarrIngestor (Region) Tutorial](../tutorials/direct-zarr-parallel.md)** - build a direct-indexed plugin
+- **[How Parallel Zarr Writes Stay Safe](../concepts/output-formats/zarr/parallel-writes.md)** - understand the slot safety model
+- **[Slot-Based Parallelism: MTG FCI L1C](../showcase/mtg-fci-l1c-benchmarks.ipynb)** - reproduce the setup with a public plugin
 - **[Scheduling And Write Safety](../concepts/orchestration/write-safety.md)** - coordinate external workers
 - **[CLI Reference](../reference/cli.md)** - look up all slot and ingest flags

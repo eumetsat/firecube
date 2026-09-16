@@ -35,9 +35,9 @@ class StorageMetrics:
     """
 
     path: str | None = None
-    bytes: int = 0
-    files: int = 0
-    duration_s: float = 0.0
+    bytes: int | None = 0
+    files: int | None = 0
+    duration_s: float | None = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         """Render storage metrics as a compatibility dictionary."""
@@ -61,6 +61,8 @@ class PipelineMetrics:
             and time ranges the run wrote.
         duration_upload_s: Time spent uploading staged output, in seconds.
         duration_total_s: Total wall-clock duration, in seconds.
+        timestamps_skipped: Number of timestamps skipped (e.g. already present
+            or out of range) during ingestion.
     """
 
     duration_pipeline_s: float = 0.0
@@ -69,6 +71,7 @@ class PipelineMetrics:
     coverage: list[SpanCoverage] = field(default_factory=list)
     duration_upload_s: float = 0.0
     duration_total_s: float = 0.0
+    timestamps_skipped: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         """Render pipeline metrics as a compatibility dictionary."""
@@ -79,6 +82,7 @@ class PipelineMetrics:
             "coverage": list(self.coverage),
             "duration_upload_s": self.duration_upload_s,
             "duration_total_s": self.duration_total_s,
+            "timestamps_skipped": self.timestamps_skipped,
         }
 
 
@@ -304,9 +308,13 @@ def _coerce_storage_metrics(value: Any) -> StorageMetrics | None:
     if isinstance(value, dict):
         return StorageMetrics(
             path=value.get("path"),
-            bytes=int(value.get("bytes", 0) or 0),
-            files=int(value.get("files", 0) or 0),
-            duration_s=float(value.get("duration_s", 0.0) or 0.0),
+            bytes=None if value.get("bytes") is None else int(value.get("bytes", 0) or 0),
+            files=None if value.get("files") is None else int(value.get("files", 0) or 0),
+            duration_s=(
+                None
+                if value.get("duration_s") is None
+                else float(value.get("duration_s", 0.0) or 0.0)
+            ),
         )
     return None
 
@@ -322,6 +330,7 @@ def _coerce_pipeline_metrics(value: Any) -> PipelineMetrics | None:
             coverage=_coerce_span_coverage_list(value.get("coverage")),
             duration_upload_s=float(value.get("duration_upload_s", 0.0) or 0.0),
             duration_total_s=float(value.get("duration_total_s", 0.0) or 0.0),
+            timestamps_skipped=int(value.get("timestamps_skipped", 0) or 0),
         )
     return None
 
@@ -349,6 +358,7 @@ def _coerce_span_coverage_list(value: Any) -> list[SpanCoverage]:
                     region_spec=item.get("region_spec"),
                     write_strategy=item.get("write_strategy"),
                     time_dim_name=item.get("time_dim_name"),
+                    chunk_len_used=item.get("chunk_len_used"),
                 )
             )
     return spans
@@ -361,8 +371,15 @@ def _coerce_result_metrics(value: Any) -> ResultMetrics:
         return value
     if isinstance(value, dict):
         pipeline = _coerce_pipeline_metrics(value.get("pipeline"))
-        if pipeline is None and value.get("coverage"):
-            pipeline = PipelineMetrics(coverage=_coerce_span_coverage_list(value.get("coverage")))
+        zarr_dict = value.get("zarr") if isinstance(value.get("zarr"), dict) else None
+        zarr_ts_skipped = int(zarr_dict.get("timestamps_skipped", 0) or 0) if zarr_dict else 0
+        if pipeline is None and (value.get("coverage") or zarr_ts_skipped):
+            pipeline = PipelineMetrics(
+                coverage=_coerce_span_coverage_list(value.get("coverage")),
+                timestamps_skipped=zarr_ts_skipped,
+            )
+        elif pipeline is not None and pipeline.timestamps_skipped == 0 and zarr_ts_skipped:
+            pipeline.timestamps_skipped = zarr_ts_skipped
         metrics = ResultMetrics(
             write_mode=value.get("write_mode"),
             storage=_coerce_storage_metrics(value.get("storage")),

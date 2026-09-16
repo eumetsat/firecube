@@ -135,9 +135,11 @@ def compute_run_summary(
     ``max(processing_wall_s - cpu_s, 0.0)`` (``0`` when CPU-bound).
     """
     workers = max(int(state.pipeline_workers or 0), 1)
-    successful_batches = sum(1 for result in state.results if result.success)
     batches_total = len(state.batches)
-    batches_failed = max(batches_total - successful_batches, 0)
+    # ``batches_failed`` counts attempted failures only; batches the runner
+    # skipped after a fail-stop halt are reported separately.
+    batches_failed = sum(1 for result in state.results if result.attempted and not result.success)
+    batches_not_attempted = len(state.batches_not_attempted)
 
     duration_pipeline_s = float(state.total_ingestion_duration or 0.0)
     duration_processing_s = float(state.processing_duration or 0.0)
@@ -155,6 +157,7 @@ def compute_run_summary(
         "batch_size": int(state.batch_size or 0),
         "batches_total": batches_total,
         "batches_failed": batches_failed,
+        "batches_not_attempted": batches_not_attempted,
         "hook_failures": int(state.hook_failures or 0),
         "files_processed": int(files_processed or 0),
         "bytes_ingested": int(bytes_ingested or 0),

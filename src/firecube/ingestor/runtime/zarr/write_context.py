@@ -15,8 +15,8 @@
 """Zarr write-session context manager.
 
 Encapsulates Dask scheduler validation, ``dask.config.set`` context,
-``zarr.config`` async-concurrency settings, and write-lock acquisition
-into a single reusable context manager.
+``zarr.config`` async-concurrency settings, and an optional caller-supplied
+serialisation context into a single reusable context manager.
 
 Extracted from ``GenericZarrIngestor._process_batch()`` so that any
 write strategy can share identical scheduler/lock policy.
@@ -25,7 +25,6 @@ write strategy can share identical scheduler/lock policy.
 from __future__ import annotations
 
 import contextlib
-import threading
 from typing import Any
 
 from firecube.ingestor.api import ConfigurationError
@@ -56,12 +55,9 @@ class ZarrWriteContext:
     """Context manager for Zarr write sessions.
 
     Validates Dask scheduler configuration, sets ``zarr.config``
-    async-concurrency, activates the appropriate ``dask.config`` scope,
-    and acquires the caller-supplied write lock.
+    async-concurrency, and activates the appropriate ``dask.config`` scope.
 
     Args:
-        write_lock: A ``threading.Lock`` (or compatible) used to serialize
-            Zarr writes.
         configured_scheduler: Explicit Dask scheduler name (e.g.
             ``"synchronous"``, ``"threads"``), or *None* to keep the ambient
             default.
@@ -77,13 +73,11 @@ class ZarrWriteContext:
     def __init__(
         self,
         *,
-        write_lock: threading.Lock,
         configured_scheduler: str | None = None,
         write_threads: int = 0,
         async_concurrency: int = 10,
         write_empty_chunks: bool = False,
     ) -> None:
-        self._write_lock = write_lock
         self._configured_scheduler = configured_scheduler
         self._write_threads = write_threads
         self._async_concurrency = async_concurrency
@@ -132,7 +126,6 @@ class ZarrWriteContext:
         stack = contextlib.ExitStack()
         self._exit_stack = stack
         try:
-            stack.enter_context(self._write_lock)  # type: ignore[arg-type]
             stack.enter_context(dask_ctx)
             stack.enter_context(_array_write_empty_chunks_config(self._write_empty_chunks))
         except BaseException:

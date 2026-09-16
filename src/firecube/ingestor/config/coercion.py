@@ -22,6 +22,23 @@ from __future__ import annotations
 import json
 from typing import Any, get_args, get_origin
 
+from firecube.ingestor.errors import ConfigurationError
+
+
+def _json_list_hint(value: str) -> str:
+    """Render an unparseable list value as the JSON list form the CLI accepts.
+
+    Splits the bracket-stripped value on commas and drops surrounding
+    whitespace and stray quotes from each element, so the hint is a value the
+    operator can paste back into ``--option``. When no element survives, a
+    generic placeholder is rendered instead.
+    """
+    elements = [element.strip().strip("\"'") for element in value.strip().strip("[]").split(",")]
+    elements = [element for element in elements if element]
+    if not elements:
+        return '["<value>", ...]'
+    return json.dumps(elements)
+
 
 def _unwrap_optional(t: Any) -> tuple[Any, bool]:
     """Return (inner_type, is_optional).
@@ -114,7 +131,13 @@ def coerce_cli_value(value: Any, target_type: Any, field_name: str) -> Any:
             try:
                 parsed = json.loads(value)
             except json.JSONDecodeError as exc:
-                raise ValueError(f"Invalid JSON list for {field_name}: {value!r}") from exc
+                if "[" not in value and "," not in value and args and args[0] is str:
+                    return [value]
+                raise ConfigurationError(
+                    f"Invalid JSON list for {field_name!r}: {value!r}. "
+                    "Check shell quoting for the value. "
+                    f"Try: --option '{field_name}={_json_list_hint(value)}'"
+                ) from exc
             if not isinstance(parsed, list):
                 raise ValueError(
                     f"Expected JSON list for {field_name}, got {type(parsed).__name__}"

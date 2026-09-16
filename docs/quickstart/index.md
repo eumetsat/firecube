@@ -14,8 +14,8 @@ You need:
 - `Python 3.12+`, `uv`, and `git` installed
 
 The installation step creates a working directory with a `.venv` and installs
-Firecube from PyPI. Keep the virtual environment active for the rest of the
-quickstart.
+Firecube from PyPI. Activate `.venv` and keep that environment active for
+the remaining commands.
 
 ## Quickstart Path
 
@@ -30,5 +30,5 @@ quickstart.
 
 ## Next Steps
 
-- **[Installation](installation.md)**: create the environment, activate it, and
+- **[Installation](installation.md)**: create and activate the environment, install Firecube, and
   verify the Firecube CLI.

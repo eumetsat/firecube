@@ -33,6 +33,7 @@ class AppendWriteStrategy(Protocol):
         dataset_for_batch: Callable[[str, Sequence[Any]], xr.Dataset | None],
         batch_size: int,
         claim_for_group: Callable[[str], Any] | None = None,
+        is_final_batch: bool = False,
     ) -> dict[str, Any]:
         """Append each group's timestamps to the store and report metrics.
 
@@ -44,9 +45,17 @@ class AppendWriteStrategy(Protocol):
             batch_size: Maximum number of timestamps per append call.
             claim_for_group: Called as ``(group)`` to obtain a write claim
                 guarding that group. ``None`` writes without coordination.
+            is_final_batch: ``True`` when the planner marked this batch as
+                the last of the run; a short final write is then not
+                reported as unaligned.
 
         Returns:
             Write metrics for the call, merged across all groups.
+
+        Raises:
+            AppendBatchFailed: A group's write raised after the batch
+                started writing; the exception's ``outcome`` names the
+                committed, failed and not-attempted groups.
         """
         ...
 

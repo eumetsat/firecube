@@ -18,6 +18,7 @@ from typing import Any
 
 import pytest
 
+from firecube.core.errors import ConfigurationError
 from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.templates.config import ZarrTemplateConfig
 from firecube.ingestor.types.context import OutputPaths, PipelineResult
@@ -70,12 +71,12 @@ def test_zarr_region_write_concurrency_default_is_one() -> None:
 
 
 def test_zarr_region_write_concurrency_rejects_zero() -> None:
-    with pytest.raises(ValueError, match="zarr_region_write_concurrency must be >= 1"):
+    with pytest.raises(ConfigurationError, match="zarr_region_write_concurrency must be >= 1"):
         ZarrTemplateConfig(zarr_region_write_concurrency=0)
 
 
 def test_zarr_region_write_concurrency_rejects_negative() -> None:
-    with pytest.raises(ValueError, match="zarr_region_write_concurrency must be >= 1"):
+    with pytest.raises(ConfigurationError, match="zarr_region_write_concurrency must be >= 1"):
         ZarrTemplateConfig(zarr_region_write_concurrency=-1)
 
 

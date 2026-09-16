@@ -16,13 +16,13 @@ These patterns have caused real bugs or maintenance pain. If a change introduces
 
 - **Automatic Env Resolution**: Resolving `${VAR}` placeholders in all config strings unconditionally. Forbidden because it prevents literal `${...}` values and makes config behavior environment-dependent. Env expansion must be opt-in and scoped.
 
-- **Database Leakage**: A plugin (e.g. MSG FRM) pulling global `[database.duckdb]` settings implicitly from the top-level config. Forbidden because it creates invisible coupling between unrelated config sections. Plugin config must be self-contained under its own namespace.
+- **Database Leakage**: A plugin pulling global `[database.duckdb]` settings implicitly from the top-level config. Forbidden because it creates invisible coupling between unrelated config sections. Plugin config must be self-contained under its own namespace.
 
 - **Option Aliases**: Dual-naming the same Zarr config key (e.g. `zarr_chunk` vs `chunk_shape`). Forbidden because it creates confusion about which name is canonical and which is deprecated. Pick one name, document it, reject the other at parse time.
 
   **Note**: internal or verified-zero-caller dual hook names for the same concern (e.g. `groups_for_items` and `get_batch_groups`) are this same anti-pattern at the API surface. When unification is required, the canonical name MUST be declared and the duplicate MUST be DELETED in the same change — no `DeprecationWarning`, no back-compat shim, no transitional period. Carrying two names "for safety" is the anti-pattern this rule exists to prevent.
 
-- **Regex Guessing**: Extracting horizons from filenames via regex or discovering groups by listing `F*` folders. Forbidden because it ties the plugin to a specific naming convention that can silently break. Require explicit configuration for horizon and group discovery.
+- **Regex Guessing**: Extracting horizons from filenames via regex or discovering groups by listing `F*` folders. Forbidden because it ties the plugin to a specific naming convention that can silently break. Require explicit configuration for horizon and group discovery. Parsing a complete string against a caller-supplied format is permitted: the caller declares the syntax, parse errors propagate, and core assigns no field meaning. This does not permit inferring horizons, groups, or time-selection policy from filenames.
 
 - **Hardcoded Defaults**: Magic numbers for regrid spacing, lat/lon soft limits, or similar domain constants embedded in source code. Forbidden because they're invisible to operators and impossible to override without a code change. Expose them as named config fields with documented defaults.
 

@@ -21,8 +21,29 @@ import click
 
 from firecube.core.errors import ManifestError
 
-from ._common import confirm_deletion, parse_datetime, parse_meta_filters
+from ._common import confirm_deletion, parse_datetime, parse_meta_filters, parse_time_range
 from ._manager import resolve_cli_product, resolve_manager, storage_config_from_ctx
+
+
+def _no_match_message(*, record_time_options: list[str], time_range: str | None) -> str:
+    """Explain an empty match in terms of the time filter the user passed.
+
+    Record-time filters (``--range``, ``--start-date``, ``--end-date``) and the
+    data-time filter (``--time-range``) select on different axes, so a miss on
+    one is answered by pointing at the other. With both or neither in play no
+    axis note applies.
+    """
+    base = "No chunks found matching the given criteria."
+    if time_range and not record_time_options:
+        return (
+            f"{base} Note: --time-range filters by data time (span coverage); "
+            "use --range, --start-date, or --end-date for record time."
+        )
+    if record_time_options and not time_range:
+        names = "/".join(record_time_options)
+        verb = "filters" if len(record_time_options) == 1 else "filter"
+        return f"{base} Note: {names} {verb} by record time; use --time-range for data time."
+    return base
 
 
 @click.command(
@@ -37,8 +58,12 @@ Examples:
   firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --yes-i-really-mean-it
 
 \b
-  # delete chunks in a date range
+  # delete chunks in a record-time range
   firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --range 2024-01-01,2024-03-31 --dry-run
+
+\b
+  # delete spans overlapping a data-time range
+  firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --time-range 2024-01-01:2024-03-31 --dry-run
 
 \b
   # preview deletions across all products
@@ -63,9 +88,30 @@ See also: firecube chunks list, firecube chunks delete-span,
     default=False,
     help="Apply to all products (mutually exclusive with --product-name).",
 )
-@click.option("--end-date", "end_date", help="delete chunks created before date (YYYY-MM-DD)")
-@click.option("--start-date", "start_date", help="delete chunks created after date (YYYY-MM-DD)")
-@click.option("--range", "date_range", help="delete chunks in date range (YYYY-MM-DD,YYYY-MM-DD)")
+@click.option(
+    "--end-date",
+    "end_date",
+    help="delete chunks with record time before date (YYYY-MM-DD)",
+)
+@click.option(
+    "--start-date",
+    "start_date",
+    help="delete chunks with record time after date (YYYY-MM-DD)",
+)
+@click.option(
+    "--range",
+    "date_range",
+    help=(
+        "delete chunks in a record-time range (YYYY-MM-DD,YYYY-MM-DD; "
+        "use --time-range for data time)"
+    ),
+)
+@click.option(
+    "--time-range",
+    "time_range",
+    default=None,
+    help="spans overlapping data-time range START:END (ISO 8601)",
+)
 @click.option("--type", "chunk_type", help="filter by chunk type (chunk, meta)")
 @click.option(
     "--meta",
@@ -95,6 +141,7 @@ def delete_cmd(
     all_products: bool,
     end_date,
     start_date,
+    time_range,
     date_range,
     chunk_type,
     meta_filters,
@@ -144,6 +191,7 @@ def delete_cmd(
 
     before_dt = parse_datetime(end_date)
     after_dt = parse_datetime(start_date)
+    time_range_dt = parse_time_range(time_range) if time_range is not None else None
     if date_range:
         try:
             start_str, end_str = date_range.split(",", 1)
@@ -165,12 +213,26 @@ def delete_cmd(
             chunk_type=chunk_type,
             include_metadata=include_metadata,
             meta=meta,
+            time_overlaps=time_range_dt,
         )
         if plan.chunks:
             plans.append(plan)
 
     if not plans:
-        click.echo("No chunks found matching criteria.")
+        click.echo(
+            _no_match_message(
+                record_time_options=[
+                    name
+                    for name, value in (
+                        ("--range", date_range),
+                        ("--start-date", start_date),
+                        ("--end-date", end_date),
+                    )
+                    if value
+                ],
+                time_range=time_range,
+            )
+        )
         return
 
     all_chunks = []
@@ -355,6 +417,7 @@ def delete_span_cmd(
             spans,
             dry_run=dry_run,
             force=force,
+            yes_i_really_mean_it=yes_i_really_mean_it,
             update_manifest=not dry_run,
             update_state=not dry_run,
             time_dim_name=time_dim,
@@ -363,15 +426,39 @@ def delete_span_cmd(
         raise click.ClickException(str(exc)) from exc
 
     if dry_run:
-        click.echo(
-            f"DRY RUN: would delete {result.get('deleted_keys', 0):,} chunk keys from storage "
-            f"across {result.get('deleted_spans', 0):,} spans"
-        )
+        if result.get("region_filled_spans", 0):
+            click.echo(
+                f"DRY RUN: would NaN-fill {result.get('region_filled_spans', 0):,} spans "
+                f"and delete {result.get('deleted_keys', 0):,} chunk keys from storage"
+            )
+        else:
+            click.echo(
+                f"DRY RUN: would delete {result.get('deleted_keys', 0):,} chunk keys from storage "
+                f"across {result.get('deleted_spans', 0):,} spans"
+            )
     else:
-        click.echo(
-            f"Deleted {result.get('deleted_keys', 0):,} chunk keys from storage across "
-            f"{result.get('deleted_spans', 0):,} spans"
-        )
+        if result.get("region_filled_spans", 0):
+            click.echo(
+                f"NaN-filled {result.get('region_filled_spans', 0):,} spans and deleted "
+                f"{result.get('deleted_keys', 0):,} chunk keys from storage"
+            )
+        else:
+            click.echo(
+                f"Deleted {result.get('deleted_keys', 0):,} chunk keys from storage across "
+                f"{result.get('deleted_spans', 0):,} spans"
+            )
+
+    warnings_out = result.get("warnings") or []
+    if warnings_out:
+        click.echo(f"\nWarnings: {len(warnings_out)}")
+        for w in warnings_out[:10]:
+            click.echo(f"  - {w}")
+
+    collateral = result.get("collateral_spans") or []
+    if collateral and not dry_run:
+        click.echo(f"\nCollateral spans marked replaced: {len(collateral)}")
+        for key in collateral[:10]:
+            click.echo(f"  - {key}")
 
     errors = result.get("errors") or []
     if errors:

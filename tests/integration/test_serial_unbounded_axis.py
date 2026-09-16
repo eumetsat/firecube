@@ -131,6 +131,8 @@ def _ingest_args(tmp_path: Path, *extra: str) -> list[str]:
         "direct",
         "--option",
         "no_progress=true",
+        "--option",
+        "allow_empty_source=true",
         *extra,
     ]
 
@@ -144,5 +146,5 @@ def test_serial_run_accepts_unbounded_axis(tmp_path: Path) -> None:
 def test_parallel_run_still_rejects_unbounded_axis(tmp_path: Path) -> None:
     result = CliRunner().invoke(cli, _ingest_args(tmp_path, "--slot-start", "0", "--slot-end", "2"))
     assert result.exit_code != 0
-    message = str(result.exception) if result.exception is not None else result.output
+    message = result.output
     assert "extent" in message.lower(), message

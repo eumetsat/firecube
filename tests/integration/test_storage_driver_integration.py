@@ -249,7 +249,7 @@ class TestPipelineWithBothDrivers:
             options={
                 "pipeline_workers": 1,
                 "pipeline_batch_size": 1,
-                "include_patterns": ["*.nc"],
+                "input_filters": ["*.nc"],
                 "write_mode": "direct",
             },
         )

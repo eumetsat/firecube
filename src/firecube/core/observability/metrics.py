@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 # Counter/gauge names (single source of truth).
 METRIC_PIPELINE_BATCHES = "firecube_pipeline_batches_total"
 METRIC_PIPELINE_BATCHES_FAILED = "firecube_pipeline_batches_failed_total"
+METRIC_PIPELINE_BATCHES_NOT_ATTEMPTED = "firecube_pipeline_batches_not_attempted_total"
 METRIC_PIPELINE_HOOK_FAILURES = "firecube_pipeline_hook_failures_total"
 METRIC_FILES_PROCESSED = "firecube_files_processed_total"
 METRIC_BYTES_INGESTED = "firecube_bytes_ingested_total"
@@ -131,6 +132,7 @@ RUN_SUMMARY_SCHEMA: dict[str, RunMetricSpec] = {
     "batch_size": RunMetricSpec(METRIC_PIPELINE_BATCH_SIZE, "gauge"),
     "batches_total": RunMetricSpec(METRIC_PIPELINE_BATCHES, "counter"),
     "batches_failed": RunMetricSpec(METRIC_PIPELINE_BATCHES_FAILED, "counter"),
+    "batches_not_attempted": RunMetricSpec(METRIC_PIPELINE_BATCHES_NOT_ATTEMPTED, "counter"),
     "hook_failures": RunMetricSpec(METRIC_PIPELINE_HOOK_FAILURES, "counter"),
     "files_processed": RunMetricSpec(METRIC_FILES_PROCESSED, "counter"),
     "bytes_ingested": RunMetricSpec(METRIC_BYTES_INGESTED, "counter"),
@@ -165,6 +167,7 @@ _INTEGER_SUMMARY_KEYS = {
     "batch_size",
     "batches_total",
     "batches_failed",
+    "batches_not_attempted",
     "hook_failures",
     "files_processed",
     "bytes_ingested",
@@ -180,6 +183,18 @@ _INTEGER_SUMMARY_KEYS = {
     "resume_guard_runs_enumerated",
     "resume_guard_spans_scanned",
 }
+
+# PipelineMetrics fields that are NOT metric schema fields.  These are
+# structural/envelope keys used for span recording and result routing; they
+# must be stripped before comparing against RUN_SUMMARY_SCHEMA so that the
+# schema-drift check does not fire for them.
+_PIPELINE_ENVELOPE_KEYS: frozenset[str] = frozenset(
+    {
+        "coverage",
+        "rows_ingested",
+        "timestamps_skipped",
+    }
+)
 
 
 def _to_number(value: Any, *, as_int: bool) -> int | float:
@@ -227,9 +242,13 @@ class TelemetryService:
             return
 
         normalized = normalize_run_summary(summary)
-        unknown = sorted(set(summary.keys()) - set(RUN_SUMMARY_SCHEMA)) if summary else []
+        clean = {k: v for k, v in (summary or {}).items() if k not in _PIPELINE_ENVELOPE_KEYS}
+        unknown = sorted(set(clean.keys()) - set(RUN_SUMMARY_SCHEMA))
         if unknown:
-            self._log.warning("Ignoring unknown pipeline summary keys: %s", ", ".join(unknown))
+            self._log.warning(
+                "Ignoring unknown pipeline summary keys not declared in RUN_SUMMARY_SCHEMA: %s",
+                ", ".join(unknown),
+            )
 
         meta = {"plugin": self._plugin_name}
         for key, spec in RUN_SUMMARY_SCHEMA.items():

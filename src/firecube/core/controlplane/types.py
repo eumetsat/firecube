@@ -27,7 +27,7 @@ import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 from firecube.core.errors import ManifestError
 from firecube.core.slot_index import SlotAxis, SlotIndexModel
@@ -73,6 +73,8 @@ INDEX_ENSURED_OUTCOMES = frozenset(
         INDEX_ENSURED_OUTCOME_REBUILT,
     }
 )
+
+STATE_DELETED_BY_FIRECUBE: Final[int] = 2
 
 # NOTE: legacy slot-index attrs live in core/slot_index.py alongside SlotIndexModel; resolved-index attrs live here alongside ResolvedIndexRecord. Both follow the pattern "co-locate reserved attr constants with the type that uses them".
 INDEX_DIRNAME = "index"
@@ -399,6 +401,8 @@ class RunInfo:
     None for single-pod (Phase 2 and pre-Phase-3) runs.
     """
     slot_group: str | None = None
+    timestamps_skipped: int = 0
+    """Number of timestamps skipped (already present) during this run, when known."""
 
     @property
     def stale(self) -> bool:
@@ -422,6 +426,17 @@ class SpanCoverage:
     of ``time_index_ranges`` or ``region_spec`` should be set for
     meaningful coverage, but both default to ``None`` so construction
     never fails.
+
+    ``chunk_len_used`` records the STORED chunk length of the append
+    dimension that was actually used for alignment decisions during this
+    write. For existing groups this is the chunk length read from the
+    Zarr metadata (authoritative); for new groups it is the configured
+    chunk length. The value is optional (``None`` for legacy records and
+    for spans that never resolved a chunk length) so old WAL records
+    without this field continue to parse cleanly. Consumers today are
+    observability (``chunk_len_used`` propagated through
+    ``PipelineResult.metrics`` and the recording layer) and the
+    ``chunks list`` CLI display (``_span_payload`` renders it per span).
     """
 
     group: str
@@ -429,12 +444,13 @@ class SpanCoverage:
     time_index_ranges: list[list[int]] | None = None
     aligned: bool = True
     state_array: str | None = None
-    state_deleted_value: int = 2
+    state_deleted_value: int = STATE_DELETED_BY_FIRECUBE
     time_min: str | None = None
     time_max: str | None = None
     region_spec: dict[str, Any] | None = None
     write_strategy: str | None = None
     time_dim_name: str | None = None
+    chunk_len_used: int | None = None
 
     @property
     def timestamps_written(self) -> int:
@@ -456,10 +472,11 @@ def build_span_entry(
     reason: str | None = None,
     aligned: bool = True,
     state_array: str | None = None,
-    state_deleted_value: int = 2,
+    state_deleted_value: int = STATE_DELETED_BY_FIRECUBE,
     region_spec: dict[str, Any] | None = None,
     write_strategy: str | None = None,
     time_dim_name: str | None = None,
+    chunk_len_used: int | None = None,
 ) -> dict[str, Any]:
     """Build a projected span record dict."""
     entry_meta = dict(meta)
@@ -484,6 +501,8 @@ def build_span_entry(
         span_payload["write_strategy"] = write_strategy
     if time_dim_name is not None:
         span_payload["time_dim_name"] = time_dim_name
+    if chunk_len_used is not None:
+        span_payload["chunk_len_used"] = int(chunk_len_used)
 
     return {
         "key": f"span_{run_id}_{batch_id}_{group}".strip("_"),

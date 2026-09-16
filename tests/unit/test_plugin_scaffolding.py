@@ -25,7 +25,11 @@ only guard against the templates drifting from the Firecube API.
 
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
+import math
+import os
+import re
 import subprocess
 import sys
 import tomllib
@@ -34,11 +38,18 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
 
+import numpy as np
 import pytest
+import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import IndexSpec, PipelineResult, resolve_index_spec
+from firecube.ingestor.api import (
+    IndexSpec,
+    PipelineResult,
+    ZarrTemplateConfig,
+    resolve_index_spec,
+)
 from firecube.ingestor.devtools.scaffolding import _load_template, create_plugin_structure
 
 TEMPLATES = ["base", "zarr", "parquet", "direct_zarr"]
@@ -88,7 +99,11 @@ def _render_and_exec(
     plugin_name: str = "test_plugin",
     class_name: str = "TestPlugin",
 ) -> dict[str, Any]:
-    source = template_str.format(plugin_name=plugin_name, class_name=class_name)
+    source = template_str.format(
+        plugin_name=plugin_name,
+        class_name=class_name,
+        copyright_header="# Copyright 2024 Test Author\n# SPDX-License-Identifier: Apache-2.0",
+    )
     ns: dict[str, Any] = {}
     exec(compile(source, "<scaffold>", "exec"), ns)
     return ns
@@ -113,6 +128,7 @@ def _reader_calls(template_type: str, instance: Any) -> list[Callable[[], Any]]:
     if template_type == "base":
         return [lambda: instance._process_batch(batch, _CTX)]
     if template_type == "zarr":
+        type(instance).time_dim_name = "timestamp"  # the author sets TIME_DIM first
         return [lambda: instance.build_dataset("default", [_ITEM], _CTX)]
     if template_type == "parquet":
         return [lambda: instance.build_dataset("default", batch, _CTX)]
@@ -179,12 +195,14 @@ def test_generated_readme_names_reader_and_documents_the_flow(
         "--input-data /path/to/your/input",
         "--target file:///tmp/demo_foo_out",
         "--product-name demo_foo",
-        "--storage-type local",
-        "--storage-driver fsspec",
         f"--output-format {OUTPUT_FORMAT_PER_TEMPLATE[template_type]}",
         "--write-mode",
+        "--input-filters",
     ):
         assert flag in readme, flag
+    # Storage type and driver are inferred from the file:// URI.
+    assert "--storage-type" not in readme
+    assert "--storage-driver" not in readme
     for command in ("plugins install --editable .", "plugins list", "plugins describe demo_foo"):
         assert f"uv run firecube {command}" in readme, command
 
@@ -276,6 +294,8 @@ def test_generated_direct_zarr_plans_without_a_reader(tmp_path: Path) -> None:
         assert array.shape[0] == slot_count, array.name
         assert array.chunks is not None
         assert slot_count % array.chunks[0] == 0, f"{array.name}: chunk would be partial"
+    (value,) = (array for array in group_spec.arrays if array.name == "value")
+    assert math.isnan(value.fill_value), "unwritten slots must not read as 0.0"
 
     with pytest.raises(NotImplementedError):
         module.read_product_item(Path(_ITEM))
@@ -315,3 +335,253 @@ def test_cli_create_defaults_to_the_zarr_template(tmp_path: Path) -> None:
 
     ingestor = tmp_path / "firecube-demo-foo" / "src" / "firecube_demo_foo" / "ingestor.py"
     assert "class DemoFooIngestor(GenericZarrIngestor)" in ingestor.read_text()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("name", ["my plugin", "9lives", "my.plugin", "-plugin", "_plugin", ""])
+def test_invalid_plugin_names_are_rejected_before_anything_is_written(
+    name: str, tmp_path: Path
+) -> None:
+    with pytest.raises(ValueError, match="Invalid plugin name"):
+        create_plugin_structure(name, tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("name", "plugin_name", "class_name"),
+    [
+        ("my-plugin", "my_plugin", "MyPluginIngestor"),
+        ("MyCoolPlugin", "my_cool_plugin", "MyCoolPluginIngestor"),
+        ("HTTPServer", "http_server", "HttpServerIngestor"),
+        ("My-Cool_Plugin", "my_cool_plugin", "MyCoolPluginIngestor"),
+        ("sentinel3-frp", "sentinel3_frp", "Sentinel3FrpIngestor"),
+    ],
+)
+def test_plugin_id_package_and_class_derive_from_one_snake_case_name(
+    name: str, plugin_name: str, class_name: str, tmp_path: Path
+) -> None:
+    root = create_plugin_structure(name, tmp_path)
+
+    assert root.name == f"firecube-{plugin_name.replace('_', '-')}"
+    project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    assert project["entry-points"]["firecube.plugins"] == {plugin_name: f"firecube_{plugin_name}"}
+    ingestor = (root / "src" / f"firecube_{plugin_name}" / "ingestor.py").read_text()
+    assert f"class {class_name}(GenericZarrIngestor)" in ingestor
+
+
+@pytest.mark.unit
+def test_quotes_in_author_and_license_still_produce_a_valid_pyproject(tmp_path: Path) -> None:
+    root = create_plugin_structure(
+        "demo-foo",
+        tmp_path,
+        author_name='Jane "JD" Doe',
+        author_email="jd@example.com",
+        license='Foo "bar"',
+    )
+
+    project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    assert project["authors"] == [{"name": 'Jane "JD" Doe', "email": "jd@example.com"}]
+    assert project["license"] == "LicenseRef-Foo-bar"
+
+
+@pytest.mark.unit
+def test_pyproject_license_is_the_spdx_expression_in_the_header(tmp_path: Path) -> None:
+    root = create_plugin_structure("demo-foo", tmp_path, license="apache-2.0")
+
+    project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    assert project["license"] == "Apache-2.0"
+    ingestor = (root / "src" / "firecube_demo_foo" / "ingestor.py").read_text()
+    assert "# SPDX-License-Identifier: Apache-2.0" in ingestor
+
+
+def _install_entry_point_metadata(site: Path, entry_point_line: str) -> None:
+    """Stand in for ``uv sync``: installed metadata with one plugin entry point."""
+    dist_info = site / "firecube_demo_foo-0.1.0.dist-info"
+    dist_info.mkdir(parents=True)
+    (dist_info / "METADATA").write_text(
+        "Metadata-Version: 2.1\nName: firecube-demo-foo\nVersion: 0.1.0\n"
+    )
+    (dist_info / "entry_points.txt").write_text(f"[firecube.plugins]\n{entry_point_line}\n")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("entry_point_line", "passes"),
+    [
+        ("demo_foo = firecube_demo_foo", True),
+        ("demo_foo = firecube_demo_fo", False),
+        ("demo_fo = firecube_demo_foo", False),
+    ],
+)
+def test_generated_registration_test_checks_the_installed_entry_point(
+    entry_point_line: str, passes: bool, tmp_path: Path
+) -> None:
+    """A wrong entry point name or module must fail the generated test.
+
+    Importing the package registers the class on its own, so a test that only
+    imports it passes while ``firecube plugins list`` cannot find the plugin.
+    """
+    root = create_plugin_structure("demo-foo", tmp_path / "project")
+    site = tmp_path / "site"
+    _install_entry_point_metadata(site, entry_point_line)
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(site), str(root / "src")])}
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert (completed.returncode == 0) is passes, completed.stdout + completed.stderr
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("template", ["parquet", "base"])
+def test_cli_rejects_write_strategy_outside_the_zarr_template(
+    template: str, tmp_path: Path
+) -> None:
+    result = CliRunner().invoke(
+        cli,
+        [
+            "plugins",
+            "create",
+            "demo-foo",
+            "--target-dir",
+            str(tmp_path),
+            "--template",
+            template,
+            "--write-strategy",
+            "zarr-python",
+            "--non-interactive",
+        ],
+    )
+
+    assert result.exit_code == 2, result.output
+    assert "--write-strategy applies only to --template zarr" in result.output
+    assert not (tmp_path / "firecube-demo-foo").exists()
+
+
+@pytest.mark.unit
+def test_cli_reports_an_invalid_name_as_a_usage_error(tmp_path: Path) -> None:
+    result = CliRunner().invoke(
+        cli,
+        ["plugins", "create", "my plugin", "--target-dir", str(tmp_path), "--non-interactive"],
+    )
+
+    assert result.exit_code == 2, result.output
+    assert "Invalid plugin name 'my plugin'" in result.output
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.unit
+def test_cli_wizard_asks_again_after_an_invalid_name(tmp_path: Path) -> None:
+    result = CliRunner().invoke(
+        cli,
+        ["plugins", "create", "placeholder", "--target-dir", str(tmp_path)],
+        input="my plugin\nmy-plugin\n\n\n\n\n\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Invalid plugin name 'my plugin'" in result.output
+    assert (tmp_path / "firecube-my-plugin").is_dir()
+
+
+@pytest.mark.unit
+def test_generated_zarr_ingestor_refuses_a_dataset_without_the_time_dimension(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Concatenating on a missing dimension would invent it and store a mostly-NaN cube."""
+    _, module = _generate(tmp_path, "zarr")
+    dataset = xr.Dataset(
+        {"value": (("time",), [1.0])}, coords={"time": [np.datetime64("2024-01-01")]}
+    )
+    monkeypatch.setattr(module, "read_dataset", lambda path: dataset)
+    monkeypatch.setattr(module.DemoFooIngestor, "time_dim_name", "timestamp")
+
+    with pytest.raises(ValueError, match="without TIME_DIM 'timestamp'"):
+        module.DemoFooIngestor().build_dataset("default", [_ITEM], _CTX)
+
+
+@pytest.mark.unit
+def test_generated_zarr_ingestor_pins_concat_keywords(tmp_path: Path) -> None:
+    """xr.concat pins four keywords; drift silently produces inconsistent stores."""
+    root = create_plugin_structure("demo-foo", tmp_path, template_type="zarr")
+    source = (root / "src" / "firecube_demo_foo" / "ingestor.py").read_text()
+
+    for keyword in ('data_vars="minimal"', 'coords="minimal"', 'compat="equals"', 'join="exact"'):
+        assert keyword in source, keyword
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("target", ["s3://bucket/demo_foo_out", None])
+def test_generated_base_ingestor_refuses_a_remote_or_missing_target(
+    target: str | None, tmp_path: Path
+) -> None:
+    _, module = _generate(tmp_path, "base")
+    ctx = SimpleNamespace(materialize=lambda item: Path(item), target=target)
+
+    with pytest.raises(ValueError, match="local file:// target"):
+        module.DemoFooIngestor()._process_batch(SimpleNamespace(items=[]), ctx)
+
+
+_COMMENTED_SETTING = re.compile(
+    r"^(\s+)# ((?:zarr_\w+|shards|compressors)\b.*|with xr\.open_dataset\(.*|\s{4}\S.*|\).*)$",
+    re.MULTILINE,
+)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("template_type", "setting_lines"), [("zarr", 13), ("direct_zarr", 6)])
+def test_commented_storage_settings_are_valid_code_once_uncommented(
+    template_type: str, setting_lines: int, tmp_path: Path
+) -> None:
+    """The storage and reader hints are commented out, hiding them from ruff and pyright.
+
+    Uncomment every one and check the result, so the hints cannot drift from
+    ``ZarrTemplateConfig``, ``ZarrArraySpec``, and xarray.
+    """
+    root = create_plugin_structure("demo-foo", tmp_path, template_type=template_type)
+    ingestor = root / "src" / "firecube_demo_foo" / "ingestor.py"
+    source, uncommented = _COMMENTED_SETTING.subn(r"\1\2", ingestor.read_text())
+    assert uncommented == setting_lines
+    ingestor.write_text(source)
+
+    config_fields = {field.name for field in dataclasses.fields(ZarrTemplateConfig)}
+    for name in re.findall(r"^    (zarr_\w+):", source, re.MULTILINE):
+        assert name in config_fields, name
+    for command in (
+        [sys.executable, "-m", "ruff", "check", "src"],
+        [sys.executable, "-m", "pyright", "--pythonpath", sys.executable],
+    ):
+        completed = subprocess.run(command, cwd=root, capture_output=True, text=True)
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+@pytest.mark.unit
+def test_generated_zarr_ingestor_stops_until_time_dim_is_set(tmp_path: Path) -> None:
+    """A fresh scaffold names ``TIME_DIM`` before it reaches the unimplemented reader."""
+    _, module = _generate(tmp_path, "zarr")
+
+    assert module.TIME_DIM == ""
+    assert module.DemoFooIngestor.time_dim_name == module.TIME_DIM
+    with pytest.raises(NotImplementedError, match="TIME_DIM is not set"):
+        module.DemoFooIngestor().build_dataset("default", [_ITEM], _CTX)
+
+
+_DOCS_URL = re.compile(r"https://eumetsat\.github\.io/firecube/latest/([a-z0-9/-]+)/")
+
+
+@pytest.mark.unit
+def test_guide_links_in_the_generated_zarr_ingestor_point_at_existing_pages(
+    tmp_path: Path,
+) -> None:
+    root = create_plugin_structure("demo-foo", tmp_path, template_type="zarr")
+    source = (root / "src" / "firecube_demo_foo" / "ingestor.py").read_text()
+    docs_root = Path(__file__).resolve().parents[2] / "docs"
+
+    pages = _DOCS_URL.findall(source)
+    assert len(pages) == 5
+    for page in pages:
+        assert (docs_root / f"{page}.md").is_file(), page

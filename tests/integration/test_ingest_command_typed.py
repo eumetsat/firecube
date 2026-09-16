@@ -87,6 +87,16 @@ def test_all_required_ingest_flags_reach_ingestor(tmp_path: Path) -> None:
     assert ctx.storage.output.driver.driver == "fsspec"
 
 
+def test_unimplemented_time_encoding_is_rejected_before_writing(tmp_path: Path) -> None:
+    args = _required_args(tmp_path)
+    args[args.index("cli_test_plugin")] = "direct_zarr_capable_test_plugin"
+    result = CliRunner().invoke(cli, [*args, "--option", "zarr_time_encoding=int64"])
+
+    assert result.exit_code != 0, result.output
+    assert "zarr_time_encoding is not implemented" in result.output
+    assert not (tmp_path / "qa.zarr").exists()
+
+
 def test_empty_product_name_is_rejected_at_config_boundary(tmp_path: Path) -> None:
     args = _required_args(tmp_path)
     args[args.index("qa")] = ""

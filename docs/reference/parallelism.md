@@ -56,6 +56,6 @@ facade does not re-export it.
 
 ## See Also
 
-- [Implement `DirectZarrIngestor`](../guides/plugins/direct-zarr.md)
-- [DirectZarrIngestor (Region) tutorial](../tutorials/direct-zarr-parallel.md)
+- [Declare The Schema And Index](../guides/plugins/direct-zarr.md)
+- [MTG FCI L1C benchmark notebook](../showcase/mtg-fci-l1c-benchmarks.ipynb)
 - [Run Parallel Zarr Writes](../operations/parallel-zarr-writes.md)

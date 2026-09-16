@@ -4,7 +4,7 @@ not_in_nav: |
   concepts/plugins/index.md
   quickstart/catalogs.md
   quickstart/configuration.md
-  tutorials/weather-csv.md
+  guides/plugins/customize-source-discovery.md
 site_url: https://eumetsat.github.io/firecube/
 repo_url: https://github.com/eumetsat/firecube
 repo_name: eumetsat/firecube
@@ -43,6 +43,9 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
+extra_css:
+  - assets/stylesheets/showcase.css
+
 markdown_extensions:
   - admonition
   - attr_list
@@ -62,6 +65,12 @@ markdown_extensions:
 
 plugins:
   - search
+  - mkdocs-jupyter:
+      include: ["showcase/*.ipynb"]
+      execute: false
+      include_source: true
+      no_prompt: true
+      allow_errors: false
   - mermaid2:
       arguments:
         theme: neutral
@@ -105,17 +114,24 @@ nav:
     - Install Your Plugin: guides/plugins/install-a-plugin.md
     - Prepare Your Source Data:
       - Discover Source Data: guides/plugins/source-discovery.md
-      - Customize Source Discovery: guides/plugins/customize-source-discovery.md
+      - Discover Zipped Data: guides/plugins/discover-zipped-data.md
+      - Parse Filename Fields: guides/plugins/parse-filename-fields.md
+      - Read Paired Source Files: guides/plugins/paired-source-files.md
+    - Write Your Output:
+      - Append Datasets To Zarr: guides/plugins/generic-zarr.md
+      - Write Tables To Parquet: guides/plugins/generic-parquet.md
       - Route Writes To Multiple Groups: guides/plugins/multi-group-writes.md
-    - Implement Your Plugin:
-      - GenericZarrIngestor (Append): guides/plugins/generic-zarr.md
-      - GenericParquetIngestor (Tabular): guides/plugins/generic-parquet.md
-      - DirectZarrIngestor (Region): guides/plugins/direct-zarr.md
-      - DirectZarrIngestor (Auto): guides/plugins/direct-zarr-auto.md
+    - Customize Zarr Layout:
+      - Chunking: guides/plugins/configure-zarr-chunking.md
+      - Sharding: guides/plugins/configure-zarr-sharding.md
+      - Compression: guides/plugins/configure-zarr-compression.md
+    - Write Zarr Regions In Parallel:
+      - Declare The Schema And Index: guides/plugins/direct-zarr.md
+      - Discover The Time Axis: guides/plugins/direct-zarr-auto.md
     - Develop Further:
       - Add Configuration Options: guides/plugins/add-config-options.md
       - Add Telemetry: guides/plugins/observability.md
-    - Advanced Customization:
+    - Beyond The Templates:
       - Plugin Extensions: guides/plugins/extensions.md
       - Custom Pipeline Plugins: guides/plugins/base-ingestor.md
     - Publish Your Plugin:
@@ -130,7 +146,7 @@ nav:
         - Overview: concepts/output-formats/zarr/index.md
         - GenericZarrIngestor (Append): concepts/output-formats/zarr/generic-append.md
         - DirectZarrIngestor (Region): concepts/output-formats/zarr/direct-region.md
-        - 'DirectZarrIngestor: Parallel Writes': concepts/output-formats/zarr/parallel-writes.md
+        - How Parallel Writes Stay Safe: concepts/output-formats/zarr/parallel-writes.md
       - Parquet: concepts/output-formats/parquet.md
       - Tensogram: concepts/output-formats/archive.md
     - Storage & ChunkManager:
@@ -176,17 +192,11 @@ nav:
       - Create: operations/archive/create.md
       - Inspect And Validate: operations/archive/inspect.md
       - Restore: operations/archive/restore.md
-  - Tutorials:
-    - Overview: tutorials/index.md
-    - First Plugin:
-      - NetCDF To Zarr: tutorials/weather-netcdf.md
-      - "NetCDF To Zarr: Source Discovery": tutorials/source-discovery.md
-      - "NetCDF To Zarr: Observability": tutorials/observability.md
-    - Product Examples:
-      - Sentinel-3 FRP To Parquet: tutorials/sentinel3-frp.md
-    - Advanced Zarr:
-      - DirectZarrIngestor (Region): tutorials/direct-zarr-parallel.md
-      - DirectZarrIngestor (Auto): tutorials/direct-zarr-auto.md
+  - Showcase:
+    - Overview: showcase/index.md
+    - "Firecube 101: NetCDF To Zarr": showcase/netcdf-to-zarr.ipynb
+    - Sentinel-3 SLSTR FRP: showcase/sentinel3-fire-detections.ipynb
+    - "Slot-Based Parallelism: MTG FCI L1C": showcase/mtg-fci-l1c-benchmarks.ipynb
   - Contributing:
     - Overview: contributing/index.md
     - Firecube Contributors: contributing/firecube-contributors.md
@@ -197,7 +207,7 @@ nav:
       - Hooks & Lifecycle: reference/hooks.md
       - Context & Results: reference/context.md
       - Exceptions: reference/exceptions.md
-      - Slot-Range Parallelism: reference/parallelism.md
+      - Index Specification: reference/parallelism.md
       - Extensions: reference/extensions.md
     - Core Utilities: reference/core-utilities.md
     - CLI Reference: reference/cli.md
