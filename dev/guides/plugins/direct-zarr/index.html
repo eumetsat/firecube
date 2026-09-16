@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/guides/plugins/direct-zarr/">
       
       
-        <link rel="prev" href="../generic-parquet/">
+        <link rel="prev" href="../configure-zarr-compression/">
       
       
         <link rel="next" href="../direct-zarr-auto/">
@@ -27,7 +27,7 @@
     
     
       
-        <title>DirectZarrIngestor (Region) - Firecube</title>
+        <title>Declare The Schema And Index - Firecube</title>
       
     
     
@@ -55,6 +55,8 @@
     
       <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
+      <link rel="stylesheet" href="../../../assets/stylesheets/showcase.css">
+    
     <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -80,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#implement-directzarringestor" class="md-skip">
+        <a href="#declare-the-schema-and-index" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              DirectZarrIngestor (Region)
+              Declare The Schema And Index
             
           </span>
         </div>
@@ -333,11 +335,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../tutorials/" class="md-tabs__link">
+        <a href="../../../showcase/" class="md-tabs__link">
           
   
   
-  Tutorials
+  Showcase
 
         </a>
       </li>
@@ -890,14 +892,191 @@
   
   
     <li class="md-nav__item">
-      <a href="../customize-source-discovery/" class="md-nav__link">
+      <a href="../discover-zipped-data/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Customize Source Discovery
+    Discover Zipped Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parse-filename-fields/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Filename Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../paired-source-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Paired Source Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Your Output
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Write Your Output
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Append Datasets To Zarr
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-parquet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Tables To Parquet
   
 
     
@@ -951,6 +1130,155 @@
                 
   
   
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customize Zarr Layout
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Customize Zarr Layout
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configure-zarr-chunking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configure-zarr-sharding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sharding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configure-zarr-compression/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compression
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -972,17 +1300,17 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Implement Your Plugin
+    Write Zarr Regions In Parallel
   
 
     
@@ -993,72 +1321,16 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_7">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Implement Your Plugin
+    Write Zarr Regions In Parallel
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../generic-zarr/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GenericZarrIngestor (Append)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../generic-parquet/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GenericParquetIngestor (Tabular)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -1083,7 +1355,7 @@
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Region)
+    Declare The Schema And Index
   
 
     
@@ -1101,7 +1373,7 @@
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Region)
+    Declare The Schema And Index
   
 
     
@@ -1131,6 +1403,17 @@
     <span class="md-ellipsis">
       
         Goal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
       
     </span>
   </a>
@@ -1254,7 +1537,7 @@
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Auto)
+    Discover The Time Axis
   
 
     
@@ -1301,10 +1584,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
         
           
-          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
             
   
   
@@ -1322,8 +1605,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1422,17 +1705,17 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Customization
+    Beyond The Templates
   
 
     
@@ -1443,12 +1726,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Advanced Customization
+    Beyond The Templates
   
 
           </label>
@@ -1543,10 +1826,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="">
             
   
   
@@ -1564,8 +1847,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1990,7 +2273,7 @@
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor: Parallel Writes
+    How Parallel Writes Stay Safe
   
 
     
@@ -3624,7 +3907,7 @@
   <span class="md-ellipsis">
     
   
-    Tutorials
+    Showcase
   
 
     
@@ -3640,7 +3923,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Tutorials
+    Showcase
   
 
           </label>
@@ -3653,7 +3936,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/" class="md-nav__link">
+      <a href="../../../showcase/" class="md-nav__link">
         
   
   
@@ -3680,69 +3963,15 @@
   
   
   
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    First Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    First Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../../../tutorials/weather-netcdf/" class="md-nav__link">
+      <a href="../../../showcase/netcdf-to-zarr/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr
+    Firecube 101: NetCDF To Zarr
   
 
     
@@ -3763,14 +3992,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/source-discovery/" class="md-nav__link">
+      <a href="../../../showcase/sentinel3-fire-detections/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Source Discovery
+    Sentinel-3 SLSTR Level 2 Fire Radiative Power
   
 
     
@@ -3791,14 +4020,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/observability/" class="md-nav__link">
+      <a href="../../../showcase/mtg-fci-l1c-benchmarks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Observability
+    Slot-Based Parallelism: MTG FCI L1C
   
 
     
@@ -3807,222 +4036,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Product Examples
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Product Examples
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/sentinel3-frp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Sentinel-3 FRP To Parquet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Zarr
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Advanced Zarr
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/direct-zarr-parallel/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/direct-zarr-auto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -4414,7 +4427,7 @@
   <span class="md-ellipsis">
     
   
-    Slot-Range Parallelism
+    Index Specification
   
 
     
@@ -4677,6 +4690,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#choose-the-time-axis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4790,7 +4814,7 @@
   
 
 
-<h1 id="implement-directzarringestor">Implement DirectZarrIngestor</h1>
+<h1 id="declare-the-schema-and-index">Declare The Schema And Index</h1>
 <h2 id="goal">Goal</h2>
 <p>Use <code>DirectZarrIngestor</code> when you want slot-based parallel ingestion: many
 workers writing disjoint slices of the same Zarr product at the same time,
@@ -4806,6 +4830,19 @@ its slice without coordination at write time.</p>
 </ul>
 <p>Firecube resolves the declared index once, sizes arrays from
 <code>resolved_index(ctx).size(group)</code>, and then applies the emitted write intents.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>This guide assumes the vocabulary of indexed writes. Read these first, in
+this order:</p>
+<ol>
+<li><a href="../../../concepts/output-formats/zarr/direct-region/">DirectZarrIngestor write model</a> — time axes, coordinate ownership, and what a write intent is.</li>
+<li><a href="../../../reference/parallelism/">Index Specification</a> — <code>TimeAxis</code>, <code>IndexSpec</code>, and <code>ItemInfo</code>.</li>
+<li><a href="../../../concepts/parallelism/">Parallelism</a> — when slot-range workers are the right model.</li>
+<li><a href="../../../concepts/chunk-management/">ChunkManager Records</a> — the claims that keep workers apart.</li>
+</ol>
+<p>Running several workers, preallocating the store, and planning slot ranges is
+an operator workflow: <a href="../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a>.
+A plugin created with <code>firecube plugins create --template zarr --write-strategy zarr-python</code>
+and installed as in <a href="../install-a-plugin/">Install Your Plugin</a> is the starting point.</p>
 <h2 id="choose-the-time-axis">Choose The Time Axis</h2>
 <p>Declare the axis with a <code>TimeAxis</code> constructor. Pick the row that matches your
 product:</p>
@@ -4837,7 +4874,7 @@ product:</p>
 </table>
 <p>The first row is the common case and is what the example below uses. The
 last row has its own guide:
-<a href="../direct-zarr-auto/">DirectZarrIngestor (Auto)</a>. To
+<a href="../direct-zarr-auto/">Discover The Time Axis</a>. To
 understand what each choice means for the stored coordinate values and for
 write verification, read the
 <a href="../../../concepts/output-formats/zarr/direct-region/">DirectZarrIngestor write model</a>.
@@ -4953,7 +4990,10 @@ index, raises <code>IndexedWriteCompilationError</code> for any timestamp it can
 and emits the slot's time-coordinate verify-write for you. Append
 <code>WriteIntent.static(...)</code> items to the same list for arrays that never move
 with the time axis, such as latitude and longitude grids. Every element must
-target a declared group and array.</p>
+target a declared group and array. To write more than one group, declare one
+<code>ZarrGroupSpec</code> per group and name the group on each write; Firecube derives
+the group set from the schema, so <code>get_batch_groups</code> is not overridden on
+this template.</p>
 <h3 id="choose-a-write-factory">Choose A Write Factory</h3>
 <table>
 <thead>
@@ -5011,7 +5051,7 @@ element types mix freely in one returned list. See
 the full contract.</p>
 <h2 id="verify">Verify</h2>
 <p>Run one ingest against a small input and confirm the store is written:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input-data<span class="w"> </span>./path/to/input<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
@@ -5026,8 +5066,8 @@ the full contract.</p>
 preallocate the store, plan chunk-aligned slot ranges, then start one ingest
 worker per range. That is an operator workflow with its own page:
 <a href="../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a>. The
-<a href="../../../tutorials/direct-zarr-parallel/">DirectZarrIngestor (Region) tutorial</a>
-walks it end to end with real data.</p>
+<a href="../../../showcase/mtg-fci-l1c-benchmarks/">MTG FCI L1C benchmark notebook</a>
+reproduces the parallel setup with a public plugin and real observations.</p>
 <h2 id="common-mistakes">Common Mistakes</h2>
 <table>
 <thead>
@@ -5066,7 +5106,7 @@ walks it end to end with real data.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></strong> - preallocate, slot planning, and worker fan-out</li>
-<li><strong><a href="../../../tutorials/direct-zarr-parallel/">DirectZarrIngestor (Region) Tutorial</a></strong> - complete tutorial with real timestamps</li>
+<li><strong><a href="../../../showcase/mtg-fci-l1c-benchmarks/">Slot-Based Parallelism: MTG FCI L1C</a></strong> - reproduce a parallel ingestion benchmark</li>
 <li><strong><a href="../../../concepts/output-formats/zarr/direct-region/">DirectZarrIngestor (Region)</a></strong> - the write model, time-axis regimes, and coordinate ownership</li>
 <li><strong><a href="../../../reference/parallelism/">Index Specification Reference</a></strong> - <code>TimeAxis</code>, <code>IndexSpec</code>, and <code>ResolvedIndex</code> types</li>
 <li><strong><a href="../../../reference/templates/">Plugin Templates</a></strong> - full template surface</li>

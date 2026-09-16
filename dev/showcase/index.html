@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/tutorials/observability/">
+        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/showcase/">
       
       
-        <link rel="prev" href="../source-discovery/">
+        <link rel="prev" href="../operations/archive/restore/">
       
       
-        <link rel="next" href="../sentinel3-frp/">
+        <link rel="next" href="netcdf-to-zarr/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/firecube-favicon.png">
+      <link rel="icon" href="../assets/firecube-favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>NetCDF To Zarr: Observability - Firecube</title>
+        <title>Overview - Firecube</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,11 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+      <link rel="stylesheet" href="../assets/stylesheets/showcase.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#netcdf-to-zarr-observability" class="md-skip">
+        <a href="#showcase" class="md-skip">
           Skip to content
         </a>
       
@@ -98,9 +100,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href=".." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -117,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              NetCDF To Zarr: Observability
+              Overview
             
           </span>
         </div>
@@ -230,7 +232,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href=".." class="md-tabs__link">
         
   
   
@@ -251,7 +253,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../quickstart/" class="md-tabs__link">
+        <a href="../quickstart/" class="md-tabs__link">
           
   
   
@@ -271,7 +273,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../guides/plugins/" class="md-tabs__link">
+        <a href="../guides/plugins/" class="md-tabs__link">
           
   
   
@@ -291,7 +293,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../concepts/" class="md-tabs__link">
+        <a href="../concepts/" class="md-tabs__link">
           
   
   
@@ -311,7 +313,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../operations/" class="md-tabs__link">
+        <a href="../operations/" class="md-tabs__link">
           
   
   
@@ -333,11 +335,11 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+        <a href="./" class="md-tabs__link">
           
   
   
-  Tutorials
+  Showcase
 
         </a>
       </li>
@@ -353,7 +355,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../contributing/" class="md-tabs__link">
+        <a href="../contributing/" class="md-tabs__link">
           
   
   
@@ -373,7 +375,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../reference/" class="md-tabs__link">
           
   
   
@@ -396,7 +398,9 @@
           
             
               
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -407,9 +411,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href=".." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     Firecube
@@ -436,7 +440,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -517,7 +521,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -545,7 +549,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/installation/" class="md-nav__link">
+      <a href="../quickstart/installation/" class="md-nav__link">
         
   
   
@@ -573,7 +577,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/plugins/" class="md-nav__link">
+      <a href="../quickstart/plugins/" class="md-nav__link">
         
   
   
@@ -601,7 +605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/source-data/" class="md-nav__link">
+      <a href="../quickstart/source-data/" class="md-nav__link">
         
   
   
@@ -629,7 +633,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/ingestion/" class="md-nav__link">
+      <a href="../quickstart/ingestion/" class="md-nav__link">
         
   
   
@@ -718,7 +722,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/" class="md-nav__link">
+      <a href="../guides/plugins/" class="md-nav__link">
         
   
   
@@ -746,7 +750,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/create-a-plugin/" class="md-nav__link">
+      <a href="../guides/plugins/create-a-plugin/" class="md-nav__link">
         
   
   
@@ -774,7 +778,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/install-a-plugin/" class="md-nav__link">
+      <a href="../guides/plugins/install-a-plugin/" class="md-nav__link">
         
   
   
@@ -856,7 +860,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/source-discovery/" class="md-nav__link">
+      <a href="../guides/plugins/source-discovery/" class="md-nav__link">
         
   
   
@@ -884,14 +888,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/customize-source-discovery/" class="md-nav__link">
+      <a href="../guides/plugins/discover-zipped-data/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Customize Source Discovery
+    Discover Zipped Data
   
 
     
@@ -912,14 +916,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/multi-group-writes/" class="md-nav__link">
+      <a href="../guides/plugins/parse-filename-fields/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Route Writes To Multiple Groups
+    Parse Filename Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/plugins/paired-source-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Paired Source Files
   
 
     
@@ -973,7 +1005,7 @@
   <span class="md-ellipsis">
     
   
-    Implement Your Plugin
+    Write Your Output
   
 
     
@@ -989,7 +1021,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Implement Your Plugin
+    Write Your Output
   
 
           </label>
@@ -1002,14 +1034,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/generic-zarr/" class="md-nav__link">
+      <a href="../guides/plugins/generic-zarr/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericZarrIngestor (Append)
+    Append Datasets To Zarr
   
 
     
@@ -1030,14 +1062,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/generic-parquet/" class="md-nav__link">
+      <a href="../guides/plugins/generic-parquet/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericParquetIngestor (Tabular)
+    Write Tables To Parquet
   
 
     
@@ -1058,42 +1090,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/direct-zarr/" class="md-nav__link">
+      <a href="../guides/plugins/multi-group-writes/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
+    Route Writes To Multiple Groups
   
 
     
@@ -1147,7 +1151,7 @@
   <span class="md-ellipsis">
     
   
-    Develop Further
+    Customize Zarr Layout
   
 
     
@@ -1163,7 +1167,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Develop Further
+    Customize Zarr Layout
   
 
           </label>
@@ -1176,14 +1180,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/add-config-options/" class="md-nav__link">
+      <a href="../guides/plugins/configure-zarr-chunking/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Add Configuration Options
+    Chunking
   
 
     
@@ -1204,14 +1208,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/observability/" class="md-nav__link">
+      <a href="../guides/plugins/configure-zarr-sharding/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Add Telemetry
+    Sharding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/plugins/configure-zarr-compression/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compression
   
 
     
@@ -1265,7 +1297,7 @@
   <span class="md-ellipsis">
     
   
-    Advanced Customization
+    Write Zarr Regions In Parallel
   
 
     
@@ -1281,7 +1313,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Advanced Customization
+    Write Zarr Regions In Parallel
   
 
           </label>
@@ -1294,14 +1326,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/extensions/" class="md-nav__link">
+      <a href="../guides/plugins/direct-zarr/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Plugin Extensions
+    Declare The Schema And Index
   
 
     
@@ -1322,14 +1354,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/base-ingestor/" class="md-nav__link">
+      <a href="../guides/plugins/direct-zarr-auto/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Custom Pipeline Plugins
+    Discover The Time Axis
   
 
     
@@ -1383,7 +1415,7 @@
   <span class="md-ellipsis">
     
   
-    Publish Your Plugin
+    Develop Further
   
 
     
@@ -1396,6 +1428,242 @@
         
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Develop Further
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/plugins/add-config-options/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Add Configuration Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/plugins/observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Add Telemetry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Beyond The Templates
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Beyond The Templates
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/plugins/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/plugins/base-ingestor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Pipeline Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Publish Your Plugin
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1412,7 +1680,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/contract/" class="md-nav__link">
+      <a href="../guides/plugins/contract/" class="md-nav__link">
         
   
   
@@ -1509,7 +1777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/" class="md-nav__link">
+      <a href="../concepts/" class="md-nav__link">
         
   
   
@@ -1537,7 +1805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/glossary/" class="md-nav__link">
+      <a href="../concepts/glossary/" class="md-nav__link">
         
   
   
@@ -1565,7 +1833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/configuration/" class="md-nav__link">
+      <a href="../concepts/configuration/" class="md-nav__link">
         
   
   
@@ -1647,7 +1915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/" class="md-nav__link">
+      <a href="../concepts/output-formats/" class="md-nav__link">
         
   
   
@@ -1729,7 +1997,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/" class="md-nav__link">
+      <a href="../concepts/output-formats/zarr/" class="md-nav__link">
         
   
   
@@ -1757,7 +2025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
+      <a href="../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
         
   
   
@@ -1785,7 +2053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
+      <a href="../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
         
   
   
@@ -1813,14 +2081,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
+      <a href="../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor: Parallel Writes
+    How Parallel Writes Stay Safe
   
 
     
@@ -1849,7 +2117,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/parquet/" class="md-nav__link">
+      <a href="../concepts/output-formats/parquet/" class="md-nav__link">
         
   
   
@@ -1877,7 +2145,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/archive/" class="md-nav__link">
+      <a href="../concepts/output-formats/archive/" class="md-nav__link">
         
   
   
@@ -1967,7 +2235,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/chunkmanager/" class="md-nav__link">
+      <a href="../concepts/chunkmanager/" class="md-nav__link">
         
   
   
@@ -1995,7 +2263,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/storage/" class="md-nav__link">
+      <a href="../concepts/storage/" class="md-nav__link">
         
   
   
@@ -2023,7 +2291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/chunk-management/" class="md-nav__link">
+      <a href="../concepts/chunk-management/" class="md-nav__link">
         
   
   
@@ -2113,7 +2381,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/" class="md-nav__link">
+      <a href="../concepts/orchestration/" class="md-nav__link">
         
   
   
@@ -2141,7 +2409,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/external-orchestrator/" class="md-nav__link">
+      <a href="../concepts/orchestration/external-orchestrator/" class="md-nav__link">
         
   
   
@@ -2169,7 +2437,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/execution-shapes/" class="md-nav__link">
+      <a href="../concepts/orchestration/execution-shapes/" class="md-nav__link">
         
   
   
@@ -2197,7 +2465,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/write-safety/" class="md-nav__link">
+      <a href="../concepts/orchestration/write-safety/" class="md-nav__link">
         
   
   
@@ -2225,7 +2493,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/retries/" class="md-nav__link">
+      <a href="../concepts/orchestration/retries/" class="md-nav__link">
         
   
   
@@ -2315,7 +2583,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/" class="md-nav__link">
+      <a href="../concepts/observability/" class="md-nav__link">
         
   
   
@@ -2343,7 +2611,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/metrics/" class="md-nav__link">
+      <a href="../concepts/observability/metrics/" class="md-nav__link">
         
   
   
@@ -2371,7 +2639,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/logs/" class="md-nav__link">
+      <a href="../concepts/observability/logs/" class="md-nav__link">
         
   
   
@@ -2399,7 +2667,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/traces/" class="md-nav__link">
+      <a href="../concepts/observability/traces/" class="md-nav__link">
         
   
   
@@ -2489,7 +2757,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/best-practices/" class="md-nav__link">
+      <a href="../concepts/best-practices/" class="md-nav__link">
         
   
   
@@ -2517,7 +2785,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/reproducibility/" class="md-nav__link">
+      <a href="../concepts/reproducibility/" class="md-nav__link">
         
   
   
@@ -2545,7 +2813,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/production-guide/" class="md-nav__link">
+      <a href="../concepts/production-guide/" class="md-nav__link">
         
   
   
@@ -2573,7 +2841,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/performance/" class="md-nav__link">
+      <a href="../concepts/performance/" class="md-nav__link">
         
   
   
@@ -2601,7 +2869,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/parallelism/" class="md-nav__link">
+      <a href="../concepts/parallelism/" class="md-nav__link">
         
   
   
@@ -2629,7 +2897,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/benchmarks/" class="md-nav__link">
+      <a href="../concepts/benchmarks/" class="md-nav__link">
         
   
   
@@ -2726,7 +2994,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/" class="md-nav__link">
+      <a href="../operations/" class="md-nav__link">
         
   
   
@@ -2808,7 +3076,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/s3-access/" class="md-nav__link">
+      <a href="../operations/s3-access/" class="md-nav__link">
         
   
   
@@ -2836,7 +3104,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/intake-catalog/" class="md-nav__link">
+      <a href="../operations/intake-catalog/" class="md-nav__link">
         
   
   
@@ -2926,7 +3194,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/parallel-zarr-writes/" class="md-nav__link">
+      <a href="../operations/parallel-zarr-writes/" class="md-nav__link">
         
   
   
@@ -2954,7 +3222,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/zarr-compare/" class="md-nav__link">
+      <a href="../operations/zarr-compare/" class="md-nav__link">
         
   
   
@@ -2982,7 +3250,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/firecube-index/" class="md-nav__link">
+      <a href="../operations/firecube-index/" class="md-nav__link">
         
   
   
@@ -3072,7 +3340,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/" class="md-nav__link">
+      <a href="../operations/chunk-manager/" class="md-nav__link">
         
   
   
@@ -3100,7 +3368,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/inspect/" class="md-nav__link">
+      <a href="../operations/chunk-manager/inspect/" class="md-nav__link">
         
   
   
@@ -3128,7 +3396,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/recover/" class="md-nav__link">
+      <a href="../operations/chunk-manager/recover/" class="md-nav__link">
         
   
   
@@ -3156,7 +3424,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/post-crash-recovery/" class="md-nav__link">
+      <a href="../operations/chunk-manager/post-crash-recovery/" class="md-nav__link">
         
   
   
@@ -3184,7 +3452,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/delete/" class="md-nav__link">
+      <a href="../operations/chunk-manager/delete/" class="md-nav__link">
         
   
   
@@ -3212,7 +3480,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/snapshots/" class="md-nav__link">
+      <a href="../operations/chunk-manager/snapshots/" class="md-nav__link">
         
   
   
@@ -3302,7 +3570,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/" class="md-nav__link">
+      <a href="../operations/archive/" class="md-nav__link">
         
   
   
@@ -3330,7 +3598,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/create/" class="md-nav__link">
+      <a href="../operations/archive/create/" class="md-nav__link">
         
   
   
@@ -3358,7 +3626,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/inspect/" class="md-nav__link">
+      <a href="../operations/archive/inspect/" class="md-nav__link">
         
   
   
@@ -3386,7 +3654,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/restore/" class="md-nav__link">
+      <a href="../operations/archive/restore/" class="md-nav__link">
         
   
   
@@ -3457,7 +3725,7 @@
   <span class="md-ellipsis">
     
   
-    Tutorials
+    Showcase
   
 
     
@@ -3473,152 +3741,11 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Tutorials
+    Showcase
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    First Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_6_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    First Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../weather-netcdf/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    NetCDF To Zarr
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../source-discovery/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    NetCDF To Zarr: Source Discovery
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -3643,7 +3770,7 @@
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Observability
+    Overview
   
 
     
@@ -3661,7 +3788,7 @@
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Observability
+    Overview
   
 
     
@@ -3687,10 +3814,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
+  <a href="#firecube-101-netcdf-to-zarr" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Goal
+        Firecube 101: NetCDF To Zarr
       
     </span>
   </a>
@@ -3698,10 +3825,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#sentinel-3-slstr-level-2-fire-radiative-power" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        Sentinel-3 SLSTR Level 2 Fire Radiative Power
       
     </span>
   </a>
@@ -3709,65 +3836,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#start-a-pushgateway" class="md-nav__link">
+  <a href="#slot-based-parallelism-mtg-fci-l1c" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Start A Pushgateway
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#add-one-metric" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Add One Metric
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run The Plugin
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-the-product" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify The Product
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-the-metric" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify The Metric
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
+        Slot-Based Parallelism: MTG FCI L1C
       
     </span>
   </a>
@@ -3783,71 +3855,6 @@
 
               
             
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Product Examples
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Product Examples
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
               
                 
   
@@ -3855,107 +3862,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../sentinel3-frp/" class="md-nav__link">
+      <a href="netcdf-to-zarr/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Sentinel-3 FRP To Parquet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Zarr
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Advanced Zarr
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../direct-zarr-parallel/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
+    Firecube 101: NetCDF To Zarr
   
 
     
@@ -3976,14 +3890,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../direct-zarr-auto/" class="md-nav__link">
+      <a href="sentinel3-fire-detections/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Auto)
+    Sentinel-3 SLSTR Level 2 Fire Radiative Power
   
 
     
@@ -3997,9 +3911,29 @@
 
               
             
-          </ul>
-        </nav>
-      
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="mtg-fci-l1c-benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot-Based Parallelism: MTG FCI L1C
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -4073,7 +4007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../contributing/" class="md-nav__link">
         
   
   
@@ -4101,7 +4035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/firecube-contributors/" class="md-nav__link">
+      <a href="../contributing/firecube-contributors/" class="md-nav__link">
         
   
   
@@ -4190,7 +4124,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/" class="md-nav__link">
+      <a href="../reference/" class="md-nav__link">
         
   
   
@@ -4272,7 +4206,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/templates/" class="md-nav__link">
+      <a href="../reference/templates/" class="md-nav__link">
         
   
   
@@ -4300,7 +4234,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/hooks/" class="md-nav__link">
+      <a href="../reference/hooks/" class="md-nav__link">
         
   
   
@@ -4328,7 +4262,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/context/" class="md-nav__link">
+      <a href="../reference/context/" class="md-nav__link">
         
   
   
@@ -4356,7 +4290,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/exceptions/" class="md-nav__link">
+      <a href="../reference/exceptions/" class="md-nav__link">
         
   
   
@@ -4384,14 +4318,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/parallelism/" class="md-nav__link">
+      <a href="../reference/parallelism/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Slot-Range Parallelism
+    Index Specification
   
 
     
@@ -4412,7 +4346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/extensions/" class="md-nav__link">
+      <a href="../reference/extensions/" class="md-nav__link">
         
   
   
@@ -4448,7 +4382,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/core-utilities/" class="md-nav__link">
+      <a href="../reference/core-utilities/" class="md-nav__link">
         
   
   
@@ -4476,7 +4410,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/cli/" class="md-nav__link">
+      <a href="../reference/cli/" class="md-nav__link">
         
   
   
@@ -4504,7 +4438,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/config/" class="md-nav__link">
+      <a href="../reference/config/" class="md-nav__link">
         
   
   
@@ -4532,7 +4466,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/observability/" class="md-nav__link">
+      <a href="../reference/observability/" class="md-nav__link">
         
   
   
@@ -4560,7 +4494,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/storage-drivers/" class="md-nav__link">
+      <a href="../reference/storage-drivers/" class="md-nav__link">
         
   
   
@@ -4588,7 +4522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/control-plane-spec/" class="md-nav__link">
+      <a href="../reference/control-plane-spec/" class="md-nav__link">
         
   
   
@@ -4624,7 +4558,9 @@
             
             
               
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" hidden>
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -4643,10 +4579,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
+  <a href="#firecube-101-netcdf-to-zarr" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Goal
+        Firecube 101: NetCDF To Zarr
       
     </span>
   </a>
@@ -4654,10 +4590,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#sentinel-3-slstr-level-2-fire-radiative-power" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        Sentinel-3 SLSTR Level 2 Fire Radiative Power
       
     </span>
   </a>
@@ -4665,65 +4601,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#start-a-pushgateway" class="md-nav__link">
+  <a href="#slot-based-parallelism-mtg-fci-l1c" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Start A Pushgateway
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#add-one-metric" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Add One Metric
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run The Plugin
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-the-product" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify The Product
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-the-metric" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify The Metric
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
+        Slot-Based Parallelism: MTG FCI L1C
       
     </span>
   </a>
@@ -4744,117 +4625,73 @@
               <article class="md-content__inner md-typeset">
                 
                   
+  
+
 
 
   
   
 
 
-<h1 id="netcdf-to-zarr-observability">NetCDF To Zarr: Observability</h1>
-<h2 id="goal">Goal</h2>
-<p>Add one domain-specific metric to the plugin from the first tutorial, run
-ingestion with a Prometheus Pushgateway, and inspect the exported metric.</p>
-<p>Continue from <a href="../weather-netcdf/">NetCDF To Zarr</a>. You will keep the same
-plugin and add one metric through <code>ctx.telemetry</code>.</p>
-<h2 id="prerequisites">Prerequisites</h2>
-<ul>
-<li>The completed <a href="../../quickstart/">Quickstart</a> project in the current
-  directory.</li>
-<li>Docker available with local port <code>9091</code> free.</li>
-</ul>
-<h2 id="start-a-pushgateway">Start A Pushgateway</h2>
-<p>This tutorial uses Docker to run a temporary local Pushgateway:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--name<span class="w"> </span>firecube-tutorial-pushgateway<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-p<span class="w"> </span><span class="m">9091</span>:9091<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>prom/pushgateway:v1.11.1
-</code></pre></div>
-<p>Set its URL for the remaining commands:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_PUSHGATEWAY_URL</span><span class="o">=</span><span class="s2">&quot;http://localhost:9091&quot;</span>
-</code></pre></div>
-<p>Confirm that it is ready:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$FIRECUBE_PUSHGATEWAY_URL</span><span class="s2">/-/ready&quot;</span>
-</code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>OK
-</code></pre></div>
-<h2 id="add-one-metric">Add One Metric</h2>
-<p>In <code>plugins_dev/firecube-weather-netcdf/src/firecube_weather_netcdf/ingestor.py</code>,
-add this block near the end of <code>build_dataset</code>, just before <code>return result</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">telemetry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>            <span class="n">ctx</span><span class="o">.</span><span class="n">telemetry</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>                <span class="s2">&quot;weather_netcdf_files&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>                <span class="nb">len</span><span class="p">(</span><span class="n">items</span><span class="p">),</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>                <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;counter&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>                <span class="n">meta</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;success&quot;</span><span class="p">},</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>            <span class="p">)</span>
-</code></pre></div>
-<p><code>counter</code> is the right kind here because the value is a count that increases
-during the run. Firecube exports it as:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube_weather_netcdf_files_total
-</code></pre></div>
-<h2 id="run-the-plugin">Run The Plugin</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nv">PRODUCT_URI</span><span class="o">=</span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/quickstart-output/weather_netcdf_observed.zarr&quot;</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>weather_netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--input-data<span class="w"> </span>quickstart-data/weather-netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--product-name<span class="w"> </span>weather_netcdf_observed<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
-</code></pre></div>
-<p>Expected logs on stderr include:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>&quot;message&quot;:&quot;Found 4 files&quot;
-</code></pre></div>
-<p>Expected command output on stdout includes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>&quot;plugin&quot;: &quot;weather_netcdf&quot;
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>...
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>&quot;files_processed&quot;: 4
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>...
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>&quot;count&quot;: 4
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>&quot;product&quot;: &quot;weather_netcdf_observed&quot;
-</code></pre></div>
-<h2 id="verify-the-product">Verify The Product</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="s">import xarray as xr</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="s">ds = xr.open_zarr(</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="s">    &quot;quickstart-output/weather_netcdf_observed.zarr&quot;,</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="s">    group=&quot;default&quot;,</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="s">    consolidated=False,</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="s">)</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="s">assert ds.sizes[&quot;timestamp&quot;] == 4</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="s">print(&quot;ok&quot;)</span>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="s">PY</span>
-</code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>ok
-</code></pre></div>
-<h2 id="verify-the-metric">Verify The Metric</h2>
-<p>Firecube flushes buffered metrics at the end of the run. Query the Pushgateway
-and select the metric added above:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$FIRECUBE_PUSHGATEWAY_URL</span><span class="s2">/metrics&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;firecube_weather_netcdf_files_total&quot;</span>
-</code></pre></div>
-<p>Expected output includes a sample with the value <code>4</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube_weather_netcdf_files_total{group=&quot;default&quot;,status=&quot;success&quot;,...} 4
-</code></pre></div>
-<p>If the metric is absent, check the ingestion logs for <code>Failed to push metrics
-to Pushgateway</code>, then confirm the configured URL is reachable from the Firecube
-process.</p>
-<p>Stop the tutorial Pushgateway when verification is complete:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>docker<span class="w"> </span>stop<span class="w"> </span>firecube-tutorial-pushgateway
-</code></pre></div>
-<h2 id="next-steps">Next Steps</h2>
-<ul>
-<li><strong><a href="../../concepts/observability/metrics/">Metrics</a></strong> — understand metric kinds, labels, and Pushgateway behavior</li>
-<li><strong><a href="../../guides/plugins/observability/">Add Plugin Telemetry</a></strong> — plugin telemetry rules</li>
-<li><strong><a href="../../reference/observability/">Observability Reference</a></strong> — configure and inspect telemetry backends</li>
-<li><strong><a href="../sentinel3-frp/">Sentinel-3 FRP To Parquet</a></strong> — download and ingest a real EUMETSAT product</li>
-<li><strong><a href="../direct-zarr-parallel/">DirectZarrIngestor (Region)</a></strong> — continue to the advanced write path</li>
-</ul>
+<div class="showcase-intro">
+<h1 id="showcase">Showcase</h1>
+<p>Explore what you can build with Firecube.</p>
+<div class="showcase-intro-links">
+<p><strong>New to Firecube?</strong> <a href="../quickstart/">Quickstart</a> runs an installed plugin.
+<strong>Building your own?</strong> <a href="../guides/plugins/">Plugin Development</a> covers individual authoring tasks.</p>
+</div>
+</div>
+<div class="showcase-features">
+<div class="showcase-feature">
+<div class="showcase-feature-copy">
+<p><span class="showcase-label">Beginner notebook · Generated data</span></p>
+<h2 id="firecube-101-netcdf-to-zarr">Firecube 101: NetCDF To Zarr</h2>
+<p>Create a cube from three days of data, append the next three, and check that
+retrying an arrival adds no duplicates. Small files, no credentials.</p>
+<div class="showcase-actions">
+<p><a class="md-button md-button--primary" href="netcdf-to-zarr/">Open the notebook</a>
+<a class="md-button notebook-download" href="netcdf-to-zarr/netcdf-to-zarr.ipynb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v3h14v-3H5z"/></svg>Download notebook</a></p>
+</div>
+</div>
+<div class="showcase-feature-image">
+<p><a href="netcdf-to-zarr/"><img alt="A Zarr cube grows from three days to six: original dates in blue and appended dates in orange." src="../assets/images/netcdf-to-zarr-preview.png" /></a></p>
+<p><span class="showcase-caption">Two arrivals · One cube · Six unique days</span></p>
+</div>
+</div>
+<div class="showcase-feature">
+<div class="showcase-feature-copy">
+<p><span class="showcase-label">Featured notebook · Real satellite data</span></p>
+<h2 id="sentinel-3-slstr-level-2-fire-radiative-power">Sentinel-3 SLSTR Level 2 Fire Radiative Power</h2>
+<p>Explore thermal detections around Spain in July 2026. Download the standard
+MWIR tables, write Parquet with Firecube, and compare days on an interactive map.</p>
+<div class="showcase-actions">
+<p><a class="md-button md-button--primary" href="sentinel3-fire-detections/">Open the notebook</a>
+<a class="md-button notebook-download" href="sentinel3-fire-detections/sentinel3-fire-detections.ipynb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v3h14v-3H5z"/></svg>Download notebook</a></p>
+</div>
+</div>
+<div class="showcase-feature-image">
+<p><a href="sentinel3-fire-detections/"><img alt="Sentinel-3 SLSTR FRP detections around Spain on 25 July 2026, shown on an OpenStreetMap basemap." src="../assets/images/sentinel3-frp-preview.png" /></a></p>
+<p><span class="showcase-caption">25 July 2026 · Colour shows fire radiative power</span></p>
+</div>
+</div>
+<div class="showcase-feature">
+<div class="showcase-feature-copy">
+<p><span class="showcase-label">Benchmark notebook · Recorded runs</span></p>
+<h2 id="slot-based-parallelism-mtg-fci-l1c">Slot-Based Parallelism: MTG FCI L1C</h2>
+<p>Ingest two hours of FCI observations with the public plugin. Reproduce the
+tuned parallel setup and compare your timings with recorded runs of about
+39 seconds for twelve acquisitions.</p>
+<div class="showcase-actions">
+<p><a class="md-button md-button--primary" href="mtg-fci-l1c-benchmarks/">Open the notebook</a>
+<a class="md-button notebook-download" href="mtg-fci-l1c-benchmarks/mtg-fci-l1c-benchmarks.ipynb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v3h14v-3H5z"/></svg>Download notebook</a></p>
+</div>
+</div>
+<div class="showcase-feature-image">
+<p><a href="mtg-fci-l1c-benchmarks/"><img alt="Recorded ingestion wall time falls from a median of 250.87 seconds at one process to 39.01 seconds at twelve processes for the same twelve FCI acquisitions." src="../assets/images/mtg-fci-benchmark-preview.png" /></a></p>
+<p><span class="showcase-caption">12 acquisitions · One ARM host · Local Zarr writes</span></p>
+</div>
+</div>
+</div>
 
 
 
@@ -4862,8 +4699,13 @@ process.</p>
 
 
 
+  
+  
 
 
+
+
+  
 
 
 
@@ -4910,10 +4752,10 @@ process.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -16,7 +16,7 @@
         <link rel="prev" href="../install-a-plugin/">
       
       
-        <link rel="next" href="../customize-source-discovery/">
+        <link rel="next" href="../discover-zipped-data/">
       
       
         
@@ -54,6 +54,8 @@
     
     
       <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/showcase.css">
     
     <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -333,11 +335,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../tutorials/" class="md-tabs__link">
+        <a href="../../../showcase/" class="md-tabs__link">
           
   
   
-  Tutorials
+  Showcase
 
         </a>
       </li>
@@ -944,10 +946,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-the-source" class="md-nav__link">
+  <a href="#include-and-exclude-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Set The Source
+        Include And Exclude Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#save-filters-for-later-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Save Filters For Later Runs
       
     </span>
   </a>
@@ -1003,14 +1016,191 @@
   
   
     <li class="md-nav__item">
-      <a href="../customize-source-discovery/" class="md-nav__link">
+      <a href="../discover-zipped-data/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Customize Source Discovery
+    Discover Zipped Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parse-filename-fields/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Filename Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../paired-source-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Paired Source Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Your Output
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Write Your Output
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Append Datasets To Zarr
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-parquet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Tables To Parquet
   
 
     
@@ -1085,17 +1275,17 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
         
           
-          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Implement Your Plugin
+    Customize Zarr Layout
   
 
     
@@ -1106,12 +1296,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Implement Your Plugin
+    Customize Zarr Layout
   
 
           </label>
@@ -1124,14 +1314,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../generic-zarr/" class="md-nav__link">
+      <a href="../configure-zarr-chunking/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericZarrIngestor (Append)
+    Chunking
   
 
     
@@ -1152,14 +1342,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../generic-parquet/" class="md-nav__link">
+      <a href="../configure-zarr-sharding/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericParquetIngestor (Tabular)
+    Sharding
   
 
     
@@ -1180,42 +1370,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../direct-zarr/" class="md-nav__link">
+      <a href="../configure-zarr-compression/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../direct-zarr-auto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
+    Compression
   
 
     
@@ -1262,10 +1424,131 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
         
           
-          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Zarr Regions In Parallel
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Write Zarr Regions In Parallel
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare The Schema And Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Discover The Time Axis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
             
   
   
@@ -1283,8 +1566,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1383,17 +1666,17 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Customization
+    Beyond The Templates
   
 
     
@@ -1404,12 +1687,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Advanced Customization
+    Beyond The Templates
   
 
           </label>
@@ -1504,10 +1787,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="">
             
   
   
@@ -1525,8 +1808,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1951,7 +2234,7 @@
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor: Parallel Writes
+    How Parallel Writes Stay Safe
   
 
     
@@ -3585,7 +3868,7 @@
   <span class="md-ellipsis">
     
   
-    Tutorials
+    Showcase
   
 
     
@@ -3601,7 +3884,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Tutorials
+    Showcase
   
 
           </label>
@@ -3614,7 +3897,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/" class="md-nav__link">
+      <a href="../../../showcase/" class="md-nav__link">
         
   
   
@@ -3641,69 +3924,15 @@
   
   
   
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    First Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    First Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../../../tutorials/weather-netcdf/" class="md-nav__link">
+      <a href="../../../showcase/netcdf-to-zarr/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr
+    Firecube 101: NetCDF To Zarr
   
 
     
@@ -3724,14 +3953,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/source-discovery/" class="md-nav__link">
+      <a href="../../../showcase/sentinel3-fire-detections/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Source Discovery
+    Sentinel-3 SLSTR Level 2 Fire Radiative Power
   
 
     
@@ -3752,14 +3981,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/observability/" class="md-nav__link">
+      <a href="../../../showcase/mtg-fci-l1c-benchmarks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Observability
+    Slot-Based Parallelism: MTG FCI L1C
   
 
     
@@ -3768,222 +3997,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Product Examples
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Product Examples
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/sentinel3-frp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Sentinel-3 FRP To Parquet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Zarr
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Advanced Zarr
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/direct-zarr-parallel/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/direct-zarr-auto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -4375,7 +4388,7 @@
   <span class="md-ellipsis">
     
   
-    Slot-Range Parallelism
+    Index Specification
   
 
     
@@ -4649,10 +4662,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#set-the-source" class="md-nav__link">
+  <a href="#include-and-exclude-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Set The Source
+        Include And Exclude Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#save-filters-for-later-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Save Filters For Later Runs
       
     </span>
   </a>
@@ -4715,36 +4739,72 @@
 <h1 id="discover-source-data">Discover Source Data</h1>
 <h2 id="goal">Goal</h2>
 <p>Know which files Firecube finds under <code>--input-data</code> before writing any
-plugin code, and how each one reaches the plugin.</p>
+plugin code, how each one reaches the plugin, and how to widen or narrow that
+selection with filters.</p>
 <h2 id="use-built-in-discovery">Use Built-In Discovery</h2>
-<p>By default a plugin discovers files below <code>--input-data</code> (<code>ctx.source</code>),
-which may be a local path or a remote URI reached through the run's storage
-configuration. The default selection is:</p>
+<p>By default a plugin discovers files below <code>--input-data</code> (<code>ctx.source</code>), which
+may be a local path, a <code>file://</code> URI, or an <code>s3://</code> prefix reached through the
+run's storage configuration. The default selection is:</p>
 <ul>
-<li>files ending in <code>.zip</code>, <code>.h5</code>, or <code>.nc</code></li>
+<li>files ending in <code>.zip</code>, <code>.h5</code>, <code>.nc</code>, <code>.nc4</code>, <code>.hdf</code>, or <code>.he5</code>, in any letter case</li>
 <li>extensionless files whose content looks like HDF5 (local sources only)</li>
 </ul>
-<p>Discovery is recursive, and results are sorted so batching is deterministic.
-The run logs the count it found:</p>
+<p>Discovery is recursive, and results are sorted by file name so batching is
+deterministic. The run logs the count it found:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>&quot;message&quot;:&quot;Found 4 files&quot;
 </code></pre></div>
-<p>Every template and custom pipeline plugin gets this from <code>BaseIngestor</code>. To
-widen, narrow, or replace it, see
-<a href="../customize-source-discovery/">Customize Source Discovery</a>.</p>
-<h2 id="set-the-source">Set The Source</h2>
-<p><code>--input-data</code> accepts a local path, <code>file://</code>, or an <code>s3://</code> prefix. The
-plugin interprets its contents. The output target remains a strict product
-URI.</p>
+<p>Discovery only finds the files. Reading them is your plugin's <code>read_dataset</code>,
+which receives each file as a local path:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">dataset</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+</code></pre></div>
+<p>See <a href="../generic-zarr/">Append Datasets To Zarr</a> for where this goes and
+<a href="../discover-zipped-data/">Discover Zipped Data</a> for archives.</p>
+<h2 id="include-and-exclude-files">Include And Exclude Files</h2>
+<p>Use <code>--input-filters</code> to add file types and exclude unwanted inputs. Replace
+<code>my_plugin</code>, the product name, and paths with your own; the plugin must have a
+reader for each included format. This command also writes the output product:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--input-filters<span class="w"> </span><span class="s1">&#39;[&quot;*.csv&quot;,&quot;!*_quicklook.nc&quot;,&quot;!incoming/*&quot;]&#39;</span>
+</code></pre></div>
+<p>This adds CSV files alongside the built-in formats, excludes <code>_quicklook.nc</code>
+files, and excludes files under <code>incoming/</code>, including its subdirectories.</p>
+<ul>
+<li>Positive patterns add to built-in discovery; they do not restrict it to that
+  format. To add CSV files without exclusions, use <code>--input-filters '["*.csv"]'</code>.</li>
+<li>Exclusions win regardless of order. <code>["!*", "*.csv"]</code> excludes everything.</li>
+<li>Patterns match the file name, relative path, or full path/URI. Matching is
+  case-sensitive: <code>!*.nc</code> does not exclude <code>file.NC</code>.</li>
+</ul>
+<p>Keep the JSON list inside single quotes so the shell leaves it intact.</p>
+<h2 id="save-filters-for-later-runs">Save Filters For Later Runs</h2>
+<p>Add filters to your <a href="../../../concepts/configuration/">configuration file</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[plugins.my_plugin]</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">input_filters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;*.csv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;!*_quicklook.nc&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;!incoming/*&quot;</span><span class="p">]</span>
+</code></pre></div>
+<p>A CLI list replaces the saved list for that run. Use <code>--input-filters '[]'</code> to
+clear saved filters and return to built-in discovery. The same flag works with
+<code>firecube zarr slots</code> and <code>firecube zarr preallocate</code>.</p>
 <h2 id="verify">Verify</h2>
 <p>Run the plugin and check the log line discovery emits, before anything else
 in the pipeline runs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;Found&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;Found&quot;</span>
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>&quot;message&quot;:&quot;Found 4 files&quot;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>&quot;message&quot;:&quot;Found 4 files&quot;
 </code></pre></div>
-<p>A count of zero means nothing under <code>--input-data</code> matched the default
-selection — see <a href="../customize-source-discovery/">Customize Source Discovery</a>.</p>
+<p>If nothing under <code>--input-data</code> matched, there is no <code>Found</code> line; the run
+stops with <code>No source files found after applying input filters</code>. Check the input path and filters.</p>
+<p>When an empty delivery is expected, pass <code>--option allow_empty_source=true</code> for a successful no-op.</p>
 <h2 id="common-mistakes">Common Mistakes</h2>
 <table>
 <thead>
@@ -4755,21 +4815,33 @@ selection — see <a href="../customize-source-discovery/">Customize Source Disc
 </thead>
 <tbody>
 <tr>
-<td>Omitting <code>--input-data</code> with default discovery</td>
-<td>Pass the flag, or <a href="../customize-source-discovery/">customize discovery</a> if the plugin has no input path.</td>
+<td>Expecting <code>--input-filters '["*.csv"]'</code> to restrict discovery to CSV files</td>
+<td>Positive patterns add to built-in discovery. Add exclusions such as <code>"!*.nc"</code> to narrow the set.</td>
 </tr>
 <tr>
-<td>Expecting an unsupported file type to be found</td>
-<td>Add a pattern, don't rename files — see <a href="../customize-source-discovery/">Customize Source Discovery</a>.</td>
+<td>Passing the JSON list without quotes</td>
+<td>The shell splits it into separate arguments. Wrap the list in single quotes.</td>
+</tr>
+<tr>
+<td>Expecting <code>!*.nc</code> to exclude <code>file.NC</code></td>
+<td>Matching is case-sensitive. Add a pattern for each spelling.</td>
+</tr>
+<tr>
+<td>Overriding <code>discover_source_files</code> and expecting filters to still apply</td>
+<td>A custom hook replaces built-in discovery. Pass the filters to <code>discover_input_files</code> yourself.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../customize-source-discovery/">Customize Source Discovery</a></strong> — control which items reach the plugin and how they're grouped</li>
-<li><strong><a href="../../../concepts/storage/">Product Storage</a></strong> — understand source and target storage roles</li>
-<li><strong><a href="../../../reference/storage-drivers/">Storage Drivers</a></strong> — inspect driver values and capabilities</li>
-<li><strong><a href="../../../reference/context/">Context &amp; Results</a></strong> — look up <code>PluginContext</code></li>
+<li><strong><a href="../paired-source-files/">Read Paired Source Files</a></strong> — use a custom discovery
+  hook to keep measurements and metadata together.</li>
+<li><strong><a href="../../../reference/hooks/#firecube.ingestor.api.BaseIngestor.discover_source_files">Discovery Hook</a></strong>
+  — override discovery for catalogs or custom ordering. If file names do not
+  sort chronologically, order items by timestamp before batching for appends.</li>
+<li><strong><a href="../../../reference/core-utilities/#firecube.core.api.discover_input_files">Discovery Helper</a></strong>
+  — apply filters in a custom hook; replacing built-in discovery does not
+  apply them automatically.</li>
 </ul>
 
 

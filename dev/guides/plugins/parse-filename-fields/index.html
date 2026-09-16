@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/tutorials/direct-zarr-auto/">
+        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/guides/plugins/parse-filename-fields/">
       
       
-        <link rel="prev" href="../direct-zarr-parallel/">
+        <link rel="prev" href="../discover-zipped-data/">
       
       
-        <link rel="next" href="../../contributing/">
+        <link rel="next" href="../paired-source-files/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/firecube-favicon.png">
+      <link rel="icon" href="../../../assets/firecube-favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>DirectZarrIngestor (Auto) - Firecube</title>
+        <title>Parse Filename Fields - Firecube</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,11 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+      <link rel="stylesheet" href="../../../assets/stylesheets/showcase.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#directzarringestor-auto" class="md-skip">
+        <a href="#parse-filename-fields" class="md-skip">
           Skip to content
         </a>
       
@@ -98,9 +100,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href="../../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../../../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -117,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              DirectZarrIngestor (Auto)
+              Parse Filename Fields
             
           </span>
         </div>
@@ -230,7 +232,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -251,71 +253,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../quickstart/" class="md-tabs__link">
+        <a href="../../../quickstart/" class="md-tabs__link">
           
   
   
   Quickstart
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../guides/plugins/" class="md-tabs__link">
-          
-  
-  
-  Plugin Development
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../concepts/" class="md-tabs__link">
-          
-  
-  
-  Concepts
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../operations/" class="md-tabs__link">
-          
-  
-  
-  Operations
 
         </a>
       </li>
@@ -337,7 +279,7 @@
           
   
   
-  Tutorials
+  Plugin Development
 
         </a>
       </li>
@@ -353,7 +295,67 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../contributing/" class="md-tabs__link">
+        <a href="../../../concepts/" class="md-tabs__link">
+          
+  
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../operations/" class="md-tabs__link">
+          
+  
+  
+  Operations
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../showcase/" class="md-tabs__link">
+          
+  
+  
+  Showcase
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../contributing/" class="md-tabs__link">
           
   
   
@@ -373,7 +375,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   
@@ -407,9 +409,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href="../../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../../../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     Firecube
@@ -436,7 +438,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -517,7 +519,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../../../quickstart/" class="md-nav__link">
         
   
   
@@ -545,7 +547,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/installation/" class="md-nav__link">
+      <a href="../../../quickstart/installation/" class="md-nav__link">
         
   
   
@@ -573,7 +575,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/plugins/" class="md-nav__link">
+      <a href="../../../quickstart/plugins/" class="md-nav__link">
         
   
   
@@ -601,7 +603,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/source-data/" class="md-nav__link">
+      <a href="../../../quickstart/source-data/" class="md-nav__link">
         
   
   
@@ -629,7 +631,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/ingestion/" class="md-nav__link">
+      <a href="../../../quickstart/ingestion/" class="md-nav__link">
         
   
   
@@ -661,28 +663,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -700,7 +705,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -718,7 +723,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -746,7 +751,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/create-a-plugin/" class="md-nav__link">
+      <a href="../create-a-plugin/" class="md-nav__link">
         
   
   
@@ -774,7 +779,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/install-a-plugin/" class="md-nav__link">
+      <a href="../install-a-plugin/" class="md-nav__link">
         
   
   
@@ -799,28 +804,31 @@
                 
   
   
+    
   
   
+  
     
     
     
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
         
           
+          
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
             
   
   
@@ -838,7 +846,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -856,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/source-discovery/" class="md-nav__link">
+      <a href="../source-discovery/" class="md-nav__link">
         
   
   
@@ -884,14 +892,309 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/customize-source-discovery/" class="md-nav__link">
+      <a href="../discover-zipped-data/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Customize Source Discovery
+    Discover Zipped Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Filename Fields
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Filename Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#describe-the-filename-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Describe The Filename Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parse-the-name-in-read_dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parse The Name In read_dataset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-complete-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Complete Plugin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-mistakes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Mistakes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../paired-source-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Paired Source Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Your Output
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Write Your Output
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Append Datasets To Zarr
   
 
     
@@ -912,7 +1215,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/multi-group-writes/" class="md-nav__link">
+      <a href="../generic-parquet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Tables To Parquet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multi-group-writes/" class="md-nav__link">
         
   
   
@@ -954,26 +1285,29 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
         
           
-          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Implement Your Plugin
+    Customize Zarr Layout
   
 
     
@@ -984,12 +1318,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Implement Your Plugin
+    Customize Zarr Layout
   
 
           </label>
@@ -1002,14 +1336,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/generic-zarr/" class="md-nav__link">
+      <a href="../configure-zarr-chunking/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericZarrIngestor (Append)
+    Chunking
   
 
     
@@ -1030,14 +1364,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/generic-parquet/" class="md-nav__link">
+      <a href="../configure-zarr-sharding/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericParquetIngestor (Tabular)
+    Sharding
   
 
     
@@ -1058,42 +1392,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/direct-zarr/" class="md-nav__link">
+      <a href="../configure-zarr-compression/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
+    Compression
   
 
     
@@ -1128,19 +1434,143 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
         
           
-          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Zarr Regions In Parallel
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Write Zarr Regions In Parallel
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare The Schema And Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Discover The Time Axis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
             
   
   
@@ -1158,8 +1588,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1176,7 +1606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/add-config-options/" class="md-nav__link">
+      <a href="../add-config-options/" class="md-nav__link">
         
   
   
@@ -1204,7 +1634,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/observability/" class="md-nav__link">
+      <a href="../observability/" class="md-nav__link">
         
   
   
@@ -1246,26 +1676,29 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Customization
+    Beyond The Templates
   
 
     
@@ -1276,12 +1709,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Advanced Customization
+    Beyond The Templates
   
 
           </label>
@@ -1294,7 +1727,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/extensions/" class="md-nav__link">
+      <a href="../extensions/" class="md-nav__link">
         
   
   
@@ -1322,7 +1755,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/base-ingestor/" class="md-nav__link">
+      <a href="../base-ingestor/" class="md-nav__link">
         
   
   
@@ -1364,19 +1797,22 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="">
             
   
   
@@ -1394,8 +1830,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1412,7 +1848,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/contract/" class="md-nav__link">
+      <a href="../contract/" class="md-nav__link">
         
   
   
@@ -1509,7 +1945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/" class="md-nav__link">
+      <a href="../../../concepts/" class="md-nav__link">
         
   
   
@@ -1537,7 +1973,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/glossary/" class="md-nav__link">
+      <a href="../../../concepts/glossary/" class="md-nav__link">
         
   
   
@@ -1565,7 +2001,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/configuration/" class="md-nav__link">
+      <a href="../../../concepts/configuration/" class="md-nav__link">
         
   
   
@@ -1647,7 +2083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/" class="md-nav__link">
         
   
   
@@ -1729,7 +2165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/zarr/" class="md-nav__link">
         
   
   
@@ -1757,7 +2193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
         
   
   
@@ -1785,7 +2221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
         
   
   
@@ -1813,14 +2249,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor: Parallel Writes
+    How Parallel Writes Stay Safe
   
 
     
@@ -1849,7 +2285,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/parquet/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/parquet/" class="md-nav__link">
         
   
   
@@ -1877,7 +2313,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/archive/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/archive/" class="md-nav__link">
         
   
   
@@ -1967,7 +2403,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/chunkmanager/" class="md-nav__link">
+      <a href="../../../concepts/chunkmanager/" class="md-nav__link">
         
   
   
@@ -1995,7 +2431,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/storage/" class="md-nav__link">
+      <a href="../../../concepts/storage/" class="md-nav__link">
         
   
   
@@ -2023,7 +2459,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/chunk-management/" class="md-nav__link">
+      <a href="../../../concepts/chunk-management/" class="md-nav__link">
         
   
   
@@ -2113,7 +2549,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/" class="md-nav__link">
         
   
   
@@ -2141,7 +2577,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/external-orchestrator/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/external-orchestrator/" class="md-nav__link">
         
   
   
@@ -2169,7 +2605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/execution-shapes/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/execution-shapes/" class="md-nav__link">
         
   
   
@@ -2197,7 +2633,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/write-safety/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/write-safety/" class="md-nav__link">
         
   
   
@@ -2225,7 +2661,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/retries/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/retries/" class="md-nav__link">
         
   
   
@@ -2315,7 +2751,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/" class="md-nav__link">
+      <a href="../../../concepts/observability/" class="md-nav__link">
         
   
   
@@ -2343,7 +2779,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/metrics/" class="md-nav__link">
+      <a href="../../../concepts/observability/metrics/" class="md-nav__link">
         
   
   
@@ -2371,7 +2807,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/logs/" class="md-nav__link">
+      <a href="../../../concepts/observability/logs/" class="md-nav__link">
         
   
   
@@ -2399,7 +2835,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/traces/" class="md-nav__link">
+      <a href="../../../concepts/observability/traces/" class="md-nav__link">
         
   
   
@@ -2489,7 +2925,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/best-practices/" class="md-nav__link">
+      <a href="../../../concepts/best-practices/" class="md-nav__link">
         
   
   
@@ -2517,7 +2953,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/reproducibility/" class="md-nav__link">
+      <a href="../../../concepts/reproducibility/" class="md-nav__link">
         
   
   
@@ -2545,7 +2981,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/production-guide/" class="md-nav__link">
+      <a href="../../../concepts/production-guide/" class="md-nav__link">
         
   
   
@@ -2573,7 +3009,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/performance/" class="md-nav__link">
+      <a href="../../../concepts/performance/" class="md-nav__link">
         
   
   
@@ -2601,7 +3037,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/parallelism/" class="md-nav__link">
+      <a href="../../../concepts/parallelism/" class="md-nav__link">
         
   
   
@@ -2629,7 +3065,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/benchmarks/" class="md-nav__link">
+      <a href="../../../concepts/benchmarks/" class="md-nav__link">
         
   
   
@@ -2726,7 +3162,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/" class="md-nav__link">
+      <a href="../../../operations/" class="md-nav__link">
         
   
   
@@ -2808,7 +3244,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/s3-access/" class="md-nav__link">
+      <a href="../../../operations/s3-access/" class="md-nav__link">
         
   
   
@@ -2836,7 +3272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/intake-catalog/" class="md-nav__link">
+      <a href="../../../operations/intake-catalog/" class="md-nav__link">
         
   
   
@@ -2926,7 +3362,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/parallel-zarr-writes/" class="md-nav__link">
+      <a href="../../../operations/parallel-zarr-writes/" class="md-nav__link">
         
   
   
@@ -2954,7 +3390,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/zarr-compare/" class="md-nav__link">
+      <a href="../../../operations/zarr-compare/" class="md-nav__link">
         
   
   
@@ -2982,7 +3418,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/firecube-index/" class="md-nav__link">
+      <a href="../../../operations/firecube-index/" class="md-nav__link">
         
   
   
@@ -3072,7 +3508,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/" class="md-nav__link">
         
   
   
@@ -3100,7 +3536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/inspect/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/inspect/" class="md-nav__link">
         
   
   
@@ -3128,7 +3564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/recover/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/recover/" class="md-nav__link">
         
   
   
@@ -3156,7 +3592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/post-crash-recovery/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/post-crash-recovery/" class="md-nav__link">
         
   
   
@@ -3184,7 +3620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/delete/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/delete/" class="md-nav__link">
         
   
   
@@ -3212,7 +3648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/snapshots/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/snapshots/" class="md-nav__link">
         
   
   
@@ -3302,7 +3738,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/" class="md-nav__link">
+      <a href="../../../operations/archive/" class="md-nav__link">
         
   
   
@@ -3330,7 +3766,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/create/" class="md-nav__link">
+      <a href="../../../operations/archive/create/" class="md-nav__link">
         
   
   
@@ -3358,7 +3794,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/inspect/" class="md-nav__link">
+      <a href="../../../operations/archive/inspect/" class="md-nav__link">
         
   
   
@@ -3386,7 +3822,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/restore/" class="md-nav__link">
+      <a href="../../../operations/archive/restore/" class="md-nav__link">
         
   
   
@@ -3426,38 +3862,35 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    Tutorials
+    Showcase
   
 
     
@@ -3468,12 +3901,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Tutorials
+    Showcase
   
 
           </label>
@@ -3486,7 +3919,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../../showcase/" class="md-nav__link">
         
   
   
@@ -3513,72 +3946,15 @@
   
   
   
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    First Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    First Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../weather-netcdf/" class="md-nav__link">
+      <a href="../../../showcase/netcdf-to-zarr/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr
+    Firecube 101: NetCDF To Zarr
   
 
     
@@ -3599,14 +3975,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../source-discovery/" class="md-nav__link">
+      <a href="../../../showcase/sentinel3-fire-detections/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Source Discovery
+    Sentinel-3 SLSTR Level 2 Fire Radiative Power
   
 
     
@@ -3627,14 +4003,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../observability/" class="md-nav__link">
+      <a href="../../../showcase/mtg-fci-l1c-benchmarks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Observability
+    Slot-Based Parallelism: MTG FCI L1C
   
 
     
@@ -3643,385 +4019,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Product Examples
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Product Examples
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../sentinel3-frp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Sentinel-3 FRP To Parquet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_4" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Zarr
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_6_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Advanced Zarr
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../direct-zarr-parallel/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Goal
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1-create-tiny-netcdf-files" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Create Tiny NetCDF Files
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-create-a-plugin-project" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Create A Plugin Project
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-implement-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Implement The Plugin
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-install-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Install The Plugin
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-ingest" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Ingest
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#6-verify-the-store" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        6. Verify The Store
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-firecube-handled" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What Firecube Handled
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -4095,7 +4092,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   
@@ -4123,7 +4120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/firecube-contributors/" class="md-nav__link">
+      <a href="../../../contributing/firecube-contributors/" class="md-nav__link">
         
   
   
@@ -4212,7 +4209,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   
@@ -4294,7 +4291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/templates/" class="md-nav__link">
+      <a href="../../../reference/templates/" class="md-nav__link">
         
   
   
@@ -4322,7 +4319,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/hooks/" class="md-nav__link">
+      <a href="../../../reference/hooks/" class="md-nav__link">
         
   
   
@@ -4350,7 +4347,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/context/" class="md-nav__link">
+      <a href="../../../reference/context/" class="md-nav__link">
         
   
   
@@ -4378,7 +4375,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/exceptions/" class="md-nav__link">
+      <a href="../../../reference/exceptions/" class="md-nav__link">
         
   
   
@@ -4406,14 +4403,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/parallelism/" class="md-nav__link">
+      <a href="../../../reference/parallelism/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Slot-Range Parallelism
+    Index Specification
   
 
     
@@ -4434,7 +4431,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/extensions/" class="md-nav__link">
+      <a href="../../../reference/extensions/" class="md-nav__link">
         
   
   
@@ -4470,7 +4467,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/core-utilities/" class="md-nav__link">
+      <a href="../../../reference/core-utilities/" class="md-nav__link">
         
   
   
@@ -4498,7 +4495,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/cli/" class="md-nav__link">
+      <a href="../../../reference/cli/" class="md-nav__link">
         
   
   
@@ -4526,7 +4523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/config/" class="md-nav__link">
+      <a href="../../../reference/config/" class="md-nav__link">
         
   
   
@@ -4554,7 +4551,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/observability/" class="md-nav__link">
+      <a href="../../../reference/observability/" class="md-nav__link">
         
   
   
@@ -4582,7 +4579,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/storage-drivers/" class="md-nav__link">
+      <a href="../../../reference/storage-drivers/" class="md-nav__link">
         
   
   
@@ -4610,7 +4607,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/control-plane-spec/" class="md-nav__link">
+      <a href="../../../reference/control-plane-spec/" class="md-nav__link">
         
   
   
@@ -4676,10 +4673,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#example-inputs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        Example Inputs
       
     </span>
   </a>
@@ -4687,10 +4684,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#1-create-tiny-netcdf-files" class="md-nav__link">
+  <a href="#describe-the-filename-format" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Create Tiny NetCDF Files
+        Describe The Filename Format
       
     </span>
   </a>
@@ -4698,10 +4695,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-create-a-plugin-project" class="md-nav__link">
+  <a href="#parse-the-name-in-read_dataset" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Create A Plugin Project
+        Parse The Name In read_dataset
       
     </span>
   </a>
@@ -4709,10 +4706,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-implement-the-plugin" class="md-nav__link">
+  <a href="#the-complete-plugin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Implement The Plugin
+        The Complete Plugin
       
     </span>
   </a>
@@ -4720,10 +4717,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-install-the-plugin" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Install The Plugin
+        How It Works
       
     </span>
   </a>
@@ -4731,10 +4728,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-ingest" class="md-nav__link">
+  <a href="#verify" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Ingest
+        Verify
       
     </span>
   </a>
@@ -4742,21 +4739,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-verify-the-store" class="md-nav__link">
+  <a href="#common-mistakes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Verify The Store
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-firecube-handled" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What Firecube Handled
+        Common Mistakes
       
     </span>
   </a>
@@ -4794,212 +4780,312 @@
   
 
 
-<h1 id="directzarringestor-auto">DirectZarrIngestor (Auto)</h1>
+<h1 id="parse-filename-fields">Parse Filename Fields</h1>
 <h2 id="goal">Goal</h2>
-<p>Build a <code>DirectZarrIngestor</code> that declares <code>TimeAxis.discovered</code>: no epoch,
-no cadence, no timestamp list. Firecube reads each observation's timestamp
-from the source files, sorts them, and materializes the time axis before any
-write.</p>
-<h2 id="prerequisites">Prerequisites</h2>
-<ul>
-<li>Firecube installed. Start with <a href="../../quickstart/installation/">Installation</a>.</li>
-<li>Run every command below in the same Python environment where Firecube is installed.</li>
-</ul>
-<h2 id="1-create-tiny-netcdf-files">1. Create Tiny NetCDF Files</h2>
-<p>Each NetCDF file holds one observation: four <code>value</code> samples and a <code>time</code>
-variable that says when the observation was taken. The gaps between
-observations are deliberately uneven, 7, 12, and 43 minutes; discovery does
-not care, but no cadence declaration could fit them.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>tutorial-data/irregular
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="s">from pathlib import Path</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">import numpy</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="s">import xarray</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">output_directory = Path(&quot;tutorial-data/irregular&quot;)</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="s">output_directory.mkdir(parents=True, exist_ok=True)</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="s">timestamps = [</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="s">    &quot;2024-01-01T00:00:00&quot;,</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s">    &quot;2024-01-01T00:07:00&quot;,</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="s">    &quot;2024-01-01T00:19:00&quot;,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="s">    &quot;2024-01-01T01:02:00&quot;,</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="s">]</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="s">for file_number, timestamp in enumerate(timestamps):</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="s">    dataset = xarray.Dataset(</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="s">        data_vars={</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="s">            &quot;value&quot;: (&quot;sample&quot;, numpy.full((4,), float(file_number), dtype=&quot;float32&quot;)),</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="s">            &quot;time&quot;: (&quot;t&quot;, numpy.array([timestamp], dtype=&quot;datetime64[ns]&quot;)),</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="s">        },</span>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="s">    )</span>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="s">    dataset.to_netcdf(output_directory / f&quot;observation-{file_number:02d}.nc&quot;)</span>
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="s">print(&quot;wrote&quot;, len(timestamps), &quot;files&quot;)</span>
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="s">PY</span>
+<p>Read a timestamp, sequence number, or other field that exists only in the
+source filename, and use it in your plugin's dataset. Firecube's <code>parse_pattern</code>
+helper uses <a href="https://github.com/pytroll/trollsift">Trollsift</a> to extract the
+fields.</p>
+<p>Add the parser dependency to your plugin with <code>uv add 'firecube[patterns]'</code>.</p>
+<h2 id="example-inputs">Example Inputs</h2>
+<p>Suppose your input directory contains these two NetCDF files:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>measurement_probe_0042_20260912T103000.nc
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>measurement_probe_0043_20260912T104500.nc
 </code></pre></div>
-<h2 id="2-create-a-plugin-project">2. Create A Plugin Project</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>plugins<span class="w"> </span>create<span class="w"> </span>irregular-times<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--template<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--write-strategy<span class="w"> </span>zarr-python<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--target-dir<span class="w"> </span>plugins_dev<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--non-interactive
+<p>Each file contains one scalar variable called <code>value</code>: <code>2.5</code> in the first file
+and <code>3.5</code> in the second. Their timestamps and sequence numbers appear only in
+the filenames.</p>
+<h2 id="describe-the-filename-format">Describe The Filename Format</h2>
+<p>The pattern describes the provider's filename convention. Text outside braces,
+such as <code>measurement_</code> and <code>.nc</code>, must match literally. Each name inside braces
+becomes a dictionary key; the part after <code>:</code> controls its conversion:</p>
+<table>
+<thead>
+<tr>
+<th>Field or format part</th>
+<th>Example input</th>
+<th>Meaning</th>
+<th>Parsed value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{device}</code></td>
+<td><code>probe</code></td>
+<td>Named text field</td>
+<td>String <code>"probe"</code></td>
+</tr>
+<tr>
+<td><code>{sequence:04d}</code></td>
+<td><code>0042</code></td>
+<td>Zero-padded integer field of width four</td>
+<td>Integer <code>42</code></td>
+</tr>
+<tr>
+<td><code>{recorded:%Y%m%dT%H%M%S}</code></td>
+<td><code>20260912T103000</code></td>
+<td>Named datetime field, built from the parts below</td>
+<td><code>datetime(2026, 9, 12, 10, 30)</code></td>
+</tr>
+<tr>
+<td><code>%Y</code> in <code>recorded</code></td>
+<td><code>2026</code></td>
+<td>Four-digit year</td>
+<td>Year: <code>2026</code></td>
+</tr>
+<tr>
+<td><code>%m</code> in <code>recorded</code></td>
+<td><code>09</code></td>
+<td>Two-digit month</td>
+<td>Month: <code>9</code> (September)</td>
+</tr>
+<tr>
+<td><code>%d</code> in <code>recorded</code></td>
+<td><code>12</code></td>
+<td>Two-digit day</td>
+<td>Day: <code>12</code></td>
+</tr>
+<tr>
+<td><code>T</code> in <code>recorded</code></td>
+<td><code>T</code></td>
+<td>Literal separator between date and time</td>
+<td>No value; must match the filename</td>
+</tr>
+<tr>
+<td><code>%H</code> in <code>recorded</code></td>
+<td><code>10</code></td>
+<td>Hour on a 24-hour clock</td>
+<td>Hour: <code>10</code></td>
+</tr>
+<tr>
+<td><code>%M</code> in <code>recorded</code></td>
+<td><code>30</code></td>
+<td>Two-digit minute</td>
+<td>Minute: <code>30</code></td>
+</tr>
+<tr>
+<td><code>%S</code> in <code>recorded</code></td>
+<td><code>00</code></td>
+<td>Two-digit second</td>
+<td>Second: <code>0</code></td>
+</tr>
+<tr>
+<td>Timezone of <code>recorded</code></td>
+<td>Absent from this filename</td>
+<td>Trollsift does not infer a timezone</td>
+<td><code>tzinfo=None</code></td>
+</tr>
+<tr>
+<td>Plugin timezone convention</td>
+<td>Source times defined as UTC in this example</td>
+<td>The plugin records the provider's convention</td>
+<td><code>timezone="UTC"</code> on the output time coordinate</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parse-the-name-in-read_dataset">Parse The Name In <code>read_dataset</code></h2>
+<p>Your generated plugin already has everything else. Set <code>TIME_DIM</code>, add
+<code>PATTERN</code> next to it, and replace <code>read_dataset</code> with the version below. Add
+the imports your plugin does not have yet:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_pattern</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">TIME_DIM</span> <span class="o">=</span> <span class="s2">&quot;timestamp&quot;</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">PATTERN</span> <span class="o">=</span> <span class="s2">&quot;measurement_</span><span class="si">{device}</span><span class="s2">_</span><span class="si">{sequence:04d}</span><span class="s2">_{recorded:%Y%m</span><span class="si">%d</span><span class="s2">T%H%M%S}.nc&quot;</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read one source item as an ``xarray.Dataset`` with a ``TIME_DIM`` dimension.&quot;&quot;&quot;</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="n">parse_pattern</span><span class="p">(</span><span class="n">PATTERN</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected measurement filename: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>        <span class="p">{</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">TIME_DIM</span><span class="p">,</span> <span class="p">[</span><span class="n">value</span><span class="p">]),</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>            <span class="s2">&quot;sequence&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">TIME_DIM</span><span class="p">,</span> <span class="p">[</span><span class="n">fields</span><span class="p">[</span><span class="s2">&quot;sequence&quot;</span><span class="p">]]),</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>        <span class="p">},</span>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>        <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="n">TIME_DIM</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="n">fields</span><span class="p">[</span><span class="s2">&quot;recorded&quot;</span><span class="p">],</span> <span class="s2">&quot;ns&quot;</span><span class="p">)]},</span>
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>    <span class="p">)</span>
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>    <span class="n">dataset</span><span class="p">[</span><span class="n">TIME_DIM</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;timezone&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;UTC&quot;</span>
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>    <span class="k">return</span> <span class="n">dataset</span>
 </code></pre></div>
-<h2 id="3-implement-the-plugin">3. Implement The Plugin</h2>
-<p>Replace <code>plugins_dev/firecube-irregular-times/src/firecube_irregular_times/ingestor.py</code> with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">DirectZarrIngestor</span><span class="p">,</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">IndexedWrite</span><span class="p">,</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">IndexSpec</span><span class="p">,</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="n">ItemInfo</span><span class="p">,</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="n">PipelineBatch</span><span class="p">,</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="n">PluginContext</span><span class="p">,</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="n">TimeAxis</span><span class="p">,</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>    <span class="n">WriteIntent</span><span class="p">,</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="n">ZarrArraySpec</span><span class="p">,</span>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>    <span class="n">ZarrGroupSpec</span><span class="p">,</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>    <span class="n">register_ingestor</span><span class="p">,</span>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="p">)</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>
-<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_observation</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read one observation file: its time and its four sample values.&quot;&quot;&quot;</span>
-<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>    <span class="k">with</span> <span class="n">xarray</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">dataset</span><span class="p">:</span>
-<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>        <span class="n">values</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>    <span class="k">return</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">values</span>
-<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>
-<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>
-<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;irregular_times&quot;</span><span class="p">)</span>
-<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="k">class</span><span class="w"> </span><span class="nc">IrregularTimesIngestor</span><span class="p">(</span><span class="n">DirectZarrIngestor</span><span class="p">):</span>
-<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;irregular_times&quot;</span>
-<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a>
-<a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">index_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IndexSpec</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a>        <span class="n">_</span> <span class="o">=</span> <span class="n">ctx</span>
-<a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a>        <span class="k">return</span> <span class="n">IndexSpec</span><span class="p">(</span>
-<a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a>            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;irregular_times_v1&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a>            <span class="n">groups</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">TimeAxis</span><span class="o">.</span><span class="n">discovered</span><span class="p">(</span><span class="n">coordinate</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)},</span>
-<a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a>        <span class="p">)</span>
-<a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a>
-<a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">inspect_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ItemInfo</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a>        <span class="n">timestamp</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="n">read_observation</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
-<a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a>        <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,):</span>
-<a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected four sample values, got </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a>        <span class="k">return</span> <span class="n">ItemInfo</span><span class="p">(</span><span class="n">coordinate</span><span class="o">=</span><span class="n">timestamp</span><span class="p">)</span>
-<a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a>
-<a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">zarr_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ZarrGroupSpec</span><span class="p">]:</span>
-<a id="__codelineno-2-50" name="__codelineno-2-50" href="#__codelineno-2-50"></a>        <span class="n">n_times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolved_index</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
-<a id="__codelineno-2-51" name="__codelineno-2-51" href="#__codelineno-2-51"></a>        <span class="k">return</span> <span class="p">[</span>
-<a id="__codelineno-2-52" name="__codelineno-2-52" href="#__codelineno-2-52"></a>            <span class="n">ZarrGroupSpec</span><span class="p">(</span>
-<a id="__codelineno-2-53" name="__codelineno-2-53" href="#__codelineno-2-53"></a>                <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-54" name="__codelineno-2-54" href="#__codelineno-2-54"></a>                <span class="n">coord_names</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;timestamp&quot;</span><span class="p">}),</span>
-<a id="__codelineno-2-55" name="__codelineno-2-55" href="#__codelineno-2-55"></a>                <span class="n">arrays</span><span class="o">=</span><span class="p">[</span>
-<a id="__codelineno-2-56" name="__codelineno-2-56" href="#__codelineno-2-56"></a>                    <span class="n">ZarrArraySpec</span><span class="p">(</span>
-<a id="__codelineno-2-57" name="__codelineno-2-57" href="#__codelineno-2-57"></a>                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-58" name="__codelineno-2-58" href="#__codelineno-2-58"></a>                        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_times</span><span class="p">,),</span>
-<a id="__codelineno-2-59" name="__codelineno-2-59" href="#__codelineno-2-59"></a>                        <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;datetime64[ns]&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-60" name="__codelineno-2-60" href="#__codelineno-2-60"></a>                        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,),</span>
-<a id="__codelineno-2-61" name="__codelineno-2-61" href="#__codelineno-2-61"></a>                        <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,),</span>
-<a id="__codelineno-2-62" name="__codelineno-2-62" href="#__codelineno-2-62"></a>                    <span class="p">),</span>
-<a id="__codelineno-2-63" name="__codelineno-2-63" href="#__codelineno-2-63"></a>                    <span class="n">ZarrArraySpec</span><span class="p">(</span>
-<a id="__codelineno-2-64" name="__codelineno-2-64" href="#__codelineno-2-64"></a>                        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-65" name="__codelineno-2-65" href="#__codelineno-2-65"></a>                        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_times</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-<a id="__codelineno-2-66" name="__codelineno-2-66" href="#__codelineno-2-66"></a>                        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
-<a id="__codelineno-2-67" name="__codelineno-2-67" href="#__codelineno-2-67"></a>                        <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
-<a id="__codelineno-2-68" name="__codelineno-2-68" href="#__codelineno-2-68"></a>                        <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">),</span>
-<a id="__codelineno-2-69" name="__codelineno-2-69" href="#__codelineno-2-69"></a>                    <span class="p">),</span>
-<a id="__codelineno-2-70" name="__codelineno-2-70" href="#__codelineno-2-70"></a>                <span class="p">],</span>
-<a id="__codelineno-2-71" name="__codelineno-2-71" href="#__codelineno-2-71"></a>            <span class="p">)</span>
-<a id="__codelineno-2-72" name="__codelineno-2-72" href="#__codelineno-2-72"></a>        <span class="p">]</span>
-<a id="__codelineno-2-73" name="__codelineno-2-73" href="#__codelineno-2-73"></a>
-<a id="__codelineno-2-74" name="__codelineno-2-74" href="#__codelineno-2-74"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_write_intents</span><span class="p">(</span>
-<a id="__codelineno-2-75" name="__codelineno-2-75" href="#__codelineno-2-75"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-2-76" name="__codelineno-2-76" href="#__codelineno-2-76"></a>        <span class="n">batch</span><span class="p">:</span> <span class="n">PipelineBatch</span><span class="p">,</span>
-<a id="__codelineno-2-77" name="__codelineno-2-77" href="#__codelineno-2-77"></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">,</span>
-<a id="__codelineno-2-78" name="__codelineno-2-78" href="#__codelineno-2-78"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">WriteIntent</span> <span class="o">|</span> <span class="n">IndexedWrite</span><span class="p">]:</span>
-<a id="__codelineno-2-79" name="__codelineno-2-79" href="#__codelineno-2-79"></a>        <span class="n">out</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">WriteIntent</span> <span class="o">|</span> <span class="n">IndexedWrite</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-2-80" name="__codelineno-2-80" href="#__codelineno-2-80"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batch</span><span class="o">.</span><span class="n">items</span><span class="p">:</span>
-<a id="__codelineno-2-81" name="__codelineno-2-81" href="#__codelineno-2-81"></a>            <span class="n">timestamp</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="n">read_observation</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
-<a id="__codelineno-2-82" name="__codelineno-2-82" href="#__codelineno-2-82"></a>            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-<a id="__codelineno-2-83" name="__codelineno-2-83" href="#__codelineno-2-83"></a>                <span class="n">IndexedWrite</span><span class="o">.</span><span class="n">slot</span><span class="p">(</span>
-<a id="__codelineno-2-84" name="__codelineno-2-84" href="#__codelineno-2-84"></a>                    <span class="n">group</span><span class="o">=</span><span class="s2">&quot;data&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-85" name="__codelineno-2-85" href="#__codelineno-2-85"></a>                    <span class="n">array</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-86" name="__codelineno-2-86" href="#__codelineno-2-86"></a>                    <span class="n">coordinate</span><span class="o">=</span><span class="n">timestamp</span><span class="p">,</span>
-<a id="__codelineno-2-87" name="__codelineno-2-87" href="#__codelineno-2-87"></a>                    <span class="n">data</span><span class="o">=</span><span class="n">values</span><span class="p">,</span>
-<a id="__codelineno-2-88" name="__codelineno-2-88" href="#__codelineno-2-88"></a>                <span class="p">)</span>
-<a id="__codelineno-2-89" name="__codelineno-2-89" href="#__codelineno-2-89"></a>            <span class="p">)</span>
-<a id="__codelineno-2-90" name="__codelineno-2-90" href="#__codelineno-2-90"></a>        <span class="k">return</span> <span class="n">out</span>
+<p>Then pass the filename to <code>read_dataset</code> from <code>build_dataset</code>. Take it from
+the source item, not from <code>path</code>: a remote file is downloaded under a hashed
+name.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">build_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">items</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">read_dataset</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">TIME_DIM</span><span class="p">,</span> <span class="n">data_vars</span><span class="o">=</span><span class="s2">&quot;minimal&quot;</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="s2">&quot;minimal&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span><span class="n">TIME_DIM</span><span class="p">)</span>
 </code></pre></div>
-<p>Three things carry the whole tutorial:</p>
-<ul>
-<li><code>index_spec()</code> declares <code>TimeAxis.discovered</code>; no epoch, no cadence, no
-  timestamp list.</li>
-<li><code>inspect_item()</code> reads each file's real observation time. Firecube runs it
-  over every item before any write, sorts the collected timestamps, and
-  builds the axis from them, so <code>resolved_index(ctx).size("data")</code> in
-  <code>zarr_schema()</code> already knows there are four slots.</li>
-<li><code>build_write_intents()</code> returns one <code>IndexedWrite.slot</code> per observation,
-  keyed by the same timestamp. Firecube resolves the slot and writes the
-  slot's time-coordinate value for you.</li>
-</ul>
-<h2 id="4-install-the-plugin">4. Install The Plugin</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>plugins<span class="w"> </span>install<span class="w"> </span>--editable<span class="w"> </span>plugins_dev/firecube-irregular-times
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>irregular_times
+<h2 id="the-complete-plugin">The Complete Plugin</h2>
+<p>The generated <code>ingestor.py</code> with both changes in place:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">GenericZarrIngestor</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">PluginContext</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">register_ingestor</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_pattern</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="n">TIME_DIM</span> <span class="o">=</span> <span class="s2">&quot;timestamp&quot;</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="n">PATTERN</span> <span class="o">=</span> <span class="s2">&quot;measurement_</span><span class="si">{device}</span><span class="s2">_</span><span class="si">{sequence:04d}</span><span class="s2">_{recorded:%Y%m</span><span class="si">%d</span><span class="s2">T%H%M%S}.nc&quot;</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read one source item as an ``xarray.Dataset`` with a ``TIME_DIM`` dimension.&quot;&quot;&quot;</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>        <span class="n">fields</span> <span class="o">=</span> <span class="n">parse_pattern</span><span class="p">(</span><span class="n">PATTERN</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected measurement filename: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>        <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>    <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>        <span class="p">{</span>
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">TIME_DIM</span><span class="p">,</span> <span class="p">[</span><span class="n">value</span><span class="p">]),</span>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>            <span class="s2">&quot;sequence&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">TIME_DIM</span><span class="p">,</span> <span class="p">[</span><span class="n">fields</span><span class="p">[</span><span class="s2">&quot;sequence&quot;</span><span class="p">]]),</span>
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>        <span class="p">},</span>
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>        <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="n">TIME_DIM</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="n">fields</span><span class="p">[</span><span class="s2">&quot;recorded&quot;</span><span class="p">],</span> <span class="s2">&quot;ns&quot;</span><span class="p">)]},</span>
+<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>    <span class="p">)</span>
+<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a>    <span class="n">dataset</span><span class="p">[</span><span class="n">TIME_DIM</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;timezone&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;UTC&quot;</span>
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a>    <span class="k">return</span> <span class="n">dataset</span>
+<a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a>
+<a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a>
+<a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_plugin&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">GenericZarrIngestor</span><span class="p">):</span>
+<a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;my_plugin&quot;</span>
+<a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a>    <span class="n">time_dim_name</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TIME_DIM</span>
+<a id="__codelineno-3-43" name="__codelineno-3-43" href="#__codelineno-3-43"></a>
+<a id="__codelineno-3-44" name="__codelineno-3-44" href="#__codelineno-3-44"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-3-45" name="__codelineno-3-45" href="#__codelineno-3-45"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
+<a id="__codelineno-3-46" name="__codelineno-3-46" href="#__codelineno-3-46"></a>            <span class="k">return</span> <span class="kc">None</span>
+<a id="__codelineno-3-47" name="__codelineno-3-47" href="#__codelineno-3-47"></a>        <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">read_dataset</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<a id="__codelineno-3-48" name="__codelineno-3-48" href="#__codelineno-3-48"></a>        <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+<a id="__codelineno-3-49" name="__codelineno-3-49" href="#__codelineno-3-49"></a>            <span class="n">datasets</span><span class="p">,</span>
+<a id="__codelineno-3-50" name="__codelineno-3-50" href="#__codelineno-3-50"></a>            <span class="n">dim</span><span class="o">=</span><span class="n">TIME_DIM</span><span class="p">,</span>
+<a id="__codelineno-3-51" name="__codelineno-3-51" href="#__codelineno-3-51"></a>            <span class="n">data_vars</span><span class="o">=</span><span class="s2">&quot;minimal&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-52" name="__codelineno-3-52" href="#__codelineno-3-52"></a>            <span class="n">coords</span><span class="o">=</span><span class="s2">&quot;minimal&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-53" name="__codelineno-3-53" href="#__codelineno-3-53"></a>            <span class="n">compat</span><span class="o">=</span><span class="s2">&quot;equals&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-54" name="__codelineno-3-54" href="#__codelineno-3-54"></a>            <span class="n">join</span><span class="o">=</span><span class="s2">&quot;exact&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-55" name="__codelineno-3-55" href="#__codelineno-3-55"></a>        <span class="p">)</span>
+<a id="__codelineno-3-56" name="__codelineno-3-56" href="#__codelineno-3-56"></a>        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span><span class="n">TIME_DIM</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="5-ingest">5. Ingest</h2>
-<p>Discovery happens inside the normal ingest; a serial run needs no other
-command:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>irregular_times<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--input-data<span class="w"> </span>tutorial-data/irregular<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/tutorial-output/irregular_times.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--product-name<span class="w"> </span>irregular_times<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
+<h2 id="how-it-works">How It Works</h2>
+<p>For the first filename, <code>parse_pattern</code> returns <code>device="probe"</code>, <code>sequence=42</code>,
+and <code>recorded=datetime(2026, 9, 12, 10, 30)</code>.</p>
+<p><code>read_dataset</code> reads <code>value</code> from the local file and returns a dataset with one
+step along <code>TIME_DIM</code>, using <code>recorded</code> as its time and storing <code>sequence</code>
+alongside the measurement. The generated <code>build_dataset</code> concatenates the
+datasets of a batch along <code>TIME_DIM</code> and sorts them by time.</p>
+<p>With the two example inputs, the batch dataset contains:</p>
+<table>
+<thead>
+<tr>
+<th>timestamp</th>
+<th>sequence</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-09-12 10:30:00</td>
+<td>42</td>
+<td>2.5</td>
+</tr>
+<tr>
+<td>2026-09-12 10:45:00</td>
+<td>43</td>
+<td>3.5</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>device</code> field is available if your plugin needs it; this example uses
+only the timestamp and sequence number. Change the literal text and named fields in
+<code>PATTERN</code> to match your provider's convention, then use the corresponding
+keys in <code>fields</code>.</p>
+<p>A malformed filename or invalid date raises an error naming the input.
+Use <a href="../source-discovery/"><code>--input-filters</code></a> to exclude unwanted
+files before they reach <code>read_dataset</code>.</p>
+<h2 id="verify">Verify</h2>
+<p>Run your plugin on the two example files:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
 </code></pre></div>
-<h2 id="6-verify-the-store">6. Verify The Store</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="s">import zarr</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="s">root = zarr.open_group(&quot;tutorial-output/irregular_times.zarr&quot;, mode=&quot;r&quot;)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">timestamps = root[&quot;data/timestamp&quot;][:]</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s">value = root[&quot;data/value&quot;]</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s">print(&quot;timestamps:&quot;, timestamps)</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">print(&quot;first cell by slot:&quot;, value[:, 0].tolist())</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">assert value.shape == (4, 4)</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">assert value[:, 0].tolist() == [0.0, 1.0, 2.0, 3.0]</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="s">PY</span>
+<p>Then open the result:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">cube</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="s2">&quot;out.zarr&quot;</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span> <span class="n">consolidated</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">cube</span><span class="p">[[</span><span class="s2">&quot;sequence&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">())</span>
 </code></pre></div>
-<p>The timestamp array holds the four real observation times, sorted ascending,
-with the uneven gaps preserved exactly. Each observation's values sit in the
-slot of its own timestamp: slot 0 is the earliest observation regardless of
-file naming or discovery order.</p>
-<h2 id="what-firecube-handled">What Firecube Handled</h2>
-<ul>
-<li>Running <code>inspect_item()</code> over every item before any write</li>
-<li>Sorting the discovered timestamps into the time axis and refusing
-  duplicates or unreadable timestamps loudly</li>
-<li>Sizing the declared arrays from the discovered slot count</li>
-<li>Resolving each <code>IndexedWrite.slot</code> coordinate to its slot and writing the
-  slot's timestamp value automatically</li>
-</ul>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>                     sequence  value
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>timestamp                           
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>2026-09-12 10:30:00        42    2.5
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>2026-09-12 10:45:00        43    3.5
+</code></pre></div>
+<p>Both timestamps and sequence numbers come from the file names; the values
+come from the files.</p>
+<h2 id="common-mistakes">Common Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Passing the full path to <code>parse_pattern</code></td>
+<td>The pattern describes the file name. Parse the name, not the path.</td>
+</tr>
+<tr>
+<td>Parsing <code>path.name</code> inside <code>read_dataset</code></td>
+<td>A remote source item is downloaded under another name. Pass <code>Path(item).name</code> from <code>build_dataset</code>, as above.</td>
+</tr>
+<tr>
+<td>Every file fails with <code>Unexpected measurement filename</code></td>
+<td>Check <code>PATTERN</code> itself: a malformed pattern raises the same <code>ValueError</code>.</td>
+</tr>
+<tr>
+<td>Writing <code>{sequence}</code> for <code>0042</code></td>
+<td>Without <code>:04d</code> the field stays the string <code>"0042"</code>. Declare the width and type.</td>
+</tr>
+<tr>
+<td>Treating <code>recorded</code> as timezone-aware</td>
+<td>Trollsift returns naive datetimes. Record the provider's convention on the time coordinate, as the example does with <code>timezone="UTC"</code>.</td>
+</tr>
+<tr>
+<td>Catching the parse error and skipping the file</td>
+<td>A skipped file leaves no trace in the product. Raise, and exclude unwanted files with <code>--input-filters</code> instead.</td>
+</tr>
+<tr>
+<td>Literal text that differs from the filename</td>
+<td>Every character outside braces must match exactly, including separators such as <code>_</code> and <code>.nc</code>.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../guides/plugins/direct-zarr-auto/">Implement DirectZarrIngestor (Auto)</a></strong> - the plugin-author guide behind this tutorial</li>
-<li><strong><a href="../../reference/parallelism/#firecube.ingestor.api.TimeAxis.discovered"><code>TimeAxis.discovered</code> Reference</a></strong> - exact constructor contract and failure modes</li>
-<li><strong><a href="../direct-zarr-parallel/">DirectZarrIngestor (Region)</a></strong> - run two workers against one store</li>
+<li><strong><a href="../../../reference/extensions/#firecube.ingestor.extensions.parse_pattern">Parser Reference</a></strong> — matching, errors, and datetime behavior</li>
+<li><strong><a href="../generic-zarr/">Append Datasets To Zarr</a></strong> — where <code>read_dataset</code> and <code>TIME_DIM</code> fit, and how to verify the store</li>
 </ul>
 
 
@@ -5056,10 +5142,10 @@ file naming or discovery order.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

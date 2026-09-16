@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/guides/plugins/generic-zarr/">
       
       
-        <link rel="prev" href="../multi-group-writes/">
+        <link rel="prev" href="../paired-source-files/">
       
       
         <link rel="next" href="../generic-parquet/">
@@ -27,7 +27,7 @@
     
     
       
-        <title>GenericZarrIngestor (Append) - Firecube</title>
+        <title>Append Datasets To Zarr - Firecube</title>
       
     
     
@@ -55,6 +55,8 @@
     
       <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
+      <link rel="stylesheet" href="../../../assets/stylesheets/showcase.css">
+    
     <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -80,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#implement-genericzarringestor" class="md-skip">
+        <a href="#append-datasets-to-zarr" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              GenericZarrIngestor (Append)
+              Append Datasets To Zarr
             
           </span>
         </div>
@@ -333,11 +335,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../tutorials/" class="md-tabs__link">
+        <a href="../../../showcase/" class="md-tabs__link">
           
   
   
-  Tutorials
+  Showcase
 
         </a>
       </li>
@@ -890,14 +892,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../customize-source-discovery/" class="md-nav__link">
+      <a href="../discover-zipped-data/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Customize Source Discovery
+    Discover Zipped Data
   
 
     
@@ -918,14 +920,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../multi-group-writes/" class="md-nav__link">
+      <a href="../parse-filename-fields/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Route Writes To Multiple Groups
+    Parse Filename Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../paired-source-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Paired Source Files
   
 
     
@@ -982,7 +1012,7 @@
   <span class="md-ellipsis">
     
   
-    Implement Your Plugin
+    Write Your Output
   
 
     
@@ -998,7 +1028,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Implement Your Plugin
+    Write Your Output
   
 
           </label>
@@ -1027,7 +1057,7 @@
   <span class="md-ellipsis">
     
   
-    GenericZarrIngestor (Append)
+    Append Datasets To Zarr
   
 
     
@@ -1045,7 +1075,7 @@
   <span class="md-ellipsis">
     
   
-    GenericZarrIngestor (Append)
+    Append Datasets To Zarr
   
 
     
@@ -1093,10 +1123,43 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#set-time_dim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set TIME_DIM
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#define-read_dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Define read_dataset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#implement-build_dataset" class="md-nav__link">
     <span class="md-ellipsis">
       
         Implement build_dataset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-complete-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Complete Plugin
       
     </span>
   </a>
@@ -1159,7 +1222,7 @@
   <span class="md-ellipsis">
     
   
-    GenericParquetIngestor (Tabular)
+    Write Tables To Parquet
   
 
     
@@ -1180,42 +1243,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../direct-zarr/" class="md-nav__link">
+      <a href="../multi-group-writes/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../direct-zarr-auto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
+    Route Writes To Multiple Groups
   
 
     
@@ -1272,7 +1307,7 @@
   <span class="md-ellipsis">
     
   
-    Develop Further
+    Customize Zarr Layout
   
 
     
@@ -1285,6 +1320,276 @@
         
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Customize Zarr Layout
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configure-zarr-chunking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configure-zarr-sharding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sharding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configure-zarr-compression/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compression
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Zarr Regions In Parallel
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Write Zarr Regions In Parallel
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare The Schema And Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Discover The Time Axis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop Further
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1383,17 +1688,17 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Customization
+    Beyond The Templates
   
 
     
@@ -1404,12 +1709,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Advanced Customization
+    Beyond The Templates
   
 
           </label>
@@ -1504,10 +1809,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="">
             
   
   
@@ -1525,8 +1830,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1951,7 +2256,7 @@
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor: Parallel Writes
+    How Parallel Writes Stay Safe
   
 
     
@@ -3585,7 +3890,7 @@
   <span class="md-ellipsis">
     
   
-    Tutorials
+    Showcase
   
 
     
@@ -3601,7 +3906,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Tutorials
+    Showcase
   
 
           </label>
@@ -3614,7 +3919,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/" class="md-nav__link">
+      <a href="../../../showcase/" class="md-nav__link">
         
   
   
@@ -3641,69 +3946,15 @@
   
   
   
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    First Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    First Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../../../tutorials/weather-netcdf/" class="md-nav__link">
+      <a href="../../../showcase/netcdf-to-zarr/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr
+    Firecube 101: NetCDF To Zarr
   
 
     
@@ -3724,14 +3975,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/source-discovery/" class="md-nav__link">
+      <a href="../../../showcase/sentinel3-fire-detections/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Source Discovery
+    Sentinel-3 SLSTR Level 2 Fire Radiative Power
   
 
     
@@ -3752,14 +4003,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/observability/" class="md-nav__link">
+      <a href="../../../showcase/mtg-fci-l1c-benchmarks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr: Observability
+    Slot-Based Parallelism: MTG FCI L1C
   
 
     
@@ -3768,222 +4019,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Product Examples
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Product Examples
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/sentinel3-frp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Sentinel-3 FRP To Parquet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Zarr
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Advanced Zarr
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/direct-zarr-parallel/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../tutorials/direct-zarr-auto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -4375,7 +4410,7 @@
   <span class="md-ellipsis">
     
   
-    Slot-Range Parallelism
+    Index Specification
   
 
     
@@ -4649,10 +4684,43 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#set-time_dim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set TIME_DIM
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#define-read_dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Define read_dataset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#implement-build_dataset" class="md-nav__link">
     <span class="md-ellipsis">
       
         Implement build_dataset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-complete-plugin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Complete Plugin
       
     </span>
   </a>
@@ -4712,7 +4780,7 @@
   
 
 
-<h1 id="implement-genericzarringestor">Implement GenericZarrIngestor</h1>
+<h1 id="append-datasets-to-zarr">Append Datasets To Zarr</h1>
 <h2 id="goal">Goal</h2>
 <p>Implement a plugin that converts each batch into a complete
 <code>xarray.Dataset</code>. Firecube appends each returned dataset to the selected Zarr
@@ -4726,64 +4794,164 @@ for the write and concurrency model.</p>
 <p>Follow <a href="../create-a-plugin/">Create a Plugin</a>, select <code>zarr</code> and the <code>xarray</code>
 write strategy, then <a href="../install-a-plugin/">install the plugin</a>.</p>
 <p>Edit <code>src/firecube_my_plugin/ingestor.py</code>. Keep the generated registration and
-product name, and implement the <code>read_dataset</code> reader that the generated
-<code>build_dataset</code> calls, or replace <code>build_dataset</code> as in the listing below.</p>
+product name, then work through the three steps below in order. Ingestion
+stops with <code>NotImplementedError</code> until <code>TIME_DIM</code> and <code>read_dataset</code> are done.</p>
+<h2 id="set-time_dim">Set <code>TIME_DIM</code></h2>
+<p><code>TIME_DIM</code> is the name of the time dimension in the datasets <code>read_dataset</code>
+returns. Firecube appends each batch to the store along it, and the store
+keeps this name. Set it to the name your files use:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">TIME_DIM</span> <span class="o">=</span> <span class="s2">&quot;time&quot;</span>
+</code></pre></div>
+<h2 id="define-read_dataset">Define <code>read_dataset</code></h2>
+<p><code>read_dataset</code> turns one source item into an <code>xarray.Dataset</code>. <code>path</code> is
+always a local file: <code>build_dataset</code> downloads remote source items first.
+<code>.load()</code> reads the data into memory before the file closes. Select or rename
+variables here when the store should not keep everything in the file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read one source item as an ``xarray.Dataset`` with a ``TIME_DIM`` dimension.&quot;&quot;&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">dataset</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+</code></pre></div>
+<p>When the file has no time dimension, <code>read_dataset</code> adds it. This version
+takes the time from the file name with <code>parse_pattern</code>, which needs
+<code>uv add 'firecube[patterns]'</code>, and opens the group of the file that holds the
+variables:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_pattern</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">PATTERN</span> <span class="o">=</span> <span class="s2">&quot;measurement_{recorded:%Y%m</span><span class="si">%d</span><span class="s2">}.nc&quot;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read one source item as an ``xarray.Dataset`` with a ``TIME_DIM`` dimension.&quot;&quot;&quot;</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">fields</span> <span class="o">=</span> <span class="n">parse_pattern</span><span class="p">(</span><span class="n">PATTERN</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s2">&quot;PRODUCT&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="n">dataset</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">({</span><span class="n">TIME_DIM</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">datetime64</span><span class="p">(</span><span class="n">fields</span><span class="p">[</span><span class="s2">&quot;recorded&quot;</span><span class="p">],</span> <span class="s2">&quot;ns&quot;</span><span class="p">)]})</span>
+</code></pre></div>
 <h2 id="implement-build_dataset">Implement <code>build_dataset</code></h2>
-<p>This example reads a batch of NetCDF files with <code>xarray</code> and appends them
-along <code>time_dim_name</code>; replace the file format and variable selection with
-what the product's data actually needs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">GenericZarrIngestor</span><span class="p">,</span> <span class="n">PluginContext</span><span class="p">,</span> <span class="n">register_ingestor</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_plugin&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">GenericZarrIngestor</span><span class="p">):</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;my_product&quot;</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">time_dim_name</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;time&quot;</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_dataset</span><span class="p">(</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>  <span class="c1"># Called once per output group; most plugins ignore this and use &quot;default&quot;.</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>        <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">,</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>            <span class="k">return</span> <span class="kc">None</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_mfdataset</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">combine</span><span class="o">=</span><span class="s2">&quot;by_coords&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_dim_name</span><span class="p">)</span>
+<p><code>build_dataset</code> reads every source item of a batch with <code>read_dataset</code>,
+concatenates the batch along <code>TIME_DIM</code>, and sorts it. Keep the four
+<code>xr.concat</code> keywords; see <a href="#common-mistakes">Common Mistakes</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>            <span class="k">return</span> <span class="kc">None</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">read_dataset</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>            <span class="n">datasets</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>            <span class="n">dim</span><span class="o">=</span><span class="n">TIME_DIM</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>            <span class="n">data_vars</span><span class="o">=</span><span class="s2">&quot;minimal&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>            <span class="n">coords</span><span class="o">=</span><span class="s2">&quot;minimal&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>            <span class="n">compat</span><span class="o">=</span><span class="s2">&quot;equals&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>            <span class="n">join</span><span class="o">=</span><span class="s2">&quot;exact&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>        <span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span><span class="n">TIME_DIM</span><span class="p">)</span>
+</code></pre></div>
+<p>With the file-name version of <code>read_dataset</code>, pass the name along. Take it
+from the source item, because a remote file is downloaded under a hashed name:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>    <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">read_dataset</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+</code></pre></div>
+<h2 id="the-complete-plugin">The Complete Plugin</h2>
+<p>This plugin reads a batch of NetCDF files with <code>xarray</code> and appends them along
+<code>TIME_DIM</code>; replace the file format and variable selection with what the
+product's data actually needs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">GenericZarrIngestor</span><span class="p">,</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">PluginContext</span><span class="p">,</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">register_ingestor</span><span class="p">,</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">)</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="n">TIME_DIM</span> <span class="o">=</span> <span class="s2">&quot;time&quot;</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">:</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read one source item as an ``xarray.Dataset`` with a ``TIME_DIM`` dimension.&quot;&quot;&quot;</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>    <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">dataset</span><span class="p">:</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="nd">@register_ingestor</span><span class="p">(</span><span class="s2">&quot;my_plugin&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">GenericZarrIngestor</span><span class="p">):</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>    <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;my_plugin&quot;</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>    <span class="n">time_dim_name</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TIME_DIM</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
+<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>            <span class="k">return</span> <span class="kc">None</span>
+<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a>        <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span><span class="n">read_dataset</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">))</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a>        <span class="n">dataset</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a>            <span class="n">datasets</span><span class="p">,</span>
+<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a>            <span class="n">dim</span><span class="o">=</span><span class="n">TIME_DIM</span><span class="p">,</span>
+<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a>            <span class="n">data_vars</span><span class="o">=</span><span class="s2">&quot;minimal&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a>            <span class="n">coords</span><span class="o">=</span><span class="s2">&quot;minimal&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a>            <span class="n">compat</span><span class="o">=</span><span class="s2">&quot;equals&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a>            <span class="n">join</span><span class="o">=</span><span class="s2">&quot;exact&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a>        <span class="p">)</span>
+<a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a>        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">sortby</span><span class="p">(</span><span class="n">TIME_DIM</span><span class="p">)</span>
 </code></pre></div>
 <p>See the <a href="../../../reference/templates/#genericzarringestor">Plugin Templates</a>
 for the exact hook signature and optional group, path, and writer
-customizations, or the quickstart plugin's
-<a href="https://github.com/eumetsat/firecube-quickstart-plugin/blob/main/src/firecube_quickstart_plugin/ingestor.py"><code>build_dataset</code> implementation</a>
-for a complete, runnable version of this example.</p>
+customizations, or <a href="../../../showcase/netcdf-to-zarr/">Firecube 101: NetCDF To Zarr</a>
+for a notebook that creates a plugin and checks the written store.</p>
+<p>When one local file path is not enough, these guides show <code>read_dataset</code> for
+the layout and, where needed, the <code>build_dataset</code> change that goes with it:</p>
+<table>
+<thead>
+<tr>
+<th>Your source data</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Files Firecube does not find by default, or files to exclude</td>
+<td><a href="../source-discovery/">Discover Source Data</a></td>
+</tr>
+<tr>
+<td>Data inside <code>.zip</code> archives</td>
+<td><a href="../discover-zipped-data/">Discover Zipped Data</a></td>
+</tr>
+<tr>
+<td>Times or other values that exist only in the file name</td>
+<td><a href="../parse-filename-fields/">Parse Filename Fields</a></td>
+</tr>
+<tr>
+<td>Two files per source item, such as data plus metadata</td>
+<td><a href="../paired-source-files/">Read Paired Source Files</a></td>
+</tr>
+</tbody>
+</table>
 <h2 id="verify">Verify</h2>
 <p>First check registration and configuration:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>firecube-my-plugin
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>my_plugin
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>--show-options
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>firecube-my-plugin
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>my_plugin
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>--show-options
 </code></pre></div>
 <p>Then ingest a small, representative input supported by the product reader:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input-data<span class="w"> </span>./path/to/input<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--input-data<span class="w"> </span>./path/to/input<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_plugin_out.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
 </code></pre></div>
-<p>Open the written group with the product's normal reader. Confirm the expected
-variables and coordinates, the append-dimension values, and at least one known
-data value. Run the same input again and confirm that the product remains
-consistent with the plugin's resume policy.</p>
+<p>Open the <code>default</code> group and confirm the expected variables and coordinates,
+the <code>TIME_DIM</code> values, and at least one known data value:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="s2">&quot;/tmp/my_plugin_out.zarr&quot;</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span> <span class="n">consolidated</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+</code></pre></div>
+<p>A second run into the same store is refused. Add
+<code>--option resume_existing=true</code> to skip timestamps already written and append
+new ones.</p>
 <p>If built-in discovery does not include the product's source names, pass
-<code>include_patterns</code> or customize discovery before verifying ingestion.</p>
+<code>--input-filters</code> or customize discovery before verifying ingestion.</p>
 <h2 id="common-mistakes">Common Mistakes</h2>
 <table>
 <thead>
@@ -4794,34 +4962,61 @@ consistent with the plugin's resume policy.</p>
 </thead>
 <tbody>
 <tr>
-<td>Returning an unordered dataset</td>
-<td>Sort on <code>time_dim_name</code> before returning.</td>
+<td>Leaving <code>TIME_DIM</code> empty</td>
+<td>Ingestion stops with <code>TIME_DIM is not set</code>. Set it to the time dimension <code>read_dataset</code> returns.</td>
 </tr>
 <tr>
-<td>Returning incompatible batch schemas</td>
-<td>Normalize dimensions, coordinates, variables, and data types in the product reader.</td>
+<td><code>TIME_DIM</code> names a dimension the dataset does not have</td>
+<td><code>build_dataset</code> raises <code>ValueError</code> listing the dimensions it found. Set <code>TIME_DIM</code> to that name, or rename the dimension in <code>read_dataset</code>.</td>
 </tr>
 <tr>
-<td>Passing a remote URI to a local-only reader</td>
-<td>Resolve each item with <code>ctx.materialize(item)</code>.</td>
+<td>Returning data read lazily after the file closed</td>
+<td>Call <code>.load()</code> inside the <code>with</code> block.</td>
+</tr>
+<tr>
+<td>Returning incompatible schemas from different files</td>
+<td>Normalize dimensions, coordinates, variables, and data types in <code>read_dataset</code>.</td>
+</tr>
+<tr>
+<td><code>xarray.MergeError: conflicting values for variable</code></td>
+<td>A variable without <code>TIME_DIM</code> differs between files of one batch. If it varies per file, add <code>TIME_DIM</code> to its dimensions in <code>read_dataset</code>; otherwise make the files agree.</td>
+</tr>
+<tr>
+<td><code>xarray.AlignmentError: cannot align objects with join='exact'</code></td>
+<td>The grid coordinates differ between files of one batch. Make them match in <code>read_dataset</code>.</td>
+</tr>
+<tr>
+<td>Removing an <code>xr.concat</code> keyword from <code>build_dataset</code></td>
+<td>The four keywords keep static variables and bounds from being copied per time step and stop silent mismatches. Keep them, also in your own <code>build_dataset</code>.</td>
+</tr>
+<tr>
+<td><code>SchemaDriftError</code> on append</td>
+<td>A variable without <code>TIME_DIM</code> changed, appeared, or was force-reingested with a different value. Firecube writes such variables once and refuses to change them. Add <code>TIME_DIM</code> to it in <code>read_dataset</code> if it varies per file, or create a new store.</td>
+</tr>
+<tr>
+<td><code>Group attributes differ from stored; keeping first-write values</code> on every append</td>
+<td>Group attributes are written once. Per-file attributes such as <code>history</code> or <code>date_created</code> differ every time; drop them in <code>build_dataset</code> with <code>dataset.attrs.pop("history", None)</code> before returning. Keep attributes that describe the whole dataset.</td>
 </tr>
 <tr>
 <td>Starting another append writer for the same group</td>
 <td>Keep appends to one group serialized.</td>
 </tr>
 <tr>
-<td>Setting <code>time_dim_name</code> to a name absent from the returned dataset</td>
-<td>Match the dataset's dimension name exactly, or the write raises a <code>ValueError</code>.</td>
+<td>Opening the target store from a hook while workers are writing</td>
+<td>Wrap the access in <code>with self.write_lock:</code> so it waits for the current batch write.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../../../concepts/output-formats/zarr/generic-append/">GenericZarrIngestor (Append)</a></strong> — understand ordering and serialized group writes</li>
-<li><strong><a href="../../../quickstart/">Quickstart</a></strong> — create and run a complete local plugin with this template</li>
-<li><strong><a href="../../../tutorials/weather-netcdf/">NetCDF To Zarr</a></strong> — inspect the example plugin and verify its stored values</li>
+<li><strong><a href="../../../quickstart/">Quickstart</a></strong> — run an installed NetCDF-to-Zarr plugin</li>
+<li><strong><a href="../../../showcase/netcdf-to-zarr/">Firecube 101: NetCDF To Zarr</a></strong> — inspect the example plugin and verify its stored values</li>
 <li><strong><a href="../multi-group-writes/">Route Writes To Multiple Groups</a></strong> — write more than the single default group</li>
+<li><strong><a href="../configure-zarr-chunking/">Configure Zarr Chunking</a></strong> — set chunk shape, and from there compression and sharding, before the first real run</li>
 <li><strong><a href="../add-config-options/">Add Plugin Configuration Options</a></strong> — declare typed options the plugin validates before ingestion</li>
+<li><strong><a href="../../../reference/core-utilities/#firecube.core.api.prepare_netcdf_for_zarr">NetCDF Preparation</a></strong> and <strong><a href="../../../reference/core-utilities/#firecube.core.api.normalize_string_vars">String Normalization</a></strong> — prepare arrays for writing</li>
+<li><strong><a href="../observability/">Add Plugin Telemetry</a></strong> — emit metrics and use standard module logging</li>
 <li><strong><a href="../../../reference/templates/">Plugin Templates</a></strong> — look up the public template types</li>
 </ul>
 

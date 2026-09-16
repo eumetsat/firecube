@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/tutorials/source-discovery/">
+        <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/guides/plugins/configure-zarr-chunking/">
       
       
-        <link rel="prev" href="../weather-netcdf/">
+        <link rel="prev" href="../multi-group-writes/">
       
       
-        <link rel="next" href="../observability/">
+        <link rel="next" href="../configure-zarr-sharding/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/firecube-favicon.png">
+      <link rel="icon" href="../../../assets/firecube-favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>NetCDF To Zarr: Source Discovery - Firecube</title>
+        <title>Chunking - Firecube</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,11 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+      <link rel="stylesheet" href="../../../assets/stylesheets/showcase.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#netcdf-to-zarr-source-discovery" class="md-skip">
+        <a href="#configure-zarr-chunking" class="md-skip">
           Skip to content
         </a>
       
@@ -98,9 +100,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href="../../.." title="Firecube" class="md-header__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../../../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -117,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              NetCDF To Zarr: Source Discovery
+              Chunking
             
           </span>
         </div>
@@ -230,7 +232,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -251,71 +253,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../quickstart/" class="md-tabs__link">
+        <a href="../../../quickstart/" class="md-tabs__link">
           
   
   
   Quickstart
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../guides/plugins/" class="md-tabs__link">
-          
-  
-  
-  Plugin Development
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../concepts/" class="md-tabs__link">
-          
-  
-  
-  Concepts
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../operations/" class="md-tabs__link">
-          
-  
-  
-  Operations
 
         </a>
       </li>
@@ -337,7 +279,7 @@
           
   
   
-  Tutorials
+  Plugin Development
 
         </a>
       </li>
@@ -353,7 +295,67 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../contributing/" class="md-tabs__link">
+        <a href="../../../concepts/" class="md-tabs__link">
+          
+  
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../operations/" class="md-tabs__link">
+          
+  
+  
+  Operations
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../showcase/" class="md-tabs__link">
+          
+  
+  
+  Showcase
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../contributing/" class="md-tabs__link">
           
   
   
@@ -373,7 +375,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   
@@ -407,9 +409,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
+    <a href="../../.." title="Firecube" class="md-nav__button md-logo" aria-label="Firecube" data-md-component="logo">
       
-  <img src="../../assets/firecube-amblem-white.png" alt="logo">
+  <img src="../../../assets/firecube-amblem-white.png" alt="logo">
 
     </a>
     Firecube
@@ -436,7 +438,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -517,7 +519,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../../../quickstart/" class="md-nav__link">
         
   
   
@@ -545,7 +547,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/installation/" class="md-nav__link">
+      <a href="../../../quickstart/installation/" class="md-nav__link">
         
   
   
@@ -573,7 +575,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/plugins/" class="md-nav__link">
+      <a href="../../../quickstart/plugins/" class="md-nav__link">
         
   
   
@@ -601,7 +603,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/source-data/" class="md-nav__link">
+      <a href="../../../quickstart/source-data/" class="md-nav__link">
         
   
   
@@ -629,7 +631,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/ingestion/" class="md-nav__link">
+      <a href="../../../quickstart/ingestion/" class="md-nav__link">
         
   
   
@@ -661,28 +663,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -700,7 +705,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -718,7 +723,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -746,7 +751,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/create-a-plugin/" class="md-nav__link">
+      <a href="../create-a-plugin/" class="md-nav__link">
         
   
   
@@ -774,7 +779,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/install-a-plugin/" class="md-nav__link">
+      <a href="../install-a-plugin/" class="md-nav__link">
         
   
   
@@ -808,10 +813,13 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
@@ -820,7 +828,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
         
           
-          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
             
   
   
@@ -856,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/source-discovery/" class="md-nav__link">
+      <a href="../source-discovery/" class="md-nav__link">
         
   
   
@@ -884,14 +892,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/customize-source-discovery/" class="md-nav__link">
+      <a href="../discover-zipped-data/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Customize Source Discovery
+    Discover Zipped Data
   
 
     
@@ -912,7 +920,184 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/multi-group-writes/" class="md-nav__link">
+      <a href="../parse-filename-fields/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Filename Fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../paired-source-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read Paired Source Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Your Output
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Write Your Output
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Append Datasets To Zarr
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-parquet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Tables To Parquet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multi-group-writes/" class="md-nav__link">
         
   
   
@@ -945,35 +1130,38 @@
                 
   
   
+    
   
   
+  
     
     
     
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
         
           
+          
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Implement Your Plugin
+    Customize Zarr Layout
   
 
     
@@ -984,12 +1172,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_6">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Implement Your Plugin
+    Customize Zarr Layout
   
 
           </label>
@@ -999,17 +1187,191 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/generic-zarr/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunking
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericZarrIngestor (Append)
+    Chunking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#goal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#on-the-command-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On The Command Line
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-a-config-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In A Config File
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#as-the-plugins-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        As The Plugin's Default
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chosen-at-run-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chosen At Run Time
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-a-directzarringestor-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In A DirectZarrIngestor Schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-mistakes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Mistakes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configure-zarr-sharding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sharding
   
 
     
@@ -1030,70 +1392,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/generic-parquet/" class="md-nav__link">
+      <a href="../configure-zarr-compression/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GenericParquetIngestor (Tabular)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/direct-zarr/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/plugins/direct-zarr-auto/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Auto)
+    Compression
   
 
     
@@ -1128,19 +1434,143 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
         
           
-          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write Zarr Regions In Parallel
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Write Zarr Regions In Parallel
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare The Schema And Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../direct-zarr-auto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Discover The Time Axis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="">
             
   
   
@@ -1158,8 +1588,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1176,7 +1606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/add-config-options/" class="md-nav__link">
+      <a href="../add-config-options/" class="md-nav__link">
         
   
   
@@ -1204,7 +1634,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/observability/" class="md-nav__link">
+      <a href="../observability/" class="md-nav__link">
         
   
   
@@ -1246,26 +1676,29 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
         
           
-          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Customization
+    Beyond The Templates
   
 
     
@@ -1276,12 +1709,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Advanced Customization
+    Beyond The Templates
   
 
           </label>
@@ -1294,7 +1727,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/extensions/" class="md-nav__link">
+      <a href="../extensions/" class="md-nav__link">
         
   
   
@@ -1322,7 +1755,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/base-ingestor/" class="md-nav__link">
+      <a href="../base-ingestor/" class="md-nav__link">
         
   
   
@@ -1364,19 +1797,22 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_10" >
         
           
-          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="">
             
   
   
@@ -1394,8 +1830,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1412,7 +1848,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/plugins/contract/" class="md-nav__link">
+      <a href="../contract/" class="md-nav__link">
         
   
   
@@ -1509,7 +1945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/" class="md-nav__link">
+      <a href="../../../concepts/" class="md-nav__link">
         
   
   
@@ -1537,7 +1973,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/glossary/" class="md-nav__link">
+      <a href="../../../concepts/glossary/" class="md-nav__link">
         
   
   
@@ -1565,7 +2001,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/configuration/" class="md-nav__link">
+      <a href="../../../concepts/configuration/" class="md-nav__link">
         
   
   
@@ -1647,7 +2083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/" class="md-nav__link">
         
   
   
@@ -1729,7 +2165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/zarr/" class="md-nav__link">
         
   
   
@@ -1757,7 +2193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/zarr/generic-append/" class="md-nav__link">
         
   
   
@@ -1785,7 +2221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/zarr/direct-region/" class="md-nav__link">
         
   
   
@@ -1813,14 +2249,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/zarr/parallel-writes/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor: Parallel Writes
+    How Parallel Writes Stay Safe
   
 
     
@@ -1849,7 +2285,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/parquet/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/parquet/" class="md-nav__link">
         
   
   
@@ -1877,7 +2313,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/output-formats/archive/" class="md-nav__link">
+      <a href="../../../concepts/output-formats/archive/" class="md-nav__link">
         
   
   
@@ -1967,7 +2403,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/chunkmanager/" class="md-nav__link">
+      <a href="../../../concepts/chunkmanager/" class="md-nav__link">
         
   
   
@@ -1995,7 +2431,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/storage/" class="md-nav__link">
+      <a href="../../../concepts/storage/" class="md-nav__link">
         
   
   
@@ -2023,7 +2459,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/chunk-management/" class="md-nav__link">
+      <a href="../../../concepts/chunk-management/" class="md-nav__link">
         
   
   
@@ -2113,7 +2549,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/" class="md-nav__link">
         
   
   
@@ -2141,7 +2577,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/external-orchestrator/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/external-orchestrator/" class="md-nav__link">
         
   
   
@@ -2169,7 +2605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/execution-shapes/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/execution-shapes/" class="md-nav__link">
         
   
   
@@ -2197,7 +2633,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/write-safety/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/write-safety/" class="md-nav__link">
         
   
   
@@ -2225,7 +2661,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/orchestration/retries/" class="md-nav__link">
+      <a href="../../../concepts/orchestration/retries/" class="md-nav__link">
         
   
   
@@ -2315,7 +2751,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/" class="md-nav__link">
+      <a href="../../../concepts/observability/" class="md-nav__link">
         
   
   
@@ -2343,7 +2779,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/metrics/" class="md-nav__link">
+      <a href="../../../concepts/observability/metrics/" class="md-nav__link">
         
   
   
@@ -2371,7 +2807,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/logs/" class="md-nav__link">
+      <a href="../../../concepts/observability/logs/" class="md-nav__link">
         
   
   
@@ -2399,7 +2835,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/observability/traces/" class="md-nav__link">
+      <a href="../../../concepts/observability/traces/" class="md-nav__link">
         
   
   
@@ -2489,7 +2925,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/best-practices/" class="md-nav__link">
+      <a href="../../../concepts/best-practices/" class="md-nav__link">
         
   
   
@@ -2517,7 +2953,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/reproducibility/" class="md-nav__link">
+      <a href="../../../concepts/reproducibility/" class="md-nav__link">
         
   
   
@@ -2545,7 +2981,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/production-guide/" class="md-nav__link">
+      <a href="../../../concepts/production-guide/" class="md-nav__link">
         
   
   
@@ -2573,7 +3009,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/performance/" class="md-nav__link">
+      <a href="../../../concepts/performance/" class="md-nav__link">
         
   
   
@@ -2601,7 +3037,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/parallelism/" class="md-nav__link">
+      <a href="../../../concepts/parallelism/" class="md-nav__link">
         
   
   
@@ -2629,7 +3065,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/benchmarks/" class="md-nav__link">
+      <a href="../../../concepts/benchmarks/" class="md-nav__link">
         
   
   
@@ -2726,7 +3162,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/" class="md-nav__link">
+      <a href="../../../operations/" class="md-nav__link">
         
   
   
@@ -2808,7 +3244,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/s3-access/" class="md-nav__link">
+      <a href="../../../operations/s3-access/" class="md-nav__link">
         
   
   
@@ -2836,7 +3272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/intake-catalog/" class="md-nav__link">
+      <a href="../../../operations/intake-catalog/" class="md-nav__link">
         
   
   
@@ -2926,7 +3362,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/parallel-zarr-writes/" class="md-nav__link">
+      <a href="../../../operations/parallel-zarr-writes/" class="md-nav__link">
         
   
   
@@ -2954,7 +3390,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/zarr-compare/" class="md-nav__link">
+      <a href="../../../operations/zarr-compare/" class="md-nav__link">
         
   
   
@@ -2982,7 +3418,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/firecube-index/" class="md-nav__link">
+      <a href="../../../operations/firecube-index/" class="md-nav__link">
         
   
   
@@ -3072,7 +3508,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/" class="md-nav__link">
         
   
   
@@ -3100,7 +3536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/inspect/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/inspect/" class="md-nav__link">
         
   
   
@@ -3128,7 +3564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/recover/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/recover/" class="md-nav__link">
         
   
   
@@ -3156,7 +3592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/post-crash-recovery/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/post-crash-recovery/" class="md-nav__link">
         
   
   
@@ -3184,7 +3620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/delete/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/delete/" class="md-nav__link">
         
   
   
@@ -3212,7 +3648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/snapshots/" class="md-nav__link">
+      <a href="../../../operations/chunk-manager/snapshots/" class="md-nav__link">
         
   
   
@@ -3302,7 +3738,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/" class="md-nav__link">
+      <a href="../../../operations/archive/" class="md-nav__link">
         
   
   
@@ -3330,7 +3766,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/create/" class="md-nav__link">
+      <a href="../../../operations/archive/create/" class="md-nav__link">
         
   
   
@@ -3358,7 +3794,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/inspect/" class="md-nav__link">
+      <a href="../../../operations/archive/inspect/" class="md-nav__link">
         
   
   
@@ -3386,7 +3822,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/archive/restore/" class="md-nav__link">
+      <a href="../../../operations/archive/restore/" class="md-nav__link">
         
   
   
@@ -3426,38 +3862,35 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    Tutorials
+    Showcase
   
 
     
@@ -3468,12 +3901,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Tutorials
+    Showcase
   
 
           </label>
@@ -3486,7 +3919,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../../showcase/" class="md-nav__link">
         
   
   
@@ -3511,418 +3944,17 @@
                 
   
   
-    
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    First Plugin
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_6_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    First Plugin
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
   
   
     <li class="md-nav__item">
-      <a href="../weather-netcdf/" class="md-nav__link">
+      <a href="../../../showcase/netcdf-to-zarr/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    NetCDF To Zarr
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    NetCDF To Zarr: Source Discovery
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    NetCDF To Zarr: Source Discovery
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#goal" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Goal
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#use-built-in-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Use Built-In Discovery
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#add-another-filename-pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Add Another Filename Pattern
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../observability/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    NetCDF To Zarr: Observability
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Product Examples
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Product Examples
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../sentinel3-frp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Sentinel-3 FRP To Parquet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Advanced Zarr
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Advanced Zarr
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../direct-zarr-parallel/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DirectZarrIngestor (Region)
+    Firecube 101: NetCDF To Zarr
   
 
     
@@ -3943,14 +3975,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../direct-zarr-auto/" class="md-nav__link">
+      <a href="../../../showcase/sentinel3-fire-detections/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    DirectZarrIngestor (Auto)
+    Sentinel-3 SLSTR Level 2 Fire Radiative Power
   
 
     
@@ -3964,9 +3996,29 @@
 
               
             
-          </ul>
-        </nav>
-      
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../showcase/mtg-fci-l1c-benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slot-Based Parallelism: MTG FCI L1C
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -4040,7 +4092,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   
@@ -4068,7 +4120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/firecube-contributors/" class="md-nav__link">
+      <a href="../../../contributing/firecube-contributors/" class="md-nav__link">
         
   
   
@@ -4157,7 +4209,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   
@@ -4239,7 +4291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/templates/" class="md-nav__link">
+      <a href="../../../reference/templates/" class="md-nav__link">
         
   
   
@@ -4267,7 +4319,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/hooks/" class="md-nav__link">
+      <a href="../../../reference/hooks/" class="md-nav__link">
         
   
   
@@ -4295,7 +4347,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/context/" class="md-nav__link">
+      <a href="../../../reference/context/" class="md-nav__link">
         
   
   
@@ -4323,7 +4375,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/exceptions/" class="md-nav__link">
+      <a href="../../../reference/exceptions/" class="md-nav__link">
         
   
   
@@ -4351,14 +4403,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/parallelism/" class="md-nav__link">
+      <a href="../../../reference/parallelism/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Slot-Range Parallelism
+    Index Specification
   
 
     
@@ -4379,7 +4431,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/extensions/" class="md-nav__link">
+      <a href="../../../reference/extensions/" class="md-nav__link">
         
   
   
@@ -4415,7 +4467,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/core-utilities/" class="md-nav__link">
+      <a href="../../../reference/core-utilities/" class="md-nav__link">
         
   
   
@@ -4443,7 +4495,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/cli/" class="md-nav__link">
+      <a href="../../../reference/cli/" class="md-nav__link">
         
   
   
@@ -4471,7 +4523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/config/" class="md-nav__link">
+      <a href="../../../reference/config/" class="md-nav__link">
         
   
   
@@ -4499,7 +4551,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/observability/" class="md-nav__link">
+      <a href="../../../reference/observability/" class="md-nav__link">
         
   
   
@@ -4527,7 +4579,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/storage-drivers/" class="md-nav__link">
+      <a href="../../../reference/storage-drivers/" class="md-nav__link">
         
   
   
@@ -4555,7 +4607,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/control-plane-spec/" class="md-nav__link">
+      <a href="../../../reference/control-plane-spec/" class="md-nav__link">
         
   
   
@@ -4621,10 +4673,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#use-built-in-discovery" class="md-nav__link">
+  <a href="#on-the-command-line" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Use Built-In Discovery
+        On The Command Line
       
     </span>
   </a>
@@ -4632,10 +4684,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#add-another-filename-pattern" class="md-nav__link">
+  <a href="#in-a-config-file" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Add Another Filename Pattern
+        In A Config File
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#as-the-plugins-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        As The Plugin's Default
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chosen-at-run-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chosen At Run Time
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-a-directzarringestor-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In A DirectZarrIngestor Schema
       
     </span>
   </a>
@@ -4647,6 +4732,17 @@
     <span class="md-ellipsis">
       
         Verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-mistakes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Mistakes
       
     </span>
   </a>
@@ -4684,116 +4780,136 @@
   
 
 
-<h1 id="netcdf-to-zarr-source-discovery">NetCDF To Zarr: Source Discovery</h1>
+<h1 id="configure-zarr-chunking">Configure Zarr Chunking</h1>
 <h2 id="goal">Goal</h2>
-<p>See which files Firecube discovers automatically, then add another filename
-pattern without writing discovery code in the plugin.</p>
-<p>Continue from <a href="../weather-netcdf/">NetCDF To Zarr</a>. You will keep the same
-plugin and input directory.</p>
-<h2 id="use-built-in-discovery">Use Built-In Discovery</h2>
-<p>For file-based templates such as <code>GenericZarrIngestor</code> and
-<code>GenericParquetIngestor</code>, Firecube searches recursively under <code>--input-data</code>.
-NetCDF <code>.nc</code>, HDF5 <code>.h5</code>, and ZIP <code>.zip</code> files are included by default.</p>
-<p>Run the Weather plugin without a discovery option:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">PRODUCT_URI</span><span class="o">=</span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/quickstart-output/weather_netcdf_discovery.zarr&quot;</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>weather_netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--input-data<span class="w"> </span>quickstart-data/weather-netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span>--product-name<span class="w"> </span>weather_netcdf_discovery<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
+<p>Set the chunk shape of the arrays your plugin writes. Chunking decides how
+much data one read has to fetch. Decide it before the first real run: a
+written cube keeps its chunk shape, and appends must match it, so changing
+it later means writing a new cube. Without a setting Zarr picks a shape
+itself (for a <code>(2, 720, 1440)</code> array it chose <code>(1, 180, 720)</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Where the chunk shape comes from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GenericZarrIngestor</code></td>
+<td>the <code>zarr_chunk_shape</code> option</td>
+</tr>
+<tr>
+<td><code>DirectZarrIngestor</code></td>
+<td><code>chunks=</code> in each <code>ZarrArraySpec</code>; the option has no effect</td>
+</tr>
+</tbody>
+</table>
+<h2 id="on-the-command-line">On The Command Line</h2>
+<p>The value is a JSON object keyed by dimension name, so quote the option:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span>--option<span class="w"> </span><span class="s1">&#39;zarr_chunk_shape={&quot;time&quot;:5,&quot;lat&quot;:90,&quot;lon&quot;:180}&#39;</span>
 </code></pre></div>
-<p>Expected output includes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&quot;message&quot;:&quot;Found 4 files&quot;
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>...
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>&quot;files_processed&quot;: 4
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>...
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>&quot;count&quot;: 4
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>&quot;product&quot;: &quot;weather_netcdf_discovery&quot;
+<h2 id="in-a-config-file">In A Config File</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[plugins.my_plugin]</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">zarr_chunk_shape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">time</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="n">lat</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"> </span><span class="n">lon</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">180</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
-<h2 id="add-another-filename-pattern">Add Another Filename Pattern</h2>
-<p>Create one more NetCDF file, this time with the <code>.nc4</code> suffix:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="s">from pathlib import Path</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="s">import numpy as np</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="s">import xarray as xr</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="s">path = Path(&quot;quickstart-data/weather-netcdf/weather_05.nc4&quot;)</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="s">ds = xr.Dataset(</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="s">    data_vars={</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="s">        &quot;temperature_c&quot;: (</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="s">            (&quot;timestamp&quot;, &quot;latitude&quot;, &quot;longitude&quot;),</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="s">            np.full((1, 2, 3), 18.7, dtype=&quot;float64&quot;),</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="s">        ),</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="s">        &quot;humidity_pct&quot;: (</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="s">            (&quot;timestamp&quot;, &quot;latitude&quot;, &quot;longitude&quot;),</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="s">            np.full((1, 2, 3), 72.0, dtype=&quot;float64&quot;),</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="s">        ),</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="s">    },</span>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="s">    coords={</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="s">        &quot;timestamp&quot;: [np.datetime64(&quot;2024-07-02T00:00:00&quot;, &quot;ns&quot;)],</span>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="s">        &quot;latitude&quot;: [50.0, 51.0],</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="s">        &quot;longitude&quot;: [7.0, 8.0, 9.0],</span>
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="s">    },</span>
-<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="s">    attrs={&quot;title&quot;: &quot;Weather observations&quot;},</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="s">)</span>
-<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="s">ds.to_netcdf(path)</span>
-<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="s">print(path)</span>
-<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="s">PY</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>--config-file<span class="w"> </span>firecube.toml<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>...
 </code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>quickstart-data/weather-netcdf/weather_05.nc4
+<p>A <code>--option</code> on the command line overrides the file.</p>
+<h2 id="as-the-plugins-default">As The Plugin's Default</h2>
+<p>Subclass the template config and attach it. An operator's <code>--option</code> still
+wins:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">GenericZarrIngestor</span><span class="p">,</span> <span class="n">ZarrTemplateConfig</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyZarrConfig</span><span class="p">(</span><span class="n">ZarrTemplateConfig</span><span class="p">):</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">zarr_chunk_shape</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="mi">180</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="mi">360</span><span class="p">}</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="p">)</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">GenericZarrIngestor</span><span class="p">):</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="n">template_config_class</span> <span class="o">=</span> <span class="n">MyZarrConfig</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="o">...</span>
 </code></pre></div>
-<p>The <code>.nc4</code> suffix is not in the built-in set. Add it with <code>include_patterns</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">PRODUCT_URI</span><span class="o">=</span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/quickstart-output/weather_netcdf_extended.zarr&quot;</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>weather_netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--input-data<span class="w"> </span>quickstart-data/weather-netcdf<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--product-name<span class="w"> </span>weather_netcdf_extended<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span>--option<span class="w"> </span><span class="s1">&#39;include_patterns=[&quot;*.nc4&quot;]&#39;</span>
+<h2 id="chosen-at-run-time">Chosen At Run Time</h2>
+<p><code>GenericZarrIngestor</code> only. When the plugin offers more than one layout,
+override <code>get_zarr_config</code>. Start from the operator's options and fill only
+what they did not set:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">LAYOUTS</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="s2">&quot;maps&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;chunk_shape&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="mi">180</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="mi">360</span><span class="p">}},</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="s2">&quot;timeseries&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;chunk_shape&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">}},</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">}</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyPlugin</span><span class="p">(</span><span class="n">GenericZarrIngestor</span><span class="p">):</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_zarr_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="n">zarr_config</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_zarr_config</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>  <span class="c1"># the operator&#39;s zarr_* options</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">LAYOUTS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">plugin_config</span><span class="o">.</span><span class="n">layout</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>            <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;zarr_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ctx</span><span class="o">.</span><span class="n">options</span><span class="p">:</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>                <span class="n">zarr_config</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="k">return</span> <span class="n">zarr_config</span>
 </code></pre></div>
-<p>Expected output includes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>&quot;message&quot;:&quot;Found 5 files&quot;
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>...
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>&quot;files_processed&quot;: 5
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>...
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>&quot;count&quot;: 5
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>&quot;product&quot;: &quot;weather_netcdf_extended&quot;
+<p>The returned key is the writer's name, <code>chunk_shape</code>, not the option name.
+Returning <code>{**super().get_zarr_config(ctx), **preset}</code> would silently discard
+what the operator passed.</p>
+<h2 id="in-a-directzarringestor-schema">In A <code>DirectZarrIngestor</code> Schema</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">ZarrArraySpec</span><span class="p">(</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_times</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">chunks</span><span class="o">=</span><span class="p">(</span><span class="mi">24</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">),</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">)</span>
 </code></pre></div>
-<p><code>include_patterns</code> adds matching files to the built-in formats. It does not
-exclude <code>.nc</code>, <code>.h5</code>, or <code>.zip</code> files that Firecube would otherwise discover.</p>
 <h2 id="verify">Verify</h2>
-<p>Open the product and confirm that it contains all five time steps:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="s">import xarray as xr</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="s">ds = xr.open_zarr(</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="s">    &quot;quickstart-output/weather_netcdf_extended.zarr&quot;,</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="s">    group=&quot;default&quot;,</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="s">    consolidated=False,</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="s">)</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="s">print(ds.sizes)</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="s">assert ds.sizes == {&quot;timestamp&quot;: 5, &quot;latitude&quot;: 2, &quot;longitude&quot;: 3}</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="s">PY</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">zarr</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">array</span> <span class="o">=</span> <span class="n">zarr</span><span class="o">.</span><span class="n">open_group</span><span class="p">(</span><span class="s2">&quot;out.zarr&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">use_consolidated</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="s2">&quot;default&quot;</span><span class="p">][</span><span class="s2">&quot;precipitation&quot;</span><span class="p">]</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">chunks</span><span class="p">)</span>
 </code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Frozen({&#39;timestamp&#39;: 5, &#39;latitude&#39;: 2, &#39;longitude&#39;: 3})
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>(5, 90, 180)
 </code></pre></div>
+<h2 id="common-mistakes">Common Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--option zarr_chunk_shape={"time":5}</code> without quotes</td>
+<td>The shell eats the braces. Quote the whole option.</td>
+</tr>
+<tr>
+<td>A dimension name the dataset does not have</td>
+<td>Use the dataset's own names, for example <code>latitude</code> rather than <code>lat</code>.</td>
+</tr>
+<tr>
+<td><code>zarr_chunk_shape</code> on a <code>DirectZarrIngestor</code> plugin</td>
+<td>It has no effect there. Set <code>chunks=</code> in the <code>ZarrArraySpec</code>.</td>
+</tr>
+<tr>
+<td><code>get_zarr_config</code> returns the preset over the operator's options</td>
+<td>Fill only the keys absent from <code>ctx.options</code>, as above.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../observability/">NetCDF To Zarr: Observability</a></strong> — add one custom metric to the same plugin</li>
-<li><strong><a href="../../guides/plugins/customize-source-discovery/">Customize Source Discovery</a></strong> — the full pattern and filter contracts behind this walkthrough</li>
-<li><strong><a href="../../reference/">API Reference</a></strong> — look up the public plugin context and template hooks</li>
-<li><strong><a href="../sentinel3-frp/">Sentinel-3 FRP To Parquet</a></strong> — download and ingest a real EUMETSAT product</li>
+<li><strong><a href="../configure-zarr-sharding/">Configure Zarr Sharding</a></strong> — many chunks in one file</li>
+<li><strong><a href="../configure-zarr-compression/">Configure Zarr Compression</a></strong> — codecs and levels</li>
+<li><strong><a href="../../../concepts/performance/">Performance Tuning</a></strong> — choosing chunk sizes for the reads you expect</li>
 </ul>
 
 
@@ -4850,10 +4966,10 @@ exclude <code>.nc</code>, <code>.h5</code>, or <code>.zip</code> files that Fire
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

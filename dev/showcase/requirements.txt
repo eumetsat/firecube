@@ -1,0 +1,7 @@
+# Python 3.12. Versions used by the self-contained Sentinel-3 notebook.
+firecube==0.1.5
+eumdac==3.1.1
+pandas==3.0.5
+matplotlib==3.11.2
+folium==0.20.0
+uv==0.12.13
