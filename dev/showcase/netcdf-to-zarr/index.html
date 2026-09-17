@@ -2859,9 +2859,9 @@ continuing. Each run creates a new folder under <code>outputs/</code>.</p>
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="o">%</span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">q</span> <span class="n">firecube</span><span class="o">==</span><span class="mf">0.1.5</span> <span class="n">xarray</span><span class="o">==</span><span class="mf">2026.7.0</span> <span class="n">numpy</span><span class="o">==</span><span class="mf">2.5.2</span> <span class="n">pandas</span><span class="o">==</span><span class="mf">3.0.5</span> <span class="n">h5netcdf</span><span class="o">==</span><span class="mf">1.8.1</span> <span class="n">matplotlib</span><span class="o">==</span><span class="mf">3.11.2</span> <span class="n">uv</span><span class="o">==</span><span class="mf">0.12.13</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="o">%</span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">q</span> <span class="n">firecube</span><span class="o">==</span><span class="mf">0.1.6</span> <span class="n">xarray</span><span class="o">==</span><span class="mf">2026.7.0</span> <span class="n">numpy</span><span class="o">==</span><span class="mf">2.5.2</span> <span class="n">pandas</span><span class="o">==</span><span class="mf">3.0.5</span> <span class="n">h5netcdf</span><span class="o">==</span><span class="mf">1.8.1</span> <span class="n">matplotlib</span><span class="o">==</span><span class="mf">3.11.2</span> <span class="n">uv</span><span class="o">==</span><span class="mf">0.12.13</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-1">%pip install -q firecube==0.1.5 xarray==2026.7.0 numpy==2.5.2 pandas==3.0.5 h5netcdf==1.8.1 matplotlib==3.11.2 uv==0.12.13</div>
+<div class="clipboard-copy-txt" id="cell-1">%pip install -q firecube==0.1.6 xarray==2026.7.0 numpy==2.5.2 pandas==3.0.5 h5netcdf==1.8.1 matplotlib==3.11.2 uv==0.12.13</div>
 </div>
 </div>
 </div>
@@ -3509,8 +3509,8 @@ plt.show()</div>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="6-try-the-same-arrival-again">6. Try The Same Arrival Again<a class="anchor-link" href="#6-try-the-same-arrival-again">¶</a></h2><p>Retry days 4–6 with resume enabled. Firecube 0.1.5 refuses the overlap; newer
-versions may skip completed timestamps. In either case, the cube must stay unchanged.</p>
+<h2 id="6-try-the-same-arrival-again">6. Try The Same Arrival Again<a class="anchor-link" href="#6-try-the-same-arrival-again">¶</a></h2><p>Retry days 4–6 with resume enabled. Firecube skips the timestamps that are
+already stored, and the cube must stay unchanged.</p>
 </div>
 </div>
 </div>
