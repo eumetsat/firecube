@@ -7,6 +7,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-09-16
+
 ### Added
 
 - Showcase notebooks for Sentinel-3 fire detections, a Firecube 101 NetCDF-to-Zarr
@@ -181,6 +183,16 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - Ingestion no longer implies support for `--option dry_run=true`: ingestion
   writes normally. Use `--dry-run` on supported deletion and preallocation
   commands to preview those operations.
+
+### Stats
+
+- pytest: full local suite green under `-W error::DeprecationWarning`
+  (`not s3` and `not race` skips only); `not slow and not s3 and not race`
+  lane: 3851 passed, 5 skipped, 86% line coverage.
+- pyright: 0 errors, 0 warnings.
+- ruff: `check` and `format --check` clean.
+- docs: `mkdocs build --strict` succeeds.
+- package: `uv build` produces the `0.1.6` wheel + sdist; `twine check` PASSED.
 
 ## [0.1.5] - 2026-09-03
 
