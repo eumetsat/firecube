@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" role="img" aria-labelledby="title desc">
+  <title id="title">GenericZarrIngestor append parallelism model</title>
+  <desc id="desc">Pipeline workers can prepare batches in parallel, but appends to one Zarr group are serialized. Separate jobs can write distinct Zarr groups concurrently.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:13px;fill:#5a6673}
+      .panel{fill:#ffffff;stroke:#d6dde5;stroke-width:2}
+      .worker{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .queue{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .group{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .job{fill:#f3f1ff;stroke:#6f62d2;stroke-width:2}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .softline{stroke:#9aa7b3;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="30" y="42" width="420" height="320" rx="12" class="panel"/>
+  <text x="240" y="78" text-anchor="middle" class="label">One ingest process</text>
+  <text x="240" y="104" text-anchor="middle" class="small">pipeline workers prepare batches</text>
+
+  <rect x="64" y="138" width="112" height="38" rx="6" class="worker"/>
+  <rect x="64" y="196" width="112" height="38" rx="6" class="worker"/>
+  <rect x="64" y="254" width="112" height="38" rx="6" class="worker"/>
+  <text x="120" y="162" text-anchor="middle" class="small">worker 1</text>
+  <text x="120" y="220" text-anchor="middle" class="small">worker 2</text>
+  <text x="120" y="278" text-anchor="middle" class="small">worker 3</text>
+
+  <path class="softline" d="M176 157 C210 157 220 181 254 181"/>
+  <path class="softline" d="M176 215 H254"/>
+  <path class="softline" d="M176 273 C210 273 220 239 254 239"/>
+
+  <rect x="254" y="170" width="140" height="70" rx="8" class="queue"/>
+  <text x="324" y="198" text-anchor="middle" class="label">append queue</text>
+  <text x="324" y="222" text-anchor="middle" class="small">one writer</text>
+
+  <path class="line" d="M324 240 V284"/>
+  <rect x="244" y="284" width="160" height="44" rx="8" class="group"/>
+  <text x="324" y="312" text-anchor="middle" class="small">Zarr group: data</text>
+
+  <rect x="510" y="42" width="420" height="320" rx="12" class="panel"/>
+  <text x="720" y="78" text-anchor="middle" class="label">Fan out by group</text>
+  <text x="720" y="104" text-anchor="middle" class="small">separate jobs own separate write domains</text>
+
+  <rect x="552" y="146" width="128" height="54" rx="8" class="job"/>
+  <rect x="552" y="244" width="128" height="54" rx="8" class="job"/>
+  <text x="616" y="168" text-anchor="middle" class="small">job A</text>
+  <text x="616" y="190" text-anchor="middle" class="hint">append</text>
+  <text x="616" y="266" text-anchor="middle" class="small">job B</text>
+  <text x="616" y="288" text-anchor="middle" class="hint">append</text>
+
+  <path class="line" d="M680 173 H760"/>
+  <path class="line" d="M680 271 H760"/>
+
+  <rect x="760" y="146" width="148" height="54" rx="8" class="group"/>
+  <rect x="760" y="244" width="148" height="54" rx="8" class="group"/>
+  <text x="834" y="178" text-anchor="middle" class="small">group: day</text>
+  <text x="834" y="276" text-anchor="middle" class="small">group: night</text>
+
+  <text x="480" y="398" text-anchor="middle" class="hint">Same group: serialized append writes. Distinct groups: safe concurrent jobs.</text>
+</svg>

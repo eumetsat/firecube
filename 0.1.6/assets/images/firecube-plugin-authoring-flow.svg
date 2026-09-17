@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube template plugin responsibility flow</title>
+  <desc id="desc">For a template plugin, Firecube discovers and batches source items. The plugin shapes each batch for the product. Firecube writes the data, tracks the run, and produces the persisted product.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .source{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .engine{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .plugin{fill:#fff8df;stroke:#d6a400;stroke-width:2}
+      .writer{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .product{fill:#ffffff;stroke:#2f9d65;stroke-width:2}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="28" y="72" width="156" height="112" rx="10" class="source"/>
+  <text x="106" y="116" text-anchor="middle" class="label">Source items</text>
+  <text x="106" y="148" text-anchor="middle" class="small">local or remote</text>
+
+  <path class="line" d="M184 128 H220"/>
+  <rect x="220" y="60" width="180" height="136" rx="10" class="engine"/>
+  <text x="310" y="104" text-anchor="middle" class="label">Firecube</text>
+  <text x="310" y="136" text-anchor="middle" class="small">discover and batch</text>
+  <text x="310" y="164" text-anchor="middle" class="small">prepare context</text>
+
+  <path class="line" d="M400 128 H436"/>
+  <rect x="436" y="60" width="180" height="136" rx="10" class="plugin"/>
+  <text x="526" y="104" text-anchor="middle" class="label">Your plugin</text>
+  <text x="526" y="136" text-anchor="middle" class="small">read product data</text>
+  <text x="526" y="164" text-anchor="middle" class="small">shape each batch</text>
+
+  <path class="line" d="M616 128 H652"/>
+  <rect x="652" y="60" width="180" height="136" rx="10" class="writer"/>
+  <text x="742" y="104" text-anchor="middle" class="label">Firecube</text>
+  <text x="742" y="136" text-anchor="middle" class="small">write and coordinate</text>
+  <text x="742" y="164" text-anchor="middle" class="small">track the run</text>
+
+  <path class="line" d="M742 196 V212"/>
+  <rect x="652" y="216" width="180" height="36" rx="8" class="product"/>
+  <text x="742" y="240" text-anchor="middle" class="small">persisted product</text>
+</svg>

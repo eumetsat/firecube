@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube output format choices</title>
+  <desc id="desc">Source products enter Firecube and become Zarr, Parquet, or Tensogram outputs.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .box{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .engine{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .zarr{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .parquet{fill:#f3f1ff;stroke:#6f62d2;stroke-width:2}
+      .archive{fill:#fff8df;stroke:#d6a400;stroke-width:2}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect x="24" y="56" width="180" height="248" rx="10" class="box"/>
+  <text x="114" y="94" text-anchor="middle" class="label">Source products</text>
+  <rect x="54" y="125" width="120" height="34" rx="5" fill="#ffffff" stroke="#9bb8d6"/>
+  <rect x="54" y="178" width="120" height="34" rx="5" fill="#ffffff" stroke="#9bb8d6"/>
+  <rect x="54" y="231" width="120" height="34" rx="5" fill="#ffffff" stroke="#9bb8d6"/>
+  <text x="114" y="147" text-anchor="middle" class="small">files</text>
+  <text x="114" y="200" text-anchor="middle" class="small">archives</text>
+  <text x="114" y="253" text-anchor="middle" class="small">remote URI</text>
+
+  <path class="line" d="M204 180 H318"/>
+  <rect x="318" y="92" width="190" height="176" rx="12" class="engine"/>
+  <text x="413" y="133" text-anchor="middle" class="label">Firecube</text>
+  <text x="413" y="165" text-anchor="middle" class="small">plugin reads data</text>
+  <text x="413" y="190" text-anchor="middle" class="small">engine runs batches</text>
+  <text x="413" y="215" text-anchor="middle" class="small">storage and ChunkManager</text>
+
+  <path class="line" d="M508 180 C560 180 560 86 612 86"/>
+  <path class="line" d="M508 180 H612"/>
+  <path class="line" d="M508 180 C560 180 560 274 612 274"/>
+
+  <rect x="612" y="42" width="300" height="72" rx="10" class="zarr"/>
+  <text x="762" y="72" text-anchor="middle" class="label">Zarr</text>
+  <text x="762" y="96" text-anchor="middle" class="small">gridded datacubes</text>
+  <rect x="612" y="144" width="300" height="72" rx="10" class="parquet"/>
+  <text x="762" y="174" text-anchor="middle" class="label">Parquet</text>
+  <text x="762" y="198" text-anchor="middle" class="small">rows, detections, records</text>
+  <rect x="612" y="246" width="300" height="72" rx="10" class="archive"/>
+  <text x="762" y="276" text-anchor="middle" class="label">Tensogram</text>
+  <text x="762" y="300" text-anchor="middle" class="small">portable .tgm product</text>
+</svg>

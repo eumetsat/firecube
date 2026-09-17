@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" role="img" aria-labelledby="title desc">
+  <title id="title">ChunkManager record model</title>
+  <desc id="desc">Firecube ingestion, archive restore, and maintenance commands write ChunkManager records. ChunkManager contains runs, spans, claims, and snapshots, which firecube chunks reads for inspection, recovery, and cleanup.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#546a7b"/>
+    </marker>
+    <style>
+      .label { font: 600 16px Arial, sans-serif; fill: #1f2d36; }
+      .small { font: 14px Arial, sans-serif; fill: #415361; }
+      .main { font: 700 20px Arial, sans-serif; fill: #1f2d36; }
+      .input { fill: #f7fbff; stroke: #4c9aff; stroke-width: 2; rx: 6; }
+      .manager { fill: #f2fbf5; stroke: #39b36e; stroke-width: 2; rx: 8; }
+      .record { fill: #fff8ee; stroke: #ff9f43; stroke-width: 2; rx: 6; }
+      .command { fill: #f8f9fb; stroke: #aab7c2; stroke-width: 2; rx: 6; }
+      .arrow { stroke: #546a7b; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="80" y="40" width="210" height="64" class="input"/>
+  <text x="185" y="66" text-anchor="middle" class="label">firecube ingest</text>
+  <text x="185" y="88" text-anchor="middle" class="small">normal product runs</text>
+
+  <rect x="395" y="40" width="210" height="64" class="input"/>
+  <text x="500" y="66" text-anchor="middle" class="label">archive restore</text>
+  <text x="500" y="88" text-anchor="middle" class="small">restored products</text>
+
+  <rect x="710" y="40" width="210" height="64" class="input"/>
+  <text x="815" y="66" text-anchor="middle" class="label">maintenance</text>
+  <text x="815" y="88" text-anchor="middle" class="small">cleanup and snapshots</text>
+
+  <rect x="355" y="160" width="290" height="76" class="manager"/>
+  <text x="500" y="191" text-anchor="middle" class="main">ChunkManager</text>
+  <text x="500" y="216" text-anchor="middle" class="small">product lifecycle records</text>
+
+  <path d="M 185 104 L 185 130 L 455 130 L 455 153" class="arrow"/>
+  <path d="M 500 104 L 500 153" class="arrow"/>
+  <path d="M 815 104 L 815 130 L 545 130 L 545 153" class="arrow"/>
+
+  <rect x="70" y="292" width="180" height="82" class="record"/>
+  <text x="160" y="322" text-anchor="middle" class="label">Runs</text>
+  <text x="160" y="345" text-anchor="middle" class="small">started, complete,</text>
+  <text x="160" y="363" text-anchor="middle" class="small">failed, abandoned</text>
+
+  <rect x="290" y="292" width="180" height="82" class="record"/>
+  <text x="380" y="322" text-anchor="middle" class="label">Spans</text>
+  <text x="380" y="345" text-anchor="middle" class="small">batch coverage</text>
+  <text x="380" y="363" text-anchor="middle" class="small">and written ranges</text>
+
+  <rect x="530" y="292" width="180" height="82" class="record"/>
+  <text x="620" y="322" text-anchor="middle" class="label">Claims</text>
+  <text x="620" y="345" text-anchor="middle" class="small">write coordination</text>
+  <text x="620" y="363" text-anchor="middle" class="small">for safe workers</text>
+
+  <rect x="750" y="292" width="180" height="82" class="record"/>
+  <text x="840" y="322" text-anchor="middle" class="label">Snapshots</text>
+  <text x="840" y="345" text-anchor="middle" class="small">derived views for</text>
+  <text x="840" y="363" text-anchor="middle" class="small">fast inspection</text>
+
+  <path d="M 500 236 L 500 268 L 160 268 L 160 285" class="arrow"/>
+  <path d="M 500 236 L 500 268 L 380 268 L 380 285" class="arrow"/>
+  <path d="M 500 236 L 500 268 L 620 268 L 620 285" class="arrow"/>
+  <path d="M 500 236 L 500 268 L 840 268 L 840 285" class="arrow"/>
+
+  <rect x="310" y="425" width="380" height="48" class="command"/>
+  <text x="500" y="455" text-anchor="middle" class="label">firecube chunks: inspect, recover, cleanup</text>
+  <path d="M 500 236 L 500 418" class="arrow"/>
+</svg>
