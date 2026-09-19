@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 520" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube concept flow</title>
+  <desc id="desc">Source products flow through the Firecube engine, plugin hooks, and write strategy into a product root containing a data store and ChunkManager records. Metrics, logs, and traces are emitted as sibling observability signals.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5d6b78}
+      .source{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .engine{fill:#fff4ed;stroke:#ff7043;stroke-width:2}
+      .plugin{fill:#fff8df;stroke:#d6a400;stroke-width:2}
+      .write{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .product{fill:#f7f7fb;stroke:#76808f;stroke-width:2}
+      .data{fill:#ffffff;stroke:#2f9d65;stroke-width:1.8}
+      .cm{fill:#f3f1ff;stroke:#6f62d2;stroke-width:1.8}
+      .obsPanel{fill:#f7fbff;stroke:#9bb8d6;stroke-width:1.8}
+      .obs{fill:#ffffff;stroke:#9bb8d6;stroke-width:1.6}
+      .line{stroke:#3b4652;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+      .thin{stroke:#667381;stroke-width:1.8;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="32" y="36" class="hint">Ingestion flow</text>
+
+  <rect x="28" y="82" width="145" height="94" rx="10" class="source"/>
+  <text x="100.5" y="121" text-anchor="middle" class="label">Source data</text>
+  <text x="100.5" y="149" text-anchor="middle" class="small">files or URIs</text>
+
+  <path class="line" d="M173 129 H210"/>
+
+  <rect x="210" y="54" width="190" height="150" rx="12" class="engine"/>
+  <text x="305" y="90" text-anchor="middle" class="label">Firecube engine</text>
+  <text x="305" y="124" text-anchor="middle" class="small">discover</text>
+  <text x="305" y="150" text-anchor="middle" class="small">batch</text>
+  <text x="305" y="176" text-anchor="middle" class="small">coordinate</text>
+
+  <path class="line" d="M400 129 H438"/>
+
+  <rect x="438" y="72" width="158" height="114" rx="12" class="plugin"/>
+  <text x="517" y="110" text-anchor="middle" class="label">Plugin</text>
+  <text x="517" y="142" text-anchor="middle" class="small">shape data</text>
+  <text x="517" y="164" text-anchor="middle" class="hint">product rules</text>
+
+  <path class="line" d="M596 129 H635"/>
+
+  <rect x="635" y="72" width="150" height="114" rx="12" class="write"/>
+  <text x="710" y="110" text-anchor="middle" class="label">Write path</text>
+  <text x="710" y="142" text-anchor="middle" class="small">store output</text>
+  <text x="710" y="164" text-anchor="middle" class="hint">claims and writes</text>
+
+  <path class="line" d="M785 129 H825"/>
+
+  <rect x="825" y="38" width="190" height="218" rx="14" class="product"/>
+  <text x="920" y="76" text-anchor="middle" class="label">Product root</text>
+  <rect x="849" y="106" width="142" height="56" rx="8" class="data"/>
+  <text x="920" y="129" text-anchor="middle" class="small">Data store</text>
+  <text x="920" y="148" text-anchor="middle" class="hint">Zarr / Parquet / .tgm</text>
+  <rect x="849" y="184" width="142" height="56" rx="8" class="cm"/>
+  <text x="920" y="207" text-anchor="middle" class="small">ChunkManager</text>
+  <text x="920" y="226" text-anchor="middle" class="hint">runs, spans, claims</text>
+
+  <path class="thin" d="M305 204 C305 278 386 314 452 328"/>
+
+  <rect x="452" y="306" width="430" height="132" rx="12" class="obsPanel"/>
+  <text x="667" y="342" text-anchor="middle" class="label">Observability</text>
+  <text x="667" y="366" text-anchor="middle" class="hint">signals emitted during the run</text>
+  <rect x="498" y="388" width="108" height="44" rx="7" class="obs"/>
+  <text x="552" y="416" text-anchor="middle" class="small">Metrics</text>
+  <rect x="613" y="388" width="108" height="44" rx="7" class="obs"/>
+  <text x="667" y="416" text-anchor="middle" class="small">Logs</text>
+  <rect x="728" y="388" width="108" height="44" rx="7" class="obs"/>
+  <text x="782" y="416" text-anchor="middle" class="small">Traces</text>
+</svg>

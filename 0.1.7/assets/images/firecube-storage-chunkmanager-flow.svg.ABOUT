@@ -1,0 +1,11 @@
+# Component information
+name: firecube-storage-chunkmanager-flow.svg
+description: Firecube project asset (bespoke, EUMETSAT-owned); header comments are not supported for this file type.
+copyright: Copyright 2025-2026 EUMETSAT
+license_spdx: Apache-2.0
+home_url: https://github.com/eumetsat/firecube
+date: 2026-06-29
+# Package IPR documentation
+license_text_file: /LICENSE
+# File(s) associated to this component
+about_resource: firecube-storage-chunkmanager-flow.svg

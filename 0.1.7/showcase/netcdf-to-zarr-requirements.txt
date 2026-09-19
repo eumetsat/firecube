@@ -1,0 +1,8 @@
+# Python 3.12. Incremental NetCDF-to-Zarr notebook.
+firecube==0.1.6
+xarray==2026.7.0
+numpy==2.5.2
+pandas==3.0.5
+h5netcdf==1.8.1
+matplotlib==3.11.2
+uv==0.12.13
