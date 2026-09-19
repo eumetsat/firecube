@@ -171,24 +171,25 @@ class ResumeGuard:
         slice_meta = dict(slice_meta or {})
         self._check_time_coord_seal(product=product, slot_group=slot_group)
 
-        try:
-            self._check_non_terminal_runs(
-                product=product,
-                force_reingest=force_reingest,
-                resume_existing=resume_existing,
-                slot_range=slot_range,
-                new_slot_group=slot_group,
-            )
-        except ResumeConflictError:
-            self._log_decision(
-                ResumeDecision(
-                    verdict=ResumeVerdict.BLOCK_STALE_RUN,
-                    reason="Non-terminal run(s) exist",
+        if not force_reingest:
+            try:
+                self._check_non_terminal_runs(
+                    product=product,
+                    force_reingest=force_reingest,
+                    resume_existing=resume_existing,
+                    slot_range=slot_range,
+                    new_slot_group=slot_group,
                 )
-            )
-            raise
-        finally:
-            self._record_runs_enumerated(product=product, metrics=metrics)
+            except ResumeConflictError:
+                self._log_decision(
+                    ResumeDecision(
+                        verdict=ResumeVerdict.BLOCK_STALE_RUN,
+                        reason="Non-terminal run(s) exist",
+                    )
+                )
+                raise
+            finally:
+                self._record_runs_enumerated(product=product, metrics=metrics)
 
         # Phase 3.1 T5: Slot-range-aware completed-span check (split bypass).
         # When slot_range is set, the new pod uses group+range-aware overlap instead of
@@ -481,6 +482,8 @@ class ResumeGuard:
         non_terminal = self.chunk_manager.list_runs(product=product, non_terminal=True)
         if not non_terminal:
             return
+        # Note: ResumeGuard._enforce no longer reaches this branch under force_reingest.
+        # Kept for direct callers.
         if force_reingest:
             self.log.warning(
                 "Non-terminal run(s) exist for product=%s but force_reingest=true, proceeding.",

@@ -22,6 +22,7 @@ and renders a generic Intake catalog from the resulting source list.
 from __future__ import annotations
 
 import contextlib
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
@@ -40,6 +41,8 @@ from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 from firecube.core.uris import is_remote_target, storage_uri_from_target
 from firecube.core.zarr.validation import discover_groups
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -71,7 +74,7 @@ def _group_path(store_root: str, group: str) -> str:
     return store_root.rstrip("/") if not group_clean else f"{store_root.rstrip('/')}/{group_clean}"
 
 
-def _group_target_uri(store_uri: str, group: str) -> str:
+def _group_target_uri(store_uri: str, group: str | None) -> str:
     group_clean = (group or "").strip("/")
     return store_uri.rstrip("/") if not group_clean else f"{store_uri.rstrip('/')}/{group_clean}"
 
@@ -93,6 +96,7 @@ def _storage_config_for_target(
             region=storage_session.driver.region,
             path_style=storage_session.driver.path_style,
             storage_driver=storage_session.driver.driver,
+            anonymous=storage_session.driver.anonymous,
         )
     raise ValueError(
         "storage_config is required for catalog generation; pass --storage-type and --storage-driver"
@@ -168,7 +172,7 @@ def detect_catalog_data_format(store_uri: str) -> str:
 
 def _read_node_type(
     store_uri: str,
-    group: str,
+    group: str | None,
     storage_config: Any | None = None,
     storage_session: StorageSession | None = None,
 ) -> str | None:
@@ -180,7 +184,14 @@ def _read_node_type(
     )
     try:
         node = zarr.open(**handle.zarr_kwargs(), path=(group or None), mode="r")
-    except Exception:
+    except Exception as exc:
+        log.warning(
+            "intake discovery: cannot read node type at %s (group=%s): %s: %s",
+            store_uri,
+            group or "<root>",
+            type(exc).__name__,
+            exc,
+        )
         return None
     payload = getattr(node, "metadata", None)
     if payload is None:
@@ -225,7 +236,13 @@ def _contains_zarr_arrays(
     handle = _resolve_dataset_store_handle(target_uri, storage_config, storage_session)
     try:
         node = zarr.open(**handle.zarr_kwargs(), mode="r")
-    except Exception:
+    except Exception as exc:
+        log.warning(
+            "intake discovery: cannot open %s as zarr: %s: %s",
+            target_uri,
+            type(exc).__name__,
+            exc,
+        )
         return False
     if not isinstance(node, zarr.Group):
         return False
@@ -234,7 +251,7 @@ def _contains_zarr_arrays(
 
 def _is_readable_dataset_group(
     store_uri: str,
-    group: str,
+    group: str | None,
     *,
     storage_config: Any | None = None,
     storage_session: StorageSession | None = None,
@@ -244,7 +261,13 @@ def _is_readable_dataset_group(
     open_kwargs = {**handle.zarr_kwargs(), "group": None, "chunks": None, "consolidated": False}
     try:
         ds = xr.open_zarr(**open_kwargs)  # pyright: ignore[reportArgumentType]
-    except Exception:
+    except Exception as exc:
+        log.debug(
+            "intake discovery: xr.open_zarr failed for %s, falling back to zarr array check: %s: %s",
+            target_uri,
+            type(exc).__name__,
+            exc,
+        )
         return _contains_zarr_arrays(target_uri, storage_config, storage_session)
     try:
         return len(ds.data_vars) > 0
@@ -428,7 +451,7 @@ def _catalog_entry_args(
         "urlpath": store_uri,
         "group": spec.group,
         "consolidated": False,
-        "chunks": "auto",
+        "chunks": {},
     }
     if storage_opts:
         args["storage_options"] = storage_opts
@@ -445,7 +468,7 @@ def _catalog_entry_driver(spec: CatalogSourceSpec) -> str:
     return "zarr"
 
 
-def _default_storage_options(store_uri: str) -> dict[str, Any]:
+def _default_storage_options(store_uri: str, *, anonymous: bool = False) -> dict[str, Any]:
     """Build a generic storage_options block for Intake.
 
     To keep the catalog portable and avoid embedding secrets, this helper
@@ -462,15 +485,19 @@ def _default_storage_options(store_uri: str) -> dict[str, Any]:
         # Local/other backends rely on fsspec/xarray defaults and env.
         return {}
 
-    return {
-        "anon": False,
+    options: dict[str, Any] = {
         "client_kwargs": {
             "endpoint_url": "${FIRECUBE_ENDPOINT_URL}",
         },
-        "key": "${FIRECUBE_ACCESS_KEY}",
-        # env-var template placeholder rendered downstream, not a credential value
-        "secret": "${FIRECUBE_SECRET_KEY}",  # nosec B105
     }
+    if anonymous:
+        options["anon"] = True
+    else:
+        options["anon"] = False
+        options["key"] = "${FIRECUBE_ACCESS_KEY}"
+        # env-var template placeholder rendered downstream, not a credential value
+        options["secret"] = "${FIRECUBE_SECRET_KEY}"  # nosec B105
+    return options
 
 
 def build_intake_catalog(
@@ -481,6 +508,7 @@ def build_intake_catalog(
     store_uri: str,
     sources: list[CatalogSourceSpec],
     include_storage_options: bool = True,
+    anonymous: bool = False,
 ) -> dict[str, Any]:
     """Construct an Intake catalog dictionary for the given product store.
 
@@ -503,7 +531,9 @@ def build_intake_catalog(
         "sources": {},
     }
 
-    storage_opts = _default_storage_options(store_uri) if include_storage_options else {}
+    storage_opts = (
+        _default_storage_options(store_uri, anonymous=anonymous) if include_storage_options else {}
+    )
 
     for spec in sources:
         source_entry: dict[str, Any] = {

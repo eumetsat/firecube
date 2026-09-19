@@ -25,6 +25,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
+from firecube.core.filesystem.ops import open_source_filesystem
 from firecube.core.formats._input_filters import split_input_filters
 from firecube.core.formats.hdf5 import looks_like_hdf5
 from firecube.core.uris import is_remote_target, parse_uri
@@ -170,25 +171,35 @@ def discover_input_files(
         ValueError: If ``source`` cannot be opened or listed, or a filter
             is empty, a bare ``!``, or not a string.
     """
-    from firecube.core.filesystem.ops import _open_fsspec_url
-    from firecube.core.uris import is_remote_target, parse_uri
-
     source_uri = str(source)
     is_remote = is_remote_target(source_uri)
 
     try:
-        fs, root = _open_fsspec_url(source_uri, storage_config=storage_config)
+        fs, uri_obj = open_source_filesystem(source_uri, storage_config)
+        root = uri_obj.to_str()
     except Exception as exc:
         raise ValueError(f"Cannot open source location {source_uri!r}: {exc}") from exc
 
+    single_object_uris = None
     try:
-        all_paths = [str(path) for path in fs.find(root)]
+        if is_remote:
+            try:
+                info = fs.info(uri_obj)
+                if info and info.get("type") == "file":
+                    single_object_uris = [uri_obj]
+            except (FileNotFoundError, KeyError, AttributeError):
+                pass
+
+        all_paths_uris = single_object_uris if single_object_uris is not None else fs.find(uri_obj)
+        all_paths = [path.to_str() for path in all_paths_uris]
     except Exception as exc:
         raise ValueError(f"Cannot list source location {source_uri!r}: {exc}") from exc
 
-    if is_remote:
-        protocol = parse_uri(source_uri)["protocol"]
-        all_paths = [path if "://" in path else f"{protocol}://{path}" for path in all_paths]
+    if not is_remote:
+        root = parse_uri(root)["path"] if "://" in root else root
+        all_paths = [
+            parse_uri(path)["path"] if path.startswith("file://") else path for path in all_paths
+        ]
 
     return _filter_discovered_paths(
         all_paths,

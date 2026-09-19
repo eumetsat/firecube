@@ -33,6 +33,7 @@ class _FakeStorageConfig:
     access_key: str | None = None
     secret_key: str | None = None
     region: str | None = None
+    anonymous: bool | None = None
     path_style: bool = True
     storage_type: str = "local"
     target_path: str | None = None

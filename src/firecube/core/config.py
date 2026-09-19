@@ -70,6 +70,8 @@ class StorageConfig:
         region: Optional S3 region name.
         path_style: Whether to use S3 path-style addressing.
         storage_driver: Storage I/O driver. Use ``"fsspec"`` or ``"obstore"``.
+        anonymous: Explicit anonymous S3 access. When True and storage type is
+            S3, disables request signing. Never inferred from missing credentials.
     """
 
     storage_type: str  # "local" or "s3"
@@ -79,6 +81,7 @@ class StorageConfig:
     region: str | None = None
     path_style: bool = True
     storage_driver: str = "fsspec"
+    anonymous: bool = False
 
     def validate(self) -> None:
         """Validate that required fields are present for the storage type."""
@@ -249,6 +252,34 @@ def build_storage_config(
 
     region = _pick("region", ["FIRECUBE_REGION"], "region")
 
+    def _parse_optional_bool(value: Any) -> bool | None:
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.lower() in {"true", "1", "yes"}
+        return bool(value)
+
+    def _pick_bool(
+        key_cfg: str,
+        env_keys: list[str],
+        override_key: str,
+        *,
+        default: bool,
+    ) -> bool:
+        """Resolve a boolean config value from CLI, Env, or Config."""
+        override_val = _parse_optional_bool(overrides.get(override_key))
+        if override_val is not None:
+            return override_val
+
+        for ek in env_keys:
+            if ek in env:
+                return bool(_parse_optional_bool(env.get(ek)))
+
+        cfg_val = _parse_optional_bool(storage_cfg.get(key_cfg))
+        return cfg_val if cfg_val is not None else default
+
     # path_style: bool with sane defaults
     if "path_style" in overrides and overrides["path_style"] is not None:
         path_style_val = bool(overrides["path_style"])
@@ -259,6 +290,13 @@ def build_storage_config(
         else:
             cfg_val = storage_cfg.get("path_style", True)
             path_style_val = bool(cfg_val)
+
+    anonymous_val = _pick_bool(
+        "anonymous",
+        ["FIRECUBE_S3_ANONYMOUS"],
+        "anonymous",
+        default=False,
+    )
 
     storage_driver_val = (
         overrides.get("storage_driver")
@@ -275,6 +313,7 @@ def build_storage_config(
         region=region,
         path_style=path_style_val,
         storage_driver=str(storage_driver_val),
+        anonymous=anonymous_val,
     )
     target_path = _pick("target_path", ["FIRECUBE_TARGET_PATH"], "target_path")
     if target_path:

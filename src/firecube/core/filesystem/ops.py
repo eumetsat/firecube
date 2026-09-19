@@ -94,13 +94,15 @@ def _protocol_for_uri(uri: str) -> str:
 
 def _s3_fs_kwargs_from_storage_config(storage_config: Any) -> dict[str, Any]:
     """Build s3fs kwargs from a StorageConfig-like object (duck-typed)."""
+    fs_kwargs: dict[str, Any] = {}
+
     endpoint_url = getattr(storage_config, "endpoint_url", None)
     region = getattr(storage_config, "region", None)
     access_key = getattr(storage_config, "access_key", None)
     secret_key = getattr(storage_config, "secret_key", None)
     path_style = getattr(storage_config, "path_style", True)
+    anonymous = getattr(storage_config, "anonymous", False)
 
-    fs_kwargs: dict[str, Any] = {}
     client_kwargs: dict[str, Any] = {}
     config_kwargs: dict[str, Any] = {}
 
@@ -117,6 +119,12 @@ def _s3_fs_kwargs_from_storage_config(storage_config: Any) -> dict[str, Any]:
         config_kwargs.setdefault("s3", {})["addressing_style"] = "virtual"
     if config_kwargs:
         fs_kwargs["config_kwargs"] = config_kwargs
+
+    if anonymous:
+        fs_kwargs["anon"] = True
+        if access_key is not None or secret_key is not None:
+            log.warning("S3 anonymous access requested; credentials dropped because anonymous wins")
+        return fs_kwargs
 
     if access_key is not None:
         fs_kwargs["key"] = access_key
@@ -410,3 +418,48 @@ def delete_path(
 
     fs.rm(root, recursive=True)
     return {"path": target_uri, "exists": True, "deleted": True}
+
+
+def open_source_filesystem(
+    source_uri: str,
+    storage_config: Any | None,
+) -> tuple[StorageFilesystem, StorageUri]:
+    """Open a driver-aware filesystem for source-side reads.
+
+    Source URIs point to external inputs, not managed Firecube products, but
+    the storage-driver factory is product-binding based. This helper creates a
+    synthetic ``ProductIdentity`` with ``format="zarr"`` only because the
+    identity validator accepts managed product formats. The placeholder is
+    benign for this source-read path: callers operate on the returned
+    ``StorageUri`` directly, and source-side code must not use the synthetic
+    identity's ``format`` or ``control_root_uri``.
+
+    ``storage_config=None`` is accepted for source discovery/read callers that
+    only have a URI. In that case a minimal ``StorageConfig`` is derived from
+    the URI scheme (``s3://`` -> ``"s3"``; everything else -> ``"local"``),
+    preserving URI-driven source access without leaking product-format details
+    to call sites.
+    """
+    from pathlib import Path
+
+    from firecube.core.config import StorageConfig
+    from firecube.core.product.identity import ProductIdentity
+    from firecube.core.storage.driver_config import StorageDriverConfig
+    from firecube.core.storage.uri import StorageUri
+    from firecube.core.uris import parse_uri
+
+    if storage_config is None:
+        scheme = parse_uri(source_uri).get("protocol") or "file"
+        storage_type = "s3" if scheme == "s3" else "local"
+        storage_config = StorageConfig(storage_type=storage_type)
+
+    uri_obj = (
+        StorageUri.parse(source_uri)
+        if "://" in str(source_uri)
+        else StorageUri.from_local_path(Path(source_uri).expanduser().resolve())
+    )
+    binding = StorageBinding(
+        identity=ProductIdentity.from_uri(uri_obj, "zarr", product_name=source_uri),
+        driver=StorageDriverConfig.from_storage_config(storage_config),
+    )
+    return create_filesystem(binding), uri_obj

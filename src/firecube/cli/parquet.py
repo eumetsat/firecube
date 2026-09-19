@@ -126,6 +126,7 @@ def validate(
     product: str,
     storage_type: str | None,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
 ) -> None:
     """validate Parquet files
 
@@ -137,7 +138,11 @@ def validate(
     storage_type = apply_smart_default(parsed_uri, storage_type)
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
@@ -221,6 +226,7 @@ def consolidate(
     codec: str,
     storage_type: str | None,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
 ) -> None:
     """merge Parquet files into one
 
@@ -236,7 +242,11 @@ def consolidate(
         raise click.ClickException("Remote artifact output not yet supported")
     storage_conf = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_conf)

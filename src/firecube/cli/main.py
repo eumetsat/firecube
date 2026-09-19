@@ -111,6 +111,7 @@ OPTION_GROUPS.update(
                     "--write-mode",
                     "--storage-type",
                     "--storage-driver",
+                    "--storage-anonymous",
                     "--in-memory",
                     "--slot-start",
                     "--slot-end",
@@ -139,6 +140,10 @@ OPTION_GROUPS.update(
                 "name": "Behavior",
                 "options": ["--overwrite", "--allow-nan", "--allow-inf"],
             },
+            {
+                "name": "Storage",
+                "options": ["--storage-type", "--storage-driver", "--storage-anonymous"],
+            },
         ],
         "firecube archive restore": [
             {
@@ -148,6 +153,10 @@ OPTION_GROUPS.update(
             {
                 "name": "Behavior",
                 "options": ["--overwrite"],
+            },
+            {
+                "name": "Storage",
+                "options": ["--storage-type", "--storage-driver", "--storage-anonymous"],
             },
         ],
         "firecube chunks list": [
@@ -270,7 +279,13 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Optional",
-                "options": ["--include-storage-options", "--no-storage-options"],
+                "options": [
+                    "--include-storage-options",
+                    "--no-storage-options",
+                    "--storage-type",
+                    "--storage-driver",
+                    "--storage-anonymous",
+                ],
             },
         ],
         "firecube zarr validate": [
@@ -286,6 +301,7 @@ OPTION_GROUPS.update(
                     "--on-timeout",
                     "--storage-type",
                     "--storage-driver",
+                    "--storage-anonymous",
                 ],
             },
         ],
@@ -297,6 +313,7 @@ OPTION_GROUPS.update(
                     "--product-name",
                     "--storage-type",
                     "--storage-driver",
+                    "--storage-anonymous",
                     "--write-mode",
                 ],
             },
@@ -312,7 +329,13 @@ OPTION_GROUPS.update(
         "firecube zarr multires": [
             {
                 "name": "Required",
-                "options": ["--target", "--product-name", "--storage-type", "--storage-driver"],
+                "options": [
+                    "--target",
+                    "--product-name",
+                    "--storage-type",
+                    "--storage-driver",
+                    "--storage-anonymous",
+                ],
             },
             {
                 "name": "Options",
@@ -327,6 +350,7 @@ OPTION_GROUPS.update(
                     "--product-name",
                     "--storage-type",
                     "--storage-driver",
+                    "--storage-anonymous",
                     "--write-mode",
                 ],
             },
@@ -342,7 +366,11 @@ OPTION_GROUPS.update(
         "firecube parquet validate": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--product"],
+            },
+            {
+                "name": "Options",
+                "options": ["--storage-type", "--storage-driver", "--storage-anonymous"],
             },
         ],
         "firecube parquet consolidate": [
@@ -352,7 +380,12 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Options",
-                "options": ["--codec", "--storage-type", "--storage-driver"],
+                "options": [
+                    "--codec",
+                    "--storage-type",
+                    "--storage-driver",
+                    "--storage-anonymous",
+                ],
             },
         ],
         "firecube plugins list": [
@@ -384,6 +417,10 @@ OPTION_GROUPS.update(
                 "name": "Required",
                 "options": ["--product", "--group"],
             },
+            {
+                "name": "Options",
+                "options": ["--storage-type", "--storage-driver", "--storage-anonymous"],
+            },
         ],
         "firecube advise compliance": [
             {
@@ -397,6 +434,7 @@ OPTION_GROUPS.update(
                     "--strict",
                     "--storage-type",
                     "--storage-driver",
+                    "--storage-anonymous",
                 ],
             },
         ],
@@ -653,6 +691,7 @@ def ingest(
     product_name: str | None,
     storage_type: str | None,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
     output_format: str | None,
     write_mode: str | None,
     slot_start: int | None,
@@ -782,13 +821,14 @@ def ingest(
                 )
             except ValueError as exc:
                 raise click.UsageError(str(exc)) from exc
-            storage_overrides: dict[str, str | None] = {
+            storage_overrides: dict[str, object | None] = {
                 "storage_type": str(ingest_cfg.storage_type)
                 if ingest_cfg.storage_type is not None
                 else None,
                 "storage_driver": str(ingest_cfg.storage_driver)
                 if ingest_cfg.storage_driver is not None
                 else None,
+                "anonymous": storage_anonymous,
             }
             storage_config = get_storage_config(ctx, overrides=storage_overrides, cache=False)
             options.setdefault("storage", {"type": storage_config.storage_type})

@@ -1,4 +1,4 @@
-# Firecube ingestor (AGENTS.md)
+# Firecube (AGENTS.md)
 
 This repo is a **batch ingestion worker** for EO datasets that writes Zarr/Parquet and maintains a product-local `.firecube/` control-plane root used for idempotency, resume safety, cleanup, and write coordination.
 

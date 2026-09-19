@@ -41,7 +41,7 @@ def get_config(ctx: click.Context) -> dict[str, Any]:
 def get_storage_config(
     ctx: click.Context,
     *,
-    overrides: Mapping[str, str | None] | None = None,
+    overrides: Mapping[str, Any] | None = None,
     set_global: bool = False,
     cache: bool = True,
 ) -> StorageConfig:

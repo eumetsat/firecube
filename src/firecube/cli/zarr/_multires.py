@@ -83,13 +83,18 @@ def multires(
     product_name: str,
     storage_type: str,
     storage_driver: str,
+    storage_anonymous: bool | None,
 ) -> None:
     """Build multi-resolution Zarr pyramid for an existing product."""
     parsed = parse_product_uri(target)
     storage_type = apply_smart_default(parsed, storage_type)
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)

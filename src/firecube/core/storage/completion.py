@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, Any
 
 from firecube.core.config import StorageConfig
 from firecube.core.errors import StorageError
-from firecube.core.filesystem import path_stats
 from firecube.core.product import CompletionRoute, write_mode_policy
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.product.target import ProductTarget
@@ -133,15 +132,17 @@ class StorageCompleter:
         storage_config: StorageConfig,
         final_target_uri: str,
     ) -> StorageWriteResult:
-        """Describe a direct S3 write without staging anything.
+        """Describe a direct S3 write without scanning the target store.
 
         A plugin-reported ``result.metrics.storage`` summary is trusted only
         when it carries counts (``files`` or ``bytes`` not ``None``); the
         engine-seeded block that holds just ``control_root``/``latest_pointer``
         has none and must not be mistaken for a zero-byte write. Otherwise the
-        target is listed with ``path_stats``. That listing cost is paid only
-        for the returned ``storage_result``: the manifest's upload counters
-        stay null for every direct run because no staged upload happened.
+        returned ``storage_result`` carries zero counters to match direct-local
+        behaviour: no staged upload happened, so the manifest and metrics stay
+        ``null`` per :meth:`PipelineExecutor.complete_output`. The
+        ``storage_config`` parameter is retained for signature compatibility
+        with the sibling completion routes but is not consulted in this branch.
         """
         storage_summary = result.metrics.storage
         if storage_summary is not None and (
@@ -155,11 +156,10 @@ class StorageCompleter:
                 storage_type="s3",
             )
 
-        stats = path_stats(final_target_uri, storage_config=storage_config)
         return StorageWriteResult(
             path=str(final_target_uri),
-            bytes_written=int(stats.get("bytes", 0) or 0),
-            files_written=int(stats.get("files", 0) or 0),
+            bytes_written=0,
+            files_written=0,
             duration_s=0.0,
             storage_type="s3",
         )

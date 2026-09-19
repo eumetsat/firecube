@@ -73,10 +73,6 @@ _ALLOWED_FSSPEC_FILESYSTEM = frozenset(
 
 _FSSPEC_PERMANENT_ALLOWLIST = frozenset(
     {
-        # PERMANENT: source-side workspace materializer for arbitrary external inputs.
-        "src/firecube/ingestor/runtime/workspace.py",
-        # PERMANENT: source-side discovery enumerator for external input locations.
-        "src/firecube/core/formats/discovery.py",
         # PERMANENT: legacy URI-string adapter seam for `read_chunk_grid(uri)`,
         # `discover_groups(uri)`, and `group_exists(uri)`; the typed-fs entry
         # point `validate_group_with_fs(fs, store_uri, group)` is preferred for

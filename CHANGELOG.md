@@ -7,6 +7,104 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `--storage-anonymous` presence-only flag on the storage option group and matching
+  `FIRECUBE_S3_ANONYMOUS` environment variable for opting into unsigned S3
+  requests. Precedence follows the existing storage-option shape: CLI flag,
+  then env var, then `[storage].anonymous` in the config file, then the
+  default (`false`). To force authenticated access when env or config
+  requests anonymous, unset the env var or edit the config; there is no
+  `--no-storage-anonymous` opt-out flag.
+- `anonymous` field in the `[storage]` config-file section, and matching
+  public `StorageConfig.anonymous` and `StorageDriverConfig.anonymous`
+  fields for programmatic runs. Both are importable from
+  `firecube.core.api`.
+
+### Changed
+
+- `discover_input_files` and `WorkspaceManager._materialize_remote_uri` now
+  route source reads through the configured storage driver via the internal
+  `open_source_filesystem` helper. `--storage-driver obstore` now covers
+  source-side discovery and remote-input materialization; previously it
+  applied only to the write-domain Zarr store.
+- Concurrent remote materialization uses a per-URI lock instead of a single
+  process-wide lock. Distinct source URIs now materialize in parallel; an
+  identical URI is still deduplicated to one download and its cache entry
+  is shared with waiters. A failing download releases its per-URI lock so
+  a retry can proceed.
+- `IngestResult.storage_result` reports `files_written=0` and
+  `bytes_written=0` for direct-mode S3 runs, matching direct-mode local
+  runs. It previously held totals for the whole store. Manifest, CLI
+  output and metrics are unchanged (they were already `null` for direct
+  runs).
+- With `force_reingest=true` the "Non-terminal run(s) exist ... proceeding"
+  warning is no longer logged and the resume-guard log line reports
+  `runs_enumerated=0`.
+
+### Fixed
+
+- Direct-mode ingests to S3 no longer list the entire target store when a
+  run completes. The listing grew with the number of objects already in
+  the store and its result was never reported; on large stores it
+  dominated run time.
+- The resume guard no longer reads every run record to look for a
+  time-coordinate seal; it reads the seal's own record.
+- With `force_reingest=true` the resume guard no longer scans all run
+  records for non-terminal runs, since the result was ignored in that
+  mode.
+- `firecube chunks claims clear --domain X` and `--all-stale` now work when
+  the store filename differs from the logical product name (e.g. dated or
+  versioned stores like `<name>_20260501.zarr`). Previously the command
+  compared the logical product name recorded in the claim with the store
+  name taken from the URI and failed with
+  `ValueError: claim domain '...' does not belong to product '...'`
+  whenever the two differed. `firecube chunks claims list` was unaffected.
+  Operators can now recover stale claims through the CLI without
+  out-of-band recovery workarounds.
+- `firecube catalog intake` no longer hides read errors behind
+  "No catalogable dataset groups found". If the store cannot be listed at
+  all (bad credentials, unreachable endpoint), the command now fails with
+  the underlying error. If an individual group cannot be read (e.g.
+  malformed metadata), the underlying exception is logged at WARNING level
+  with the store URI, so operators can see why it was skipped. Groups
+  that are readable but need the plain-Zarr fallback do not produce
+  warnings.
+- `firecube catalog intake` generated Zarr entries now use `chunks: {}`
+  instead of `chunks: "auto"`. Stores with object-dtype variables (e.g.
+  string metadata) previously failed to open from the generated catalog
+  with `Can not use auto rechunking with object dtype`. Datasets still
+  open lazily and dask-backed, now using the store's on-disk chunking;
+  pass a different `chunks` value when opening the entry to override.
+- Anonymous S3 buckets are now readable without providing empty-string
+  credentials or setting `AWS_SHARED_CREDENTIALS_FILE=/dev/null`. With
+  `--storage-anonymous` (or the matching env or config setting), fsspec receives
+  `anon=True` and obstore receives `skip_signature=True`. Anonymous mode
+  applies only to `s3://` URIs; `file://` targets ignore it.
+- Concurrent remote input materialization no longer serializes distinct
+  downloads through a single process-wide lock, so parallel workers
+  fetching different source URIs no longer wait on one another.
+- `--storage-anonymous` is now honored through the `ChunkManager` binding
+  round-trip; previously `storage_config_from_binding` dropped the flag,
+  silently breaking anonymous S3 reads during real ingest.
+- `--storage-anonymous` combined with `--storage-type local` and an `s3://`
+  source now works; a target-type gate in `StorageDriverConfig.from_storage_config`
+  previously zeroed the flag for non-S3 target types.
+- `_s3_fs_kwargs_from_storage_config` restored URI-based behavior; legacy
+  callers that pass a `storage_type="local"` config with an `s3://` URI
+  receive correct fsspec kwargs again.
+- `firecube catalog intake --storage-anonymous` generates `storage_options`
+  with `anon: true`; the generated YAML previously hardcoded `anon: false`.
+- `discover_input_files` with `--storage-driver obstore` on a single-object
+  `s3://` source now returns the object; obstore previously returned an
+  empty list for single-object prefix queries.
+- `discover_input_files` on a `file://` source now returns plain paths;
+  previously it returned `file://` URIs, breaking `local_path()` resolution
+  and HDF5 content sniffing.
+- Concurrent `_materialize_remote_uri` calls for the same URI use
+  reference-counted per-URI locks; a failed first download no longer
+  causes a race condition where subsequent threads skip the retry.
+
 ## [0.1.6] - 2026-09-16
 
 ### Added

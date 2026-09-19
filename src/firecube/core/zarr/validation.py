@@ -414,6 +414,7 @@ def compare_zarr_stores(
     *,
     storage_type: str,
     storage_driver: str,
+    anonymous: bool = False,
 ) -> ZarrCompareReport:
     """Compare two Zarr stores through the configured storage abstraction.
 
@@ -448,7 +449,11 @@ def compare_zarr_stores(
     """
     import zarr
 
-    storage_config = StorageConfig(storage_type=storage_type, storage_driver=storage_driver)
+    storage_config = StorageConfig(
+        storage_type=storage_type,
+        storage_driver=storage_driver,
+        anonymous=anonymous,
+    )
     storage_config.validate()
     a_fs, a_store_uri = create_filesystem_for_uri(a_uri, storage_config, format="zarr")
     b_fs, b_store_uri = create_filesystem_for_uri(b_uri, storage_config, format="zarr")
@@ -636,7 +641,9 @@ def read_chunk_grid_with_shards_from_handle(
     return dim_names, shape, outer_chunk_shape, inner_chunk_shape
 
 
-def _discover_groups_with_fs(fs: StorageFilesystem, store_uri: StorageUri) -> list[str]:
+def _discover_groups_with_fs(
+    fs: StorageFilesystem, store_uri: StorageUri, *, strict: bool = False
+) -> list[str]:
     discovered: list[str] = []
     try:
         for entry in fs.find(store_uri):  # pyright: ignore[reportArgumentType]
@@ -651,7 +658,11 @@ def _discover_groups_with_fs(fs: StorageFilesystem, store_uri: StorageUri) -> li
             parent = entry.parent()
             rel = parent.path.removeprefix(store_uri.path.rstrip("/")).strip("/")
             discovered.append(rel or "/")
-    except Exception:
+    except Exception as exc:
+        if strict:
+            raise RuntimeError(
+                f"Failed to discover Zarr groups under {store_uri.to_str()}: {exc}"
+            ) from exc
         log.debug("Driver-aware group discovery failed for %s", store_uri.to_str(), exc_info=True)
     return sorted(set(discovered))
 
@@ -1418,7 +1429,7 @@ def discover_groups(
         from firecube.core.filesystem.ops import create_filesystem_for_uri  # type: ignore
 
         fs_driver, uri_obj = create_filesystem_for_uri(store_uri, storage_config, format="zarr")
-        return _discover_groups_with_fs(cast(StorageFilesystem, fs_driver), uri_obj)
+        return _discover_groups_with_fs(cast(StorageFilesystem, fs_driver), uri_obj, strict=strict)
 
     fs, root = _open_fs(store_uri, storage_config=storage_config, storage_options=storage_options)
     discovered: list[str] = []

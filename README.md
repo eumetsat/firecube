@@ -156,7 +156,7 @@ documentation, or testing:
 
 | dependency | version | sw type | license | copyright | home_url | comments |
 | --- | --- | --- | --- | --- | --- | --- |
-| `hatchling` | 1.32.0 | Development tools | MIT |  | https://hatch.pypa.io/latest/ | Build backend dependency. |
+| `hatchling` | 1.32.3 | Development tools | MIT |  | https://hatch.pypa.io/latest/ | Build backend dependency. |
 | `trollsift` | 1.0.1 | Development tools | Apache-2.0 |  | https://pypi.org/project/trollsift/ | Direct optional `test` extra dependency. |
 | `tensogram` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `tensogram-xarray` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |

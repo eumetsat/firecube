@@ -180,6 +180,39 @@ def test_clears_only_stale_claims_leaving_fresh_alone(tmp_path: Path) -> None:
         assert f.exists(), f"fresh file {f} must be preserved"
 
 
+def test_bulk_clear_stale_with_uri_and_mismatched_logical_name(tmp_path: Path) -> None:
+    product = "logical_name_20260501.zarr"
+    manager = _manager(tmp_path, product=product)
+    now = time.time()
+
+    stale_domain = WriteDomain(product="logical_name", category="zarr_region", name="F001")
+    fresh_domain = WriteDomain(product="logical_name", category="zarr_region", name="F002")
+    stale_file = _write_claim(
+        tmp_path,
+        product=product,
+        domain=stale_domain,
+        last_heartbeat_at=now - 300,
+    )
+    fresh_file = _write_claim(
+        tmp_path,
+        product=product,
+        domain=fresh_domain,
+        last_heartbeat_at=time.time(),
+    )
+
+    try:
+        result = manager.clear_stale_claims(product=product, dry_run=False)
+    finally:
+        manager.close()
+
+    assert result.previewed == [stale_domain.identifier]
+    assert result.cleared == [stale_domain.identifier]
+    assert result.skipped_fresh == []
+    assert result.skipped_missing == []
+    assert not stale_file.exists(), f"stale file {stale_file} should have been cleared"
+    assert fresh_file.exists(), f"fresh file {fresh_file} must be preserved"
+
+
 def test_race_claim_becomes_fresh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A live pod refreshes the heartbeat between preview and mutation → skipped_fresh."""
     manager = _manager(tmp_path)

@@ -99,6 +99,7 @@ def intake(
     collection_id: str,
     include_storage_options: bool,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
     storage_type: str | None,
 ) -> None:
     """generate an Intake product catalog
@@ -125,7 +126,11 @@ def intake(
     local_output = Path(parsed_output.normalized.removeprefix("file://"))
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
 
@@ -172,6 +177,7 @@ def intake(
         store_uri=store_uri,
         sources=source_specs,
         include_storage_options=include_storage_options,
+        anonymous=storage_config.anonymous,
     )
 
     # Dump YAML safely; fall back to JSON if PyYAML is unavailable.

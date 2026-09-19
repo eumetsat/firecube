@@ -15,10 +15,13 @@
 from __future__ import annotations
 
 import json
+from typing import cast
 
 import pytest
 
-from firecube.core.zarr.validation import discover_groups
+from firecube.core.filesystem.protocol import StorageFilesystem
+from firecube.core.storage.uri import StorageUri
+from firecube.core.zarr.validation import _discover_groups_with_fs, discover_groups
 
 
 def test_discover_groups_strict_raises_on_listing_failure(monkeypatch) -> None:
@@ -58,3 +61,28 @@ def test_discover_groups_traverses_directories_without_chunk_walk(tmp_path) -> N
     groups = discover_groups(str(store), strict=True)
 
     assert groups == ["/", "group_a"]
+
+
+def test_discover_groups_with_fs_strict_raises_on_failure() -> None:
+    class BrokenFs:
+        def find(self, uri):
+            raise ValueError("driver listing failed")
+
+    uri = StorageUri.parse("s3://bucket/store.zarr")
+
+    with pytest.raises(RuntimeError, match="Failed to discover Zarr groups") as exc_info:
+        _discover_groups_with_fs(cast(StorageFilesystem, BrokenFs()), uri, strict=True)
+
+    assert isinstance(exc_info.value.__cause__, ValueError)
+
+
+def test_discover_groups_with_fs_non_strict_returns_empty_on_failure() -> None:
+    class BrokenFs:
+        def find(self, uri):
+            raise ValueError("driver listing failed")
+
+    uri = StorageUri.parse("s3://bucket/store.zarr")
+
+    groups = _discover_groups_with_fs(cast(StorageFilesystem, BrokenFs()), uri, strict=False)
+
+    assert groups == []

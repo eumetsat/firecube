@@ -227,9 +227,6 @@ class FilesystemClaimService:
         Raises ControlPlaneCorruptionError on malformed JSON.
         """
         domain_product, category, name = domain.split(":", 2)
-        if domain_product != product:
-            msg = f"claim domain {domain!r} does not belong to product {product!r}"
-            raise ValueError(msg)
         control_path, _control_uri = self._control_root_resolver(product)
         claims_dir = control_path.join(CLAIMS_DIRNAME)
         claim_name = WriteDomain(product=domain_product, category=category, name=name).claim_name
@@ -238,9 +235,6 @@ class FilesystemClaimService:
     def clear_claim(self, *, product: str, domain_id: str, force: bool = False) -> bool:
         """Delete a claim file; refuses non-stale claims unless force=True."""
         domain_product, category, name = domain_id.split(":", 2)
-        if domain_product != product:
-            msg = f"claim domain {domain_id!r} does not belong to product {product!r}"
-            raise ValueError(msg)
         control_path, _control_uri = self._control_root_resolver(product)
         claims_dir = control_path.join(CLAIMS_DIRNAME)
         claim_path = claims_dir.join(

@@ -284,6 +284,50 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
 - **Trade-off:** Higher throughput for decode-bound plugins against holding several fully built datasets in memory at once (one per in-flight worker) and a wider window in which a later batch has decoded before an earlier one has failed, all of which then count as not attempted. Memory ceiling and the store-read-in-`build_dataset` audit need a decision before this leaves IDEAS.
 - **Cross-links:** DESIGN.md "Append failure and ordering?"; DONE.md 2026-09-12; the parallelism figure in `docs/concepts/output-formats/zarr/generic-append.md` would change.
 
+### §40 Separate storage contexts for source vs target
+
+- UNDECIDED
+
+- **Origin:** Surfaced 2026-09-17 during the v0.1.7 remote-source-access work. Anonymous public buckets as sources needed a way to configure source-side signing/credentials independently from the target's. The v0.1.7 work landed `--storage-anonymous` as a top-level CLI flag, but the current CLI accepts one storage-type / storage-driver / credentials context and applies it uniformly to reads and writes, so the flag applies to both sides at once rather than being selectable per side. The v0.1.7 handoff explicitly deferred the source/target split.
+- **Goal:** Give operators separate, named storage contexts for `--source` / `--input-data` and `--target`, so an ingestion can read from an unsigned public bucket and write to a signed private target (or the reverse) without plugin-side workarounds and without env-var pinning that would break the write path.
+- **Preferred direction:** Reuse the `feat/cli-unification` branch's named storage-context concept. That branch already introduces the vocabulary for a storage context as a first-class object; extending it with per-side context selection (e.g. `--source-storage-context` / `--target-storage-context`, or `--storage-type-src` / `--storage-type-tgt`) is a natural layering on top rather than a new abstraction. Defaults keep the current single-context behaviour.
+- **Trade-off:** Adds a dimension of CLI flag surface; docs must distinguish read-side from write-side clearly and the config file needs to accept per-side storage blocks. Without it, operators either use env-var pinning (broad, breaks target signing) or `--storage-anonymous` applied uniformly (works only when both sides tolerate anonymous access, or when the target's credentials come from env-var/instance metadata rather than the CLI).
+- **Blocked on:** `feat/cli-unification` landing; the per-side split is only clean once storage contexts are first-class objects rather than a bag of top-level flags.
+- **Cross-links:** v0.1.7 remote-source-access work; §41 (bulk async prefetch — same handoff document); §42 (moto anonymous coverage — same feature area).
+
+### §41 Bulk async prefetch via obstore `get_async` in Workspace
+
+- UNDECIDED
+
+- **Origin:** Surfaced 2026-09-17 in the v0.1.7 remote-source-access handoff. The handoff measured 7.4 s for 8k small objects using `obstore.get_async` in bulk versus ~30 s using serial-per-item fetches over the same workload on s3fs — roughly a 4× wall-clock reduction on object-count-heavy runs. The handoff deferred adoption because plugin `materialize` calls arrive one item at a time inside the pipeline, so a per-item async wrapper on `obstore.get` would not capture the bulk win; the change belongs at a stage that can see the next N items at once.
+- **Goal:** Speed up large-object-count runs from remote sources by issuing many object gets concurrently before the pipeline touches them, so per-item `Workspace.materialize` calls hit warm cache instead of round-tripping to S3.
+- **Preferred direction:** In `Workspace` (or an adjacent prefetch stage that sits ahead of the batch dispatcher) issue a bulk `obstore.get_async` for the next N items when `storage_driver=obstore`, so per-item `materialize` calls hit warm cache. Serial per-item fetch on `s3fs` / `fsspec` remains the fallback. Behaviour should be an opt-in knob (workspace-level prefetch batch size) with a sensible default enabled only for `obstore`, since s3fs is unlikely to benefit and the code paths already have their own bulk primitives.
+- **Trade-off:** Adds a prefetch queue with its own memory ceiling and error paths (a prefetch failure must not preempt the item that finally requests it — the item retry has to be independent of the prefetch attempt). Prefetch is wasted work if the pipeline skips items (resume, dedup), so the queue should be conservative near known skip regions. Also introduces a behavioural divergence between drivers that needs documenting.
+- **Blocked on:** Nothing hard; needs a `Workspace`-level prefetch API design that keeps `materialize` semantics unchanged for callers and avoids double-fetching when a prefetched item is later requested.
+- **Cross-links:** v0.1.7 remote-source-access work; §40 (separate source config — same handoff document); §42 (moto anonymous coverage — related feature area).
+
+### §42 Moto behavioural tests for anonymous S3 sources
+
+- UNDECIDED
+
+- **Origin:** Surfaced 2026-09-17 during the v0.1.7 remote-source-access work; Metis review recommended end-to-end moto coverage as complementary to the direct kwarg-assertion tests. The v0.1.7 plan covered config-mapping via direct kwarg assertions (tasks T2, T5, T6, T12), and deferred end-to-end behavioural coverage because moto's anonymous-mode fidelity is uneven across the s3fs and obstore code paths and would risk false-red or false-green results without careful version pinning and skip management.
+- **Goal:** Add end-to-end tests that verify anonymous S3 listing and fetch succeed with `anonymous=True` and fail without it, using an in-process moto server so the path exercises real driver code (both s3fs and obstore) rather than mocked constructors. Catches regressions in the actual driver plumbing that the direct kwarg tests cannot see.
+- **Preferred direction:** New test module `tests/integration/test_anonymous_source_moto.py`, marked `@pytest.mark.s3`, spinning up a moto server with an unsigned bucket policy. Parameterise over both drivers (`s3fs`, `obstore`). Assertions: listing and fetch succeed only when `anonymous=True` (both via CLI flag and via `--option`), and fail as expected when the flag is absent. Use targeted skip guards keyed on moto and driver versions rather than a single global pin.
+- **Trade-off:** Moto's anonymous-mode support has historically drifted between versions and between the s3fs/boto and obstore code paths, so the fixture needs targeted skip guards. The value is catching regressions in real driver plumbing that direct kwarg tests cannot; the cost is another moto-dependent integration test file with skip management overhead.
+- **Blocked on:** Nothing hard; a short spike is worth running first to verify the current moto version handles anonymous listing for both drivers before committing to full parameterisation.
+- **Cross-links:** v0.1.7 remote-source-access work; §40 (separate source config); §41 (bulk async prefetch).
+
+### §43 Streaming obstore materialization for large single-object sources
+
+- UNDECIDED
+
+- **Origin:** External review of the v0.1.7 anonymous S3 read work (Finding 6b). `WorkspaceManager._materialize_remote_uri` on the obstore path currently buffers the entire object into memory before writing to the cache file. For very large single-object sources (multi-GB files), this can exhaust worker memory when multiple concurrent workers materialize different large objects.
+- **Goal:** Bound peak memory during materialization on the obstore driver regardless of source object size, so multi-GB single-object sources do not exhaust worker memory when several workers materialize different large objects concurrently.
+- **Preferred direction:** Use obstore's chunked GET (`get_range` or streaming API) with a reasonable chunk size (e.g. 8 MB), matching the fsspec path's `shutil.copyfileobj` streaming behaviour. Keep the fsspec path unchanged.
+- **Trade-off:** Adds an obstore-specific code path; keeps memory bounded regardless of object size. The current behaviour is acceptable for workshop-scale sources.
+- **Blocked on:** Nothing structural; ready when someone reports a memory issue at scale.
+- **Cross-links:** §40 (named source/target contexts); §41 (obstore async prefetch).
+
 ## Notes
 
 Move an idea to [TODO.md](TODO.md) only after the workflow, constraints, and tradeoffs are agreed and the decision is recorded in [DONE.md](DONE.md) with a date.

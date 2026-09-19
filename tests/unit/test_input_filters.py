@@ -15,12 +15,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 
 import h5py
 import pytest
 
 from firecube.core.api import discover_input_files
+from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.api import EngineConfig, IngestContext
 from firecube.ingestor.runtime.configure import TierConfigurator
 
@@ -149,15 +149,27 @@ def test_exclusions_override_content_detection_without_sniffing(tmp_path, monkey
 
 def test_remote_paths_use_same_matching_without_sniffing(monkeypatch):
     paths = [
-        "bucket/root/a.csv",
-        "bucket/root/draft_b.csv",
-        "bucket/root/incoming/deeper/a.nc",
-        "bucket/root/file.hdf",
-        "bucket/root/file.NC",
+        "s3://bucket/root/a.csv",
+        "s3://bucket/root/draft_b.csv",
+        "s3://bucket/root/incoming/deeper/a.nc",
+        "s3://bucket/root/file.hdf",
+        "s3://bucket/root/file.NC",
     ]
+
+    class RemoteListing:
+        def find(self, root: StorageUri) -> list[StorageUri]:
+            _ = root
+            return [StorageUri.parse(path) for path in paths]
+
+    def open_source_filesystem(
+        source_uri: str, storage_config: object | None
+    ) -> tuple[RemoteListing, StorageUri]:
+        _ = storage_config
+        return RemoteListing(), StorageUri.parse(source_uri)
+
     monkeypatch.setattr(
-        "firecube.core.filesystem.ops._open_fsspec_url",
-        lambda *args, **kwargs: (SimpleNamespace(find=lambda root: paths), "bucket/root"),
+        "firecube.core.formats.discovery.open_source_filesystem",
+        open_source_filesystem,
     )
 
     def must_not_sniff(_):
@@ -166,7 +178,7 @@ def test_remote_paths_use_same_matching_without_sniffing(monkeypatch):
     monkeypatch.setattr("firecube.core.formats.discovery.looks_like_hdf5", must_not_sniff)
     assert discover_input_files(
         "s3://bucket/root",
-        preferred_globs=["*.csv", "!draft_*.csv", "!incoming/*", "!s3://bucket/root/file.hdf"],
+        preferred_globs=["*.csv", "!draft_*.csv", "!*/incoming/*", "!s3://bucket/root/file.hdf"],
     ) == ["s3://bucket/root/a.csv", "s3://bucket/root/file.NC"]
 
 
