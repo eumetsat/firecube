@@ -7,6 +7,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-09-19
+
 ### Added
 
 - `--storage-anonymous` presence-only flag on the storage option group and matching
