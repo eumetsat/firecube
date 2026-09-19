@@ -107,6 +107,7 @@ def validate(
     on_timeout: str,
     time_dim: str | None,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
     storage_type: str | None,
 ) -> None:
     """validate a Zarr array group
@@ -119,7 +120,11 @@ def validate(
     storage_type = apply_smart_default(parsed_uri, storage_type)
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
@@ -181,12 +186,23 @@ Examples:
     type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
     help="Storage driver for both store URIs (defaults to fsspec when omitted).",
 )
+@click.option(
+    "--storage-anonymous",
+    "storage_anonymous",
+    is_flag=True,
+    default=None,
+    help=(
+        "Use anonymous access for public S3 buckets. Overrides any credentials "
+        "in the environment or config file."
+    ),
+)
 @wrap_user_facing_errors
 def compare(
     a_uri: str,
     b_uri: str,
     storage_type: str | None,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
 ) -> None:
     """Compare two Zarr stores; exit 0 when equivalent or layout-only differences.
 
@@ -209,6 +225,7 @@ def compare(
         b_uri,
         storage_type=resolved_storage_type,
         storage_driver=resolved_storage_driver,
+        anonymous=bool(storage_anonymous),
     )
     if report.equivalent:
         return

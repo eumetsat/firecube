@@ -99,6 +99,16 @@ See also: firecube zarr slots, firecube zarr validate
     type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
 )
 @click.option(
+    "--storage-anonymous",
+    "storage_anonymous",
+    is_flag=True,
+    default=None,
+    help=(
+        "Use anonymous access for public S3 buckets. Overrides any credentials "
+        "in the environment or config file."
+    ),
+)
+@click.option(
     "-w",
     "--write-mode",
     "write_mode",
@@ -160,6 +170,7 @@ def preallocate(
     product_name: str,
     storage_type: str,
     storage_driver: str,
+    storage_anonymous: bool | None,
     write_mode: str,
     input_data: str | None,
     input_filters: list[str] | None,
@@ -206,7 +217,11 @@ def preallocate(
 
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)

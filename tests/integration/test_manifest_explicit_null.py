@@ -176,25 +176,25 @@ def test_staged_manifest_still_has_real_counters(
     assert storage["latest_pointer"] == _CONTROL_PLANE["latest_pointer"]
 
 
-def test_direct_s3_counters_null_but_storage_result_uses_path_stats(
+def test_direct_s3_completion_does_not_scan_store_or_use_path_stats(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """direct+S3 runs null the upload counters like direct+local.
+    """direct+S3 completion must not touch the target store.
 
-    The manifest counters are about a staged upload, which never happens in
-    direct mode regardless of locality. The ``storage_result`` still reports
-    what is on the target via ``path_stats``, even when the engine-seeded
-    ``metrics.storage`` block (control-plane keys only) is present.
+    ``complete_s3_direct`` returns a ``StorageWriteResult`` describing the
+    direct write without staging or scanning: the counters are zero, the
+    ``storage_type`` is ``"s3"``, and the target store is not entered. To
+    prove no scan happens, ``firecube.core.filesystem.ops.create_filesystem``
+    is monkeypatched to raise; any regression that reintroduces a store scan
+    (for example via ``path_stats``) will trip that raise here.
     """
-    calls: list[str] = []
+    from firecube.core.filesystem import ops as _fs_ops
 
-    def fake_path_stats(uri: str, *, storage_config: Any = None, **kwargs: Any) -> dict[str, int]:
-        _ = (storage_config, kwargs)
-        calls.append(uri)
-        return {"files": 5, "bytes": 99}
+    def _boom(*_args: Any, **_kwargs: Any) -> Any:
+        raise AssertionError("direct completion must not touch the store")
 
-    monkeypatch.setattr("firecube.core.storage.completion.path_stats", fake_path_stats)
+    monkeypatch.setattr(_fs_ops, "create_filesystem", _boom)
 
     def upload_tree(self: StorageSession, *args: Any, **kwargs: Any) -> StorageWriteResult:
         _ = (self, args, kwargs)
@@ -210,11 +210,12 @@ def test_direct_s3_counters_null_but_storage_result_uses_path_stats(
         _Host(),  # pyright: ignore[reportArgumentType]
     )
 
-    assert calls == [target]
     assert updated.storage_result is not None
-    assert updated.storage_result.files_written == 5
-    assert updated.storage_result.bytes_written == 99
+    assert updated.storage_result.files_written == 0
+    assert updated.storage_result.bytes_written == 0
+    assert updated.storage_result.duration_s == 0.0
     assert updated.storage_result.storage_type == "s3"
+    assert updated.storage_result.path.startswith("s3://")
 
     assert updated.manifest is not None
     assert updated.manifest["stored_at"] == target

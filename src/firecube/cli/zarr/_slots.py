@@ -194,6 +194,7 @@ def slots(
     product_name: str,
     storage_type: str,
     storage_driver: str,
+    storage_anonymous: bool | None,
     write_mode: str,
     input_data: str | None,
     input_filters: list[str] | None,
@@ -216,7 +217,11 @@ def slots(
 
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     resolved_storage_driver = storage_config.storage_driver

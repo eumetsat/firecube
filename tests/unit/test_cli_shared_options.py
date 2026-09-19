@@ -85,7 +85,8 @@ def test_storage_type_option_choices_required_and_case_insensitive() -> None:
 def test_storage_driver_option_choices_required_and_case_insensitive() -> None:
     @click.command()
     @storage_driver_option
-    def cmd(storage_driver: str) -> None:
+    def cmd(storage_driver: str, storage_anonymous: bool | None = None) -> None:
+        _ = storage_anonymous
         click.echo(storage_driver)
 
     help_result = CliRunner().invoke(cmd, ["--help"])

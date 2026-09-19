@@ -1,5 +1,9 @@
 # Done
 
+## 2026-09-18 — Ingest hot-path scan fixes
+
+**Decision.** Completion of a direct write must not depend on store size; control-plane checks on the ingest path must not scale with run history unless their result is used.
+
 ## 2026-09-15 — Append integrity for staged and force-reingest writes
 
 **Decision.** A staged append or force-reingest into a chunk that already holds data must leave the other slots of that chunk intact. Before writing, the runtime seeds every touched chunk of every data array and of `firecube_timestamp_state` from the target, once per run, under the existing per-`(product, group)` append claim; `resume_zarr_store` stays `None` in staged mode because that claim is sufficient. Seeding is all-or-abort: a read error during seeding fails the run instead of continuing with an empty chunk, and the workspace is removed. Chunk-key existence checks follow the array's declared chunk-key encoding, so the dot separator is seeded exactly once like the slash form.

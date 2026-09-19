@@ -79,6 +79,7 @@ def storage_config_from_binding(binding: StorageBinding) -> StorageConfig:
         region=binding.driver.region,
         path_style=binding.driver.path_style,
         storage_driver=binding.driver.driver,
+        anonymous=binding.driver.anonymous,
     )
 
 

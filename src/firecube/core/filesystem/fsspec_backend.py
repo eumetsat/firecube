@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import errno
+import logging
 import os
 import tempfile
 from typing import Any
@@ -23,6 +24,8 @@ from typing import Any
 from firecube.core.filesystem.protocol import AtomicWriter, Multipart, MultipartUploader
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.uri import StorageUri
+
+log = logging.getLogger(__name__)
 
 
 def _is_precondition_failed(exc: BaseException) -> bool:
@@ -327,6 +330,19 @@ def _fsspec_kwargs_from_binding(binding: StorageBinding) -> dict[str, Any]:
     kwargs["config_kwargs"] = config_kwargs
 
     credentials = driver.credentials
+    if driver.anonymous:
+        kwargs["anon"] = True
+        if credentials is not None and any(
+            value is not None
+            for value in (
+                credentials.access_key,
+                credentials.secret_key,
+                credentials.session_token,
+            )
+        ):
+            log.warning("S3 anonymous access requested; credentials dropped because anonymous wins")
+        return kwargs
+
     if credentials is not None:
         if credentials.access_key is not None:
             kwargs["key"] = credentials.access_key

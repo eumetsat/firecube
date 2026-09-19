@@ -84,6 +84,16 @@ See also: firecube zarr preallocate, firecube zarr validate
     help="Storage driver.",
 )
 @click.option(
+    "--storage-anonymous",
+    "storage_anonymous",
+    is_flag=True,
+    default=None,
+    help=(
+        "Use anonymous access for public S3 buckets. Overrides any credentials "
+        "in the environment or config file."
+    ),
+)
+@click.option(
     "--dry-run",
     "dry_run",
     is_flag=True,
@@ -118,6 +128,7 @@ def consolidate_time_coord(
     product_name: str,
     storage_type: str,
     storage_driver: str,
+    storage_anonymous: bool | None,
     dry_run: bool,
     chunk_size: int | None,
     time_dim: str | None,
@@ -158,7 +169,11 @@ def consolidate_time_coord(
 
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     handle = create_zarr_store(uri=target, storage_config=storage_config, mode="a")

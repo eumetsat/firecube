@@ -87,13 +87,23 @@ def storage_driver_option(
 ) -> Any:
     def decorator(func: Any) -> Any:
         help_text = f"Storage backend driver. {extra_help}".strip()
-        return click.option(
+        with_driver = click.option(
             "--storage-driver",
             "storage_driver",
             required=required,
             type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
             help=help_text,
         )(func)
+        return click.option(
+            "--storage-anonymous",
+            "storage_anonymous",
+            is_flag=True,
+            default=None,
+            help=(
+                "Use anonymous access for public S3 buckets. Overrides any credentials "
+                "in the environment or config file."
+            ),
+        )(with_driver)
 
     if callable(f):
         return decorator(f)

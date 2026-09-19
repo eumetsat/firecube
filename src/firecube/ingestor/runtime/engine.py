@@ -882,12 +882,12 @@ class PipelineExecutor:
         result.write_mode_applied = effective_write_mode
 
         # Upload counters describe a staged copy into the final target. Direct
-        # runs never stage, whatever the locality, so the counters are null
-        # rather than a misleading zero (local) or a path_stats scan (S3).
-        # The same triple feeds the typed ``metrics.storage`` block and the
-        # top-level manifest keys so the two views cannot disagree; engine-
-        # seeded keys such as ``control_root``/``latest_pointer`` survive via
-        # the ``ResultMetrics._compat`` merge in ``to_dict``.
+        # runs never stage, so the counters are null rather than a misleading
+        # zero (local) or a store-wide count (S3). The same triple feeds the
+        # typed ``metrics.storage`` block and the top-level manifest keys so
+        # the two views cannot disagree; engine-seeded keys such as
+        # ``control_root``/``latest_pointer`` survive via the
+        # ``ResultMetrics._compat`` merge in ``to_dict``.
         no_staged_upload = effective_write_mode == "direct"
         files = None if no_staged_upload else stored.files_written
         bytes_written = None if no_staged_upload else stored.bytes_written

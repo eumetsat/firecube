@@ -609,3 +609,9 @@ bundled (they change a safety check's timing / touch a separate path):
 - Migration-scenario regression harness covering: uncompressed-cube append, codec-change drift error, brand-new-cube default codec.
 
 **Effort:** Medium (3-5 days). Touches `DirectZarrIngestor` schema-hash logic, default codec injection, drift-error surface, and documentation. The cold-migration boundary is subtle and requires explicit tests.
+
+---
+
+### Ingest performance
+
+- Report real per-run byte and file counts for direct-S3 completion via filesystem instrumentation instead of returning zeros. Follow-up to the direct-S3 completion fix in 0.1.7; requires wiring per-run counters into the completion path.

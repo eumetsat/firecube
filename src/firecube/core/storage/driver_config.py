@@ -26,13 +26,19 @@ if TYPE_CHECKING:
 @dataclass(frozen=True, slots=True)
 class StorageDriverConfig:
     """Credentials are immutable and set once at the run boundary via `from_storage_config()`.
-    No mid-run credential rotation is supported."""
+    No mid-run credential rotation is supported.
+
+    Attributes:
+        anonymous: Explicit anonymous S3 access. When True and storage type is
+            S3, disables request signing. Never inferred from missing credentials.
+    """
 
     driver: Literal["fsspec", "obstore"] = "fsspec"
     endpoint_url: str | None = None
     credentials: Credentials | None = None
     region: str | None = None
     path_style: bool = True
+    anonymous: bool = False
 
     def __post_init__(self) -> None:
         _check_factory_origin()
@@ -71,6 +77,7 @@ class StorageDriverConfig:
             credentials=creds,
             region=sc.region,
             path_style=sc.path_style,
+            anonymous=sc.anonymous,
         )
 
     @classmethod

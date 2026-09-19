@@ -99,6 +99,7 @@ def export_storage_config_to_env(
         target_env["FIRECUBE_REGION"] = config.region
     target_env["FIRECUBE_PATH_STYLE"] = str(config.path_style).lower()
     target_env["FIRECUBE_STORAGE_DRIVER"] = config.storage_driver
+    target_env["FIRECUBE_S3_ANONYMOUS"] = str(config.anonymous).lower()
 
     if identity is not None:
         if identity.product_uri.authority:

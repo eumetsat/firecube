@@ -26,6 +26,8 @@ import uuid
 from pathlib import Path
 from typing import IO, Any, Protocol
 
+from firecube.core.filesystem.ops import open_source_filesystem
+
 
 # Re-export LocalSourceFile so it remains available via this module
 # and can be re-exported by base.py for compatibility.
@@ -75,6 +77,8 @@ class WorkspaceManager:
         self._temp_root: Path | None = None
         self._storage_config: Any | None = storage_config
         self._lock = threading.Lock()
+        self._uri_locks: dict[str, tuple[threading.Lock, int]] = {}
+        self._uri_locks_meta = threading.Lock()
 
     @property
     def temp_root(self) -> Path | None:
@@ -194,8 +198,6 @@ class WorkspaceManager:
 
     def _materialize_remote_uri(self, uri: str) -> Path:
         """Download a remote URI to local cache and return the local Path."""
-        from firecube.core.filesystem.ops import _open_fsspec_url
-
         if not self._temp_root:
             raise RuntimeError("Cannot materialize remote URI without a workspace/temp_root")
 
@@ -210,22 +212,41 @@ class WorkspaceManager:
         if final_path.exists():
             return final_path
 
-        with self._lock:
-            if final_path.exists():
-                return final_path
+        with self._uri_locks_meta:
+            existing = self._uri_locks.get(cache_name)
+            if existing is None:
+                per_uri = threading.Lock()
+                self._uri_locks[cache_name] = (per_uri, 1)
+            else:
+                per_uri, count = existing
+                self._uri_locks[cache_name] = (per_uri, count + 1)
 
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            partial_path = cache_dir / f".tmp.{uri_hash}.{uuid.uuid4().hex}"
+        try:
+            with per_uri:
+                if final_path.exists():
+                    return final_path
 
-            self._log.info("Downloading remote file %s to cache", uri)
-            try:
-                fs, root = _open_fsspec_url(uri, storage_config=self._storage_config)
-                with fs.open(root, "rb") as src_f, open(partial_path, "wb") as dst_f:
-                    shutil.copyfileobj(src_f, dst_f)
-                os.replace(partial_path, final_path)
-            except Exception as exc:
-                if partial_path.exists():
-                    os.remove(partial_path)
-                raise exc
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                partial_path = cache_dir / f".tmp.{uri_hash}.{uuid.uuid4().hex}"
+
+                self._log.info("Downloading remote file %s to cache", uri)
+                try:
+                    fs, uri_obj = open_source_filesystem(uri, self._storage_config)
+                    with fs.open(uri_obj, "rb") as src_f, open(partial_path, "wb") as dst_f:
+                        shutil.copyfileobj(src_f, dst_f)
+                    os.replace(partial_path, final_path)
+                except Exception:
+                    if partial_path.exists():
+                        os.remove(partial_path)
+                    raise
+        finally:
+            with self._uri_locks_meta:
+                existing = self._uri_locks.get(cache_name)
+                if existing is not None:
+                    per_uri_ref, count = existing
+                    if count <= 1:
+                        self._uri_locks.pop(cache_name, None)
+                    else:
+                        self._uri_locks[cache_name] = (per_uri_ref, count - 1)
 
         return final_path

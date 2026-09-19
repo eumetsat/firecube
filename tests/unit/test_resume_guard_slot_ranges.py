@@ -103,7 +103,7 @@ def test_same_range_with_resume_allows():
 
 
 @pytest.mark.unit
-def test_same_range_with_force_reingest_allows():
+def test_same_range_with_force_reingest_allows_without_run_scan():
     chunk_manager = _make_chunk_manager([_make_run(slot_range=(0, 100))])
     guard = _make_guard(chunk_manager)
 
@@ -111,7 +111,8 @@ def test_same_range_with_force_reingest_allows():
         ctx=_make_ctx(force_reingest=True), product="P", slot_range=(0, 100), slot_group=None
     )
 
-    guard.log.warning.assert_called_once()  # pyright: ignore[reportAttributeAccessIssue]
+    guard.log.warning.assert_not_called()  # pyright: ignore[reportAttributeAccessIssue]
+    chunk_manager.list_runs.assert_not_called()
     chunk_manager.list_chunks.assert_not_called()
 
 

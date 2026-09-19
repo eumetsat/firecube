@@ -42,6 +42,7 @@ from firecube.core.controlplane.types import (
     RESOLVED_INDEX_IDENTITY_HASH_ATTR,
     SLOT_INDEX_CURRENT_FILENAME,
     SLOT_INDEX_DIRNAME,
+    TIME_COORD_CONSOLIDATION_RUN_ID,
     AbandonSweepResult,
     ChunkInfo,
     ClaimInfo,
@@ -518,7 +519,7 @@ class ChunkManager:
         """Record that time coordinate consolidation has sealed these groups."""
 
         event = ConsolidatedTimeCoord(
-            run_id="time-coord-consolidation",
+            run_id=TIME_COORD_CONSOLIDATION_RUN_ID,
             timestamp_iso=timestamp_iso,
             groups=groups,
         )

@@ -87,6 +87,7 @@ def batch_size(
     product: str,
     group_path: str,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
     storage_type: str | None,
 ) -> None:
     """recommend optimal batch size
@@ -100,7 +101,11 @@ def batch_size(
     storage_type = apply_smart_default(parsed_uri, storage_type)
     storage_cfg = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_cfg)
@@ -211,6 +216,7 @@ def compliance(
     output_format: str,
     strict: bool,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
     storage_type: str | None,
 ) -> None:
     """run structural compliance checks
@@ -224,7 +230,11 @@ def compliance(
     storage_type = apply_smart_default(parsed_uri, storage_type)
     storage_cfg = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_cfg)

@@ -177,6 +177,16 @@ See also: firecube archive restore, firecube archive info, firecube archive vali
     required=False,
     type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
 )
+@click.option(
+    "--storage-anonymous",
+    "storage_anonymous",
+    is_flag=True,
+    default=None,
+    help=(
+        "Use anonymous access for public S3 buckets. Overrides any credentials "
+        "in the environment or config file."
+    ),
+)
 @click.option("--start-date", default=None, help="ISO 8601 start date for time range filter")
 @click.option("--end-date", default=None, help="ISO 8601 end date for time range filter")
 @click.option("-g", "--group", default=None, help="product group to archive (e.g. F024, NORDLIS)")
@@ -207,6 +217,7 @@ def create(
     archive: str,
     storage_type: str | None,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
     start_date: str | None,
     end_date: str | None,
     group: str | None,
@@ -235,7 +246,11 @@ def create(
 
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
 
@@ -368,6 +383,16 @@ See also: firecube archive create, firecube archive info
     required=False,
     type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
 )
+@click.option(
+    "--storage-anonymous",
+    "storage_anonymous",
+    is_flag=True,
+    default=None,
+    help=(
+        "Use anonymous access for public S3 buckets. Overrides any credentials "
+        "in the environment or config file."
+    ),
+)
 @click.option("--overwrite", is_flag=True, default=False, help="overwrite existing Zarr store")
 @dry_run_flag
 @yes_flag
@@ -378,6 +403,7 @@ def restore(
     target: str,
     storage_type: str | None,
     storage_driver: str | None,
+    storage_anonymous: bool | None,
     overwrite: bool,
     dry_run: bool,
     yes_i_really_mean_it: bool,
@@ -405,7 +431,11 @@ def restore(
 
     storage_config = get_storage_config(
         ctx,
-        overrides={"storage_type": storage_type, "storage_driver": storage_driver},
+        overrides={
+            "storage_type": storage_type,
+            "storage_driver": storage_driver,
+            "anonymous": storage_anonymous,
+        },
         cache=False,
     )
 

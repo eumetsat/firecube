@@ -61,6 +61,7 @@ from firecube.core.controlplane.types import (
     RUNS_DIRNAME,
     SCHEMA_VERSION,
     SNAPSHOT_DIRNAME,
+    TIME_COORD_CONSOLIDATION_RUN_ID,
     ChunkInfo,
     ClaimInfo,
     IndexEnsuredEvent,
@@ -313,19 +314,29 @@ class ManifestRepository:
         )
 
     def list_time_coord_consolidations(self, *, product: str) -> list[ConsolidatedTimeCoord]:
+        self._ensure_bound()
+        assert self._wal_reader is not None and self._resolver is not None
+        run_dir, run_uri = run_dir_for(self._resolver, product, TIME_COORD_CONSOLIDATION_RUN_ID)
+        run_entry = self._wal_reader.read_run_entry(
+            product=product,
+            run_dir=run_dir,
+            run_uri=run_uri,
+            run_id=TIME_COORD_CONSOLIDATION_RUN_ID,
+        )
+        if run_entry is None:
+            return []
         events: list[ConsolidatedTimeCoord] = []
-        for run_entry in self._list_run_entries(product):
-            for raw_event in self._read_run_events(product, run_entry):
-                if raw_event.get("event_type") != EVENT_CONSOLIDATED_TIME_COORD:
-                    continue
-                try:
-                    events.append(ConsolidatedTimeCoord.from_dict(raw_event.get("record", {})))
-                except ValueError:
-                    self.log.warning(
-                        "Skipping malformed consolidated time coord event for run %s: %s",
-                        raw_event.get("run_id", "<unknown>"),
-                        repr(raw_event)[:200],
-                    )
+        for raw_event in self._read_run_events(product, run_entry):
+            if raw_event.get("event_type") != EVENT_CONSOLIDATED_TIME_COORD:
+                continue
+            try:
+                events.append(ConsolidatedTimeCoord.from_dict(raw_event.get("record", {})))
+            except ValueError:
+                self.log.warning(
+                    "Skipping malformed consolidated time coord event for run %s: %s",
+                    raw_event.get("run_id", "<unknown>"),
+                    repr(raw_event)[:200],
+                )
         return events
 
     def record_slot_index_model_event(

@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
@@ -28,6 +29,9 @@ if TYPE_CHECKING:
     from obstore.store import S3Config
 
     from firecube.core.config import StorageConfig
+
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,10 +83,17 @@ def create_obstore_store(uri: str, storage_config: StorageConfig) -> Any:
     from firecube.core.uris import is_remote_target, local_path_from_target
 
     if is_remote_target(uri):
+        parsed = StorageUri.parse(uri)
         config: dict[str, Any] = {}
-        if storage_config.access_key:
+        if parsed.protocol == "s3" and storage_config.anonymous:
+            config["skip_signature"] = True
+            if storage_config.access_key is not None or storage_config.secret_key is not None:
+                log.warning(
+                    "S3 anonymous access requested; credentials dropped because anonymous wins"
+                )
+        elif storage_config.access_key:
             config["aws_access_key_id"] = storage_config.access_key
-        if storage_config.secret_key:
+        if not (parsed.protocol == "s3" and storage_config.anonymous) and storage_config.secret_key:
             config["aws_secret_access_key"] = storage_config.secret_key
         if storage_config.endpoint_url:
             config["aws_endpoint"] = storage_config.endpoint_url
@@ -92,7 +103,6 @@ def create_obstore_store(uri: str, storage_config: StorageConfig) -> Any:
             config["aws_region"] = storage_config.region
         if storage_config.path_style:
             config["aws_virtual_hosted_style_request"] = "false"
-        parsed = StorageUri.parse(uri)
         return S3Store(
             bucket=parsed.authority,
             prefix=parsed.path.lstrip("/").rstrip("/") or None,

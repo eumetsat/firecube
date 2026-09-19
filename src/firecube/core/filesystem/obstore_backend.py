@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import io
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
@@ -30,6 +31,9 @@ from firecube.core.storage.uri import StorageUri
 
 if TYPE_CHECKING:
     from obstore.store import S3Config
+
+
+log = logging.getLogger(__name__)
 
 
 class ObstoreFilesystem:
@@ -350,13 +354,28 @@ def _obstore_store_from_binding(binding: StorageBinding) -> Any:
     return _obstore_compat.S3Store(
         bucket=uri.authority,
         prefix=_store_prefix_for(binding) or None,
-        config=cast("S3Config", _aws_config_from_driver(binding.driver)),
+        config=cast(
+            "S3Config", _aws_config_from_driver(binding.driver, is_s3=uri.protocol == "s3")
+        ),
     )
 
 
-def _aws_config_from_driver(driver: StorageDriverConfig) -> dict[str, Any]:
+def _aws_config_from_driver(driver: StorageDriverConfig, *, is_s3: bool = True) -> dict[str, Any]:
     config: dict[str, Any] = {}
     credentials = driver.credentials
+    if is_s3 and driver.anonymous:
+        config["skip_signature"] = True
+        if credentials is not None and any(
+            value is not None
+            for value in (
+                credentials.access_key,
+                credentials.secret_key,
+                credentials.session_token,
+            )
+        ):
+            log.warning("S3 anonymous access requested; credentials dropped because anonymous wins")
+        credentials = None
+
     if credentials is not None:
         if credentials.access_key:
             config["aws_access_key_id"] = credentials.access_key
