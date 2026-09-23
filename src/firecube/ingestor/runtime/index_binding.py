@@ -40,7 +40,13 @@ from firecube.core.errors import (
     NoDiscoveredItemsError,
 )
 from firecube.core.index_resolve import ResolvedIndex, resolve_index_spec
-from firecube.core.index_spec import AUTO, IndexSpec, IrregularTimeAxis, _canonical_coordinate_value
+from firecube.core.index_spec import (
+    AUTO,
+    IndexSpec,
+    IrregularTimeAxis,
+    _canonical_coordinate_value,
+    _canonicalise_irregular_value,
+)
 from firecube.ingestor.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -126,6 +132,9 @@ def _discover_auto_irregular_axis(
 ) -> tuple[IrregularTimeAxis, tuple[ItemManifestEntry, ...]]:
     """Discover concrete values and a manifest for ``IrregularTimeAxis(values=AUTO)``."""
 
+    calendar = axis.calendar
+    units = axis.units
+
     discovered: list[tuple[Any, str, SourceRefKind, str]] = []
     for item in _iter_runtime_items(ingestor, ctx):
         source_ref, source_ref_kind = _source_ref(item)
@@ -136,6 +145,17 @@ def _discover_auto_irregular_axis(
         coordinate = getattr(info, "coordinate", info) if info is not None else None
         if coordinate is None:
             raise MissingIrregularCoordinateError(axis.coordinate, source_ref)
+        # Canonicalise before sort/dedup so ordering and duplicate detection
+        # happen in the same domain the axis will be built from: encoded
+        # numbers for a non-Gregorian calendar, unchanged (Gregorian-cftime
+        # converted to datetime64) for a Gregorian-like one. A discovered
+        # value on a calendar this axis does not declare raises here, naming
+        # both calendars, instead of failing much later at preallocate with
+        # an opaque JSON-serialization error.
+        try:
+            coordinate = _canonicalise_irregular_value(coordinate, calendar=calendar, units=units)
+        except ValueError as exc:
+            raise ValueError(f"item {source_ref!r} resolved coordinate: {exc}") from exc
         discovered.append((coordinate, source_ref, source_ref_kind, _item_identity_hash(item)))
 
     if not discovered:
@@ -162,7 +182,10 @@ def _discover_auto_irregular_axis(
     )
     validate_manifest_entries(list(manifest))
     return IrregularTimeAxis(
-        coordinate=axis.coordinate, values=tuple(row[0] for row in discovered)
+        coordinate=axis.coordinate,
+        values=tuple(row[0] for row in discovered),
+        calendar=calendar,
+        units=units,
     ), manifest
 
 

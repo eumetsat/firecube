@@ -29,9 +29,14 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from firecube.core.encoded_time import is_calendar_valued
 from firecube.core.storage.session import StorageSession, storage_config_from_binding
 from firecube.core.zarr.chunk_geometry import chunk_index_to_region
-from firecube.core.zarr.time_decode import decode_or_passthrough, decode_time_array
+from firecube.core.zarr.time_decode import (
+    decode_or_passthrough,
+    decode_time_array,
+    missing_time_mask,
+)
 from firecube.ingestor.errors import (
     AppendOverwriteRefused,
     ConfigurationError,
@@ -175,9 +180,11 @@ class AppendClassification:
 
 def _contains_nat(values: np.ndarray) -> bool:
     array = np.asarray(values)
-    if array.dtype.kind not in ("M", "m"):
+    if array.dtype.kind == "m":
+        return bool(np.isnat(array).any())
+    if array.dtype.kind not in ("M", "O"):
         return False
-    return bool(np.isnat(array).any())
+    return bool(missing_time_mask(array).any())
 
 
 def _flat_value_list(values: np.ndarray) -> list[Any]:
@@ -673,18 +680,20 @@ class AppendResumeService:
             return IndexedAppendCoordinate(values=values, value_to_index={}, state=state)
 
         diagnostics: list[str] = []
-        nat_indices: list[int] = []
-        if values.dtype.kind == "M":
-            nat_mask = np.isnat(values)
-            if nat_mask.any():
-                nat_indices = [int(i) for i in np.where(nat_mask)[0]]
-                diagnostics.extend(f"index {idx}: NaT" for idx in nat_indices)
+        # ``missing_time_mask`` covers datetime64 NaT and, for an object array of
+        # calendar-valued scalars (a non-standard or out-of-range calendar), a
+        # None or float-NaN element; it reports no missing slots for a bare
+        # numeric passthrough (non-time append dim), matching prior behavior.
+        missing_mask = missing_time_mask(values)
+        nat_indices = [int(i) for i in np.where(missing_mask)[0]]
+        if nat_indices:
+            diagnostics.extend(f"index {idx}: NaT" for idx in nat_indices)
 
         value_list = _time_key_list(values)
         first_seen: dict[Any, int] = {}
         counts: dict[Any, int] = {}
         for i, v in enumerate(value_list):
-            if v is None:
+            if missing_mask[i]:
                 continue
             if v in first_seen:
                 counts[v] = counts.get(v, 1) + 1
@@ -1105,9 +1114,49 @@ class AppendCoverageBuilder:
     def __init__(self, *, time_dim_name: str) -> None:
         self._written_ranges: list[list[int]] = []
         self._aligned_all: bool = True
-        self._time_min: pd.Timestamp | None = None
-        self._time_max: pd.Timestamp | None = None
+        self._time_min: Any | None = None
+        self._time_max: Any | None = None
+        self._time_bound_kind: str | None = None
         self._time_dim_name = time_dim_name
+
+    def _merge_bounds(self, batch_min: Any, batch_max: Any, *, kind: str, dim_name: str) -> None:
+        """Fold one batch's bounds into the running min/max, guarding cross-batch kind drift.
+
+        A single append dimension is decoded consistently for the life of a
+        store (its ``units``/``calendar`` attrs do not change between
+        batches), so a kind change here means a caller mixed sources; that is
+        refused loudly rather than compared with mismatched types (a
+        ``pd.Timestamp`` and a calendar-valued scalar are not orderable).
+        """
+        if self._time_bound_kind is not None and self._time_bound_kind != kind:
+            raise ValueError(
+                f"Coverage for dim {dim_name!r} mixes {self._time_bound_kind!r} and "
+                f"{kind!r} decoded time bounds across batches of the same append "
+                "dimension; this indicates inconsistent units/calendar attrs "
+                "between batches."
+            )
+        self._time_bound_kind = kind
+        if self._time_min is None or batch_min < self._time_min:
+            self._time_min = batch_min
+        if self._time_max is None or batch_max > self._time_max:
+            self._time_max = batch_max
+
+    def _record_calendar_bounds(self, decoded: np.ndarray, *, dim_name: str) -> None:
+        """Record bounds for an object array of calendar-valued scalars.
+
+        Missing slots (``None`` or a float ``NaN`` element) are excluded before
+        computing bounds. An object array that is not calendar-valued (for
+        example, a non-time append dimension whose passthrough dtype happens to
+        be ``object``) is left untouched: that is legitimate passthrough per
+        :func:`~firecube.core.zarr.time_decode.decode_or_passthrough`, not a
+        time coordinate, so no bounds are recorded for it.
+        """
+        flat = decoded.reshape(-1)
+        missing = missing_time_mask(decoded).reshape(-1)
+        present = [value for value, is_missing in zip(flat, missing, strict=True) if not is_missing]
+        if not present or not all(is_calendar_valued(value) for value in present):
+            return
+        self._merge_bounds(min(present), max(present), kind="calendar", dim_name=dim_name)
 
     def record_batch(
         self,
@@ -1141,10 +1190,13 @@ class AppendCoverageBuilder:
                         raise ValueError(
                             f"Invalid timestamp value after decoding for dim {dim_name!r}"
                         )
-                    if self._time_min is None or batch_min < self._time_min:
-                        self._time_min = batch_min
-                    if self._time_max is None or batch_max > self._time_max:
-                        self._time_max = batch_max
+                    self._merge_bounds(batch_min, batch_max, kind="datetime64", dim_name=dim_name)
+                elif decoded.dtype.kind == "O":
+                    self._record_calendar_bounds(decoded, dim_name=dim_name)
+                # Any other decoded dtype (a bare numeric counter with no CF
+                # ``units``) is legitimate non-time-dimension passthrough per
+                # decode_or_passthrough; it has no time-bounds concept and
+                # coverage intentionally stays unset for it.
 
     def build_entry(
         self,
@@ -1165,8 +1217,8 @@ class AppendCoverageBuilder:
             "aligned": bool(self._aligned_all),
             "state_array": f"{group}/{state_var_name}",
             "state_deleted_value": int(state_deleted_value),
-            "time_min": self._time_min.isoformat() if self._time_min else None,
-            "time_max": self._time_max.isoformat() if self._time_max else None,
+            "time_min": self._time_min.isoformat() if self._time_min is not None else None,
+            "time_max": self._time_max.isoformat() if self._time_max is not None else None,
             "time_dim_name": self._time_dim_name,
         }
         if chunk_len_used is not None:

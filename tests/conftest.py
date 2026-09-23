@@ -100,6 +100,8 @@ def pytest_sessionstart(session):
         "indexed_write_test_plugin",
         "mixed_bounded_unbounded_test_plugin",
         "precip_daily_test_plugin",
+        "calendar_time_test_plugin",
+        "calendar_axis_test_plugin",
         "w14_single_discovery_plugin",
     )
     missing_plugins = []

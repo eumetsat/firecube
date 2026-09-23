@@ -41,12 +41,14 @@ from zarr.storage import LocalStore
 
 from firecube.core.errors import SchemaDriftError
 from firecube.core.uris import is_remote_target, local_path_from_target
+from firecube.core.zarr._calendar_guard import reject_non_gregorian_calendar_value
 from firecube.core.zarr._coord_lifecycle import (
     CoordLifecycleState,
     raise_if_invalid,
     resolve_coord_lifecycle,
 )
 from firecube.core.zarr._reserved_attrs import _FILL_VALUE_ATTR, assert_attrs_safe
+from firecube.core.zarr._sealing_markers import ATTR_COORD_MANAGED
 
 log = logging.getLogger("firecube.core.zarr.region_writer")
 
@@ -93,6 +95,30 @@ def _fill_values_equal(existing: Any, spec: Any) -> bool:
     return bool(existing == spec)
 
 
+def _fill_mask(arr: np.ndarray, fill_value: Any) -> np.ndarray:
+    """Return the elementwise mask of *arr* positions that hold *fill_value*.
+
+    Missing-aware, so a NaN or NaT fill is detected with ``isnan``/``isnat``
+    rather than equality; every other dtype compares elementwise. This is
+    the one place that compares an array against its fill value; callers
+    that need a mask use it instead of writing ``arr == fill_value``.
+
+    Args:
+        arr: Array to test; object and structured dtypes are out of contract.
+        fill_value: The array's declared fill value.
+
+    Returns:
+        A boolean array of ``arr``'s shape, ``True`` where the element is fill.
+    """
+    if _fill_value_is_missing(fill_value):
+        kind = np.asarray(fill_value).dtype.kind
+        if kind in ("f", "c"):
+            return np.isnan(arr)
+        if kind in ("M", "m"):
+            return np.isnat(arr)
+    return np.asarray(arr == fill_value)
+
+
 def _array_is_all_fill(arr: np.ndarray, fill_value: Any) -> bool:
     """Return True iff every element of *arr* equals *fill_value* under
     missing-aware equality.
@@ -108,13 +134,7 @@ def _array_is_all_fill(arr: np.ndarray, fill_value: Any) -> bool:
     Out of contract: object dtype, structured/record dtypes. Callers MUST
     not pass these.
     """
-    if _fill_value_is_missing(fill_value):
-        kind = np.asarray(fill_value).dtype.kind
-        if kind in ("f", "c"):
-            return bool(np.all(np.isnan(arr)))
-        if kind in ("M", "m"):
-            return bool(np.all(np.isnat(arr)))
-    return bool(np.all(arr == fill_value))
+    return bool(np.all(_fill_mask(arr, fill_value)))
 
 
 def _fill_value_attr_value(fill_value: Any, dtype: Any) -> Any:
@@ -436,7 +456,16 @@ class RegionZarrWriter:
 
     @staticmethod
     def _normalize_timestamp_value(timestamp_val: Any) -> np.datetime64:
-        """Normalize timestamp-like values to ``datetime64[s]``."""
+        """Normalize timestamp-like values to ``datetime64[s]``.
+
+        Raises:
+            ValueError: If *timestamp_val* is calendar-valued (see
+                `firecube.core.encoded_time.is_calendar_valued`) on a
+                non-Gregorian calendar -- stamping it as ``datetime64`` would
+                silently mislabel it. Gregorian-like calendar values keep
+                converting exactly as before.
+        """
+        reject_non_gregorian_calendar_value(timestamp_val)
         if isinstance(timestamp_val, np.datetime64):
             return timestamp_val.astype("datetime64[s]")
         if hasattr(timestamp_val, "isoformat"):
@@ -445,7 +474,13 @@ class RegionZarrWriter:
 
     @staticmethod
     def _normalize_timestamp_value_ns(timestamp_val: Any) -> np.datetime64:
-        """Normalize timestamp-like values to ``datetime64[ns]`` for equality checks."""
+        """Normalize timestamp-like values to ``datetime64[ns]`` for equality checks.
+
+        Raises:
+            ValueError: If *timestamp_val* is calendar-valued on a
+                non-Gregorian calendar; see `_normalize_timestamp_value`.
+        """
+        reject_non_gregorian_calendar_value(timestamp_val)
         if isinstance(timestamp_val, np.datetime64):
             return timestamp_val.astype("datetime64[ns]")
         if hasattr(timestamp_val, "isoformat"):
@@ -899,18 +934,34 @@ class RegionZarrWriter:
         If a matching timestamp already exists in the ``timestamp`` array,
         its index is returned (idempotent).  Otherwise the next available
         slot (== current length) is returned.
+
+        Dispatches on the target array's `CoordinateEncoding` (see
+        `firecube.core.zarr.coord_materialization.coordinate_encoding_from_array`):
+        a ``datetime64`` array (or no array yet) is unchanged. An encoded
+        (calendar) array's ``encode_scalar`` encodes *timestamp_val* using
+        the array's own attrs before the equality lookup, instead of
+        normalizing it to ``datetime64``.
         """
         root = self._open_root()
         self.ensure_group(group)
         path = f"{group}/{self._time_coord_name}"
-        normalized = self._normalize_timestamp_value(timestamp_val)
 
-        if path not in root:
+        if path not in root or root[path].shape[0] == 0:
+            # No coordinate to dispatch on yet: validate the value exactly as the
+            # datetime64 path always has, so a malformed or non-Gregorian value
+            # still fails here instead of resolving to slot 0.
+            self._normalize_timestamp_value(timestamp_val)
             return 0
 
         timestamp_arr = root[path]
-        if timestamp_arr.shape[0] == 0:
-            return 0
+        from firecube.core.zarr.coord_materialization import coordinate_encoding_from_array
+
+        encoding = coordinate_encoding_from_array(timestamp_arr.dtype, dict(timestamp_arr.attrs))
+        normalized: Any = (
+            encoding.encode_scalar(timestamp_val)
+            if encoding.extra_attrs
+            else self._normalize_timestamp_value(timestamp_val)
+        )
 
         existing = np.asarray(timestamp_arr[:])
         matches = np.nonzero(existing == normalized)[0]
@@ -942,6 +993,14 @@ class RegionZarrWriter:
         - ``INVALID_BOTH_MARKERS``: the two lifecycles are mutually exclusive;
           combined presence is a corrupted state surfaced by
           ``raise_if_invalid`` before any read or write.
+
+        Dispatches on the target array's `CoordinateEncoding` before any of
+        the above (see
+        `firecube.core.zarr.coord_materialization.coordinate_encoding_from_array`):
+        an encoded (calendar) coordinate only ever reaches ``PREALLOCATED``
+        in practice, verified by `_verify_preallocated_encoded_slot`; any
+        other lifecycle state is refused by `_raise_encoded_unreachable_state`.
+        A ``datetime64`` array falls through to the unchanged logic below.
         """
         root = self._open_root()
         timestamp_path = f"{group}/{self._time_coord_name}"
@@ -953,6 +1012,26 @@ class RegionZarrWriter:
         attrs: dict[str, Any] = dict(timestamp_arr.attrs) if timestamp_arr is not None else {}
         state = resolve_coord_lifecycle(attrs)
         raise_if_invalid(state, timestamp_path)
+
+        if timestamp_arr is not None:
+            from firecube.core.zarr.coord_materialization import coordinate_encoding_from_array
+
+            encoding = coordinate_encoding_from_array(timestamp_arr.dtype, attrs)
+            if encoding.extra_attrs:
+                if state is not CoordLifecycleState.PREALLOCATED:
+                    self._raise_encoded_unreachable_state(
+                        timestamp_path=timestamp_path, attrs=attrs, state=state
+                    )
+                self._verify_preallocated_encoded_slot(
+                    group=group,
+                    ts_index=ts_index,
+                    timestamp_val=timestamp_val,
+                    timestamp_arr=timestamp_arr,
+                    timestamp_path=timestamp_path,
+                    encoding=encoding,
+                    attrs=attrs,
+                )
+                return
 
         if state is CoordLifecycleState.PREALLOCATED and timestamp_arr is not None:
             current_ns = self._normalize_timestamp_value_ns(timestamp_arr[ts_index])
@@ -1005,6 +1084,106 @@ class RegionZarrWriter:
                     ts_index=ts_index,
                 )
             timestamp_arr[ts_index] = normalized
+
+    def _raise_encoded_unreachable_state(
+        self, *, timestamp_path: str, attrs: dict[str, Any], state: CoordLifecycleState
+    ) -> None:
+        """Raise for an encoded (calendar) coordinate array whose lifecycle
+        state is not ``PREALLOCATED``.
+
+        Only ``CoordLifecycleState.PREALLOCATED`` is reachable in practice: a
+        calendar axis only supports ``mode="exact"`` (grid) materialization
+        (`RegularTimeAxis.calendar`'s docstring), and
+        `firecube.core.zarr.coord_materialization.materialize_regular_coord_array`
+        /``materialize_irregular_coord_array`` always stamp
+        ``firecube_preallocated`` before returning from that path. A
+        ``LEGACY`` or ``COORD_MANAGED`` numeric array carrying ``units`` and
+        ``calendar`` attrs therefore means the store was edited out of band,
+        or ingest reached this coordinate before ``firecube zarr
+        preallocate`` ran against it; both are refused loudly rather than
+        guessed at.
+
+        Raises:
+            SchemaDriftError: Always.
+        """
+        units = str(attrs["units"])
+        calendar = str(attrs["calendar"])
+        marker_name = (
+            ATTR_COORD_MANAGED
+            if state is CoordLifecycleState.COORD_MANAGED
+            else "no sealing marker (legacy)"
+        )
+        raise SchemaDriftError(
+            f"coordinate array {timestamp_path!r} carries encoded time attrs "
+            f"(units={units!r}, calendar={calendar!r}) but its lifecycle state is "
+            f"{marker_name}; this should be unreachable because calendar axes only "
+            "support the preallocated (grid) regime. Preallocate it first: "
+            "firecube zarr preallocate <plugin> --target <uri> --product-name <name> "
+            "--write-mode <mode>"
+        )
+
+    def _verify_preallocated_encoded_slot(
+        self,
+        *,
+        group: str,
+        ts_index: int,
+        timestamp_val: Any,
+        timestamp_arr: Any,
+        timestamp_path: str,
+        encoding: Any,
+        attrs: dict[str, Any],
+    ) -> None:
+        """Verify-or-error one slot of a preallocated encoded (calendar) coordinate.
+
+        Args:
+            group: Data group path.
+            ts_index: Timestamp slot index to verify.
+            timestamp_val: The incoming coordinate value (calendar-valued
+                object, or an already-encoded number).
+            timestamp_arr: The opened coordinate array.
+            timestamp_path: ``f"{group}/{self._time_coord_name}"``, for error messages.
+            encoding: The array's `CoordinateEncoding`, from
+                `firecube.core.zarr.coord_materialization.coordinate_encoding_from_array`.
+            attrs: The coordinate array's attrs (already carries ``units``
+                and ``calendar``; checked by the caller before dispatch).
+
+        Raises:
+            SchemaDriftError: If the slot is unfilled or diverges from
+                *timestamp_val*.
+            ValueError: If *timestamp_val* is calendar-valued on a different
+                calendar than *attrs['calendar']* (propagated from
+                `firecube.core.encoded_time.encode_coordinate`).
+            TypeError: If *timestamp_val* is a Gregorian-typed value (``str``,
+                ``datetime``, ``numpy.datetime64``, ...); propagated from
+                `firecube.core.encoded_time.encode_coordinate`.
+        """
+        units = str(attrs["units"])
+        calendar = str(attrs["calendar"])
+
+        incoming = encoding.encode_scalar(timestamp_val)
+        stored_raw = timestamp_arr[ts_index]
+        stored = stored_raw.item() if isinstance(stored_raw, np.generic) else stored_raw
+        if stored == incoming:
+            return
+        # A partially preallocated or hand-built coord array can carry
+        # ``ATTR_PREALLOCATED`` while still holding the encoded fill sentinel at
+        # unwritten slots; surface that as its own failure so the operator runs
+        # ``firecube zarr preallocate`` instead of chasing a phantom drift.
+        fill_value = timestamp_arr.fill_value
+        if _array_is_all_fill(np.atleast_1d(np.asarray(stored_raw)), fill_value):
+            raise SchemaDriftError(
+                f"Preallocated encoded timestamp coordinate {timestamp_path!r} in group "
+                f"{group!r} slot {ts_index}: preallocation incomplete (unwritten slot); "
+                f"stored value equals the encoded fill sentinel {fill_value!r} "
+                f"(units={units!r}, calendar={calendar!r}). Preallocate the coord array "
+                "first: firecube zarr preallocate <plugin> --target <uri> "
+                "--product-name <name> --write-mode <mode>"
+            )
+        raise SchemaDriftError(
+            f"Preallocated encoded timestamp coordinate {timestamp_path!r} in group "
+            f"{group!r} slot {ts_index} diverged: stored={stored!r} incoming={incoming!r} "
+            f"(units={units!r}, calendar={calendar!r})."
+        )
 
     def write_static(
         self,

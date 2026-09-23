@@ -54,7 +54,7 @@ from firecube.cli._uri_policy import (
 from firecube.core import observability
 from firecube.core.config import get_archive_defaults
 from firecube.core.controlplane.types import MAINTENANCE_OP_ARCHIVE_RESTORE, WriteDomain
-from firecube.core.errors import ClaimConflictError
+from firecube.core.errors import ClaimConflictError, ConfigurationError
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
@@ -332,7 +332,7 @@ def create(
                 target_session=target_session,
             )
             result["target"] = archive_uri.to_str()
-    except (FileExistsError, ValueError, ImportError) as exc:
+    except (FileExistsError, ValueError, ImportError, ConfigurationError) as exc:
         raise click.ClickException(str(exc)) from exc
     finally:
         if temp_archive_path is not None and os.path.exists(temp_archive_path):

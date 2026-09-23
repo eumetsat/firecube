@@ -44,7 +44,9 @@ from typing import Any
 import numpy as np
 
 from firecube.core.api import (
+    ATTR_PREALLOCATED,
     FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
+    AxisSpec,
     ExtentUnknownError,
     IndexSpec,
     IntegerAxis,
@@ -54,6 +56,7 @@ from firecube.core.api import (
     ResolvedIndex,
     compute_group_identity_hash,
 )
+from firecube.core.encoded_time import is_gregorian_axis
 from firecube.core.errors import ClaimConflictError, IndexedWriteCompilationError
 from firecube.core.indexed_write import IndexedWrite
 from firecube.ingestor.api import (
@@ -778,14 +781,20 @@ def _compile_indexed_write(iw: IndexedWrite, resolved_index: ResolvedIndex) -> l
         IndexedWriteCompilationError: If ``iw.coordinate`` cannot be resolved
             to a slot in ``iw.group`` (unknown group, coordinate not present,
             out-of-range integer, misaligned timestamp, wrong coordinate
-            type). The original resolver error is chained via ``__cause__``.
+            type). The original resolver error is chained via ``__cause__``,
+            and its type and message are appended to ``reason`` (e.g.
+            ``"... : ValueError: ..."``) so the operator sees why the
+            coordinate was refused without having to inspect the traceback.
     """
     try:
         slot = resolved_index.position(iw.group, iw.coordinate)
     except (KeyError, ValueError, IndexError, TypeError) as exc:
         raise IndexedWriteCompilationError(
             coordinate=iw.coordinate,
-            reason=f"coordinate not in resolved index for group '{iw.group}'",
+            reason=(
+                f"coordinate not in resolved index for group '{iw.group}': "
+                f"{type(exc).__name__}: {exc}"
+            ),
             iw_repr=repr(iw)[:200],
         ) from exc
 
@@ -825,7 +834,54 @@ def _axis_coordinate_name(axis: Any) -> str | None:
     return None
 
 
+def _compute_zarr_not_found_errors() -> tuple[type[BaseException], ...]:
+    """Return the tuple of exception types treated as 'store/group is absent'.
+
+    ``FileNotFoundError`` and ``KeyError`` are included unconditionally.
+    Zarr-specific 'missing' error classes (``GroupNotFoundError``,
+    ``ArrayNotFoundError``, ``NodeNotFoundError``, ``PathNotFoundError``)
+    are probed at import time and included only if
+    the installed ``zarr.errors`` exports them, so a future rename in
+    ``zarr-python`` cannot break firecube's import step. Every other
+    exception (``PermissionError``, ``TimeoutError``, generic ``OSError``,
+    ``ValueError``, ``TypeError``, ``BotoCoreError``, ``DNSError`` and the
+    like) is deliberately excluded so credential, throttling, and network
+    faults surface loudly instead of being silently converted into
+    ``ConfigurationError('... must be preallocated ...')``.
+    """
+    from zarr import errors as zarr_errors
+
+    optional_names = (
+        "GroupNotFoundError",
+        "ArrayNotFoundError",
+        "NodeNotFoundError",
+        "PathNotFoundError",
+    )
+    optional: list[type[BaseException]] = []
+    for name in optional_names:
+        cls = getattr(zarr_errors, name, None)
+        if isinstance(cls, type) and issubclass(cls, BaseException):
+            optional.append(cls)
+    return (FileNotFoundError, KeyError, *optional)
+
+
+_ZARR_NOT_FOUND_ERRORS: tuple[type[BaseException], ...] = _compute_zarr_not_found_errors()
+
+
 def _open_zarr_root_for_read(store_uri: str, storage_config: Any) -> Any | None:
+    """Open a Zarr group at ``store_uri`` for reading, or return ``None`` if absent.
+
+    Returns ``None`` only when the store or group is genuinely missing
+    (``FileNotFoundError``, ``KeyError``, or a zarr-specific NotFound-family
+    class from ``_ZARR_NOT_FOUND_ERRORS``). Every other exception -- e.g.
+    ``PermissionError`` from a wrong key, ``TimeoutError`` from a hung
+    endpoint, a plain ``OSError`` from DNS failure -- propagates with its
+    original ``__cause__`` preserved. Silently converting those into
+    ``None`` would let ingest fall through to the caller's
+    ``ConfigurationError('... must be preallocated ...')`` message, which
+    misleads operators into re-running ``firecube zarr preallocate`` on a
+    store they simply cannot reach.
+    """
     import zarr
     from zarr.storage import LocalStore
 
@@ -840,7 +896,7 @@ def _open_zarr_root_for_read(store_uri: str, storage_config: Any) -> Any | None:
             return zarr.open_group(**handle.zarr_kwargs(), mode="r", zarr_format=3)
         local = local_path_from_target(store_uri)
         return zarr.open_group(store=LocalStore(str(local)), mode="r", zarr_format=3)
-    except Exception:
+    except _ZARR_NOT_FOUND_ERRORS:
         return None
 
 
@@ -1132,6 +1188,8 @@ class DirectZarrIngestor(BaseIngestor):
         if getattr(self, "_resolved_index_stamped", False):
             return
 
+        self._verify_calendar_axes_preallocated_at_startup(ctx, binding.resolved)
+
         product = _ctx_product_name(ctx, self.name)
         self._check_legacy_index_record_at_startup(product=product, plugin_name=self.name)
         run_id = str(ctx.run_id or ctx.option("run_id", "unknown"))
@@ -1158,6 +1216,89 @@ class DirectZarrIngestor(BaseIngestor):
             outcome=outcome,
         )
         self._resolved_index_stamped = True
+
+    def _verify_calendar_axes_preallocated_at_startup(
+        self, ctx: PluginContext, resolved: ResolvedIndex
+    ) -> None:
+        """Refuse to ingest into a calendar-declared group with no preallocated coordinate.
+
+        A calendar axis only ever resolves to the ``"grid"`` stored-values
+        policy (`RegularTimeAxis` construction rejects ``mode="floor"``
+        together with ``calendar``; `IrregularTimeAxis` has no floor mode at
+        all), so its coordinate values are always the nominal grid, known
+        only to the single-writer materialization step (``firecube zarr
+        preallocate``) -- see `plans/DESIGN.md` "single-writer time
+        coordinate". A partially unwritten calendar coordinate cannot be
+        opened by xarray at all: the encoded fill sentinel (``int64.min``)
+        is not a legal ``seconds since <epoch>`` value on any calendar,
+        unlike a partially unwritten Gregorian coordinate whose ``NaT``
+        fill is legal ``datetime64``.
+
+        Skipping preallocate used to fall through to
+        `RegionZarrWriter.write_timestamp`'s legacy branch, which creates the
+        coordinate array on first ingest write as ``datetime64`` -- silently
+        mislabeling every calendar value written into it as Gregorian. This
+        check closes that path with a loud `ConfigurationError` naming the
+        command to run instead, before any batch runs.
+
+        Runs once per pod process, called from `_ensure_index_identity_at_startup`
+        (guarded there by its own ``_resolved_index_stamped`` early return).
+        Unlike `_verify_schema_at_pod_startup`, this is NOT gated on
+        ``self._parallel_execution_state``: `_ensure_index_identity_at_startup`
+        itself is unconditional (see the base-runtime call site in
+        ``ingestor/runtime/base.py``), so this covers every run that binds an
+        index: a single-process run, a slot-range parallel pod, and the pod that
+        owns slot 0 alike. A plugin whose ``index_spec`` returns ``None`` never
+        reaches it (the caller returns first), which is sound only because a
+        calendar can be declared nowhere but on an ``IndexSpec`` axis; a
+        calendar-valued object handed to such a plugin's legacy timestamp write
+        is refused by the writer's own guard instead.
+        """
+        calendar_groups: list[tuple[str, AxisSpec, str]] = []
+        for group_name in resolved.groups:
+            axis = resolved.axis_for(group_name)
+            if axis is not None and not is_gregorian_axis(axis):
+                calendar = getattr(axis, "calendar", None)
+                assert calendar is not None  # non-Gregorian per is_gregorian_axis above
+                calendar_groups.append((group_name, axis, calendar))
+        if not calendar_groups:
+            return
+
+        # Always inspect the final target regardless of write_mode -- that
+        # is where preallocate writes. `firecube zarr preallocate` ignores
+        # `--write-mode` (it is accepted only for CLI parity with `ingest`;
+        # see `firecube/cli/zarr/_preallocate.py`) and materialises the
+        # coordinate array directly at the final product URI. In staged
+        # ingest mode the engine's own ``write_mode`` resolves to a
+        # workspace path that has NOT been seeded yet at this startup hook,
+        # so probing it would falsely refuse every staged calendar ingest
+        # even when the final target was correctly preallocated first.
+        try:
+            store_uri = self.resolve_output_uri(ctx, write_mode="direct")
+        except ConfigurationError:
+            # No resolvable output yet (e.g. a fresh in-memory context, as
+            # used by `firecube zarr index rebuild`'s plugin probe): nothing
+            # to verify. Any other exception must propagate; swallowing it
+            # would silently disable this check.
+            return
+
+        root = _open_zarr_root_for_read(store_uri, self._chunk_manager.storage_config)
+        for group_name, axis, calendar in calendar_groups:
+            coord_name = _axis_coordinate_name(axis)
+            if coord_name is None:
+                continue
+            coord_array_path = f"{group_name}/{coord_name}"
+            coord_arr = None if root is None else _open_zarr_array(root, coord_array_path)
+            if coord_arr is not None and bool(coord_arr.attrs.get(ATTR_PREALLOCATED, False)):
+                continue
+            raise ConfigurationError(
+                f"group {group_name!r} declares calendar={calendar!r} on its time axis; "
+                f"its coordinate array {coord_array_path!r} at target {store_uri!s} "
+                "must be preallocated before ingest. Calendar coordinates are "
+                "single-writer: the engine will not create or fill them on first "
+                "ingest write. Run: firecube zarr preallocate "
+                "<plugin> --target <uri> --product-name <name> --write-mode <mode>"
+            )
 
     def _verify_per_group_identity_at_startup(
         self, ctx: PluginContext, resolved: ResolvedIndex

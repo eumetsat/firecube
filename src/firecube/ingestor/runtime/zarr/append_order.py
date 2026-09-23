@@ -23,7 +23,7 @@ import zarr
 from zarr.errors import GroupNotFoundError
 
 from firecube.core.filesystem.store_factory import ZarrStoreHandle
-from firecube.core.zarr.time_decode import decode_or_passthrough
+from firecube.core.zarr.time_decode import decode_or_passthrough, missing_time_mask
 from firecube.ingestor.errors import AppendOverwriteRefused, InsertRefusedError
 
 
@@ -85,7 +85,16 @@ class AppendOrder:
         start = previous.length if previous is not None else 0
         values = _values(np.asarray(array[start:]), dict(array.attrs))
         if values.size:
-            invalid = np.isnat(values) if values.dtype.kind == "M" else np.isnan(values)
+            # A decoded time coordinate is datetime64 or, for a calendar xarray
+            # cannot represent as datetime64, an object array of calendar-valued
+            # scalars; ``np.isnan``/``np.isnat`` reject object dtype, so those two
+            # go through the shared helper. Anything else is a numeric passthrough
+            # (a non-time append dimension), where NaN marks a missing value
+            # exactly as before.
+            if values.dtype.kind in ("M", "O"):
+                invalid = missing_time_mask(values)
+            else:
+                invalid = np.isnan(values)
             if bool(np.any(invalid)):
                 raise AppendOverwriteRefused(
                     refused_timestamps=["<missing existing value>"], reason="nat_existing"

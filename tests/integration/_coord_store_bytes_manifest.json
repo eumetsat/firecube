@@ -1,0 +1,108 @@
+{
+  "calendar_360_day_regular": {
+    "files": {
+      "data/time/c/0": "344535520a0092b2e91d21927db587f4a7b889871a11a5f476eec93e136f6df2",
+      "data/time/zarr.json": "990ddccadb91baef7999a19802c29d6ab7722f2e7124cede5ff897fd11088760",
+      "data/values/c/0/0/0": "97c003eb3c0378556996c6f85376b70a08704568a5213361cf5f3a63c9808c69",
+      "data/values/c/1/0/0": "ff6ac04ab6e2133f550717f2321c69340b6fbeabe7cdb1fb357f73691aaaa8ca",
+      "data/values/c/2/0/0": "e2195d824a0c47bc277ca9d80e61cd81afdf121d726eb8c31dca383369c39ee5",
+      "data/values/c/3/0/0": "b2af11ff8ef0bca66948a4578bbcc46146dd302cf78b00e845e48a80f6987028",
+      "data/values/c/4/0/0": "92c8847e8682428674e85e857e58bccd4bfc870eee3aad53aa36e9b86a587b0e",
+      "data/values/c/5/0/0": "9251f070f73465f1253024640a02a065acaa441f80872fd9d3d89d5afd7f37f2",
+      "data/values/c/6/0/0": "02845afd35b2569accdb9de7cce797f53448cc89c5761df63eec82ced5409e8d",
+      "data/values/c/7/0/0": "95efacbeafbe10bb19edad3044c3b8e4b16e5ccd8ac7809219a2beff871b56e5",
+      "data/values/c/8/0/0": "1433cdc3a529681f0ce8472a7d10e1811a2b5585493efe9063ee88b8791852bd",
+      "data/values/c/9/0/0": "26842e4db9770d15898264efd8441d5b77f1e527b00a6d9cec66c1f990eb3b52",
+      "data/values/zarr.json": "74843338fe881dd3d395b5cf0b00fa6f0fb8bbe838173396f7fb2513ab890a4f",
+      "data/zarr.json": "36615682d5be9646729635067a75185212eb0c48d708ef06ad34c1f58dd587d2",
+      "zarr.json": "722a0d3a0aabbcc24df312f43cfcdcfb30cd23d9c4492fa26237ca6abb493936"
+    },
+    "plugin": "calendar_axis_regular",
+    "product_name": "calendar_axis_regular",
+    "zarr_json_text": {
+      "data/time/zarr.json": "{\n  \"shape\": [\n    10\n  ],\n  \"data_type\": \"int64\",\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        10\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": -9223372036854775808,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"standard_name\": \"time\",\n    \"axis\": \"T\",\n    \"units\": \"seconds since 2049-01-01 00:00:00\",\n    \"calendar\": \"360_day\",\n    \"_FillValue\": -9223372036854775808,\n    \"firecube_preallocated\": true,\n    \"firecube_group_identity_hash\": \"159dfd27160c9f7c78ff85b74fd082931755aea12eaa0a048d14656bb8f1e7b3\"\n  },\n  \"dimension_names\": [\n    \"time\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/values/zarr.json": "{\n  \"shape\": [\n    10,\n    1,\n    1\n  ],\n  \"data_type\": \"float32\",\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        1,\n        1,\n        1\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": -1.0,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"_FillValue\": \"AAAAAAAA8L8=\"\n  },\n  \"dimension_names\": [\n    \"time\",\n    \"y\",\n    \"x\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/zarr.json": "{\n  \"attributes\": {},\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}",
+      "zarr.json": "{\n  \"attributes\": {\n    \"firecube_resolved_index\": \"{\\\"groups\\\":{\\\"data\\\":{\\\"kind\\\":\\\"regular_time\\\",\\\"params\\\":{\\\"cadence_s\\\":86400,\\\"calendar\\\":\\\"360_day\\\",\\\"epoch\\\":\\\"2049-01-01T00:00:00Z\\\",\\\"mode\\\":\\\"exact\\\"},\\\"size\\\":10}},\\\"name\\\":\\\"calendar_axis_regular_v1\\\",\\\"schema_version\\\":\\\"v1\\\"}\",\n    \"firecube_resolved_index_identity_hash\": \"f97230ff2db1d36c1fdcf10ae2f63eaf8d38053d4bca065564def5d3de311591\"\n  },\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}"
+    }
+  },
+  "calendar_noleap_irregular": {
+    "files": {
+      "data/time/c/0": "d701fe7891fcad6bdd45bedcd4930c1d64ea8c5584aca9ab79a3f092e8a40058",
+      "data/time/zarr.json": "cc726e7bf2d7d49984a1ddc413a81eca63b17555242d8371ff94bc096f5eae81",
+      "data/values/c/0/0/0": "97c003eb3c0378556996c6f85376b70a08704568a5213361cf5f3a63c9808c69",
+      "data/values/c/1/0/0": "ff6ac04ab6e2133f550717f2321c69340b6fbeabe7cdb1fb357f73691aaaa8ca",
+      "data/values/c/2/0/0": "e2195d824a0c47bc277ca9d80e61cd81afdf121d726eb8c31dca383369c39ee5",
+      "data/values/c/3/0/0": "b2af11ff8ef0bca66948a4578bbcc46146dd302cf78b00e845e48a80f6987028",
+      "data/values/c/4/0/0": "92c8847e8682428674e85e857e58bccd4bfc870eee3aad53aa36e9b86a587b0e",
+      "data/values/zarr.json": "6901b780fbf287b9b3eb180443cceed81057b2b06940b0d8acd3a4be619ceaaa",
+      "data/zarr.json": "36615682d5be9646729635067a75185212eb0c48d708ef06ad34c1f58dd587d2",
+      "zarr.json": "0deaaf81445c39ba4443cb6193f0fc9fe989bcbc564a9da74d231753f942cfd7"
+    },
+    "plugin": "calendar_axis_irregular_explicit",
+    "product_name": "calendar_axis_irregular_explicit",
+    "zarr_json_text": {
+      "data/time/zarr.json": "{\n  \"shape\": [\n    5\n  ],\n  \"data_type\": \"int64\",\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        5\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": -9223372036854775808,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"standard_name\": \"time\",\n    \"axis\": \"T\",\n    \"units\": \"days since 2049-01-01 00:00:00\",\n    \"calendar\": \"noleap\",\n    \"_FillValue\": -9223372036854775808,\n    \"firecube_preallocated\": true,\n    \"firecube_group_identity_hash\": \"c932c98116850a7c04673a54bb28ceb048f979b21a246a00c3aa7c066fccab43\"\n  },\n  \"dimension_names\": [\n    \"time\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/values/zarr.json": "{\n  \"shape\": [\n    5,\n    1,\n    1\n  ],\n  \"data_type\": \"float32\",\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        1,\n        1,\n        1\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": -1.0,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"_FillValue\": \"AAAAAAAA8L8=\"\n  },\n  \"dimension_names\": [\n    \"time\",\n    \"y\",\n    \"x\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/zarr.json": "{\n  \"attributes\": {},\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}",
+      "zarr.json": "{\n  \"attributes\": {\n    \"firecube_resolved_index\": \"{\\\"groups\\\":{\\\"data\\\":{\\\"kind\\\":\\\"irregular_time\\\",\\\"params\\\":{\\\"calendar\\\":\\\"noleap\\\",\\\"coordinate\\\":\\\"time\\\",\\\"units\\\":\\\"days since 2049-01-01 00:00:00\\\",\\\"values\\\":[0,2,5,9,14]},\\\"size\\\":5}},\\\"name\\\":\\\"calendar_axis_irregular_explicit_v1\\\",\\\"schema_version\\\":\\\"v1\\\"}\",\n    \"firecube_resolved_index_identity_hash\": \"140589078470f456aa93062d2210f2a22c82ba587d9cad87a44551bbff9b0311\"\n  },\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}"
+    }
+  },
+  "gregorian_irregular_explicit": {
+    "files": {
+      "data/timestamp/c/0": "8dd640a5d5d14f113f5dd33824326eff0604597f9dcf838a8980741bd39427e7",
+      "data/timestamp/zarr.json": "19fdcdbf9087ea65fbf1bb580106f4b4c40df5ac4ad935e2d09fedd39b6f9e27",
+      "data/values/zarr.json": "0311f6792209c213a8c3acc8cfb85379870a89f2a8dd193cae811c0ed3c97a39",
+      "data/zarr.json": "36615682d5be9646729635067a75185212eb0c48d708ef06ad34c1f58dd587d2",
+      "zarr.json": "f402f17a6027b8a2e3fb73cc533fb16db8c9985747b44f338db0f75819412934"
+    },
+    "plugin": "irregular_axis_concrete",
+    "product_name": "irregular_axis_concrete",
+    "zarr_json_text": {
+      "data/timestamp/zarr.json": "{\n  \"shape\": [\n    5\n  ],\n  \"data_type\": {\n    \"name\": \"numpy.datetime64\",\n    \"configuration\": {\n      \"unit\": \"ns\",\n      \"scale_factor\": 1\n    }\n  },\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        5\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": -9223372036854775808,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"standard_name\": \"time\",\n    \"axis\": \"T\",\n    \"firecube_preallocated\": true,\n    \"firecube_group_identity_hash\": \"3f4b2439e6ec0f4d691f46af47a228f10022f787f147bd8739b25a6e193ccfed\"\n  },\n  \"dimension_names\": [\n    \"timestamp\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/values/zarr.json": "{\n  \"shape\": [\n    5,\n    3,\n    4\n  ],\n  \"data_type\": \"float32\",\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        1,\n        3,\n        4\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": 0.0,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"_FillValue\": \"AAAAAAAAAAA=\"\n  },\n  \"dimension_names\": [\n    \"timestamp\",\n    \"y\",\n    \"x\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/zarr.json": "{\n  \"attributes\": {},\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}",
+      "zarr.json": "{\n  \"attributes\": {\n    \"firecube_resolved_index\": \"{\\\"groups\\\":{\\\"data\\\":{\\\"kind\\\":\\\"irregular_time\\\",\\\"params\\\":{\\\"coordinate\\\":\\\"timestamp\\\",\\\"values\\\":[\\\"2026-01-01T00:00:00.000000000Z\\\",\\\"2026-01-01T00:10:00.000000000Z\\\",\\\"2026-01-01T00:20:00.000000000Z\\\",\\\"2026-01-01T00:30:00.000000000Z\\\",\\\"2026-01-01T00:40:00.000000000Z\\\"]},\\\"size\\\":5}},\\\"name\\\":\\\"irregular_axis_concrete_v1\\\",\\\"schema_version\\\":\\\"v1\\\"}\",\n    \"firecube_resolved_index_identity_hash\": \"ba56fdb4628c32935df3c76886edd6ed496fddbb9b1a26df60774e2406488178\"\n  },\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}"
+    }
+  },
+  "gregorian_regular_exact_end_date": {
+    "files": {
+      "data/time/c/0": "e938f8d820c0dd8fd3708c0cf2942e1b2c1e738fce161b0492caad3158549706",
+      "data/time/c/1": "48dbdf6fc8c133eea652feaa7c3dd29326f379be134912f5af2f6a37395e4a64",
+      "data/time/c/2": "04044468909a00bb18c1508df044897d1a92e82ec6a69406fcce1fa18919a8b4",
+      "data/time/c/3": "e413022800a354b4492c299bd65935fe1217d438a3429bf78557eb1669a26cf9",
+      "data/time/zarr.json": "aa368974df01888b0c13aa3924a88d97f0a7fa8741fa680e579e6b19d177c4fc",
+      "data/values/zarr.json": "9c60566a391d0b796c45ffff80797052be29f42cd5bd298417439a60ef4147b4",
+      "data/zarr.json": "36615682d5be9646729635067a75185212eb0c48d708ef06ad34c1f58dd587d2",
+      "zarr.json": "dd95160bbe255da5b583e531196c57c30718190fe2dc993ff746da82407e38eb"
+    },
+    "plugin": "regular_axis_end_date",
+    "product_name": "regular_axis_end_date",
+    "zarr_json_text": {
+      "data/time/zarr.json": "{\n  \"shape\": [\n    1000\n  ],\n  \"data_type\": {\n    \"name\": \"numpy.datetime64\",\n    \"configuration\": {\n      \"unit\": \"ns\",\n      \"scale_factor\": 1\n    }\n  },\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        256\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": -9223372036854775808,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"standard_name\": \"time\",\n    \"axis\": \"T\",\n    \"firecube_preallocated\": true,\n    \"firecube_group_identity_hash\": \"2cdff3c424c5fa4a3f7240dd3d70f719caac964de3fe8a4ab52db6f9cb07fef9\"\n  },\n  \"dimension_names\": [\n    \"time\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/values/zarr.json": "{\n  \"shape\": [\n    1000,\n    5\n  ],\n  \"data_type\": \"float32\",\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        1,\n        5\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": 0.0,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"_FillValue\": \"AAAAAAAAAAA=\"\n  },\n  \"dimension_names\": [\n    \"time\",\n    \"x\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/zarr.json": "{\n  \"attributes\": {},\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}",
+      "zarr.json": "{\n  \"attributes\": {\n    \"firecube_resolved_index\": \"{\\\"groups\\\":{\\\"data\\\":{\\\"kind\\\":\\\"regular_time\\\",\\\"params\\\":{\\\"cadence_s\\\":600,\\\"end_date\\\":\\\"2024-01-07T22:40:00Z\\\",\\\"epoch\\\":\\\"2024-01-01T00:00:00Z\\\",\\\"mode\\\":\\\"exact\\\"},\\\"size\\\":1000}},\\\"name\\\":\\\"regular_axis_end_date_v1\\\",\\\"schema_version\\\":\\\"v1\\\"}\",\n    \"firecube_resolved_index_identity_hash\": \"2ee0b7cf61c2ef0d907bd3c3d2345bef16db2f68846c04b8b5e48ec9ff4405ad\"\n  },\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}"
+    }
+  },
+  "gregorian_regular_exact_slot_count": {
+    "files": {
+      "data/time/c/0": "e938f8d820c0dd8fd3708c0cf2942e1b2c1e738fce161b0492caad3158549706",
+      "data/time/c/1": "48dbdf6fc8c133eea652feaa7c3dd29326f379be134912f5af2f6a37395e4a64",
+      "data/time/c/2": "04044468909a00bb18c1508df044897d1a92e82ec6a69406fcce1fa18919a8b4",
+      "data/time/c/3": "e413022800a354b4492c299bd65935fe1217d438a3429bf78557eb1669a26cf9",
+      "data/time/zarr.json": "aa368974df01888b0c13aa3924a88d97f0a7fa8741fa680e579e6b19d177c4fc",
+      "data/values/zarr.json": "9c60566a391d0b796c45ffff80797052be29f42cd5bd298417439a60ef4147b4",
+      "data/zarr.json": "36615682d5be9646729635067a75185212eb0c48d708ef06ad34c1f58dd587d2",
+      "zarr.json": "9c58d2c06917f31dc2c08581187983fb342ba29223ed933ab0d9d03a739a6ada"
+    },
+    "plugin": "regular_axis_dense_coord",
+    "product_name": "regular_axis_dense_coord",
+    "zarr_json_text": {
+      "data/time/zarr.json": "{\n  \"shape\": [\n    1000\n  ],\n  \"data_type\": {\n    \"name\": \"numpy.datetime64\",\n    \"configuration\": {\n      \"unit\": \"ns\",\n      \"scale_factor\": 1\n    }\n  },\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        256\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": -9223372036854775808,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"standard_name\": \"time\",\n    \"axis\": \"T\",\n    \"firecube_preallocated\": true,\n    \"firecube_group_identity_hash\": \"2cdff3c424c5fa4a3f7240dd3d70f719caac964de3fe8a4ab52db6f9cb07fef9\"\n  },\n  \"dimension_names\": [\n    \"time\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/values/zarr.json": "{\n  \"shape\": [\n    1000,\n    5\n  ],\n  \"data_type\": \"float32\",\n  \"chunk_grid\": {\n    \"name\": \"regular\",\n    \"configuration\": {\n      \"chunk_shape\": [\n        1,\n        5\n      ]\n    }\n  },\n  \"chunk_key_encoding\": {\n    \"name\": \"default\",\n    \"configuration\": {\n      \"separator\": \"/\"\n    }\n  },\n  \"fill_value\": 0.0,\n  \"codecs\": [\n    {\n      \"name\": \"bytes\",\n      \"configuration\": {\n        \"endian\": \"little\"\n      }\n    },\n    {\n      \"name\": \"zstd\",\n      \"configuration\": {\n        \"level\": 0,\n        \"checksum\": false\n      }\n    }\n  ],\n  \"attributes\": {\n    \"_FillValue\": \"AAAAAAAAAAA=\"\n  },\n  \"dimension_names\": [\n    \"time\",\n    \"x\"\n  ],\n  \"zarr_format\": 3,\n  \"node_type\": \"array\",\n  \"storage_transformers\": []\n}",
+      "data/zarr.json": "{\n  \"attributes\": {},\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}",
+      "zarr.json": "{\n  \"attributes\": {\n    \"firecube_resolved_index\": \"{\\\"groups\\\":{\\\"data\\\":{\\\"kind\\\":\\\"regular_time\\\",\\\"params\\\":{\\\"cadence_s\\\":600,\\\"epoch\\\":\\\"2024-01-01T00:00:00Z\\\",\\\"mode\\\":\\\"exact\\\"},\\\"size\\\":1000}},\\\"name\\\":\\\"regular_axis_dense_coord_v1\\\",\\\"schema_version\\\":\\\"v1\\\"}\",\n    \"firecube_resolved_index_identity_hash\": \"3999806051ec54ef64f15e6d9b0d8eaed89b6e0c76cc9b222712671d5655a80c\"\n  },\n  \"zarr_format\": 3,\n  \"node_type\": \"group\"\n}"
+    }
+  }
+}

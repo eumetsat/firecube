@@ -40,6 +40,7 @@ from firecube.core.api import (
     ATTR_PREALLOCATED,
 )
 from firecube.core.controlplane import ChunkManager, WriteDomain
+from firecube.core.encoded_time import is_gregorian_axis
 from firecube.core.index_resolve import (
     ExtentUnknownError,
     resolve_index_spec,
@@ -752,6 +753,8 @@ def _resolve_preallocate_windows(
     slot_end: int | None,
     slot_group: str | None = None,
 ) -> dict[str, tuple[int, int]]:
+    from firecube.core.index_spec import RegularTimeAxis
+
     if slot_group is not None:
         available = tuple(resolved_index.groups)
         if slot_group not in available:
@@ -787,7 +790,15 @@ def _resolve_preallocate_windows(
             raise click.UsageError(f"--slot-start must be >= 0, got {start}")
         if end < 0:
             raise click.UsageError(f"--slot-end must be >= 0, got {end}")
-        if start >= end:
+        # Empty windows are allowed only for a non-Gregorian calendar axis:
+        # its coord array is engine-owned and always fully materialized (see
+        # the R1 fix in `_materialize_regular_encoded_coord_array`), so an
+        # empty data-slot window is a legitimate "prep the store, materialize
+        # the calendar, do zero data slots on this call" workflow. Every
+        # other axis still requires start < end because there is nothing to
+        # preallocate.
+        is_calendar_axis = isinstance(axis, RegularTimeAxis) and not is_gregorian_axis(axis)
+        if start > end or (start == end and not is_calendar_axis):
             raise click.UsageError(f"--slot-start must be < --slot-end, got [{start}, {end})")
         if end > group_size:
             raise click.UsageError(
@@ -815,6 +826,16 @@ def _emit_preallocate_dry_run(
         slot_end=slot_end,
         slot_group=slot_group,
     )
+    # Reuse the calendar-decoding helper that ``firecube zarr index show
+    # --derived`` uses (see ``_derived_coordinates_for_group`` in
+    # ``firecube.cli.index``). Both surfaces render encoded calendar coord
+    # values as ISO 8601 strings on the axis's own calendar, so they must
+    # agree byte-for-byte on the format: the helper is imported rather than
+    # duplicated to keep them locked together. Kept local to the dry-run
+    # emitter so it is only paid for when a calendar axis is actually
+    # previewed.
+    from firecube.cli.index import _decoded_calendar_isoformats
+
     for group_name, (start, end) in windows.items():
         axis = resolved_index.axis_for(group_name)
         if not isinstance(axis, RegularTimeAxis):
@@ -825,12 +846,39 @@ def _emit_preallocate_dry_run(
             continue
         policy = effective_regular_time_policy(axis)
         if policy == "grid":
-            first = resolved_index.coordinate(group_name, start)
-            last = resolved_index.coordinate(group_name, end - 1)
+            group_size = int(resolved_index.size(group_name))
+            is_full_grid = start == 0 and end == group_size
+            is_calendar_axis = not is_gregorian_axis(axis)
+            calendar_window_suffix = (
+                "; window not applied to calendar coordinate"
+                if is_calendar_axis and not is_full_grid
+                else ""
+            )
+            first: Any = resolved_index.coordinate(group_name, start) if end > start else None
+            last: Any = resolved_index.coordinate(group_name, end - 1) if end > start else None
+            if is_calendar_axis and end > start:
+                # Calendar axes: render encoded coord values as ISO 8601 dates
+                # on the axis's own calendar so operators can see the actual
+                # calendar-day the window spans, not the raw ``n * cadence_s``
+                # seconds. Gregorian axes fall through unchanged; the
+                # ``resolved_index.coordinate`` return there is already a
+                # ``numpy.datetime64`` whose ``str()`` is human-readable.
+                units = axis.encoded_units
+                calendar = axis.calendar
+                # Both are non-None here because ``is_calendar_axis`` is True,
+                # i.e. the axis's calendar is not Gregorian-like, and
+                # ``encoded_units`` is only unset for a Gregorian-like axis.
+                assert units is not None and calendar is not None
+                iso_first, iso_last = _decoded_calendar_isoformats(
+                    [first, last], units=units, calendar=calendar
+                )
+                first = f"{iso_first} ({calendar})"
+                last = f"{iso_last} ({calendar})"
             click.echo(
                 f"group {group_name}: window [{start}, {end}); policy=grid; "
                 f"items_in_window={end - start}; first={first}; last={last}; "
-                f"would write nominal grid values and stamp {ATTR_PREALLOCATED}",
+                f"would write nominal grid values and stamp "
+                f"{ATTR_PREALLOCATED}{calendar_window_suffix}",
                 err=True,
             )
             continue

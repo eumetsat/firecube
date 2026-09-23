@@ -24,7 +24,12 @@ from typing import Any
 
 import numpy as np
 
-__all__ = ["decode_or_passthrough", "decode_time_array", "encode_time_array"]
+__all__ = [
+    "decode_or_passthrough",
+    "decode_time_array",
+    "encode_time_array",
+    "missing_time_mask",
+]
 
 
 def _xarray_time_codecs() -> tuple[Callable[..., Any], Callable[..., Any]]:
@@ -34,16 +39,28 @@ def _xarray_time_codecs() -> tuple[Callable[..., Any], Callable[..., Any]]:
 
 
 def decode_time_array(values: np.ndarray, attrs: Mapping[str, Any]) -> np.ndarray:
-    """Return a ``datetime64`` array decoded from *values* using *attrs*.
+    """Decode *values* into a time array using the CF ``units``/``calendar`` in *attrs*.
 
-    The decoded array preserves its native resolution rather than being forced
-    to a fixed granularity. Coverage bounds and dedup keys are derived from this
-    output, so coarsening to seconds here would silently collapse distinct
-    sub-second timestamps into one (corrupting dedup/coverage); coarsening is
-    therefore left to the storage layer, which owns the on-disk precision
-    contract. The resolution that ``decode_cf_datetime`` selects is range-aware,
-    so this also avoids forcing a finer unit that could overflow for
-    out-of-range epochs.
+    For a Gregorian-compatible calendar whose decoded range fits inside
+    ``datetime64``, the result is a ``datetime64`` array that preserves its
+    native decoded resolution rather than being forced to a fixed granularity.
+    Coverage bounds and dedup keys are derived from this output, so coarsening
+    to seconds here would silently collapse distinct sub-second timestamps into
+    one (corrupting dedup/coverage); coarsening is therefore left to the
+    storage layer, which owns the on-disk precision contract. The resolution
+    that ``decode_cf_datetime`` selects is range-aware, so this also avoids
+    forcing a finer unit that could overflow for out-of-range epochs.
+
+    For any other calendar (for example ``360_day`` or ``noleap``), and for a
+    Gregorian calendar whose decoded values fall outside the range
+    ``datetime64`` can represent, xarray's CF decoder instead returns an
+    object array (``dtype.kind == "O"``) of calendar-valued scalars, the same
+    ``cftime`` instances xarray produces with ``use_cftime=True``. Callers that
+    branch on this array's dtype, such as ordering checks, missing-value
+    detection, or coverage-bounds tracking, must handle both shapes.
+    ``decode_time_array`` never imports ``cftime`` itself and never raises to
+    force one shape over the other; it returns whatever xarray's decoder
+    produces for the given ``units``/``calendar``.
     """
 
     values = np.asarray(values)
@@ -74,6 +91,32 @@ def decode_time_array(values: np.ndarray, attrs: Mapping[str, Any]) -> np.ndarra
         f"Cannot decode time array with dtype {values.dtype!r}: not a datetime64 or "
         "a numeric type with 'units' containing 'since'."
     )
+
+
+def missing_time_mask(values: np.ndarray) -> np.ndarray:
+    """Return a boolean missing-value mask for a *decoded* time-like array.
+
+    Handles every shape :func:`decode_or_passthrough` can return: ``datetime64``
+    (``NaT``, via ``np.isnat``), an object array of calendar-valued scalars as
+    :func:`decode_time_array` returns for a non-standard or out-of-range
+    calendar (a missing slot is ``None`` or a float ``NaN`` element, since
+    numpy's ``isnan``/``isnat`` ufuncs reject object dtype). Any other dtype is
+    not time-like and reports no missing slots: a caller that treats ``NaN`` as
+    missing in a numeric passthrough array must test for it itself.
+    """
+
+    array = np.asarray(values)
+    if array.dtype.kind == "M":
+        return np.isnat(array)
+    if array.dtype.kind == "O":
+        flat = array.reshape(-1)
+        mask = np.fromiter(
+            (item is None or (isinstance(item, float) and np.isnan(item)) for item in flat),
+            dtype=bool,
+            count=flat.size,
+        )
+        return mask.reshape(array.shape)
+    return np.zeros(array.shape, dtype=bool)
 
 
 def decode_or_passthrough(values: np.ndarray, attrs: Mapping[str, Any]) -> np.ndarray:

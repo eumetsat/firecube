@@ -128,6 +128,7 @@ nav:
     - Write Zarr Regions In Parallel:
       - Declare The Schema And Index: guides/plugins/direct-zarr.md
       - Discover The Time Axis: guides/plugins/direct-zarr-auto.md
+      - Declare A Calendar: guides/plugins/declare-a-calendar.md
     - Develop Further:
       - Add Configuration Options: guides/plugins/add-config-options.md
       - Add Telemetry: guides/plugins/observability.md

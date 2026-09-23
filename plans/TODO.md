@@ -5,6 +5,66 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 ## Active Work
 
+### Calendar-declared time axes - follow-ups (updated 2026-09-23)
+
+**Status**: OPEN; none started.
+
+**Non-goals for this version**, each rejected loudly rather than
+half-supported: `mode="floor"` (observed sensing times) with a
+non-Gregorian calendar; `end_date` with a non-Gregorian calendar (use
+`slot_count`); `firecube zarr consolidate-time-coord` on an encoded
+coordinate (it already refuses non-`datetime64` arrays cleanly); units
+other than the derived ones on a regular axis; a non-Gregorian calendar on
+a serial-mode `DirectZarrIngestor` (no `index_spec` declared).
+
+- **`mode="floor"` (observed placement) with a non-Gregorian calendar.**
+  Blocked, not merely undone: xarray decodes a fill value in a float64
+  non-Gregorian coordinate to a valid-looking date instead of a missing
+  value, and an int64 fill value fails to open the store outright. Either
+  failure mode defeats the "fully materialized before any reader opens
+  it" requirement a non-Gregorian coordinate has today. Needs an upstream
+  fill-masking fix before observed placement can support a
+  partially-written non-Gregorian coordinate.
+- **`end_date=` with a non-Gregorian calendar.** Small: parsing an
+  `end_date` string in the axis's own calendar (instead of only accepting
+  a slot count) is algebraically equivalent to `slot_count=` for a fixed
+  cadence and does not touch the fully-materialized-up-front requirement.
+- **Serial-mode `DirectZarrIngestor` (no `index_spec`) with a
+  non-Gregorian calendar.** Not supported: there is no axis to declare a
+  calendar on, so a calendar-shaped value is refused loudly instead of
+  being silently re-read as Gregorian. The documented path is to declare
+  an `index_spec` (opting into indexed mode) instead of staying serial.
+- An optional, source-matching encoding unit on a fixed-cadence
+  non-Gregorian axis, instead of always deriving it from the axis's
+  reference point.
+- Consolidating an already fully-materialized, encoded-number time
+  coordinate into a denser chunk layout. Today that command is a no-op for
+  a non-Gregorian axis because the coordinate is already dense from
+  preallocation; a genuine use case (e.g. a legacy sparse layout) would
+  need its own encode/decode-aware path.
+- **Encoded storage for every calendar, Gregorian included (next minor).**
+  Today only a non-Gregorian calendar stores its coordinate as an encoded
+  number; a Gregorian axis stays `datetime64` for byte compatibility with
+  every existing store. Moving every calendar onto one storage
+  representation is plausible next-minor work, but the per-group identity
+  hash would need to embed the coordinate's dtype string to keep
+  distinguishing declarations that differ only in storage representation.
+  That needs a schema version bump, a period of dual acceptance (reading
+  both the old and the new persisted-record shape), and a migration
+  command for existing stores.
+- **Archive and restore losing time-coordinate CF encoding.** `firecube
+  archive` refuses a non-Gregorian store today as a stopgap; the archive
+  format does not carry `units`/`calendar`/dtype through serialize and
+  restore. The real fix is to serialize the time coordinate's encoding
+  into the archive's own metadata and reapply it on restore, then lift
+  the refusal. Related to the general archive-restore metadata-loss item
+  elsewhere in this file.
+- **Eager `xarray` import on every plugin's import path.** The core Zarr
+  I/O module imports `xarray` at module import time rather than lazily,
+  the way the time-decode helper does. Every plugin pays that import cost
+  even when it never touches Zarr I/O directly; fold it into a lazy-import
+  pass rather than fixing it as a one-off during calendar work.
+
 ### Generic numeric flag helpers (2026-09-12)
 
 **Status**: FUTURE; no implementation in the current core-readiness work.
@@ -611,6 +671,20 @@ bundled (they change a safety check's timing / touch a separate path):
 **Effort:** Medium (3-5 days). Touches `DirectZarrIngestor` schema-hash logic, default codec injection, drift-error surface, and documentation. The cold-migration boundary is subtle and requires explicit tests.
 
 ---
+
+### Archive of a region-written (DirectZarr) Zarr cube fails
+
+`firecube archive create` fails with `cannot convert datetime64 to CBOR` on
+any cube whose time coordinate was materialized by the region writer: the
+converter copies the coordinate's raw zarr fill value (a `datetime64` NaT)
+into the archive metadata, which the archive encoder cannot serialise. Cubes
+written by the append template are unaffected because xarray CF-encodes
+their time coordinate to integers with an integer fill value, which is why
+the existing archive tests never hit it. Reproduces on v0.1.7. Fix: encode a
+`NaT`/`NaN` fill value in a serialisable form in the archive metadata and
+map it back on restore; add the region-written cube to the archive tests.
+Pinned by `tests/integration/test_maintenance_paths_calendar_regression.py::test_archive_create_gregorian_direct_zarr_store`
+(strict xfail until fixed).
 
 ### Ingest performance
 

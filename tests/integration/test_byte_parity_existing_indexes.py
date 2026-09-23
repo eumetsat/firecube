@@ -181,3 +181,22 @@ class TestResolvedIndexBytesUnchanged:
         ):
             payload = resolved.canonical_index_payload()
             assert hashlib.sha256(canonical_index_bytes(payload)).hexdigest() == expected_hash
+
+    def test_explicit_proleptic_gregorian_calendar_matches_opera_golden(self) -> None:
+        # An explicit calendar="proleptic_gregorian" is the same declared
+        # Gregorian time as the default (unset) calendar -- it must produce
+        # the exact same golden bytes and hash, with no "calendar" key.
+        axis = RegularTimeAxis(
+            coordinate="time",
+            epoch="2026-01-01T00:00:00Z",
+            cadence_s=300,
+            mode="exact",
+            slot_count=288,
+            calendar="proleptic_gregorian",
+        )
+        resolved = resolve_index_spec(
+            IndexSpec(name="opera_v1_resolved", groups={"data": axis}),
+            time_dim_name="time",
+        )
+        assert canonical_index_bytes(resolved.canonical_index_payload()) == OPERA_RESOLVED_BYTES
+        assert resolved.identity_hash == OPERA_RESOLVED_HASH

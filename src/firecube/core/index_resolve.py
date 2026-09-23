@@ -32,6 +32,7 @@ from typing import Any, Protocol, cast, runtime_checkable
 
 import numpy as np
 
+from firecube.core import encoded_time as _encoded_time
 from firecube.core.controlplane.types import (
     ItemManifestEntry,
     ResolvedIndexRecord,
@@ -45,6 +46,7 @@ from firecube.core.index_spec import (
     IrregularTimeAxis,
     RegularTimeAxis,
     _canonical_coordinate_value,
+    _canonicalise_irregular_value,
 )
 from firecube.core.slot_index import (
     SlotAxis,
@@ -114,45 +116,7 @@ def coerce_to_epoch_s(value: Any, *, mode: str = "floor") -> int:
         TypeError: If ``value`` is not one of the accepted types.
         ValueError: In ``"exact"`` mode, if the value has sub-second precision.
     """
-    import pandas as pd  # lazy import: keep at function scope to defer import cost
-
-    if isinstance(value, str):
-        return iso_to_epoch_s(value)
-
-    if isinstance(value, pd.Timestamp):
-        if value.tz is None:
-            value = value.tz_localize("UTC")
-        else:
-            value = value.tz_convert("UTC")
-        ts = value.timestamp()
-        if mode == "exact" and ts != int(ts):
-            raise ValueError(
-                f"coordinate {value!r} has sub-second precision; "
-                "use mode='floor' or provide a whole-second value"
-            )
-        return int(ts)
-
-    if isinstance(value, dt.datetime):
-        if value.tzinfo is None:
-            # Default: naive datetime treated as UTC (FCI pattern)
-            value = value.replace(tzinfo=dt.UTC)
-        else:
-            value = value.astimezone(dt.UTC)
-        ts = value.timestamp()
-        if mode == "exact" and ts != int(ts):
-            raise ValueError(
-                f"coordinate {value!r} has sub-second precision; "
-                "use mode='floor' or provide a whole-second value"
-            )
-        return int(ts)
-
-    if isinstance(value, np.datetime64):
-        return int(value.astype("datetime64[s]").astype("int64"))
-
-    raise TypeError(
-        "coordinate must be str, datetime, numpy.datetime64, or pandas.Timestamp; "
-        f"got {type(value).__name__!r}"
-    )
+    return _encoded_time.coerce_to_epoch_s(value, mode=mode)
 
 
 @dataclass(frozen=True)
@@ -194,42 +158,90 @@ class RegularTimeResolver:
     def position(self, coordinate: Any) -> int:
         """Map a coordinate value to its zero-based slot index.
 
+        Encodes *coordinate* through `encode_coordinate` against the axis's
+        derived ``units``/``calendar`` -- the single arithmetic entry point
+        for every calendar, Gregorian included -- then applies the
+        predates-epoch and cadence-alignment checks in that encoded domain.
+
         Args:
-            coordinate: The coordinate value (datetime, ISO string, etc.).
+            coordinate: The coordinate value. For a Gregorian-like axis
+                (default ``calendar="proleptic_gregorian"``): datetime, ISO
+                string, etc. For a non-Gregorian axis: a calendar-valued
+                object on the axis calendar (e.g. a ``cftime`` instance), or
+                an already-encoded number.
 
         Returns:
             Zero-based slot index.
 
         Raises:
             ValueError: If the coordinate predates the epoch, or (in exact
-                mode) is not cadence-aligned.
+                mode) is not cadence-aligned. For a non-Gregorian axis, also
+                if the encoded value is not integral.
         """
-        ts_s = coerce_to_epoch_s(coordinate, mode=self.axis.mode)
-        epoch_s = self._epoch_s
-        if ts_s < epoch_s:
-            raise ValueError(f"coordinate {coordinate!r} predates epoch {self.axis.epoch!r}")
-        raw = ts_s - epoch_s
-        index, rem = divmod(raw, self.axis.cadence_s)
-        if self.axis.mode == "exact" and rem != 0:
+        from firecube.core.encoded_time import encode_coordinate, is_gregorian_like
+
+        calendar = self.axis.calendar
+        units = self.axis.encoded_units
+        encoded = encode_coordinate(coordinate, units=units, calendar=calendar, mode=self.axis.mode)
+
+        if is_gregorian_like(calendar):
+            # Gregorian-like: `encoded` is already whole seconds offset from
+            # the axis epoch (the Gregorian fast path in `encode_coordinate`
+            # subtracts the axis's own units-epoch), so the check below is
+            # the same arithmetic `raw = ts_s - epoch_s` always was -- just
+            # computed inside `encode_coordinate` instead of here.
+            assert isinstance(encoded, int)  # Gregorian fast path always returns whole seconds
+            epoch_s = self._epoch_s
+            if encoded < 0:
+                raise ValueError(f"coordinate {coordinate!r} predates epoch {self.axis.epoch!r}")
+            index, rem = divmod(encoded, self.axis.cadence_s)
+            if self.axis.mode == "exact" and rem != 0:
+                raise ValueError(
+                    f"coordinate {coordinate!r} is not cadence-aligned "
+                    f"(mode=exact, cadence={self.axis.cadence_s}s; "
+                    "nearest slot boundaries: "
+                    f"{epoch_s_to_iso(epoch_s + index * self.axis.cadence_s)!r}, "
+                    f"{epoch_s_to_iso(epoch_s + (index + 1) * self.axis.cadence_s)!r})"
+                )
+            return int(index)
+
+        if not isinstance(encoded, int):
             raise ValueError(
-                f"coordinate {coordinate!r} is not cadence-aligned "
-                f"(mode=exact, cadence={self.axis.cadence_s}s; "
-                "nearest slot boundaries: "
-                f"{epoch_s_to_iso(epoch_s + index * self.axis.cadence_s)!r}, "
-                f"{epoch_s_to_iso(epoch_s + (index + 1) * self.axis.cadence_s)!r})"
+                f"coordinate {coordinate!r} encodes to non-integral value {encoded!r} "
+                f"(units={units!r}, calendar={calendar!r}); calendar axes require "
+                "whole-second alignment"
+            )
+        if encoded < 0:
+            raise ValueError(f"coordinate {coordinate!r} predates epoch {self.axis.epoch!r}")
+        index, remainder = divmod(encoded, self.axis.cadence_s)
+        if remainder != 0:
+            lo = index * self.axis.cadence_s
+            hi = (index + 1) * self.axis.cadence_s
+            raise ValueError(
+                f"coordinate {coordinate!r} encodes to {encoded} (units={units!r}, "
+                f"calendar={calendar!r}), which is not cadence-aligned "
+                f"(mode=exact, cadence={self.axis.cadence_s}s; nearest slot boundaries: "
+                f"{lo}, {hi})"
             )
         return int(index)
 
-    def coordinate(self, index: int) -> np.datetime64:
+    def coordinate(self, index: int) -> np.datetime64 | int:
         """Map a slot index to its coordinate value.
 
         Args:
             index: Zero-based slot index.
 
         Returns:
-            ``numpy.datetime64`` in seconds resolution.
+            ``numpy.datetime64`` in seconds resolution for a Gregorian-like
+            axis; the Python ``int`` ``index * cadence_s`` for a
+            non-Gregorian axis (the exact value stored in the encoded
+            coordinate array).
         """
-        return np.datetime64(self._epoch_s + index * self.axis.cadence_s, "s")
+        from firecube.core.encoded_time import is_gregorian_like
+
+        if is_gregorian_like(self.axis.calendar):
+            return np.datetime64(self._epoch_s + index * self.axis.cadence_s, "s")
+        return int(index) * self.axis.cadence_s
 
 
 @dataclass(frozen=True)
@@ -315,6 +327,9 @@ class IrregularTimeResolver:
     def position(self, coordinate: Any) -> int:
         # O(n) scan; acceptable for hundreds of items. For tens of thousands,
         # replace with a cached dict[value, index] lookup.
+        coordinate = _canonicalise_irregular_value(
+            coordinate, calendar=self.axis.calendar, units=self.axis.units
+        )
         try:
             return self._values().index(coordinate)
         except ValueError as exc:
@@ -423,6 +438,7 @@ class ResolvedIndex:
                     mode=axis.mode,
                     end_date=axis.end_date,
                     slot_count=axis.slot_count,
+                    calendar=axis.calendar,
                 )
                 continue
             if isinstance(axis, IntegerAxis):
@@ -432,7 +448,12 @@ class ResolvedIndex:
                 values = axis.values
                 if values is AUTO:
                     raise ExtentUnknownError("irregular axis has no explicit values")
-                spec_groups[group] = IrregularTimeAxis(coordinate=axis.coordinate, values=values)
+                spec_groups[group] = IrregularTimeAxis(
+                    coordinate=axis.coordinate,
+                    values=values,
+                    calendar=axis.calendar,
+                    units=axis.units,
+                )
                 continue
             raise NotImplementedError(
                 f"No filtered spec reconstruction for axis type {type(axis).__name__!r}"
@@ -441,7 +462,16 @@ class ResolvedIndex:
         return IndexSpec(name=self._name, groups=spec_groups, time_unit=self._time_unit)
 
     def canonical_index_payload(self) -> dict[str, Any]:
-        """Return the canonical resolved-index payload."""
+        """Return the canonical resolved-index payload.
+
+        A Gregorian-like ``calendar`` (the default) carries no ``calendar``
+        key in the emitted payload -- Gregorian time is stored as
+        ``datetime64`` and has no CF-encoding params of its own. A
+        non-Gregorian ``calendar`` emits ``calendar`` (and, for an irregular
+        axis, ``units``).
+        """
+
+        from firecube.core.encoded_time import is_gregorian_like
 
         groups: dict[str, dict[str, Any]] = {}
         for group in self._groups:
@@ -455,6 +485,8 @@ class ResolvedIndex:
                 }
                 if axis.end_date is not None:
                     params["end_date"] = axis.end_date
+                if not is_gregorian_like(axis.calendar):
+                    params["calendar"] = axis.calendar
                 try:
                     size: int | None = resolver.size
                 except ExtentUnknownError:
@@ -472,16 +504,19 @@ class ResolvedIndex:
                 values = axis.values
                 if values is AUTO:
                     raise ExtentUnknownError("irregular axis has no explicit values")
+                irregular_params: dict[str, Any] = {
+                    "coordinate": axis.coordinate,
+                    "values": [
+                        _canonical_coordinate_value(value) for value in cast(Sequence[Any], values)
+                    ],
+                }
+                if not is_gregorian_like(axis.calendar):
+                    irregular_params["calendar"] = axis.calendar
+                    irregular_params["units"] = axis.units
                 groups[group] = {
                     "kind": "irregular_time",
                     "size": resolver.size,
-                    "params": {
-                        "coordinate": axis.coordinate,
-                        "values": [
-                            _canonical_coordinate_value(value)
-                            for value in cast(Sequence[Any], values)
-                        ],
-                    },
+                    "params": irregular_params,
                 }
                 continue
             raise NotImplementedError(
@@ -565,18 +600,24 @@ class ResolvedIndex:
     def as_legacy_slot_index_model(self) -> SlotIndexModel | None:
         """Build a ``SlotIndexModel`` for byte-parity with existing cubes.
 
-        Returns non-None ONLY when every axis is a ``RegularTimeAxis``.
-        Mixed-kind specs return ``None``; persistence for those
-        specs is handled by a future release.
+        Returns non-None ONLY when every axis is a ``RegularTimeAxis`` with
+        a Gregorian-like ``calendar``. Mixed-kind specs, and specs with any
+        non-Gregorian axis, return ``None``: the legacy model has no
+        calendar field, and a non-Gregorian axis's ``epoch`` may not even be
+        a valid Gregorian date, so it cannot be round-tripped through
+        `normalize_epoch_iso`. Persistence for those specs is handled
+        elsewhere (the resolved-index payload).
 
         Returns:
             A ``SlotIndexModel`` byte-identical to what the legacy mixin
-            produced, or ``None`` for non-regular specs.
+            produced, or ``None`` for non-regular or non-Gregorian specs.
         """
+        from firecube.core.encoded_time import is_gregorian_like
+
         groups: dict[str, SlotAxis] = {}
         for group in self._groups:
             axis = self._spec.groups[group]
-            if not isinstance(axis, RegularTimeAxis):
+            if not isinstance(axis, RegularTimeAxis) or not is_gregorian_like(axis.calendar):
                 return None
             groups[group] = SlotAxis(cadence_s=axis.cadence_s, mode=axis.mode)
 
@@ -699,18 +740,32 @@ def _compute_group_identity_hash(
         >>> len(hash_a)
         64
     """
+    from firecube.core.encoded_time import is_gregorian_axis
+
     if isinstance(axis, RegularTimeAxis) or (
         hasattr(axis, "epoch") and hasattr(axis, "cadence_s") and hasattr(axis, "mode")
     ):
         regular_axis = cast(RegularTimeAxis, axis)
+        calendar = getattr(regular_axis, "calendar", None)
+        axis_is_gregorian = is_gregorian_axis(regular_axis)
+        # A non-Gregorian epoch may not be a valid Gregorian date (e.g.
+        # "1850-02-30T00:00:00Z" in 360_day), so it cannot go through the
+        # Gregorian-parsing `normalize_epoch_iso`; the raw, already
+        # UTC-explicit epoch string is used verbatim instead. Gregorian-like
+        # (the default) keeps the exact prior behaviour.
+        epoch_repr = (
+            normalize_epoch_iso(regular_axis.epoch) if axis_is_gregorian else regular_axis.epoch
+        )
         payload: dict[str, Any] = {
             "kind": "regular_time",
             "mode": regular_axis.mode,
-            "epoch": normalize_epoch_iso(regular_axis.epoch),
+            "epoch": epoch_repr,
             "cadence_s": int(regular_axis.cadence_s),
             "resolved_size": int(resolved_size),
             "dtype": str(np.dtype(dtype)),
         }
+        if not axis_is_gregorian:
+            payload["calendar"] = calendar
     elif isinstance(axis, IrregularTimeAxis) or (
         hasattr(axis, "values") and hasattr(axis, "coordinate")
     ):
@@ -721,6 +776,11 @@ def _compute_group_identity_hash(
             "resolved_size": int(resolved_size),
             "dtype": str(np.dtype(dtype)),
         }
+        if not is_gregorian_axis(irregular_axis):
+            payload["calendar"] = getattr(irregular_axis, "calendar", None)
+            irregular_units = getattr(irregular_axis, "units", None)
+            if irregular_units is not None:
+                payload["units"] = irregular_units
     elif isinstance(axis, IntegerAxis) or hasattr(axis, "slot_count"):
         payload = {
             "kind": "integer",

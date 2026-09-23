@@ -133,3 +133,79 @@ def test_duplicate_filled_values_beside_nat_slots_are_still_invalid(tmp_path: Pa
 
     assert report.is_valid is False
     assert any("duplicate" in issue.lower() for issue in report.validity_issues)
+
+
+def _seed_encoded_calendar_group(store_path: Path, *, values: np.ndarray) -> None:
+    """Seed a group whose time coordinate is CF-encoded on a non-Gregorian calendar.
+
+    The coordinate is int64 with ``units``/``calendar`` attributes and the
+    int64 minimum as its fill value, the layout ``firecube zarr preallocate``
+    writes for a calendar axis. ``values`` may contain that fill value to
+    stand for never-written slots.
+    """
+    fill = np.iinfo(np.int64).min
+    root = zarr.open_group(store=str(store_path), mode="w", zarr_format=3)
+    group = root.require_group("G")
+    coord = group.create_array(
+        "timestamp",
+        shape=(len(values),),
+        chunks=(2,),
+        dtype=np.int64,
+        fill_value=fill,
+        dimension_names=("timestamp",),
+        attributes={
+            "standard_name": "time",
+            "axis": "T",
+            "units": "seconds since 1850-01-01 00:00:00",
+            "calendar": "360_day",
+        },
+    )
+    coord[:] = values
+    group.create_array(
+        "firecube_timestamp_state",
+        data=np.ones(len(values), dtype=np.uint8),
+        chunks=(2,),
+        dimension_names=("timestamp",),
+    )
+    data = group.create_array(
+        "data",
+        shape=(len(values), 2),
+        chunks=(2, 2),
+        dtype=np.float32,
+        fill_value=0.0,
+        dimension_names=("timestamp", "x"),
+    )
+    data[:] = np.arange(len(values) * 2, dtype=np.float32).reshape(len(values), 2)
+
+
+def test_encoded_calendar_coordinate_with_fill_slots_is_valid(tmp_path: Path) -> None:
+    """Unwritten slots of an encoded calendar coordinate hold the int64 fill value.
+
+    Two such slots are absent, not duplicates: the validator must not report
+    them as repeated values.
+    """
+    fill = np.iinfo(np.int64).min
+    store_path = tmp_path / "encoded-fill.zarr"
+    _seed_encoded_calendar_group(
+        store_path, values=np.array([0, 86400, fill, fill, 4 * 86400], dtype=np.int64)
+    )
+
+    report = _validate(store_path)
+
+    assert report.is_valid is True
+    assert report.validity_issues == []
+
+
+def test_encoded_calendar_coordinate_duplicates_beside_fill_slots_are_invalid(
+    tmp_path: Path,
+) -> None:
+    fill = np.iinfo(np.int64).min
+    store_path = tmp_path / "encoded-duplicate.zarr"
+    _seed_encoded_calendar_group(
+        store_path, values=np.array([0, 86400, fill, 86400, 4 * 86400], dtype=np.int64)
+    )
+
+    report = _validate(store_path)
+
+    assert report.is_valid is False
+    assert any("duplicate" in issue.lower() for issue in report.validity_issues)

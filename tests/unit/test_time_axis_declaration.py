@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import datetime as dt
 
+import cftime
 import pytest
 
 from firecube.core.api import (
@@ -153,3 +154,56 @@ class TestTimeAxisFacade:
     def test_serial_mode_declaration_needs_no_extent(self) -> None:
         axis = TimeAxis.observed(coordinate="time", epoch=_EPOCH, cadence_s=_CADENCE_S)
         assert axis.slot_count is None and axis.end_date is None
+
+    def test_grid_matches_raw_calendar_declaration(self) -> None:
+        via_facade = TimeAxis.grid(
+            coordinate="time",
+            epoch="2049-01-01T12:00:00Z",
+            cadence_s=86400,
+            slot_count=90,
+            calendar="360_day",
+        )
+        raw = RegularTimeAxis(
+            coordinate="time",
+            epoch="2049-01-01T12:00:00Z",
+            cadence_s=86400,
+            mode="exact",
+            slot_count=90,
+            calendar="360_day",
+        )
+        assert via_facade == raw
+        assert _identity(via_facade) == _identity(raw)
+
+    def test_observed_has_no_calendar_keyword(self) -> None:
+        # A calendar coordinate must be fully materialized before any value
+        # is known (see RegularTimeAxis docs), which floor/observed mode
+        # cannot guarantee; the facade does not offer the keyword at all.
+        with pytest.raises(TypeError, match="calendar"):
+            TimeAxis.observed(
+                coordinate="time",
+                epoch=_EPOCH,
+                cadence_s=_CADENCE_S,
+                slot_count=_SLOTS,
+                calendar="360_day",  # type: ignore[call-arg]
+            )
+
+    def test_explicit_matches_raw_calendar_declaration(self) -> None:
+        units = "seconds since 2049-01-01 00:00:00"
+        values = (
+            cftime.Datetime360Day(2049, 1, 1, 0, 0, 0),
+            cftime.Datetime360Day(2049, 1, 3, 0, 0, 0),
+        )
+        via_facade = TimeAxis.explicit(
+            coordinate="time", values=values, calendar="360_day", units=units
+        )
+        raw = IrregularTimeAxis(coordinate="time", values=values, calendar="360_day", units=units)
+        assert via_facade == raw
+        assert via_facade.values == (0, 172800)
+
+    def test_discovered_matches_raw_calendar_auto_declaration(self) -> None:
+        units = "seconds since 2049-01-01 00:00:00"
+        axis = TimeAxis.discovered(coordinate="time", calendar="360_day", units=units)
+        assert isinstance(axis, IrregularTimeAxis)
+        assert axis.values is AUTO
+        assert axis.calendar == "360_day"
+        assert axis.units == units

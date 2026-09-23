@@ -19,10 +19,17 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, cast
 
+import numpy as np
 import pytest
 
 from firecube.core.errors import IndexedWriteCompilationError
-from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+from firecube.core.index_resolve import resolve_index_spec
+from firecube.core.index_spec import IndexSpec, IrregularTimeAxis
+from firecube.ingestor.templates.direct_zarr import (
+    DirectZarrIngestor,
+    IndexedWrite,
+    _compile_indexed_write,
+)
 
 
 def test_compilation_error_fields() -> None:
@@ -80,3 +87,35 @@ def test_abstract_error_fires_when_neither_hook_overridden() -> None:
     message = str(excinfo.value)
     assert "build_write_intents" in message
     assert "WriteIntent and IndexedWrite" in message
+
+
+def test_str_message_carries_both_the_prefix_and_the_chained_cause() -> None:
+    """``str(err)`` (not just ``err.reason``) must show the resolver failure that
+    caused compilation to refuse the coordinate, end to end through a real
+    ``_compile_indexed_write`` failure."""
+    spec = IndexSpec(
+        name="cause-in-message-test",
+        groups={
+            "data": IrregularTimeAxis(
+                coordinate="timestamp",
+                values=(np.datetime64("2024-01-01T00:00:00", "ns"),),
+            )
+        },
+    )
+    idx = resolve_index_spec(spec, time_dim_name="timestamp")
+    iw = IndexedWrite.slot(
+        group="data",
+        array="counts",
+        coordinate="2099-12-31T00:00:00Z",
+        data=np.zeros((4,)),
+    )
+
+    with pytest.raises(IndexedWriteCompilationError) as excinfo:
+        _compile_indexed_write(iw, idx)
+
+    err = excinfo.value
+    message = str(err)
+    assert "IndexedWrite compilation failed" in message
+    assert "coordinate not in resolved index for group 'data'" in message
+    assert err.__cause__ is not None
+    assert f"{type(err.__cause__).__name__}: {err.__cause__}" in message

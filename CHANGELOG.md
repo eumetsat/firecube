@@ -7,6 +7,63 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `RegularTimeAxis` and `IrregularTimeAxis` accept an optional `calendar`
+  (and, on the irregular axis, `units`) for a time axis whose source is not
+  on the Gregorian calendar. A calendar-declared coordinate is stored as
+  CF-encoded numbers instead of `datetime64`, so readers decode it in that
+  calendar. `firecube zarr preallocate` must run before the first ingest
+  into a calendar-declared group; ingesting into one before preallocate has
+  run is refused.
+
+### Changed
+
+- `IndexedWriteCompilationError`'s message now includes the underlying
+  cause of a coordinate resolution failure, not just the coordinate that
+  could not be resolved.
+- `firecube zarr preallocate` always writes the full coordinate grid for a
+  regular calendar-declared time axis; the report line and `--dry-run`
+  output name explicitly when a slot window was not applied.
+- Every time axis now has a calendar: `calendar` defaults to
+  `"proleptic_gregorian"`, and `"standard"`/`"gregorian"` are accepted
+  aliases of it. Declaring one of those names, or leaving `calendar`
+  unset, produces the same store, byte for byte, as every prior release:
+  `datetime64`, no `units`/`calendar` array attributes, no change to
+  stored bytes or identity hashes. A date before 1582-10-15 on a Gregorian
+  axis follows the proleptic rule (the Gregorian calendar extended
+  backward), not the CF mixed Julian/Gregorian calendar; an ISO string,
+  `datetime`, `numpy.datetime64`, or `pandas.Timestamp` handed to
+  `inspect_item` on a Gregorian axis keeps working exactly as before.
+
+### Fixed
+
+- A staged (dataset-append) time coordinate that decodes to calendar-valued
+  objects (a non-Gregorian calendar) no longer crashes a second ingest run
+  and no longer records null coverage bounds for that run.
+- A calendar-shaped coordinate value on a calendar the axis does not
+  declare (including a plain Gregorian `datetime`, `numpy.datetime64`, or
+  string handed to a calendar-declared axis) is now refused instead of
+  being silently re-read as Gregorian time.
+- The startup check that refuses ingestion into a calendar-declared group
+  whose coordinate has not been preallocated now always inspects the final
+  target URI regardless of `--write-mode`. Previously, a staged ingest
+  would probe the workspace path (not yet seeded at startup) and falsely
+  refuse every staged calendar ingest even when the final target was
+  correctly preallocated.
+- At ingest startup, an error opening the target store (missing
+  credentials, a throttled or unreachable endpoint) is now reported as
+  that error. Previously it was treated as "store does not exist": for
+  a calendar-declared group that produced a misleading "must be
+  preallocated" message, and for a mixed bounded/unbounded index the
+  per-group identity check was skipped silently.
+- `firecube archive` now refuses a store whose time coordinate is on a
+  non-Gregorian calendar instead of silently dropping the coordinate; the
+  archive format does not carry CF time encoding yet.
+- `firecube zarr validate` now treats an encoded (non-Gregorian) time
+  coordinate's fill value as missing, the same way it already treats
+  `NaT` on a `datetime64` coordinate.
+
 ## [0.1.7] - 2026-09-19
 
 ### Added

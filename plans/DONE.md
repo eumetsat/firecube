@@ -1,5 +1,88 @@
 # Done
 
+## 2026-09-23 - Calendar as a property of every time axis
+
+**Context:** A time axis on the direct write path always resolved and
+stored coordinates in the Gregorian calendar, even when the source used a
+different day-counting calendar. A plugin handing over calendar-shaped
+values on such a calendar was silently re-read as Gregorian, producing a
+store with plausible but wrong dates and no error, and a staged
+(dataset-append) time coordinate on such a calendar crashed the second
+ingest run. A first cut added the calendar as an optional extra, defaulting
+to none and rejecting Gregorian names, which left "declared Gregorian" and
+"undeclared" as two different-looking states for one behaviour and gave
+every consumer two code paths. Separately, `firecube archive` had no defined
+behaviour for a non-Gregorian time coordinate, and `firecube zarr validate`
+did not recognize an encoded coordinate's fill value as missing.
+
+**Decision:** Calendar is a property every time axis has. `calendar`
+defaults to `proleptic_gregorian`; `standard` and `gregorian` are aliases of
+it, and a date before 1582-10-15 on a Gregorian axis follows the proleptic
+rule, not the CF mixed calendar. Declaring an alias or leaving `calendar`
+unset resolves to the identical declaration. A single encoder places every
+value on its axis for every calendar; Gregorian values take a fast path
+that needs no time-coding library, and the engine holds no calendar-specific
+logic of its own, delegating encode/decode of calendar-shaped values to the
+existing time-coding dependency. One coordinate-encoding descriptor selects
+the on-disk form: a Gregorian axis keeps the date type it always had; a
+non-Gregorian axis stores a CF-encoded count of a fixed unit since a
+reference point, with `units` and `calendar` attributes, and its coordinate
+must be fully materialized by the single preallocation step before any
+ingest run; ingest verifies incoming values against it and never creates or
+fills it. A non-Gregorian calendar is incompatible with observed (floor)
+placement and with an open-ended end date; both raise at declaration time
+naming the supported alternative. A value on a calendar the axis does not
+declare, and a Gregorian value handed to a non-Gregorian axis, are refused
+loudly instead of mislabeled. The persisted index record and the per-group
+identity include the calendar only when it is not Gregorian-like, so every
+existing store, index record, and identity hash stays byte-identical.
+`firecube archive` refuses a store whose time coordinate is on a
+non-Gregorian calendar, naming the group, instead of silently dropping the
+coordinate; carrying CF time encoding through the archive format is
+deferred (see TODO.md). `firecube zarr validate` treats an encoded
+coordinate's fill value as missing, as it already treats `NaT`.
+
+**Consequences:**
+- A plugin author declares the calendar the data carries, or writes
+  `calendar="standard"` for clarity, and gets the same store as before when
+  the calendar is Gregorian; existing cubes and plugins need no change.
+- A staged time coordinate on a non-Gregorian calendar no longer crashes a
+  second ingest run and no longer records empty coverage bounds.
+- A coordinate-resolution error names the value's calendar and the axis
+  calendar and tells the plugin author how to declare it, instead of an
+  opaque type error deep in resolution.
+- Derived-coordinate CLI inspection and preallocation dry runs render
+  calendar dates on the axis's own calendar instead of Gregorian arithmetic.
+- Consolidating a non-Gregorian time coordinate is a no-op: preallocation
+  already left it fully materialized and sealed.
+- The startup check that refuses ingestion into a non-Gregorian group whose
+  coordinate has not been preallocated resolves the final target regardless
+  of `--write-mode`, so staged ingests are not falsely refused.
+- `firecube archive` is a hard stop on a non-Gregorian store instead of a
+  silent data-loss path; `firecube zarr validate` flags an unwritten slot in
+  an encoded coordinate as missing rather than reporting it as a date.
+- Resolver, materializer, writer, validation, and the CLI each carry one
+  path keyed on the axis calendar; the descriptor is the seam a future
+  encoded storage form for all calendars plugs into (see IDEAS.md).
+
+**Verified:** unit and end-to-end coverage for a regular calendar axis, an
+irregular axis with explicit calendar values, and an irregular axis whose
+calendar values are discovered, including wrong-calendar and
+Gregorian-into-calendar rejection, preallocation-required refusal,
+idempotent re-preallocation, and identity divergence between declarations
+that differ only in calendar; alias normalization producing the identical
+declaration and identity hash as leaving `calendar` unset; a parity test
+pinning the Gregorian fast path to the time-coding library's encoder on
+every accepted input type; a store-bytes oracle over fixture cubes and
+pinned identity-hash literals recomputed on the previous release, both
+unchanged through the refactor; a differential run of the previous release
+against this tree over Gregorian and calendar scenarios with identical
+stores; real-data parity of two retained production Gregorian cubes
+(1:1 arrays, metadata, and values); end-to-end coverage for `firecube
+archive` refusing a non-Gregorian store and for `firecube zarr validate`
+treating an encoded fill value as missing; and a guard that the calendar
+decoder's transitive dependency is importable.
+
 ## 2026-09-18 — Ingest hot-path scan fixes
 
 **Decision.** Completion of a direct write must not depend on store size; control-plane checks on the ingest path must not scale with run history unless their result is used.

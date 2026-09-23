@@ -141,6 +141,47 @@ def test_missing_group_raises_compilation_error() -> None:
     assert isinstance(err.__cause__, KeyError)
 
 
+def test_missing_coordinate_reason_carries_cause_type_and_message() -> None:
+    """The compile error's ``reason`` keeps the pinned prefix and appends the
+    underlying resolver exception's type and message, so the operator sees why
+    a coordinate was refused without inspecting the traceback."""
+    idx = _irregular_index()
+    iw = IndexedWrite.slot(
+        group="data",
+        array="counts",
+        coordinate="2099-12-31T00:00:00Z",
+        data=np.zeros((4,)),
+    )
+
+    with pytest.raises(IndexedWriteCompilationError) as exc_info:
+        _compile_indexed_write(iw, idx)
+
+    err = exc_info.value
+    assert err.reason.startswith("coordinate not in resolved index for group 'data'")
+    cause = err.__cause__
+    assert cause is not None
+    assert f"{type(cause).__name__}: {cause}" in err.reason
+
+
+def test_missing_group_reason_carries_cause_type_and_message() -> None:
+    idx = _regular_index()
+    iw = IndexedWrite.slot(
+        group="does_not_exist",
+        array="counts",
+        coordinate="2024-01-01T00:00:00Z",
+        data=np.zeros((4,)),
+    )
+
+    with pytest.raises(IndexedWriteCompilationError) as exc_info:
+        _compile_indexed_write(iw, idx)
+
+    err = exc_info.value
+    assert err.reason.startswith("coordinate not in resolved index for group 'does_not_exist'")
+    cause = err.__cause__
+    assert isinstance(cause, KeyError)
+    assert f"KeyError: {cause}" in err.reason
+
+
 def test_region_iw_compiles_to_region_writeintent() -> None:
     idx = _regular_index()
     arr = np.arange(16, dtype=np.float32).reshape(4, 4)

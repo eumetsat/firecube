@@ -272,6 +272,18 @@ def _display_group_name(group: Any) -> str:
     return path if path.startswith("/") else f"/{path}"
 
 
+def _is_encoded_time_coord(arr: Any) -> bool:
+    """Return whether *arr* is a time coordinate stored as encoded numbers.
+
+    A calendar-declared time axis is stored as a numeric array that carries both
+    ``units`` and ``calendar`` attrs. Discovery must recognise it as the group's
+    time coordinate, otherwise the command reports that the group has none.
+    """
+
+    attrs = arr.attrs
+    return arr.dtype.kind in "iuf" and "units" in attrs and "calendar" in attrs
+
+
 def _resolve_time_dim_for_group(
     group: Any,
     *,
@@ -313,7 +325,7 @@ def _resolve_time_dim_for_group(
             arr = group[name]
         except KeyError:
             continue
-        if arr.dtype.kind != "M":
+        if arr.dtype.kind != "M" and not _is_encoded_time_coord(arr):
             continue
         if getattr(arr, "ndim", None) != 1:
             continue

@@ -28,6 +28,8 @@ import xarray as xr
 import zarr
 
 from firecube.core.controlplane.manager import ChunkManager
+from firecube.core.encoded_time import is_calendar_valued, is_gregorian_like
+from firecube.core.errors import ConfigurationError
 from firecube.core.filesystem.ops import _open_fsspec_url
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
@@ -55,6 +57,42 @@ def _is_encodable_dtype(dtype) -> bool:
     import numpy as np
 
     return np.dtype(dtype).kind not in _UNENCODABLE_DTYPE_KINDS
+
+
+def _raise_if_non_gregorian_time_coordinate(coord_name: str, coordinate: xr.Variable) -> None:
+    """Fail loudly when a skipped coordinate is a non-Gregorian time axis.
+
+    Object-dtype variables are silently skipped by the archive today (see
+    `_is_encodable_dtype`), which is safe for arbitrary unsupported dtypes, but
+    silently dropping a time *coordinate* discards the array's own axis with
+    no error and no trace in the archive: data loss a consumer cannot
+    detect. This helper detects that one case, a 1-D dimension coordinate whose values
+    duck-type as calendar-valued (`firecube.core.encoded_time.is_calendar_valued`)
+    on a calendar that is not Gregorian-like, and raises instead of skipping.
+
+    Any other skipped variable (non-coordinate object dtype, non-dimension
+    coordinate, or a Gregorian-like calendar) is left untouched here; the
+    caller's existing skip/log/continue behavior still applies to it.
+    """
+    if coordinate.dtype.kind != "O":
+        return
+    if coordinate.ndim != 1 or coordinate.dims != (coord_name,):
+        return
+    values = np.asarray(coordinate.values).reshape(-1)
+    if values.size == 0:
+        return
+    first = values[0]
+    if not is_calendar_valued(first):
+        return
+    if is_gregorian_like(first.calendar):
+        return
+    raise ConfigurationError(
+        f"Cannot archive time coordinate {coord_name!r}: calendar={first.calendar!r} is "
+        "not Gregorian-like. Archiving a time coordinate on a non-Gregorian calendar is "
+        "not supported yet, because the .tgm archive does not carry CF time encoding "
+        "(units/calendar); silently dropping the coordinate would produce an archive "
+        "with no time axis for this group."
+    )
 
 
 def zarr_to_tgm(
@@ -183,6 +221,7 @@ def zarr_to_tgm(
                 for coord_name in ds.coords:
                     coordinate = ds.coords[coord_name].variable
                     if not _is_encodable_dtype(coordinate.dtype):
+                        _raise_if_non_gregorian_time_coordinate(str(coord_name), coordinate)
                         logger.warning(
                             "Skipping variable '%s': unsupported dtype %s",
                             coord_name,

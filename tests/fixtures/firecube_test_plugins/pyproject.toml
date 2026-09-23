@@ -11,6 +11,15 @@ dependencies = ["firecube", "h5netcdf"]
 [project.entry-points."firecube.plugins"]
 callable_payload_safe = "callable_payload_test_plugin:CallablePayloadSafeIngestor"
 callable_payload_unsafe = "callable_payload_test_plugin:CallablePayloadUnsafeIngestor"
+calendar_axis_regular = "calendar_axis_test_plugin:CalendarAxisRegularIngestor"
+calendar_axis_regular_encoded = "calendar_axis_test_plugin:CalendarAxisRegularEncodedIngestor"
+calendar_axis_irregular_explicit = "calendar_axis_test_plugin:CalendarAxisIrregularExplicitIngestor"
+calendar_axis_irregular_auto = "calendar_axis_test_plugin:CalendarAxisIrregularAutoIngestor"
+calendar_axis_wrong_calendar = "calendar_axis_test_plugin:CalendarAxisWrongCalendarIngestor"
+calendar_axis_gregorian_value = "calendar_axis_test_plugin:CalendarAxisGregorianValueIngestor"
+calendar_axis_uncalendared_regular = "calendar_axis_test_plugin:CalendarAxisUncalendaredRegularIngestor"
+calendar_axis_uncalendared_auto = "calendar_axis_test_plugin:CalendarAxisUncalendaredAutoIngestor"
+calendar_time_test_plugin = "calendar_time_test_plugin:CalendarTimeIngestor"
 cf_time_dim = "cf_time_dim_test_plugin"
 cf_time_dim_value_dedup = "cf_time_dim_test_plugin"
 cli_test_plugin = "cli_test_plugin"
@@ -49,4 +58,4 @@ w14_lazy_success = "w14_single_discovery_plugin:LazySuccessIngestor"
 w14_override_empty = "w14_single_discovery_plugin:OverrideEmptyIngestor"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cli_test_plugin", "src/direct_zarr_capable_test_plugin", "src/direct_zarr_non_capable_test_plugin", "src/e2e_zarr_test_plugin", "src/multi_group_capable_test_plugin", "src/cf_time_dim_test_plugin", "src/slot_shape_test_plugin", "src/index_spec_test_plugin", "src/index_spec_integer_test_plugin", "src/callable_payload_test_plugin", "src/irregular_axis_test_plugin", "src/regular_axis_test_plugin", "src/indexed_write_test_plugin", "src/mixed_bounded_unbounded_test_plugin", "src/precip_daily_test_plugin", "src/w14_single_discovery_plugin"]
+packages = ["src/cli_test_plugin", "src/direct_zarr_capable_test_plugin", "src/direct_zarr_non_capable_test_plugin", "src/e2e_zarr_test_plugin", "src/multi_group_capable_test_plugin", "src/cf_time_dim_test_plugin", "src/slot_shape_test_plugin", "src/index_spec_test_plugin", "src/index_spec_integer_test_plugin", "src/callable_payload_test_plugin", "src/irregular_axis_test_plugin", "src/regular_axis_test_plugin", "src/indexed_write_test_plugin", "src/mixed_bounded_unbounded_test_plugin", "src/precip_daily_test_plugin", "src/w14_single_discovery_plugin", "src/calendar_time_test_plugin", "src/calendar_axis_test_plugin"]

@@ -1016,12 +1016,20 @@ def _validate_coord_values(
     coord_path: str,
     coord_values: np.ndarray[Any, Any],
     validity_issues: list[str],
+    fill_value: Any = None,
 ) -> None:
+    from firecube.core.zarr.region_writer import _fill_mask
+
     filled = np.asarray(coord_values)
-    # Dense DirectZarr coordinates carry NaT (or NaN) for slots that were never
-    # written; those slots are absent, not out of order, so only filled values
-    # take part in the uniqueness and monotonicity checks.
-    if filled.dtype.kind == "M":
+    # Dense DirectZarr coordinates carry their fill value for slots that were
+    # never written: NaT on a datetime64 coordinate, NaN on a float one, the
+    # int64 minimum on an encoded calendar coordinate. Those slots are absent,
+    # not out of order, so only filled values take part in the uniqueness and
+    # monotonicity checks. Without a declared fill value only the NaT/NaN
+    # sentinels can be recognised.
+    if fill_value is not None:
+        filled = filled[~_fill_mask(filled, fill_value)]
+    elif filled.dtype.kind == "M":
         filled = filled[~np.isnat(filled)]
     elif filled.dtype.kind == "f":
         filled = filled[~np.isnan(filled)]
@@ -1312,6 +1320,7 @@ def validate_group_with_fs(
                     coord_path=coord_path,
                     coord_values=coord_values,
                     validity_issues=validity_issues,
+                    fill_value=getattr(coord_info.array, "fill_value", None),
                 )
 
             state_path = _join_path(parent, _STATE_ARRAY_NAME)

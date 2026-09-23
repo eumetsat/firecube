@@ -23,6 +23,38 @@ from firecube.core.index_spec import _canonical_coordinate_value
 from firecube.ingestor.api import AUTO as INGESTOR_AUTO
 
 
+def test_regular_time_axis_calendar_defaults_to_proleptic_gregorian() -> None:
+    axis = RegularTimeAxis(
+        coordinate="time", epoch="2024-01-01T00:00:00Z", cadence_s=600, slot_count=4
+    )
+    assert axis.calendar == "proleptic_gregorian"
+    assert axis.encoded_units == "seconds since 2024-01-01 00:00:00"
+
+
+def test_irregular_time_axis_units_without_calendar_is_rejected() -> None:
+    try:
+        IrregularTimeAxis(coordinate="time", values=[1, 2], units="days since 1850-01-01")
+    except ValueError as exc:
+        assert "calendar" in str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("units without calendar was accepted")
+
+
+def test_irregular_time_axis_calendar_without_units_is_rejected() -> None:
+    try:
+        IrregularTimeAxis(coordinate="time", values=[1, 2], calendar="360_day")
+    except ValueError as exc:
+        assert "units" in str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("calendar without units was accepted")
+
+
+def test_irregular_time_axis_calendar_defaults_to_proleptic_gregorian() -> None:
+    axis = IrregularTimeAxis(coordinate="time", values=[1, 2, 3])
+    assert axis.calendar == "proleptic_gregorian"
+    assert axis.units is None
+
+
 def test_irregular_time_axis_accepts_auto() -> None:
     axis = IrregularTimeAxis(coordinate="time", values=AUTO)
 

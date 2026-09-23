@@ -53,6 +53,7 @@ PERMANENT_ALLOWLIST: frozenset[str] = frozenset()
 # their internal ``arr == fill_value`` lines are the intended implementation.
 _EXEMPT_FUNCTION_NAMES: frozenset[str] = frozenset(
     {
+        "_fill_mask",
         "_array_is_all_fill",
         "_fill_value_is_missing",
         "_fill_values_equal",

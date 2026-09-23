@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import cftime
 import pytest
 
 from firecube.core.errors import ConfigurationError
@@ -50,3 +51,23 @@ def test_irregular_time_axis_coordinate_match_resolves() -> None:
     resolved = resolve_index_spec(_spec(coordinate="time"), time_dim_name="time")
 
     assert resolved.groups == ("data",)
+
+
+def test_irregular_calendar_axis_resolves_cftime_coordinates_in_declared_order() -> None:
+    units = "seconds since 2049-01-01 00:00:00"
+    axis = IrregularTimeAxis(
+        coordinate="time",
+        values=[
+            cftime.Datetime360Day(2049, 1, 3, 0, 0, 0),
+            cftime.Datetime360Day(2049, 1, 1, 0, 0, 0),
+        ],
+        calendar="360_day",
+        units=units,
+    )
+    spec = IndexSpec(name="irregular_calendar_v1", groups={"data": axis})
+    resolved = resolve_index_spec(spec, time_dim_name="time")
+
+    # Declared order is preserved (not sorted) for explicit values.
+    assert resolved.position("data", cftime.Datetime360Day(2049, 1, 3, 0, 0, 0)) == 0
+    assert resolved.position("data", cftime.Datetime360Day(2049, 1, 1, 0, 0, 0)) == 1
+    assert resolved.coordinate("data", 1) == 0

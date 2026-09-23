@@ -328,6 +328,16 @@ File upstream at `https://github.com/ecmwf/tensogram` if Phase 1 implementation 
 - **Blocked on:** Nothing structural; ready when someone reports a memory issue at scale.
 - **Cross-links:** §40 (named source/target contexts); §41 (obstore async prefetch).
 
+### §44 Encoded time-coordinate storage for every calendar
+
+- DEFERRED-V2+
+
+- **Origin:** Follow-up to the 2026-09-23 calendar-default decision (see DONE.md). Today only a non-Gregorian calendar stores its time coordinate as an encoded number with `units`/`calendar` attributes; a Gregorian axis, whether declared explicitly or left at its default, keeps the existing `datetime64` representation for byte compatibility with every store written so far.
+- **Goal:** One storage representation for every calendar, so the engine's coordinate-materialization and write-verification code stops branching on "Gregorian versus not."
+- **Direction:** Move the Gregorian path onto the same CF-encoded storage the non-Gregorian path already uses. The per-group identity hash would need to embed the coordinate's dtype string to keep distinguishing declarations that differ only in storage representation, which is a persisted-format change: it needs a schema version bump, a period of dual acceptance for the old and new persisted-record shape, and a migration command for existing stores.
+- **Blocked on:** The schema-version and dual-acceptance mechanism for the persisted index record does not exist yet; encoding that mechanism generically (not just for this one field) is a prerequisite, not a detail to work out inline.
+- **Cross-links:** The calendar-declared time axes follow-ups in TODO.md.
+
 ## Notes
 
 Move an idea to [TODO.md](TODO.md) only after the workflow, constraints, and tradeoffs are agreed and the decision is recorded in [DONE.md](DONE.md) with a date.

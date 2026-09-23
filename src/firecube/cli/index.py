@@ -30,6 +30,7 @@ from firecube.cli._formatter import FirecubeGroup
 from firecube.core import observability
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.manager import check_legacy_index_record
+from firecube.core.encoded_time import is_gregorian_like
 from firecube.core.errors import LegacyIndexRecordError, ManifestError, ResolvedIndexConflictError
 from firecube.core.index_resolve import ExtentUnknownError, resolve_index_spec
 from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
@@ -126,11 +127,30 @@ def _group_rows(index_payload: dict[str, Any]) -> list[tuple[str, str, str]]:
     return rows
 
 
+def _decoded_calendar_isoformats(values: Any, *, units: str, calendar: str) -> list[str]:
+    """Decode encoded numbers into calendar dates and format each as ISO 8601.
+
+    ``decode_time_array`` always returns an object array of calendar-valued
+    (``cftime``-shaped) scalars here, never ``datetime64``: this helper is
+    only called for a non-Gregorian-like calendar, and xarray's CF decoder
+    returns an object array of calendar-valued scalars for any such
+    calendar. Each scalar's own ``isoformat()`` is used, not a Gregorian
+    ``datetime64`` conversion.
+    """
+    import numpy as np
+
+    from firecube.core.zarr.time_decode import decode_time_array
+
+    encoded = np.asarray(values)
+    decoded = decode_time_array(encoded, {"units": units, "calendar": calendar})
+    return [item.isoformat() for item in np.asarray(decoded).reshape(-1)]
+
+
 def _derived_coordinates_for_group(
     group_name: str, group_payload: dict[str, Any]
 ) -> list[str] | None:
     kind = group_payload.get("kind")
-    if kind != "regular_time":
+    if kind not in ("regular_time", "irregular_time"):
         return None
 
     params = group_payload.get("params", {})
@@ -138,6 +158,24 @@ def _derived_coordinates_for_group(
         raise click.ClickException(
             f"Group {group_name!r}: 'params' is missing or not a mapping in the index record."
         )
+    calendar = params.get("calendar")
+    calendar_is_gregorian = calendar is None or is_gregorian_like(str(calendar))
+
+    if kind == "irregular_time":
+        # No-op for a Gregorian-like calendar (the default,
+        # proleptic_gregorian): an irregular axis's coordinate is already
+        # the plugin-declared explicit timestamp, nothing to derive.
+        if calendar_is_gregorian:
+            return None
+        values = params.get("values")
+        units = params.get("units")
+        if not isinstance(values, list) or units is None:
+            raise click.ClickException(
+                f"Group {group_name!r}: cannot compute derived coordinates: missing "
+                "required field(s) 'values'/'units' for a calendar irregular_time group. "
+                "Re-run ingestion to populate the index record."
+            )
+        return _decoded_calendar_isoformats(values, units=str(units), calendar=str(calendar))
 
     missing = [f for f in ("epoch", "cadence_s") if f not in params]
     if "size" not in group_payload:
@@ -152,6 +190,15 @@ def _derived_coordinates_for_group(
     epoch_str: str = params["epoch"]
     cadence_s: int = int(params["cadence_s"])
     slot_count: int = int(group_payload["size"])
+
+    if not calendar_is_gregorian:
+        import numpy as np
+
+        from firecube.core.encoded_time import derive_regular_axis_units
+
+        units = derive_regular_axis_units(epoch_str)
+        encoded = np.arange(slot_count, dtype=np.int64) * cadence_s
+        return _decoded_calendar_isoformats(encoded, units=units, calendar=str(calendar))
 
     try:
         epoch_dt = datetime.datetime.fromisoformat(epoch_str.replace("Z", "+00:00"))
