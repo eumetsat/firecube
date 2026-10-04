@@ -4641,7 +4641,8 @@
 
 <h1 id="archive-operations">Archive Operations</h1>
 <p>Use archive operations to turn a finished Zarr product into a portable
-Tensogram <code>.tgm</code> file, inspect it, validate it, and restore it back to Zarr.</p>
+Tensogram <code>.tgm</code> or <code>.zip</code> file. A <code>.tgm</code> archive can also be inspected,
+validated, and restored back to Zarr.</p>
 <p>Archive operations are separate from normal product ingestion. A <code>.tgm</code> archive
 is a portable artifact; the restored Zarr product gets its own ChunkManager
 state.</p>
@@ -4666,7 +4667,7 @@ described in <a href="../../reference/config/">Configuration Reference</a>.</p>
 <tbody>
 <tr>
 <td><code>firecube archive create</code></td>
-<td>Convert Zarr to a <code>.tgm</code> file.</td>
+<td>Convert Zarr to a <code>.tgm</code> or <code>.zip</code> file.</td>
 </tr>
 <tr>
 <td><code>firecube archive info</code></td>
@@ -4686,9 +4687,10 @@ described in <a href="../../reference/config/">Configuration Reference</a>.</p>
 </tr>
 </tbody>
 </table>
+<p><code>.zip</code> archives are currently supported by <code>firecube archive create</code> only.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="create/">Create Archives</a></strong> — create a <code>.tgm</code> archive</li>
+<li><strong><a href="create/">Create Archives</a></strong> — create a <code>.tgm</code> or <code>.zip</code> archive</li>
 <li><strong><a href="inspect/">Inspect And Validate Archives</a></strong> — inspect metadata or verify archive integrity</li>
 <li><strong><a href="restore/">Restore Archives</a></strong> — restore a <code>.tgm</code> file to Zarr</li>
 <li><strong><a href="../../concepts/output-formats/archive/">Tensogram Output Format</a></strong> — format overview</li>

@@ -5968,7 +5968,7 @@ emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
 </tbody>
 </table>
 <h3 id="firecube-archive">firecube archive</h3>
-<p>create and manage Tensogram archives</p>
+<p>create and manage Zip and Tensogram archives</p>
 <p>Archives compress all array groups from a Zarr store into a single portable
 file using configurable codecs. Use archive create to produce an archive
 and archive restore to extract it back to Zarr.</p>
@@ -5995,9 +5995,9 @@ and archive restore to extract it back to Zarr.</p>
 </tbody>
 </table>
 <h4 id="firecube-archive-create">firecube archive create</h4>
-<p>convert a Zarr store to a .tgm archive</p>
+<p>convert a Zarr store to a .zip or .tgm archive</p>
 <p>reads all selected array groups, encodes them with the chosen codec
-(default: zstd), and writes a single portable .tgm file. use --start-date
+(default: zstd), and writes a single portable .zip or .tgm file. use --start-date
 and --end-date to archive a specific time window, or --group to select one
 product group.</p>
 <p><strong>Usage:</strong></p>
@@ -6019,6 +6019,12 @@ product group.</p>
 <td>text</td>
 <td>Zarr store URI (file:///abs/path or s3://bucket/key)</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--archive-format</code></td>
+<td>choice (<code>zip</code> &#x7C; <code>tensogram</code>)</td>
+<td>archive file format to write</td>
+<td><code>tensogram</code></td>
 </tr>
 <tr>
 <td><code>-a</code>, <code>--archive</code></td>
@@ -6185,8 +6191,8 @@ restoring.</p>
 </tbody>
 </table>
 <h4 id="firecube-archive-restore">firecube archive restore</h4>
-<p>restore a .tgm archive to a Zarr store</p>
-<p>decodes all encoded array groups from the .tgm file and writes them back
+<p>restore a  archive to a Zarr store</p>
+<p>decodes all encoded array groups from the archive file and writes them back
 to the target Zarr store. archive groups restore to their original paths.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube archive restore [OPTIONS]
