@@ -59,7 +59,7 @@ def test_create_rejects_remote_tgm_archive() -> None:
     )
 
     assert result.exit_code != 0
-    assert "Remote .tgm artifacts not yet supported" in result.output
+    assert "Remote artifacts not yet supported" in result.output
     assert "Traceback" not in result.output
 
 

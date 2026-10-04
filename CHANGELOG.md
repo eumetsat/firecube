@@ -7,6 +7,20 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `--archive-format [tensogram|zip]` option on `firecube archive create`.
+  `--archive-format zip` packs a Zarr product into a single local
+  `.zip` file that opens as a Zarr zip store. The default stays `tensogram`.
+  Zip archives contain the whole product, so `--group`, `--start-date`,
+  `--end-date`, and `--variables` are rejected, and `firecube archive info`,
+  `list`, `validate`, and `restore` do not accept `.zip` archives yet.
+
+### Changed
+
+- `firecube archive create` no longer prints the codec on the size line of
+  its summary. The line now reads `Size: <n> MB`.
+
 ## [0.1.7] - 2026-09-19
 
 ### Added

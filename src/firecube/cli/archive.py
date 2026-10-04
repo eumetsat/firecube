@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Archive CLI commands for Tensogram (.tgm) archival.
+"""Archive CLI commands for Zip (.zip) and Tensogram (.tgm) archival.
 
 Archive subcommands distinguish two URI categories:
 
 * **Source/target Zarr products** are resolved via `ProductResolver` and feed
   a `StorageSession` so that driver, endpoint, and credential resolution
   happen at the CLI boundary.
-* **`.tgm` artifact files** are *not* products. They are external archive
+* **`.tgm` and `.zip` artifact files** are *not* products. They are external archive
   files and use raw `StorageUri` only —
   product resolvers MUST NOT be used for them. ``info``/``validate``/``list``
   operate on artifacts only and never construct a session.
@@ -90,6 +90,21 @@ def _temporary_tgm_path() -> str:
     return path
 
 
+def _temporary_zip_path() -> str:
+    fd, path = tempfile.mkstemp(suffix=".zip")
+    os.close(fd)
+    os.unlink(path)
+    return path
+
+
+def _reject_zip_archive(archive: str, *, command: str) -> None:
+    """Fail early when a .zip archive is passed to a Tensogram-only command."""
+    if archive.rstrip("/").lower().endswith(".zip"):
+        raise click.ClickException(
+            f"archive {command} does not support .zip archives at the moment: {archive}"
+        )
+
+
 def _maintenance_claim_message(*, product: str, operation: str, detail: str) -> str:
     return (
         f"Cannot run {operation} for product {product}: {detail}. "
@@ -128,7 +143,7 @@ def _acquire_maintenance_claim(
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.pass_context
 def archive(ctx: click.Context) -> None:
-    """create and manage Tensogram archives
+    """create and manage Zip and Tensogram archives
 
     Archives compress all array groups from a Zarr store into a single portable
     file using configurable codecs. Use archive create to produce an archive
@@ -163,6 +178,15 @@ See also: firecube archive restore, firecube archive info, firecube archive vali
 )
 @click.option(
     "-s", "--source", required=True, help="Zarr store URI (file:///abs/path or s3://bucket/key)"
+)
+@click.option(
+    "--archive-format",
+    "archive_format",
+    required=False,
+    default="tensogram",
+    show_default=True,
+    type=click.Choice(["zip", "tensogram"], case_sensitive=False),
+    help="archive file format to write",
 )
 @archive_uri_option(tier="write")
 @click.option(
@@ -215,6 +239,7 @@ def create(
     ctx: click.Context,
     source: str,
     archive: str,
+    archive_format: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -229,10 +254,10 @@ def create(
     dry_run: bool,
     yes_i_really_mean_it: bool,
 ) -> None:
-    """convert a Zarr store to a .tgm archive
+    """convert a Zarr store to a .zip or .tgm archive
 
     reads all selected array groups, encodes them with the chosen codec
-    (default: zstd), and writes a single portable .tgm file. use --start-date
+    (default: zstd), and writes a single portable .zip or .tgm file. use --start-date
     and --end-date to archive a specific time window, or --group to select one
     product group.
     """
@@ -241,7 +266,7 @@ def create(
     parsed_source = parse_product_uri(source)
     storage_type = apply_smart_default(parsed_source, storage_type)
     if is_remote_target(archive):
-        raise click.ClickException("Remote .tgm artifacts not yet supported")
+        raise click.ClickException("Remote artifacts not yet supported")
     archive_abs = str(local_path_from_target(archive))
 
     storage_config = get_storage_config(
@@ -302,23 +327,44 @@ def create(
             raise click.ClickException(
                 f"Archive file already exists: {archive}. Use overwrite=True to replace it."
             )
-        temp_archive_path = _temporary_tgm_path()
+        temp_archive_path = (
+            _temporary_zip_path() if archive_format == "zip" else _temporary_tgm_path()
+        )
         create_target = temp_archive_path
 
+    tgm_result: dict[str, Any] | None = None
     try:
-        result = zarr_to_tgm(
-            source_identity.product_uri.to_str(),
-            create_target,
-            group=group,
-            variables=variable_list,
-            start_date=start_date,
-            end_date=end_date,
-            compression=compression,
-            overwrite=overwrite,
-            session=session,
-            allow_nan=allow_nan,
-            allow_inf=allow_inf,
-        )
+        if archive_format == "zip":
+            from firecube.core.zarr.zip_archive import zarr_to_zip
+
+            if group or start_date or end_date or variable_list:
+                raise click.ClickException(
+                    "Zip archive does not support --group, --start-date, --end-date, or --variables"
+                )
+            zip_result = zarr_to_zip(
+                session,
+                create_target,
+                overwrite=overwrite,
+            )
+            result_target = zip_result.target
+            result_file_size_bytes = zip_result.file_size_bytes
+        else:
+            tgm_result = zarr_to_tgm(
+                source_identity.product_uri.to_str(),
+                create_target,
+                group=group,
+                variables=variable_list,
+                start_date=start_date,
+                end_date=end_date,
+                compression=compression,
+                overwrite=overwrite,
+                session=session,
+                allow_nan=allow_nan,
+                allow_inf=allow_inf,
+            )
+            result_target = tgm_result["target"]
+            result_file_size_bytes = tgm_result["file_size_bytes"]
+
         if temp_archive_path is not None:
             if session.exists(archive_uri) and overwrite:
                 session.delete(archive_uri)
@@ -331,26 +377,30 @@ def create(
                 archive_uri,
                 target_session=target_session,
             )
-            result["target"] = archive_uri.to_str()
+            result_target = archive_uri.to_str()
     except (FileExistsError, ValueError, ImportError) as exc:
         raise click.ClickException(str(exc)) from exc
     finally:
         if temp_archive_path is not None and os.path.exists(temp_archive_path):
             os.unlink(temp_archive_path)
 
-    click.echo(f"Archive created: {result['target']}")
-    if result.get("groups"):
-        click.echo(f"  Groups: {', '.join(result['groups'])}")
-    click.echo(f"  Variables: {', '.join(result['variables'])}")
-    if result.get("time_range"):
-        tr = result["time_range"]
-        click.echo(f"  Time range: {tr.get('start')} → {tr.get('end')} ({tr.get('n')} steps)")
-    elif any(result.get("time_ranges", {}).values()):
-        click.echo(f"  Time ranges: {len(result['time_ranges'])} groups")
-    size_mb = result["file_size_bytes"] / (1024 * 1024)
-    click.echo(f"  Size: {size_mb:.2f} MB | Codec: {result['compression']}")
-    if result.get("skipped"):
-        click.echo(f"  Skipped: {', '.join(result['skipped'])} (unsupported dtype)", err=True)
+    click.echo(f"Archive created: {result_target}")
+    if tgm_result is not None:
+        if tgm_result.get("groups"):
+            click.echo(f"  Groups: {', '.join(tgm_result['groups'])}")
+        click.echo(f"  Variables: {', '.join(tgm_result['variables'])}")
+        if tgm_result.get("time_range"):
+            tr = tgm_result["time_range"]
+            click.echo(f"  Time range: {tr.get('start')} → {tr.get('end')} ({tr.get('n')} steps)")
+        elif any(tgm_result.get("time_ranges", {}).values()):
+            click.echo(f"  Time ranges: {len(tgm_result['time_ranges'])} groups")
+        if tgm_result.get("skipped"):
+            click.echo(
+                f"  Skipped: {', '.join(tgm_result['skipped'])} (unsupported dtype)", err=True
+            )
+
+    size_mb = result_file_size_bytes / (1024 * 1024)
+    click.echo(f"  Size: {size_mb:.2f} MB")
 
 
 @archive.command(
@@ -408,11 +458,13 @@ def restore(
     dry_run: bool,
     yes_i_really_mean_it: bool,
 ) -> None:
-    """restore a .tgm archive to a Zarr store
+    """restore a  archive to a Zarr store
 
-    decodes all encoded array groups from the .tgm file and writes them back
+    decodes all encoded array groups from the archive file and writes them back
     to the target Zarr store. archive groups restore to their original paths.
     """
+    _reject_zip_archive(archive, command="restore")
+
     parsed_target = parse_product_uri(target)
     storage_type = apply_smart_default(parsed_target, storage_type)
     if is_remote_target(archive):
@@ -655,6 +707,8 @@ def info(ctx: click.Context, archive: str, output_format: str) -> None:
         ROLE_CONTROLPLANE,
     )
 
+    _reject_zip_archive(archive, command="info")
+
     parsed = parse_product_uri(archive)
     if parsed.scheme == "s3":
         raise click.ClickException("Remote .tgm artifacts not yet supported")
@@ -790,6 +844,8 @@ def validate(ctx: click.Context, archive: str, quick: bool) -> None:
     """
     from firecube.core.tensogram._compat import require_tensogram
 
+    _reject_zip_archive(archive, command="validate")
+
     parsed = parse_product_uri(archive)
     if parsed.scheme == "s3":
         raise click.ClickException("Remote .tgm artifacts not yet supported")
@@ -851,6 +907,8 @@ def list_cmd(ctx: click.Context, archive: str) -> None:
     """
     from firecube.core.tensogram._compat import require_tensogram
     from firecube.core.tensogram.schema import ROLE_CONTROLPLANE
+
+    _reject_zip_archive(archive, command="list")
 
     parsed = parse_product_uri(archive)
     if parsed.scheme == "s3":

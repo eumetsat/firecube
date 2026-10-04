@@ -1,7 +1,7 @@
 # Create Archives
 
 Use `firecube archive create` to convert an existing Zarr product into a
-portable `.tgm` archive.
+portable `.tgm` or `.zip` archive.
 
 ```bash
 PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
@@ -14,6 +14,7 @@ ARCHIVE_URI="file:///data/archives/MY_PRODUCT.tgm"
 firecube archive create \
   --source "$PRODUCT_URI" \
   --archive "$ARCHIVE_URI" \
+  --archive-format tensogram \
   --compression zstd
 ```
 
@@ -23,8 +24,29 @@ Expected output resembles:
 Archive created: /data/archives/MY_PRODUCT.tgm
   Groups: data
   Variables: data
-  Size: 0.00 MB | Codec: zstd
+  Size: 0.00 MB
 ```
+
+## Create A Zip Archive
+
+Use `--archive-format zip` to pack the Zarr product into a single `.zip` file:
+
+```bash
+firecube archive create \
+  --source "$PRODUCT_URI" \
+  --archive "file:///data/archives/MY_PRODUCT.zarr.zip" \
+  --archive-format zip
+```
+
+Expected output resembles:
+
+```text
+Archive created: /data/archives/MY_PRODUCT.zarr.zip
+  Size: 0.00 MB
+```
+
+Zip archives contain the whole product. `--group`, `--start-date`,
+`--end-date`, and `--variables` are rejected with `--archive-format zip`.
 
 ## Create A Group Archive
 
