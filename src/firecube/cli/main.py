@@ -129,6 +129,10 @@ OPTION_GROUPS.update(
                 "options": ["--source", "--archive"],
             },
             {
+                "name": "Formats",
+                "options": ["--archive-format"],
+            },
+            {
                 "name": "Filtering",
                 "options": ["--start-date", "--end-date", "--group", "--variables"],
             },

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 from urllib.parse import urlparse
 
 from zarr.storage import LocalStore as _ZarrLocalStore
@@ -111,6 +111,38 @@ def create_obstore_store(uri: str, storage_config: StorageConfig) -> Any:
     else:
         local_path = str(local_path_from_target(uri))
         return LocalStore(prefix=local_path, mkdir=True)
+
+
+def create_zip_store(*, target: str, mode: Literal["r", "w"]) -> ZarrStoreHandle:
+    """Build a single-file zip Zarr store on the local filesystem.
+
+    Args:
+        target: Local path or ``file://`` URI of the ``.zip`` file.
+        mode: ``"r"`` to read an existing archive, ``"w"`` to create a new
+            one. ``"w"`` truncates an existing file.
+
+    Returns:
+        A handle wrapping a ``zarr.storage.ZipStore``. The caller must close
+        ``handle.store`` when done; a written archive is unreadable until
+        it is closed.
+
+    Raises:
+        ValueError: If ``mode`` is not ``"r"`` or ``"w"``, or if ``target``
+            is a remote URI.
+    """
+    if mode not in {"r", "w"}:
+        raise ValueError(f"zip store mode must be 'r' or 'w', got {mode!r}")
+    from zarr.storage import ZipStore
+
+    from firecube.core.uris import is_remote_target, local_path_from_target
+
+    if is_remote_target(target):
+        raise ValueError(f"ZipStore is not supported for remote targets: {target}")
+    return ZarrStoreHandle(
+        store=ZipStore(local_path_from_target(target), mode=mode),
+        storage_options=None,
+        target_uri=target,
+    )
 
 
 def create_zarr_store(
