@@ -47,6 +47,7 @@ from firecube.ingestor.runtime.zarr.resume_cache import (
     put_resume_cache_entry,
 )
 from firecube.ingestor.runtime.zarr.staged_metadata import _delete_workspace
+from firecube.ingestor.runtime.zarr.write import _static_data_vars
 
 if TYPE_CHECKING:
     import zarr
@@ -320,7 +321,11 @@ class AppendResumeService:
             return True
 
         state_var_name = ts_state.var_name
-        data_vars = [v for v in ds.data_vars if v != state_var_name]
+        # Static variables (no append dimension) are written once and have no
+        # time slots: they are neither span coverage nor a valid primary array
+        # (its shape[0] seeds the resume cursor).
+        static_vars = _static_data_vars(ds, time_dim=self._append_dim)
+        data_vars = [v for v in ds.data_vars if v != state_var_name and str(v) not in static_vars]
         if not data_vars:
             return False
         primary_var = str(data_vars[0])
