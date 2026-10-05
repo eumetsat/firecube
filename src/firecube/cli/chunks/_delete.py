@@ -465,3 +465,4 @@ def delete_span_cmd(
         click.echo(f"\nErrors: {len(errors)}")
         for err in errors[:10]:
             click.echo(f"  - {err}")
+        raise click.exceptions.Exit(1)

@@ -57,6 +57,103 @@ class _FakeDeleteManager:
         }
 
 
+class _FakeSpanManager:
+    """Stub manager returning a canned ``delete_spans`` result."""
+
+    def __init__(self, result: dict):
+        self._result = result
+        self.delete_spans_calls: list[dict] = []
+
+    def list_chunks(self, **kwargs):
+        return [
+            ChunkInfo(
+                key="span-1",
+                product="PRODUCT_A",
+                chunk_type="span",
+                size=0,
+                timestamp=0.0,
+                manifest_path="file:///tmp/wk/.firecube/manifest.jsonl",
+            )
+        ]
+
+    def delete_spans(self, spans, **kwargs):
+        self.delete_spans_calls.append(kwargs)
+        return self._result
+
+
+def _invoke_delete_span(monkeypatch, result: dict, *extra: str):
+    manager = _FakeSpanManager(result)
+    monkeypatch.setattr(
+        "firecube.cli.chunks._delete.resolve_manager",
+        lambda *args, **kwargs: manager,
+    )
+    r = CliRunner().invoke(
+        cli,
+        [
+            "chunks",
+            "--workspace",
+            "/tmp/wk",
+            "delete-span",
+            "--product-name",
+            "PRODUCT_A",
+            "--yes-i-really-mean-it",
+            *extra,
+        ],
+    )
+    return r, manager
+
+
+def test_delete_span_errors_exit_nonzero_after_printing_errors(monkeypatch):
+    r, _ = _invoke_delete_span(
+        monkeypatch,
+        {"deleted_keys": 0, "deleted_spans": 0, "errors": ["boom-1", "boom-2"]},
+    )
+
+    assert r.exit_code == 1, r.output
+    assert "Deleted 0 chunk keys from storage across 0 spans" in r.output
+    assert "Errors: 2" in r.output
+    assert "  - boom-1" in r.output
+    assert "  - boom-2" in r.output
+
+
+def test_delete_span_dry_run_with_errors_exits_nonzero(monkeypatch):
+    r, manager = _invoke_delete_span(
+        monkeypatch,
+        {"deleted_keys": 3, "deleted_spans": 1, "errors": ["boom"]},
+        "--dry-run",
+    )
+
+    assert manager.delete_spans_calls[0]["dry_run"] is True
+    assert r.exit_code == 1, r.output
+    assert "DRY RUN: would delete 3 chunk keys from storage across 1 spans" in r.output
+    assert "Errors: 1" in r.output
+    assert "  - boom" in r.output
+
+
+def test_delete_span_warnings_only_exits_zero(monkeypatch):
+    r, _ = _invoke_delete_span(
+        monkeypatch,
+        {"deleted_keys": 2, "deleted_spans": 1, "warnings": ["careful"], "errors": []},
+    )
+
+    assert r.exit_code == 0, r.output
+    assert "Warnings: 1" in r.output
+    assert "  - careful" in r.output
+    assert "Errors:" not in r.output
+
+
+def test_delete_span_clean_result_exits_zero(monkeypatch):
+    r, _ = _invoke_delete_span(
+        monkeypatch,
+        {"deleted_keys": 2, "deleted_spans": 1, "errors": []},
+    )
+
+    assert r.exit_code == 0, r.output
+    assert "Deleted 2 chunk keys from storage across 1 spans" in r.output
+    assert "Errors:" not in r.output
+    assert "Warnings:" not in r.output
+
+
 def test_delete_no_scope_exits_nonzero():
     r = CliRunner().invoke(cli, ["chunks", "delete", "--workspace", "/tmp/wk"])
 
