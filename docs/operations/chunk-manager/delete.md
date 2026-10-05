@@ -161,6 +161,10 @@ Expected output:
 Deleted 1 chunk keys from storage across 1 spans
 ```
 
+Arrays without the span's time dimension, such as static coordinate bounds
+(`lat_bnds`, `lon_bnds`), are not touched. The command lists them under
+`Warnings`. The command exits 1 when it reports `Errors`.
+
 Use `--force` only when you intentionally want to delete spans that are not
 time-chunk aligned:
 

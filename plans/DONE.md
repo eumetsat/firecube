@@ -1,5 +1,15 @@
 # Done
 
+## 2026-10-05 — `delete-span` on cubes with static data variables (#83)
+
+**Decision.** `GenericZarrIngestor` span records list time-indexed data variables only; static variables such as `lat_bnds` and `lon_bnds` are written once and have no time slots to cover. Records already written with static arrays in `span.arrays` stay valid: `delete-span` skips arrays whose known dimension names lack the span's time dimension and reports them as one warning per span. It does not rewrite old records.
+
+**Decision.** A span region fill validates everything before it writes. Every listed array must exist, every range must lie inside its array's time length (zarr silently clips an out-of-range slice), each fill value must be representable, and with state updates the state array must be 1-D on the time dimension with the deleted-state value fitting its dtype. A failing pre-flight leaves the cube unchanged; before, data variables could be NaN-filled while the state stayed `present`. This is not a rollback: a storage failure during the write pass can still leave some arrays filled. An array with `ndim >= 1` and no dimension names is refused, because it cannot be shown to be static, and so is a span in which no array carries the time dimension (which is also what a wrong `--time-dim` looks like).
+
+**Decision.** CF-encoded numeric time arrays (`units` containing `since`) are filled with NaT chosen by dtype, not through `encode_time_array`, which raises for all-NaT input with the `standard`/`gregorian` calendars. The sentinel is the declared `_FillValue` if present, else the `int64` minimum, else NaN for floats; an integer dtype other than `int64` without a declared `_FillValue` is refused. The Zarr fill value (`0`) decodes to the reference epoch and is a valid date. `chunks delete-span` exits 1 when it reports errors.
+
+**Coverage.** `tests/integration/test_generic_zarr_static_vars_span.py`, `tests/integration/test_delete_span_static_arrays.py`, `tests/unit/test_deletion_fill_value.py`, `tests/unit/test_cli_chunks_delete.py`, `tests/unit/test_deletion_missing_key_not_error.py`, and `tests/unit/test_append_stale_consolidated_metadata.py` lock the behavior.
+
 ## 2026-09-18 — Ingest hot-path scan fixes
 
 **Decision.** Completion of a direct write must not depend on store size; control-plane checks on the ingest path must not scale with run history unless their result is used.

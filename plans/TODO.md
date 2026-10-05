@@ -612,6 +612,14 @@ bundled (they change a safety check's timing / touch a separate path):
 
 ---
 
+### §44 `delete-span` cannot mark deleted integer variables that have no fill value (2026-10-05)
+
+**Status**: OPEN
+
+`delete-span` fills a deleted span with the array's Zarr `fill_value`. An integer data variable with no CF `units` ... `since` and no `_FillValue` (for example a `record_status (time)` `int64` array) is therefore filled with `0`, which cannot be told from data. Options: encode a `_FillValue` when such a variable is written, or make `delete-span` warn when it zero-fills an integer array with no declared fill. Only CF time arrays get a NaT sentinel today.
+
+---
+
 ### Ingest performance
 
 - Report real per-run byte and file counts for direct-S3 completion via filesystem instrumentation instead of returning zeros. Follow-up to the direct-S3 completion fix in 0.1.7; requires wiring per-run counters into the completion path.
