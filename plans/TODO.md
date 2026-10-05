@@ -618,6 +618,12 @@ bundled (they change a safety check's timing / touch a separate path):
 
 `delete-span` fills a deleted span with the array's Zarr `fill_value`. An integer data variable with no CF `units` ... `since` and no `_FillValue` (for example a `record_status (time)` `int64` array) is therefore filled with `0`, which cannot be told from data. Options: encode a `_FillValue` when such a variable is written, or make `delete-span` warn when it zero-fills an integer array with no declared fill. Only CF time arrays get a NaT sentinel today.
 
+### §45 `delete-span` region-fill dry run skips the pre-flight (2026-10-05)
+
+**Status**: OPEN
+
+For region-filled spans, `--dry-run` in `DeletionEngine._delete_span_by_region_fill` returns before `delete_span_via_region_nan_fill` runs. It can report success for a span that execution refuses (missing array, out-of-range, unknown dimensions, unfit state array) and omits the skipped-static-array warning that execution emits. Run the pre-flight in dry-run mode and return its warnings.
+
 ---
 
 ### Ingest performance
