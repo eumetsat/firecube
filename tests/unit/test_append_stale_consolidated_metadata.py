@@ -110,6 +110,7 @@ def _write_stale_consolidated_store(store_path: Path, times: np.ndarray) -> None
         shape=times.shape,
         chunks=(max(int(times.size), 1),),
         dtype=np.uint8,
+        dimension_names=("timestamp",),
     )
     state[:] = np.ones(times.shape, dtype=np.uint8)
 
