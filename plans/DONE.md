@@ -8,7 +8,7 @@
 
 **Decision.** CF-encoded numeric time arrays (`units` containing `since`) are filled with NaT chosen by dtype, not through `encode_time_array`, which raises for all-NaT input with the `standard`/`gregorian` calendars. The sentinel is the declared `_FillValue` if present, else the `int64` minimum, else NaN for floats; an integer dtype other than `int64` without a declared `_FillValue` is refused. The Zarr fill value (`0`) decodes to the reference epoch and is a valid date. `chunks delete-span` exits 1 when it reports errors.
 
-**Coverage.** `tests/integration/test_generic_zarr_static_vars_span.py`, `tests/integration/test_delete_span_static_arrays.py`, `tests/unit/test_deletion_fill_value.py`, `tests/unit/test_cli_chunks_delete.py`, `tests/unit/test_deletion_missing_key_not_error.py`, and `tests/unit/test_append_stale_consolidated_metadata.py` lock the behavior.
+**Coverage.** `tests/integration/test_generic_zarr_static_vars_span.py`, `tests/integration/test_delete_span_region_nan_fill.py`, `tests/unit/test_deletion_fill_value.py`, `tests/unit/test_cli_chunks_delete.py`, `tests/unit/test_deletion_missing_key_not_error.py`, and `tests/unit/test_append_stale_consolidated_metadata.py` lock the behavior.
 
 ## 2026-09-18 — Ingest hot-path scan fixes
 
