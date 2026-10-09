@@ -22,6 +22,7 @@ import math
 import uuid
 from collections.abc import Callable, Iterable, Sequence
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
@@ -119,20 +120,169 @@ def _array_path_relative_to_group(array_path: str, group: str) -> str:
     return clean
 
 
-def _array_time_dim_index(array: Any, expected_time_dim_name: str) -> int:
+def _array_dimension_names(array: Any) -> list[str] | None:
+    """Return ``array``'s dimension names, or ``None`` when they are unknown.
+
+    Reads zarr v3 ``dimension_names``, falling back to the ``_ARRAY_DIMENSIONS``
+    attr. Names are unknown when neither is present, when any name is null,
+    or when their count disagrees with ``ndim``; only a 0-d array without
+    names is known to have none.
+    """
     metadata = getattr(array, "metadata", None)
     raw_dim_names = getattr(metadata, "dimension_names", None)
-    if raw_dim_names is None:
+    if raw_dim_names is None or all(dim is None for dim in raw_dim_names):
         raw_dim_names = getattr(array, "attrs", {}).get("_ARRAY_DIMENSIONS")
-    dim_names = [str(dim) for dim in raw_dim_names] if raw_dim_names else []
-    return resolve_time_dim_index(dim_names, expected_time_dim_name)
+    ndim = int(array.ndim)
+    if raw_dim_names is None:
+        return [] if ndim == 0 else None
+    names = list(raw_dim_names)
+    if len(names) != ndim or any(dim is None for dim in names):
+        return None
+    return [str(dim) for dim in names]
+
+
+def _unknown_dimensions_message(display_path: str, ndim: int) -> str:
+    return (
+        f"Array {display_path} has {ndim} dimensions but no dimension names; cannot tell "
+        "whether it is time-indexed, refusing to delete the span"
+    )
+
+
+def _read_array_grid(
+    store_uri: str, array_path: str, storage_config: Any
+) -> tuple[list[str] | None, list[int], list[int]]:
+    """Return ``(dimension names or None, shape, stored chunk shape)`` for one array.
+
+    ``read_chunk_grid`` synthesises ``dim0..`` when ``dimension_names`` is
+    absent, which hides both an ``_ARRAY_DIMENSIONS`` declaration and the
+    absence of any names; the names are therefore read from the array itself.
+    """
+    import zarr
+
+    from firecube.core.filesystem.store_factory import create_zarr_store
+    from firecube.core.zarr.validation import _read_chunk_grid_from_zarr_array
+
+    handle = create_zarr_store(uri=store_uri, storage_config=storage_config, mode="r")
+    root = cast(
+        Any,
+        zarr.open_group(**handle.zarr_kwargs(), mode="r", zarr_format=3, use_consolidated=False),
+    )
+    array = root[array_path.strip("/")]
+    _synthesised, shape, chunk_shape = _read_chunk_grid_from_zarr_array(array, array_path)
+    return _array_dimension_names(array), shape, chunk_shape
+
+
+def _skipped_arrays_warning(span_key: str, time_dim_name: str, skipped: Sequence[str]) -> str:
+    return (
+        f"Span {span_key}: skipped {len(skipped)} arrays without time dimension "
+        f"'{time_dim_name}': {', '.join(skipped)}"
+    )
+
+
+def _no_time_indexed_array_message(time_dim_name: str, arrays: Sequence[str]) -> str:
+    # Every array lacking the dim is also what a wrong time-dim name looks
+    # like, so the refusal carries the same remediation as the resolver.
+    return (
+        f"no array in this span carries time dimension '{time_dim_name}'; refusing to mark "
+        f"it deleted (span arrays: {', '.join(arrays) or 'none'}). If the cube was written "
+        "with a different time dimension, pass it explicitly (CLI: --time-dim)."
+    )
+
+
+def _decode_declared_float_fill(array_path: str, dtype: Any, units: str, declared: Any) -> Any:
+    """Decode a float ``_FillValue`` attr the way xarray's Zarr backend does."""
+    import base64
+    import binascii
+    import struct
+
+    import numpy as np
+
+    def _refuse(reason: str) -> ValueError:
+        return ValueError(
+            f"Array {array_path} (dtype {dtype}, units {units!r}) declares _FillValue "
+            f"{declared!r}, which {reason}; refusing to delete"
+        )
+
+    if not isinstance(declared, str | bytes):
+        raise _refuse("is not a base64-encoded little-endian double")
+    try:
+        payload = base64.b64decode(declared, validate=True)
+    except (binascii.Error, ValueError):
+        raise _refuse("is not valid base64") from None
+    if len(payload) != 8:
+        raise _refuse(f"decodes to {len(payload)} bytes, not an 8-byte double")
+    (value,) = struct.unpack("<d", payload)
+    with np.errstate(over="ignore"):
+        cast_value = dtype.type(value)
+    if not (math.isnan(value) and np.isnan(cast_value)) and float(cast_value) != value:
+        raise _refuse("is not exactly representable in the dtype")
+    return cast_value
+
+
+def _cf_time_nat_sentinel(array_path: str, dtype: Any, units: str, declared: Any) -> Any:
+    """Return the value that marks a CF-encoded numeric time slot as missing.
+
+    Not computed through ``encode_time_array``: encoding an all-NaT input
+    raises ``TypeError`` for the ``standard``/``gregorian`` calendars. The
+    sentinel is chosen by dtype instead. A declared ``_FillValue`` wins:
+    for float arrays it must be the Zarr v3 attribute encoding xarray
+    decodes (base64 of a little-endian IEEE-754 double) and must be exactly
+    representable in the dtype. Without one, floats take NaN and ``int64``
+    takes its minimum (both decoded as NaT); any other integer dtype is
+    refused.
+
+    Raises:
+        ValueError: The declared ``_FillValue`` is malformed or does not fit
+            the dtype, or the dtype has no NaT sentinel and none is declared.
+    """
+    import numpy as np
+
+    if dtype.kind == "f":
+        if declared is None:
+            return dtype.type(np.nan)
+        return _decode_declared_float_fill(array_path, dtype, units, declared)
+    if declared is not None:
+        if isinstance(declared, bool) or not isinstance(declared, int):
+            raise ValueError(
+                f"Array {array_path} (dtype {dtype}, units {units!r}) declares _FillValue "
+                f"{declared!r}, which is not an integer; cannot represent NaT"
+            )
+        try:
+            return dtype.type(declared)
+        except OverflowError as exc:
+            raise ValueError(
+                f"Array {array_path} (dtype {dtype}, units {units!r}) declares _FillValue "
+                f"{declared!r}, which does not fit the dtype; cannot represent NaT"
+            ) from exc
+    if dtype == np.dtype(np.int64):
+        return np.int64(np.iinfo(np.int64).min)
+    raise ValueError(
+        f"Array {array_path} with dtype {dtype} and units {units!r} cannot represent NaT; "
+        "declare _FillValue"
+    )
 
 
 def _fill_value_for_array_write(array: Any) -> Any:
+    """Return the value that marks one of ``array``'s slots as deleted.
+
+    CF-encoded numeric time arrays (``units`` containing ``since``) get a NaT
+    sentinel, because their zarr ``fill_value`` (``0`` for integers) decodes
+    to the reference epoch, a valid date. Every other array keeps the
+    precedence zarr ``fill_value``, then NaN/NaT by dtype kind, then zero.
+
+    Raises:
+        ValueError: ``array`` is a CF time array whose dtype cannot carry
+            NaT and which declares no integer ``_FillValue``.
+    """
     import numpy as np
 
     fill_value = array.fill_value
     dtype = np.dtype(array.dtype)
+    attrs = getattr(array, "attrs", {}) or {}
+    units = attrs.get("units")
+    if units is not None and "since" in str(units) and dtype.kind in ("i", "u", "f"):
+        array_path = str(getattr(array, "path", "") or getattr(array, "name", ""))
+        return _cf_time_nat_sentinel(array_path, dtype, str(units), attrs.get("_FillValue"))
     if fill_value is not None:
         return fill_value
     if dtype.kind in ("f", "c"):
@@ -182,6 +332,41 @@ def _zarr_group_has_array(
     return True
 
 
+@dataclass(frozen=True, slots=True)
+class _RegionFillTarget:
+    """A time-indexed array the region-fill pre-flight cleared for writing."""
+
+    relative_path: str
+    array: Any
+    fill_value: Any
+    selections: tuple[tuple[Any, ...], ...]
+
+
+def _open_listed_array(zarr_group: Any, relative_path: str, display_path: str) -> Any:
+    import zarr
+
+    try:
+        node = zarr_group[relative_path]
+    except KeyError:
+        raise ValueError(
+            f"Array {display_path} is listed in the span but does not exist in the store"
+        ) from None
+    if not isinstance(node, zarr.Array):
+        raise ValueError(f"{display_path} is listed in the span as an array but is a group")
+    return node
+
+
+def _require_ranges_within(
+    display_path: str, length: int, ranges: Sequence[tuple[int, int]], time_dim_name: str
+) -> None:
+    for start, end in ranges:
+        if end >= length:
+            raise ValueError(
+                f"Array {display_path}: span range [{start}, {end}] exceeds its "
+                f"'{time_dim_name}' length {length}; refusing a partial fill"
+            )
+
+
 def delete_span_via_region_nan_fill(
     store_uri: str,
     group: str,
@@ -193,8 +378,45 @@ def delete_span_via_region_nan_fill(
     time_dim_name: str = "timestamp",
     update_state: bool = True,
     state_deleted_value: int = STATE_DELETED_BY_FIRECUBE,
-) -> None:
-    """NaN/fill the specified time indices in-place without deleting chunk keys."""
+) -> list[str]:
+    """Fill the given time indices in place, without deleting chunk keys.
+
+    A pre-flight pass resolves every listed array before anything is
+    written: the array must exist, its time axis is found by
+    ``time_dim_name``, its deletion fill value must be representable, and
+    every range must lie inside its time length (zarr silently clips an
+    out-of-range slice). Arrays whose known dimension names lack
+    ``time_dim_name`` (static arrays such as ``lat_bnds``, or 0-d scalars)
+    are skipped and returned; an array with ndim >= 1 and no dimension names
+    is refused, since it cannot be shown to be static. With
+    ``update_state``, the state array must be 1-D on ``time_dim_name``,
+    cover every range, and hold ``state_deleted_value`` in its dtype. Only then are the fills and the state written.
+
+    A pre-flight failure mutates nothing. This is not a rollback: a storage
+    failure during the write pass can still leave some arrays filled and
+    the state unchanged.
+
+    Args:
+        store_uri: URI of the Zarr store.
+        group: Group holding the arrays and the state array.
+        time_indices: Time indices to fill.
+        storage_config: Storage settings used to open the store.
+        state_array_name: Name of the timestamp-state array in ``group``.
+        array_paths: Arrays to fill, group-relative or group-prefixed;
+            ``None`` means every array in ``group`` except the state array.
+        time_dim_name: Name of the time dimension.
+        update_state: Whether to mark the indices deleted in the state array.
+        state_deleted_value: State value that marks an index deleted.
+
+    Returns:
+        Group-relative paths of the arrays skipped for lacking
+        ``time_dim_name``.
+
+    Raises:
+        ValueError: A pre-flight check failed, including when no listed
+            array carries ``time_dim_name``.
+        RuntimeError: A filled region did not read back as the fill value.
+    """
     import numpy as np
     import zarr
 
@@ -203,7 +425,7 @@ def delete_span_via_region_nan_fill(
 
     ranges = _contiguous_ranges(time_indices)
     if not ranges:
-        return
+        return []
 
     handle = create_zarr_store(uri=store_uri, storage_config=storage_config, mode="r+")
     root = cast(
@@ -223,26 +445,69 @@ def delete_span_via_region_nan_fill(
             if relative and relative != state_array_name and relative not in relative_array_paths:
                 relative_array_paths.append(relative)
 
+    group_prefix = f"{group.strip('/')}/" if group.strip("/") else ""
+    targets: list[_RegionFillTarget] = []
+    skipped: list[str] = []
     for relative_array_path in relative_array_paths:
-        array = cast(Any, zarr_group[relative_array_path])
-        time_dim = _array_time_dim_index(array, time_dim_name)
-        fill_value = _fill_value_for_array_write(array)
-        for start, end in ranges:
-            selection = _time_selection(array.ndim, time_dim, start, end)
-            array[selection] = fill_value
-            filled = np.asarray(array[selection])
-            if not _array_is_all_fill(filled, fill_value):
+        display_path = f"{group_prefix}{relative_array_path}"
+        array = _open_listed_array(zarr_group, relative_array_path, display_path)
+        dim_names = _array_dimension_names(array)
+        if dim_names is None:
+            raise ValueError(_unknown_dimensions_message(display_path, int(array.ndim)))
+        if time_dim_name not in dim_names:
+            skipped.append(relative_array_path)
+            continue
+        time_dim = resolve_time_dim_index(dim_names, time_dim_name)
+        _require_ranges_within(display_path, int(array.shape[time_dim]), ranges, time_dim_name)
+        targets.append(
+            _RegionFillTarget(
+                relative_path=relative_array_path,
+                array=array,
+                fill_value=_fill_value_for_array_write(array),
+                selections=tuple(
+                    _time_selection(array.ndim, time_dim, start, end) for start, end in ranges
+                ),
+            )
+        )
+
+    if not targets:
+        raise ValueError(_no_time_indexed_array_message(time_dim_name, relative_array_paths))
+
+    state_array: Any = None
+    state_value: Any = None
+    if update_state:
+        state_display_path = f"{group_prefix}{state_array_name}"
+        state_array = _open_listed_array(zarr_group, state_array_name, state_display_path)
+        state_dims = _array_dimension_names(state_array)
+        if state_array.ndim != 1 or state_dims != [time_dim_name]:
+            raise ValueError(
+                f"State array {state_display_path} has dimensions {state_dims!r}; expected "
+                f"exactly ['{time_dim_name}']"
+            )
+        state_dtype = np.dtype(state_array.dtype)
+        try:
+            state_value = state_dtype.type(int(state_deleted_value))
+        except OverflowError as exc:
+            raise ValueError(
+                f"State value {state_deleted_value} does not fit state array "
+                f"{state_display_path} dtype {state_dtype}"
+            ) from exc
+        _require_ranges_within(state_display_path, int(state_array.shape[0]), ranges, time_dim_name)
+
+    for target in targets:
+        for selection in target.selections:
+            target.array[selection] = target.fill_value
+            filled = np.asarray(target.array[selection])
+            if not _array_is_all_fill(filled, target.fill_value):
                 raise RuntimeError(
-                    f"Failed to fill {group}/{relative_array_path} with its declared fill value"
+                    f"Failed to fill {group_prefix}{target.relative_path} with its declared "
+                    "fill value"
                 )
 
-    if not update_state:
-        return
-
-    state_array = cast(Any, zarr_group[state_array_name])
-    state_value = np.uint8(int(state_deleted_value))
-    for start, end in ranges:
-        state_array[start : end + 1] = state_value
+    if state_array is not None:
+        for start, end in ranges:
+            state_array[start : end + 1] = state_value
+    return skipped
 
 
 def _local_base_from_storage_config(storage_config: StorageConfig | None) -> Path | None:
@@ -642,7 +907,7 @@ class DeletionEngine:
         expected_time_dim_name: str,
         span_key: str,
         wal_aligned: bool,
-    ) -> tuple[bool, dict[str, tuple[list[str], list[int], list[int], int]], list[str]]:
+    ) -> tuple[bool, dict[str, tuple[list[str], list[int], list[int], int]], list[str], list[str]]:
         """Measure alignment from the STORED chunk grid per data array.
 
         The WAL-recorded ``aligned`` flag can be wrong: it may have been
@@ -652,17 +917,22 @@ class DeletionEngine:
         whether every span time range lands on chunk boundaries along the
         resolved time dimension. Grids are cached so the caller can reuse
         them without re-reading zarr.json inside the deletion loop.
+        Arrays whose known dimension names lack ``expected_time_dim_name``
+        (static arrays, including 0-d scalars) get no grid and no alignment
+        vote. An array with ndim >= 1 and no dimension names raises
+        ``ValueError``: it cannot be shown to be static.
 
         Returns:
-            ``(measured_aligned, per_array_grids, read_errors)`` where
-            ``per_array_grids`` maps ``array_path -> (dim_names, shape,
-            chunk_shape, time_dim_index)``. If no grid could be read,
-            falls back to the WAL flag rather than silently deleting.
+            ``(measured_aligned, per_array_grids, read_errors,
+            skipped_arrays)`` where ``per_array_grids`` maps ``array_path ->
+            (dim_names, shape, chunk_shape, time_dim_index)`` and
+            ``skipped_arrays`` lists the arrays without the time dimension.
+            If no grid could be read, falls back to the WAL flag rather than
+            silently deleting.
         """
-        from firecube.core.zarr.validation import read_chunk_grid
-
         per_array_grids: dict[str, tuple[list[str], list[int], list[int], int]] = {}
         read_errors: list[str] = []
+        skipped_arrays: list[str] = []
         array_flags: list[bool] = []
 
         normalised: list[tuple[int, int]] = []
@@ -679,13 +949,20 @@ class DeletionEngine:
 
         for array_path in arrays:
             try:
-                dim_names, shape, chunk_shape = read_chunk_grid(
-                    store_uri,
-                    array_path,
-                    storage_config=self.repo.storage_config,
+                known_dim_names, shape, chunk_shape = _read_array_grid(
+                    store_uri, array_path, self.repo.storage_config
                 )
             except Exception as exc:
                 read_errors.append(f"Failed to read zarr.json for {array_path}: {exc}")
+                continue
+
+            # Raised, not collected: an unknown axis must abort before any
+            # chunk of this span is removed.
+            if known_dim_names is None:
+                raise ValueError(_unknown_dimensions_message(array_path, len(shape)))
+            dim_names = known_dim_names
+            if expected_time_dim_name not in dim_names:
+                skipped_arrays.append(array_path)
                 continue
 
             if not shape or not chunk_shape:
@@ -724,7 +1001,7 @@ class DeletionEngine:
             wal_aligned,
             measured_aligned,
         )
-        return measured_aligned, per_array_grids, read_errors
+        return measured_aligned, per_array_grids, read_errors, skipped_arrays
 
     @staticmethod
     def _render_collateral_entry(span: ChunkInfo) -> str:
@@ -854,12 +1131,13 @@ class DeletionEngine:
     ) -> dict[str, Any]:
         del fs, force, collateral_spans
         errors: list[str] = []
+        warnings: list[str] = []
         replacement_meta_updates_by_key: dict[str, dict[str, Any]] = {}
 
         state_array_name = _span_state_array_name(spec=spec, group=group_name)
         if not dry_run:
             try:
-                delete_span_via_region_nan_fill(
+                skipped = delete_span_via_region_nan_fill(
                     store_uri=store_uri,
                     group=group_name,
                     time_indices=time_indices,
@@ -876,6 +1154,8 @@ class DeletionEngine:
             except Exception as e:
                 errors.append(f"Failed to region-fill span {span.key}: {e}")
                 return {"deleted_keys": 0, "deleted_spans": 0, "errors": errors}
+            if skipped:
+                warnings.append(_skipped_arrays_warning(span.key, expected_time_dim_name, skipped))
 
         replaced_span_keys: list[str] = []
         if update_manifest:
@@ -886,7 +1166,7 @@ class DeletionEngine:
             "deleted_spans": 1,
             "region_filled_spans": 1,
             "errors": errors,
-            "warnings": [],
+            "warnings": warnings,
             "replaced_span_keys": replaced_span_keys,
             "replacement_meta_updates_by_key": replacement_meta_updates_by_key,
         }
@@ -925,15 +1205,30 @@ class DeletionEngine:
         pending_paths: list[str] = []
         pending_limit = 1000
         wal_aligned = bool(spec.get("aligned", True))
-        measured_aligned, per_array_grids, grid_read_errors = self._measure_span_alignment(
-            store_uri=store_uri,
-            arrays=arrays,
-            time_ranges=time_ranges,
-            expected_time_dim_name=expected_time_dim_name,
-            span_key=span.key,
-            wal_aligned=wal_aligned,
+        measured_aligned, per_array_grids, grid_read_errors, skipped_arrays = (
+            self._measure_span_alignment(
+                store_uri=store_uri,
+                arrays=arrays,
+                time_ranges=time_ranges,
+                expected_time_dim_name=expected_time_dim_name,
+                span_key=span.key,
+                wal_aligned=wal_aligned,
+            )
         )
         errors.extend(grid_read_errors)
+        if skipped_arrays:
+            warnings.append(
+                _skipped_arrays_warning(span.key, expected_time_dim_name, skipped_arrays)
+            )
+            if not per_array_grids:
+                # Raises like the unresolvable-axis error this replaces, so a
+                # wrong time-dim name still aborts delete_spans loudly.
+                raise ValueError(
+                    f"Span {span.key}: "
+                    + _no_time_indexed_array_message(
+                        expected_time_dim_name, [str(a) for a in arrays]
+                    )
+                )
 
         if not measured_aligned and not force:
             errors.append(f"Span {span.key} is not time-chunk aligned; rerun with force=True")

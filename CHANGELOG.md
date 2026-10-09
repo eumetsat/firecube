@@ -20,6 +20,28 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 - `firecube archive create` no longer prints the codec on the size line of
   its summary. The line now reads `Size: <n> MB`.
+- `firecube chunks delete-span` now exits 1 when it reports errors. It
+  previously printed them and exited 0. It also refuses a CF-encoded time
+  array whose dtype cannot represent NaT (any integer dtype other than
+  `int64`) unless the array declares a `_FillValue`.
+
+### Fixed
+
+- `firecube chunks delete-span` works on cubes with static data variables
+  such as `lat_bnds` and `lon_bnds` (#83). Arrays without the span's time
+  dimension are skipped and listed in one warning per span instead of
+  failing the delete. A span in which no array carries the time dimension,
+  or an array with unknown dimensions, is refused.
+- `GenericZarrIngestor` span records no longer list static data variables;
+  they list time-indexed variables only.
+- A `delete-span` fill that fails its pre-flight checks (a listed array is
+  missing, a range lies outside an array, the state array does not fit)
+  now changes nothing. Previously the data variables could be NaN-filled
+  while the state array still read `present`. A storage failure during the
+  write itself is not rolled back.
+- `delete-span` fills CF-encoded int64 and float time arrays (`units`
+  containing `since`) with NaT. Previously it wrote the array's Zarr fill
+  value, normally `0`, which decodes as the reference epoch, a valid date.
 
 ## [0.1.7] - 2026-09-19
 

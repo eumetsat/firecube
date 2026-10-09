@@ -91,7 +91,9 @@ def test_missing_chunk_key_treated_as_absent(tmp_path):
             "firecube.core.controlplane.deletion.resolve_span_time_dims",
             return_value={span.key: "timestamp"},
         ),
-        patch.object(engine, "_measure_span_alignment", return_value=(True, {"data": grid}, [])),
+        patch.object(
+            engine, "_measure_span_alignment", return_value=(True, {"data": grid}, [], [])
+        ),
         patch.object(engine, "_acquire_maintenance_claims", return_value=[]),
     ):
         result = engine.delete_spans([span], force=True, update_manifest=True, update_state=False)
@@ -124,7 +126,9 @@ def test_real_error_still_fails(tmp_path):
             "firecube.core.controlplane.deletion.resolve_span_time_dims",
             return_value={span.key: "timestamp"},
         ),
-        patch.object(engine, "_measure_span_alignment", return_value=(True, {"data": grid}, [])),
+        patch.object(
+            engine, "_measure_span_alignment", return_value=(True, {"data": grid}, [], [])
+        ),
         patch.object(engine, "_acquire_maintenance_claims", return_value=[]),
     ):
         result = engine.delete_spans([span], force=True, update_manifest=True, update_state=False)
