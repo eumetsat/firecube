@@ -4848,6 +4848,9 @@ record timestamps stored in the ChunkManager.</p>
 <p>Expected output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>Deleted 1 chunk keys from storage across 1 spans
 </code></pre></div>
+<p>Arrays without the span's time dimension, such as static coordinate bounds
+(<code>lat_bnds</code>, <code>lon_bnds</code>), are not touched. The command lists them under
+<code>Warnings</code>. The command exits 1 when it reports <code>Errors</code>.</p>
 <p>Use <code>--force</code> only when you intentionally want to delete spans that are not
 time-chunk aligned:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
