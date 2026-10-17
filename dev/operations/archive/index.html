@@ -4641,13 +4641,14 @@
 
 <h1 id="archive-operations">Archive Operations</h1>
 <p>Use archive operations to turn a finished Zarr product into a portable
-Tensogram <code>.tgm</code> or <code>.zip</code> file. A <code>.tgm</code> archive can also be inspected,
-validated, and restored back to Zarr.</p>
-<p>Archive operations are separate from normal product ingestion. A <code>.tgm</code> archive
+Tensogram <code>.tgm</code> or <code>.zip</code> file. Both formats can be inspected, validated,
+and restored back to Zarr.</p>
+<p>Archive operations are separate from normal product ingestion. An archive
 is a portable artifact; the restored Zarr product gets its own ChunkManager
 state.</p>
 <h2 id="prerequisites">Prerequisites</h2>
-<p>Install Firecube with the tensogram extra:</p>
+<p>For <code>.tgm</code> archives, install Firecube with the tensogram extra. <code>.zip</code>
+archives need no extra:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;firecube[tensogram]&#39;</span>
 </code></pre></div>
 <p>Use the storage flags required by the archive command:</p>
@@ -4683,16 +4684,16 @@ described in <a href="../../reference/config/">Configuration Reference</a>.</p>
 </tr>
 <tr>
 <td><code>firecube archive restore</code></td>
-<td>Restore <code>.tgm</code> back to Zarr.</td>
+<td>Restore <code>.tgm</code> or <code>.zip</code> back to Zarr.</td>
 </tr>
 </tbody>
 </table>
-<p><code>.zip</code> archives are currently supported by <code>firecube archive create</code> only.</p>
+<p><code>.zip</code> archives must be local files and restore to local targets only.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="create/">Create Archives</a></strong> — create a <code>.tgm</code> or <code>.zip</code> archive</li>
 <li><strong><a href="inspect/">Inspect And Validate Archives</a></strong> — inspect metadata or verify archive integrity</li>
-<li><strong><a href="restore/">Restore Archives</a></strong> — restore a <code>.tgm</code> file to Zarr</li>
+<li><strong><a href="restore/">Restore Archives</a></strong> — restore a <code>.tgm</code> or <code>.zip</code> file to Zarr</li>
 <li><strong><a href="../../concepts/output-formats/archive/">Tensogram Output Format</a></strong> — format overview</li>
 </ul>
 

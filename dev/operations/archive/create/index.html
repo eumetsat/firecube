@@ -4798,6 +4798,12 @@ them:</p>
 <p>Expected output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
 </code></pre></div>
+<p>Each create is recorded as an <code>archive-create-…</code> run in the source product,
+with status <code>complete</code> or <code>failed</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span>--product-name<span class="w"> </span>MY_PRODUCT.zarr
+</code></pre></div>
+<p>Products without a <code>.firecube/</code> control plane are archived without a record
+and are not modified.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../inspect/">Inspect And Validate Archives</a></strong> — inspect metadata or contents</li>

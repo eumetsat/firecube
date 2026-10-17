@@ -3732,6 +3732,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#zip-archives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zip Archives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#failure-recovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4642,6 +4653,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#zip-archives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zip Archives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#failure-recovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4685,7 +4707,7 @@
 
 <h1 id="inspect-and-validate-archives">Inspect And Validate Archives</h1>
 <p>Use archive inspection commands before transferring, publishing, or restoring a
-<code>.tgm</code> file.</p>
+<code>.tgm</code> or <code>.zip</code> file.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">ARCHIVE_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.tgm&quot;</span>
 </code></pre></div>
 <h2 id="show-metadata">Show Metadata</h2>
@@ -4743,6 +4765,25 @@
 <p>Expected output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
 </code></pre></div>
+<h2 id="zip-archives">Zip Archives</h2>
+<p><code>info</code>, <code>list</code>, and <code>validate</code> accept <code>.zip</code> archives with the same flags:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>info<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.zarr.zip&quot;</span>
+</code></pre></div>
+<p>Expected output resembles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Path:           /data/archives/MY_PRODUCT.zarr.zip
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>Format:         zip
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Size:           0.01 MB
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>Entries:        18
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>Groups:         (root), data
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>Control-plane:  present
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>Group: data
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>  Variables:
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    temperature: shape=[4, 2, 3] dtype=float64 chunks=[4, 2, 3] codec=zstd
+</code></pre></div>
+<p><code>archive list</code> prints each group as an xarray dataset. <code>archive validate</code>
+checks the CRC of every entry and that the archive opens as Zarr; <code>--quick</code>
+skips the CRC check.</p>
 <h2 id="failure-recovery">Failure Recovery</h2>
 <table>
 <thead>
@@ -4760,7 +4801,7 @@
 </tr>
 <tr>
 <td><code>requires the tensogram extras</code></td>
-<td>Archive support is not installed.</td>
+<td><code>.tgm</code> support is not installed.</td>
 <td>Install <code>firecube[tensogram]</code> in the active environment.</td>
 </tr>
 <tr>

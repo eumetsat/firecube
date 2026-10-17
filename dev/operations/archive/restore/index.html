@@ -3738,6 +3738,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#restore-a-zip-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restore A Zip Archive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-the-restored-product" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4620,6 +4631,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#restore-a-zip-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restore A Zip Archive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-the-restored-product" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4684,8 +4706,8 @@
 
 
 <h1 id="restore-archives">Restore Archives</h1>
-<p>Use <code>firecube archive restore</code> to decode a <code>.tgm</code> archive back into a Zarr
-store.</p>
+<p>Use <code>firecube archive restore</code> to restore a <code>.tgm</code> or <code>.zip</code> archive back into
+a Zarr store.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">ARCHIVE_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.tgm&quot;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">RESTORED_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/restored/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
@@ -4702,33 +4724,42 @@ store.</p>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  Coordinates:
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  Control-plane: restored
 </code></pre></div>
+<h2 id="restore-a-zip-archive">Restore A Zip Archive</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.zarr.zip&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
+</code></pre></div>
+<p>The target must be local. The output is the same as for <code>.tgm</code>, without the
+<code>restored group:</code> lines.</p>
 <h2 id="verify-the-restored-product">Verify The Restored Product</h2>
 <p>Inspect the restored product's run history:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
 </code></pre></div>
 <p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Run ID                               Status    State   Parts Events
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>------------------------------------------------------------------------
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>archive-restore-3e67c307-...         complete  active  4     4
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>direct_zarr_capable_test_plugin-...  complete  active  1     7
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Run ID                               Status    State   Parts Events
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>------------------------------------------------------------------------
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>archive-restore-3e67c307-...         complete  active  4     4
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>direct_zarr_capable_test_plugin-...  complete  active  1     7
 </code></pre></div>
 <p>Inspect restored ChunkManager records:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
 </code></pre></div>
 <h2 id="overwrite-an-existing-restore-target">Overwrite An Existing Restore Target</h2>
+<p><code>--overwrite</code> replaces the whole target. Data and run history written to the
+target after the archive was created are lost.</p>
 <p>Preview:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--dry-run
-</code></pre></div>
-<p>Overwrite in a non-interactive shell:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--yes-i-really-mean-it
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--dry-run
+</code></pre></div>
+<p>Overwrite in a non-interactive shell:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <h2 id="failure-recovery">Failure Recovery</h2>
 <table>
@@ -4749,6 +4780,11 @@ store.</p>
 <td><code>requires the tensogram extras</code></td>
 <td>Archive support is not installed.</td>
 <td>Install <code>firecube[tensogram]</code> in the active environment.</td>
+</tr>
+<tr>
+<td><code>Restoring a .zip archive to a remote target is not yet supported</code></td>
+<td>Zip restores write locally only.</td>
+<td>Restore to a local target, then copy it to S3.</td>
 </tr>
 <tr>
 <td>Restored product has no expected variables</td>

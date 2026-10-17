@@ -6119,7 +6119,7 @@ product group.</p>
 </tbody>
 </table>
 <h4 id="firecube-archive-info">firecube archive info</h4>
-<p>show metadata for a .tgm archive</p>
+<p>show metadata for a .tgm or .zip archive</p>
 <p>reads the archive header to display variable names, dimension sizes, codec,
 and time coverage. no data is decoded or written; suitable for quick
 inspection.</p>
@@ -6158,10 +6158,10 @@ inspection.</p>
 </tbody>
 </table>
 <h4 id="firecube-archive-list">firecube archive list</h4>
-<p>list contents of a .tgm archive</p>
+<p>list contents of a .tgm or .zip archive</p>
 <p>displays per-variable group entries including name, dimensions, and time
-range. no data is decoded; useful for reviewing archive contents before
-restoring.</p>
+range. a .zip archive is shown as one xarray dataset per group. no data is
+decoded; useful for reviewing archive contents before restoring.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube archive list [OPTIONS]
 </code></pre></div>
@@ -6191,9 +6191,11 @@ restoring.</p>
 </tbody>
 </table>
 <h4 id="firecube-archive-restore">firecube archive restore</h4>
-<p>restore a  archive to a Zarr store</p>
-<p>decodes all encoded array groups from the archive file and writes them back
-to the target Zarr store. archive groups restore to their original paths.</p>
+<p>restore a .tgm or .zip archive to a Zarr store</p>
+<p>decodes all encoded array groups from a .tgm archive, or copies every entry
+of a .zip archive, and writes them back to the target Zarr store. archive
+groups restore to their original paths. zip archives restore to local
+targets only.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube archive restore [OPTIONS]
 </code></pre></div>
@@ -6265,9 +6267,10 @@ to the target Zarr store. archive groups restore to their original paths.</p>
 </tbody>
 </table>
 <h4 id="firecube-archive-validate">firecube archive validate</h4>
-<p>check integrity of a .tgm archive</p>
+<p>check integrity of a .tgm or .zip archive</p>
 <p>reads the archive header and validates internal structure without fully
-decoding data. exits with code 0 if the archive is valid, code 1 if it is
+decoding data. for a .zip archive, --quick skips the CRC check of every
+entry. exits with code 0 if the archive is valid, code 1 if it is
 corrupted or incomplete.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube archive validate [OPTIONS]
