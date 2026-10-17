@@ -178,24 +178,45 @@ firecube chunks delete-span \
 
 ## Reingest A Range
 
-Two approaches are available. Choose based on whether you need physical chunk
-removal or just data replacement.
+Two approaches are available. Choose based on whether the old values may stay
+readable until the replacement is written.
 
-**Delete then reingest** — removes the physical Zarr chunks
-before writing replacement data. Use this when you want a clean slate or need
-to reclaim storage space.
+**Delete then reingest**: clears the old values first. Use this when they must
+not be read again, for example while replacement data is still being prepared.
+
+Find the spans that cover the data time range. Each record's `meta` holds its
+`run_id` and `batch_id`:
 
 ```bash
-firecube chunks delete \
+firecube chunks list \
   --product-name "$PRODUCT_URI" \
-  --range 2024-03-01,2024-03-02 \
+  --time-range 2024-03-01T00:00:00:2024-03-01T23:59:59 \
+  --format json
+```
+
+Clear each span, then ingest its source data again:
+
+```bash
+firecube chunks delete-span \
+  --product-name "$PRODUCT_URI" \
+  --run-id <run-id> \
+  --batch-id <batch-id> \
   --dry-run
 
-firecube chunks delete \
+firecube chunks delete-span \
   --product-name "$PRODUCT_URI" \
-  --range 2024-03-01,2024-03-02 \
+  --run-id <run-id> \
+  --batch-id <batch-id> \
   --yes-i-really-mean-it
+```
 
+Expected output:
+
+```text
+NaN-filled 1 spans and deleted 0 chunk keys from storage
+```
+
+```bash
 firecube ingest <plugin> \
   --input-data /data/source/2024-03-01 \
   --target "$PRODUCT_URI" \
@@ -207,7 +228,16 @@ firecube ingest <plugin> \
   --option force_reingest=true
 ```
 
-**Reingest in place** — overwrites overlapping timestamps
+On a cube with a timestamp-state array, as written by `GenericZarrIngestor`,
+`delete-span` fills the span's time steps with NaN and marks them deleted
+(state=2); the ingest writes them again at the same timestamps. On other cubes
+it deletes chunk keys instead, as in
+[Delete Storage Chunks From Spans](#delete-storage-chunks-from-spans).
+
+A span matches by its original batch window, and clearing it clears every time
+step it still covers, so supply the source data for all of them.
+
+**Reingest in place**: overwrites overlapping timestamps
 in-place (region overwrite) and appends any new tail timestamps. No separate
 delete step is required.
 
@@ -225,9 +255,7 @@ firecube ingest <plugin> \
 
 Reingesting in place refuses insert attempts (timestamps that would land in the middle of
 existing data), incoming or existing duplicates, and NaT values. State=2
-(deleted) and state=3 (failed_batch) slots are refilled. Delete first when you
-need physical chunk removal or when the replacement data does not align with the
-existing coordinate range.
+(deleted) and state=3 (failed_batch) slots are refilled.
 
 Rebuild the snapshot after a large cleanup or reingest:
 
