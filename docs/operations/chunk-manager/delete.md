@@ -129,7 +129,10 @@ record timestamps stored in the ChunkManager.
 
 ## Delete Storage Chunks From Spans
 
-Use `delete-span` when you want batch/span-level deletion from Zarr storage.
+Use `delete-span` to delete the data a span wrote. On a cube with a
+timestamp-state array, as written by `GenericZarrIngestor`, it fills the span's
+time steps with NaN and marks them deleted (state=2). On other cubes it deletes
+the span's chunk keys.
 
 Preview:
 
@@ -140,10 +143,10 @@ firecube chunks delete-span \
   --dry-run
 ```
 
-Expected output:
+Expected output on a cube with a timestamp-state array:
 
 ```text
-DRY RUN: would delete 1 chunk keys from storage across 1 spans
+DRY RUN: would NaN-fill 1 spans and delete 0 chunk keys from storage
 ```
 
 Delete:
@@ -155,18 +158,21 @@ firecube chunks delete-span \
   --yes-i-really-mean-it
 ```
 
-Expected output:
+Expected output on a cube with a timestamp-state array:
 
 ```text
-Deleted 1 chunk keys from storage across 1 spans
+NaN-filled 1 spans and deleted 0 chunk keys from storage
 ```
+
+On other cubes the output counts the deleted chunk keys instead, for example
+`Deleted 1 chunk keys from storage across 1 spans`.
 
 Arrays without the span's time dimension, such as static coordinate bounds
 (`lat_bnds`, `lon_bnds`), are not touched. The command lists them under
 `Warnings`. The command exits 1 when it reports `Errors`.
 
-Use `--force` only when you intentionally want to delete spans that are not
-time-chunk aligned:
+When chunk keys are deleted, use `--force` only when you intentionally want to
+delete spans that are not time-chunk aligned:
 
 ```bash
 firecube chunks delete-span \
