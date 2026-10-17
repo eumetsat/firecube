@@ -43,7 +43,12 @@ Expected output:
 DRY RUN - Would delete:
   Chunks: 2
   Products: MY_PRODUCT.zarr
+Records without storage objects: 2 (their data stays in storage; use firecube chunks delete-span to delete span data)
 ```
+
+Span, run, and schema records have no storage objects of their own: `chunks
+delete` removes the records and leaves the data they describe in place. To
+delete span data, use [`delete-span`](#delete-storage-chunks-from-spans).
 
 Delete after the dry-run matches your intent:
 
@@ -57,6 +62,7 @@ Expected output:
 
 ```text
 Deleted 2 chunks
+Records without storage objects: 2 (their data stays in storage; use firecube chunks delete-span to delete span data)
 ```
 
 Verify:

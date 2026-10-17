@@ -46,6 +46,15 @@ def _no_match_message(*, record_time_options: list[str], time_range: str | None)
     return base
 
 
+def _echo_records_without_storage(count: int) -> None:
+    """Say that span, run and schema records keep their data in storage."""
+    if count:
+        click.echo(
+            f"Records without storage objects: {count:,} (their data stays in storage; "
+            "use firecube chunks delete-span to delete span data)"
+        )
+
+
 @click.command(
     "delete",
     epilog="""\b
@@ -290,6 +299,8 @@ def delete_cmd(
         products = result.get("products_affected", [])
         if products:
             click.echo(f"  Products: {', '.join(products)}")
+        if not manifest_only:
+            _echo_records_without_storage(result["records_without_storage"])
         return
 
     click.echo(f"\nDeleted {result['deleted_chunks']:,} chunks")
@@ -298,6 +309,8 @@ def delete_cmd(
         size_mb = bytes_count / (1024 * 1024)
         size_gb = bytes_count / (1024 * 1024 * 1024)
         click.echo(f"Size: {size_gb:.1f} GB" if size_gb >= 1 else f"Size: {size_mb:.1f} MB")
+    if not manifest_only:
+        _echo_records_without_storage(result["records_without_storage"])
 
     if result["storage_errors"]:
         click.echo(f"\nStorage errors: {len(result['storage_errors'])}")

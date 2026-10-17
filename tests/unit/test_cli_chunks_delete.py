@@ -54,6 +54,7 @@ class _FakeDeleteManager:
             "deleted_size_bytes": 0,
             "storage_errors": [],
             "manifest_errors": [],
+            "records_without_storage": 0,
         }
 
 

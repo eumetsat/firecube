@@ -15,7 +15,7 @@ PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
 | `firecube chunks list` | Inspect ChunkManager records and span coverage. |
 | `firecube chunks runs` | Inspect or abandon ingestion runs. |
 | `firecube chunks claims` | Inspect or clear write-coordination claims. |
-| `firecube chunks delete` | Delete tracked records and, when configured, storage data. |
+| `firecube chunks delete` | Delete tracked records, and the storage objects of records that have them. |
 | `firecube chunks delete-span` | Delete storage chunks described by span records. |
 | `firecube chunks snapshots` | Check or rebuild snapshot read models. |
 

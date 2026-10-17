@@ -29,6 +29,11 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Fixed
 
+- `firecube chunks delete` no longer tries to delete span, run, and schema
+  records from storage: their keys are not storage objects. On local products
+  the attempt failed with "Missing local target base", and on S3 it deleted
+  nothing. The command now reports how many matched records have no storage
+  objects and points to `firecube chunks delete-span` for span data.
 - `firecube chunks delete-span` works on cubes with static data variables
   such as `lat_bnds` and `lon_bnds` (#83). Arrays without the span's time
   dimension are skipped and listed in one warning per span instead of

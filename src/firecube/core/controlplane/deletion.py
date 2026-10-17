@@ -31,6 +31,7 @@ from firecube.core.config import StorageConfig
 from firecube.core.controlplane.repo import ManifestRepository
 from firecube.core.controlplane.time_dim import resolve_span_time_dims, resolve_time_dim_index
 from firecube.core.controlplane.types import (
+    EVENT_SCHEMA_VERIFICATION,
     MAINTENANCE_OP_DELETE,
     STATE_DELETED_BY_FIRECUBE,
     ChunkInfo,
@@ -43,6 +44,10 @@ from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.validation import _STATE_ARRAY_NAME
 
 log = logging.getLogger(__name__)
+
+# Record types whose keys name control-plane records, not storage objects. Storage
+# deletion skips them: their data is removed with `delete-span`, not by key.
+RECORD_ONLY_TYPES = frozenset({"span", "run", EVENT_SCHEMA_VERIFICATION})
 
 
 def _span_time_indices(time_ranges: Sequence[Any]) -> list[int]:
@@ -721,13 +726,21 @@ class DeletionEngine:
         storage_config: StorageConfig | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Execute a deletion plan."""
+        """Execute a deletion plan.
+
+        Storage deletion covers only records whose key names a storage object.
+        Span, run and schema records are counted in ``records_without_storage``
+        and never passed to storage deletion.
+        """
+        storage_chunks = [c for c in plan.chunks if c.chunk_type not in RECORD_ONLY_TYPES]
+        records_without_storage = plan.count - len(storage_chunks)
         if dry_run:
             return {
                 "dry_run": True,
                 "would_delete_chunks": plan.count,
                 "would_delete_size_bytes": plan.total_size,
                 "products_affected": list(plan.products_affected),
+                "records_without_storage": records_without_storage,
             }
 
         affected_products = sorted(
@@ -765,8 +778,8 @@ class DeletionEngine:
             storage_errors = []
             manifest_errors = []
 
-            if delete_storage and (storage_config or self.filesystem):
-                storage_errors = self._delete_from_storage(plan.chunks, storage_config)
+            if delete_storage and storage_chunks and (storage_config or self.filesystem):
+                storage_errors = self._delete_from_storage(storage_chunks, storage_config)
                 if not storage_errors:
                     pass
 
@@ -797,6 +810,7 @@ class DeletionEngine:
                 "deleted_size_bytes": deleted_size,
                 "storage_errors": storage_errors,
                 "manifest_errors": manifest_errors,
+                "records_without_storage": records_without_storage,
             }
         except Exception as exc:
             self._record_maintenance_failed(

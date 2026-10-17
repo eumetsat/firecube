@@ -91,11 +91,11 @@ class _DeletionSpyFilesystem:
         return self._wrapped.capabilities()
 
 
-def _single_chunk_plan(product: str, key: str) -> DeletionPlan:
+def _single_chunk_plan(product: str, key: str, chunk_type: str = "chunk") -> DeletionPlan:
     chunk = ChunkInfo(
         key=key,
         product=product,
-        chunk_type="chunk",
+        chunk_type=chunk_type,
         size=1,
         timestamp=1.0,
         manifest_path=f"file:///tmp/{product}/.firecube",
@@ -158,6 +158,50 @@ def test_local_deletion_without_target_base_fails_closed(
 
     assert result["storage_errors"], "Deletion without a local target base should fail closed"
     assert relative_chunk.exists(), "Relative-path fallback deleted storage unexpectedly"
+
+
+@pytest.mark.parametrize("chunk_type", ["span", "run", "schema_verification"])
+def test_record_only_types_never_reach_storage(tmp_path: Path, chunk_type: str) -> None:
+    product = "product.zarr"
+    key = f"{chunk_type}_run1"
+    binding = make_test_binding(tmp_path, product=product)
+    fs = _DeletionSpyFilesystem(create_filesystem(binding), expected_suffix=f"/{product}/{key}")
+    manager = ChunkManager(binding=binding, workspace=tmp_path / "workspace", filesystem=fs)
+
+    result = manager.execute_deletion(
+        _single_chunk_plan(product, key, chunk_type),
+        delete_storage=True,
+        delete_manifest=False,
+        storage_config=None,
+        dry_run=False,
+    )
+
+    assert result["storage_errors"] == []
+    assert result["records_without_storage"] == 1
+    assert not [uri for uri in fs.rm_calls if isinstance(uri, str)]
+
+
+def test_record_only_plan_needs_no_local_target_base(tmp_path: Path) -> None:
+    product = "product.zarr"
+    repo = ManifestRepository(
+        binding=make_test_binding(tmp_path, product=product), workspace=tmp_path
+    )
+    engine = DeletionEngine(repo)
+    plan = _single_chunk_plan(product, "span_run1_batch_0000", "span")
+
+    preview = engine.execute_deletion(
+        plan,
+        storage_config=StorageConfig(storage_type="local"),
+        delete_manifest=False,
+        dry_run=True,
+    )
+    result = engine.execute_deletion(
+        plan, storage_config=StorageConfig(storage_type="local"), delete_manifest=False
+    )
+
+    assert preview["records_without_storage"] == 1
+    assert result["storage_errors"] == []
+    assert result["records_without_storage"] == 1
 
 
 def test_delete_spans_no_bypass(tmp_path: Path) -> None:

@@ -145,6 +145,7 @@ def test_delete_command_passes_typed_storage_config_to_manager(monkeypatch: Any)
                 "would_delete_chunks": len(plan.chunks),
                 "would_delete_size_bytes": plan.total_size,
                 "products_affected": sorted(plan.products_affected),
+                "records_without_storage": 0,
             }
 
     monkeypatch.setattr(delete_module, "resolve_manager", lambda *args, **kwargs: FakeManager())
