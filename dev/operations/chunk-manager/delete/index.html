@@ -4829,15 +4829,18 @@ timestamp), use <code>--time-range</code> instead:</p>
 Use it when you know the data timestamps you want to remove but not the exact
 record timestamps stored in the ChunkManager.</p>
 <h2 id="delete-storage-chunks-from-spans">Delete Storage Chunks From Spans</h2>
-<p>Use <code>delete-span</code> when you want batch/span-level deletion from Zarr storage.</p>
+<p>Use <code>delete-span</code> to delete the data a span wrote. On a cube with a
+timestamp-state array, as written by <code>GenericZarrIngestor</code>, it fills the span's
+time steps with NaN and marks them deleted (state=2). On other cubes it deletes
+the span's chunk keys.</p>
 <p>Preview:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--run-id<span class="w"> </span>docs-span-run<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>--dry-run
 </code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>DRY RUN: would delete 1 chunk keys from storage across 1 spans
+<p>Expected output on a cube with a timestamp-state array:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>DRY RUN: would NaN-fill 1 spans and delete 0 chunk keys from storage
 </code></pre></div>
 <p>Delete:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
@@ -4845,14 +4848,16 @@ record timestamps stored in the ChunkManager.</p>
 <a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>--run-id<span class="w"> </span>docs-span-run<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>Deleted 1 chunk keys from storage across 1 spans
+<p>Expected output on a cube with a timestamp-state array:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>NaN-filled 1 spans and deleted 0 chunk keys from storage
 </code></pre></div>
+<p>On other cubes the output counts the deleted chunk keys instead, for example
+<code>Deleted 1 chunk keys from storage across 1 spans</code>.</p>
 <p>Arrays without the span's time dimension, such as static coordinate bounds
 (<code>lat_bnds</code>, <code>lon_bnds</code>), are not touched. The command lists them under
 <code>Warnings</code>. The command exits 1 when it reports <code>Errors</code>.</p>
-<p>Use <code>--force</code> only when you intentionally want to delete spans that are not
-time-chunk aligned:</p>
+<p>When chunk keys are deleted, use <code>--force</code> only when you intentionally want to
+delete spans that are not time-chunk aligned:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span>--run-id<span class="w"> </span>docs-span-run<span class="w"> </span><span class="se">\</span>
