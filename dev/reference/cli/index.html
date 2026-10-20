@@ -5791,7 +5791,7 @@ start a job, or explore subcommands for storage management and diagnostics.</p>
 <td><code>--version</code></td>
 <td>boolean</td>
 <td>Show the version and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--config-file</code></td>
@@ -5800,10 +5800,10 @@ start a job, or explore subcommands for storage management and diagnostics.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -5826,10 +5826,10 @@ a recommended pipeline_batch_size before running large ingestion jobs.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -5884,10 +5884,10 @@ set --option pipeline_batch_size=N.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -5960,10 +5960,10 @@ emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -5987,10 +5987,10 @@ and archive restore to extract it back to Zarr.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6111,10 +6111,10 @@ product group.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6150,10 +6150,10 @@ inspection.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6183,10 +6183,10 @@ decoded; useful for reviewing archive contents before restoring.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6259,10 +6259,10 @@ targets only.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6299,10 +6299,10 @@ corrupted or incomplete.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6327,10 +6327,10 @@ library.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6397,10 +6397,10 @@ source specs and optional storage_options placeholders. Requires
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6438,10 +6438,10 @@ history</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6463,10 +6463,10 @@ history</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6522,7 +6522,7 @@ operations prompt in a terminal and require the flag in non-TTY contexts.</p>
 <td><code>--force</code></td>
 <td>boolean</td>
 <td>operational bypass: clear even if the claim is still active (skips is_stale check)</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--dry-run</code></td>
@@ -6537,10 +6537,10 @@ operations prompt in a terminal and require the flag in non-TTY contexts.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6583,10 +6583,10 @@ claims clear to release them</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6674,37 +6674,37 @@ removes both control-plane records and the underlying storage files. use
 <td><code>--manifest-only</code></td>
 <td>boolean</td>
 <td>remove tracked chunk records only, keep storage files</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--storage-only</code></td>
 <td>boolean</td>
 <td>delete from storage only, keep tracked chunk records</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--yes-i-really-mean-it</code></td>
 <td>boolean</td>
 <td>skip confirmation prompts</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--dry-run</code></td>
 <td>boolean</td>
 <td>show what would be deleted without doing it</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--include-metadata</code></td>
 <td>boolean</td>
 <td>include metadata chunks (zarr.json, etc.) - DANGEROUS!</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6762,7 +6762,7 @@ first</p>
 <td><code>--include-replaced</code></td>
 <td>boolean</td>
 <td>include spans already marked replaced (useful to retry deletions after a partial failure)</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--workspace</code></td>
@@ -6780,25 +6780,25 @@ first</p>
 <td><code>--dry-run</code></td>
 <td>boolean</td>
 <td>show what would be deleted without doing it</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--force</code></td>
 <td>boolean</td>
 <td>allow deletion even when spans are not chunk-aligned</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--yes-i-really-mean-it</code></td>
 <td>boolean</td>
 <td>skip confirmation prompts</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6885,19 +6885,19 @@ supports table and JSON output for scripting</p>
 <td><code>--include-span</code></td>
 <td>boolean</td>
 <td>include span coverage payload (time_index_ranges, arrays, alignment) in output</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--include-replaced</code></td>
 <td>boolean</td>
 <td>list every recorded span, including replaced spans and spans of failed runs; the default shows the current state projected from completed runs only</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6919,10 +6919,10 @@ supports table and JSON output for scripting</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -6991,10 +6991,10 @@ prompt in a terminal and require the flag in non-TTY contexts.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7042,10 +7042,10 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7067,10 +7067,10 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7118,10 +7118,10 @@ corrupt, or very stale to restore fast query performance for chunks list</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7163,10 +7163,10 @@ it was last rebuilt. use to decide whether a rebuild is needed</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7196,10 +7196,10 @@ completion for all firecube commands and options.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7305,7 +7305,7 @@ a plugin.</p>
 <td><code>--suppress-static-emission-for-non-owner</code></td>
 <td>boolean</td>
 <td>skip writes of static (non-time-indexed) arrays on this worker unless its --slot-start equals --static-owner-slot-start; pass to every fan-out worker so exactly one of them writes shared arrays such as latitude and longitude</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--static-owner-slot-start</code></td>
@@ -7317,7 +7317,7 @@ a plugin.</p>
 <td><code>--in-memory</code></td>
 <td>boolean</td>
 <td>use in-memory DuckDB</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--option</code></td>
@@ -7329,13 +7329,13 @@ a plugin.</p>
 <td><code>--show-options</code></td>
 <td>boolean</td>
 <td>show available options for the specified plugin and exit</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7359,10 +7359,10 @@ a single optimized file.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7423,10 +7423,10 @@ is not modified.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7474,10 +7474,10 @@ not modify any data.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7501,10 +7501,10 @@ a plugin's options.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7564,13 +7564,13 @@ a plugin's options.</p>
 <td><code>--non-interactive</code></td>
 <td>boolean</td>
 <td>do not ask interactive questions</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7600,10 +7600,10 @@ firecube ingest.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7633,10 +7633,10 @@ path format is <plugin>.<tier>.<field> (e.g. example_plugin.ingest.option).</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7679,13 +7679,13 @@ path format is <plugin>.<tier>.<field> (e.g. example_plugin.ingest.option).</p>
 <td><code>-e</code>, <code>--editable</code></td>
 <td>boolean</td>
 <td>install in editable mode (equivalent to 'uv pip install -e ...')</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7715,10 +7715,10 @@ plugin. Use -f to control output format.</p>
 <td><code>table</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7746,10 +7746,10 @@ plugin. Use -f to control output format.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7774,10 +7774,10 @@ zarr slots to emit parallel ingestion plans.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7821,10 +7821,10 @@ a WARNING to stderr and exit 0 — the stores are value-equivalent.</p>
 <td>None</td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7905,10 +7905,10 @@ Always run with --dry-run first.</p>
 <td>None</td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7929,10 +7929,10 @@ Always run with --dry-run first.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -7971,10 +7971,10 @@ Always run with --dry-run first.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -8010,7 +8010,7 @@ Always run with --dry-run first.</p>
 <td><code>--json</code></td>
 <td>boolean</td>
 <td>Emit the raw record as JSON.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--derived</code> / <code>--no-derived</code></td>
@@ -8019,10 +8019,10 @@ Always run with --dry-run first.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -8061,10 +8061,10 @@ Always run with --dry-run first.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -8121,10 +8121,10 @@ Always run with --dry-run first.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -8220,10 +8220,10 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -8303,7 +8303,7 @@ JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 <td><code>--no-resume</code></td>
 <td>boolean</td>
 <td>Disable resume-aware narrowing; emit full [0, total_slots) ranges.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
@@ -8318,10 +8318,10 @@ JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
@@ -8399,10 +8399,10 @@ structured JSON summary.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--help</code>, <code>-h</code></td>
+<td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
-<td><code>False</code></td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 </tbody>
 </table>
