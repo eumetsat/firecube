@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14' and platform_machine == 'ARM64' and sys_platform == 'win32'",
@@ -1290,27 +1290,27 @@ wheels = [
 
 [[package]]
 name = "healpix-geo"
-version = "0.2.1"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "marray" },
     { name = "numpy" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/35/f0/58ba22d8900f07bb9b78d03932ab1dbd40dac59ac93780cc7f976b590e4f/healpix_geo-0.2.1-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:88ac09d2376f752f4029bfef00d7e0935711f677bc41e1c306c5988eebe22ead", size = 829861, upload-time = "2026-07-19T10:22:19.497Z" },
-    { url = "https://files.pythonhosted.org/packages/66/4a/0e1ad8d0eccd70f1624f3fdfe5207615ba704ffb81ff4332598e9df32948/healpix_geo-0.2.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:e58cfd35a3e886a58e752222286410559b5a99baeda807b62d452358f2af3525", size = 806612, upload-time = "2026-07-19T10:22:21.436Z" },
-    { url = "https://files.pythonhosted.org/packages/7c/ad/967983f2efee4c9ac6ad4e7f5e6fd3e09683e55ce3fdc1be6e39652b2bac/healpix_geo-0.2.1-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6c1837d56eec6304864dbd9c8f62fea44fc906dafbb179af91736feb6b4bbd8c", size = 888034, upload-time = "2026-07-19T10:22:22.893Z" },
-    { url = "https://files.pythonhosted.org/packages/d3/e1/c46d647d4b8bf84ebe5bf80646f90309babffd987834af8ca8dfae12cc2c/healpix_geo-0.2.1-cp310-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:a0e9057cf6f85265dead546fc164a271c245eb5762259e1d2bf9f33869fbab08", size = 915670, upload-time = "2026-07-19T10:22:24.496Z" },
-    { url = "https://files.pythonhosted.org/packages/1f/a8/0d63562b5e7f5533b56516e96e733e2b7c95c597a2df7d591c55fd7398f2/healpix_geo-0.2.1-cp310-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:aad63643d360f03949a6151229b0cf32328a094fff42ba7e10b0962a84c82bc3", size = 1006646, upload-time = "2026-07-19T10:22:25.971Z" },
-    { url = "https://files.pythonhosted.org/packages/00/c9/4407d58cde9aecb7723ca59eb831acac2bc2de19434654efe0116c5fd3ba/healpix_geo-0.2.1-cp310-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:677b05b38cf3984cd6b15fdf3641c0ece6309497d74064bc90f5087950516c8c", size = 1332468, upload-time = "2026-07-19T10:22:27.517Z" },
-    { url = "https://files.pythonhosted.org/packages/75/ac/907f29bb339a6cd5aeb7d9be44d1ff3d2cf10082a7bc53cb57da9abba0ab/healpix_geo-0.2.1-cp310-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:bfb9138810c0b1b3f4f664657c0e07560d2e62f56eb1572be774800891639cdd", size = 943528, upload-time = "2026-07-19T10:22:30.317Z" },
-    { url = "https://files.pythonhosted.org/packages/1d/11/2e5967fff7af438c08ab23cf6366cd15e80e99e28c30954cf76d1898cf12/healpix_geo-0.2.1-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d247ca3f18d252fc27a454382b981850e1fd9d30764c5e347149eb40dafa8edb", size = 956893, upload-time = "2026-07-19T10:22:32.026Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/c8/c1bd6fe0d23f53081ab0d5b207d11c09fa654b913538644dad4062551845/healpix_geo-0.2.1-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:ed7b2fb4dcad52b11d0687790e56be317e939b53ecb4ffae5d827d75f589e7d4", size = 1063897, upload-time = "2026-07-19T10:22:33.716Z" },
-    { url = "https://files.pythonhosted.org/packages/ea/1e/3e52ffa8be3a71447e6777bf724eab9506f4f90361232ba87a4bb9f2aa69/healpix_geo-0.2.1-cp310-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:120b9c02beda0ad0f403d42d768345d6d5f4a921c2b8b8f1cab3fdb2013175e3", size = 1188758, upload-time = "2026-07-19T10:22:35.221Z" },
-    { url = "https://files.pythonhosted.org/packages/d6/b6/faad16645fcbf69e083c7b7fe90d242be68e974deee28ffd954d1e0ba325/healpix_geo-0.2.1-cp310-abi3-musllinux_1_2_i686.whl", hash = "sha256:344786a34d854018f042acb44bdd3bddb0a13f1545191cb95636ab2fedd0c73f", size = 1195532, upload-time = "2026-07-19T10:22:36.952Z" },
-    { url = "https://files.pythonhosted.org/packages/c7/c7/86dcec26a7c8be889366babe26bda6cc7df836c965e0ae25fcb8117b0d7b/healpix_geo-0.2.1-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:da9c7b7ea63e1a41d44aaeb2a1ad9af3e81a724cf4cf0afacfc33a8c54254fa7", size = 1125733, upload-time = "2026-07-19T10:22:38.359Z" },
-    { url = "https://files.pythonhosted.org/packages/eb/ee/45b0b0723706ce50d341d5ff8ab4f49db9e1934aa14cecfaf14505088920/healpix_geo-0.2.1-cp310-abi3-win32.whl", hash = "sha256:9365fe20558614bc57fb58b4aec45aa27bdf6ae81bf10febd3fec9dc993a0a56", size = 671226, upload-time = "2026-07-19T10:22:39.776Z" },
-    { url = "https://files.pythonhosted.org/packages/e8/43/b147cdf66f46427d83dab8ac4974c1dfc425be20d0661e88740e873a56e1/healpix_geo-0.2.1-cp310-abi3-win_amd64.whl", hash = "sha256:76574401e92f397e3f92383f4dce1d5e992a6b73aa96406498326c8952b6ba4c", size = 711705, upload-time = "2026-07-19T10:22:41.705Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/66/5856b06864045084b22d4acff1dc785825f2d1bb92c28fa8cc0e8d4dd2b5/healpix_geo-0.4.1-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:4b9a864e185d16cd2a83116aeda7aa2c939f2f664a00d42f0734d57976f70c19", size = 934511, upload-time = "2026-09-09T14:20:24.882Z" },
+    { url = "https://files.pythonhosted.org/packages/24/f7/607ffc97f18815d6edcc69901a12cacfc46e1939dbad2f3870dadb60d2ea/healpix_geo-0.4.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:079089fae20317094b16fbb42b353f01b3b3ea4b44fa4e72a776d3fbbf0e573d", size = 912121, upload-time = "2026-09-09T14:20:27.197Z" },
+    { url = "https://files.pythonhosted.org/packages/20/58/bc73081732fcd2223f837a80bf266ae2f2a1a2372e5adffb052ce6596643/healpix_geo-0.4.1-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:265c845c32d1643bcff6b84732bc17a90f1007da5e1e16cb509db8a41a059e8f", size = 1015485, upload-time = "2026-09-09T14:20:28.784Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/59/c729b11a53a8b7f37b61f5272eb584e03a813b725d3dc87583ced905d3e7/healpix_geo-0.4.1-cp310-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:34dde8858cc67ebcd3a85489e6ccdda0e045ccf4ed0c4f496fe0f90aed092318", size = 1046777, upload-time = "2026-09-09T14:20:30.385Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/d2/4444ba102780b93cf25189614826480a9f110b8666718c748ba190f08fc7/healpix_geo-0.4.1-cp310-abi3-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:2e4e5de294bfaf7de38a72e7a16b030916be1bfd8896ebbb60c7c548e1cd2bac", size = 1146497, upload-time = "2026-09-09T14:20:32.135Z" },
+    { url = "https://files.pythonhosted.org/packages/79/92/07a39086068a92644dbbb9ba800761232b09be711eed23b1609771cf35b3/healpix_geo-0.4.1-cp310-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:a7036cdac9d17c1185c12bf9e96243c27012d95c545059807874c3d13cb4296c", size = 1529622, upload-time = "2026-09-09T14:20:33.603Z" },
+    { url = "https://files.pythonhosted.org/packages/07/9d/7248144aac1c605a5803c2d471699dd0d15b07056f71439b09b5730e1c83/healpix_geo-0.4.1-cp310-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:a88fdf30256b6ed27e40ddc5998b10db43d98003887f39b978041f4d2db812cd", size = 1064534, upload-time = "2026-09-09T14:20:35.295Z" },
+    { url = "https://files.pythonhosted.org/packages/73/99/fed29024fe9b1710c91d41d2bb0304f96b97e88fc9f479eff59f036b57b7/healpix_geo-0.4.1-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bcd6d1db979d7d4d76af106378e6acac254248d0377e6eee13a08853b39b342b", size = 1067689, upload-time = "2026-09-09T14:20:36.785Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/48/1eafbd7deee9623e8e1ba7112e2c37045f32b581e810f061e640f8f2bce8/healpix_geo-0.4.1-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:7054692109202bcdd1b7a0d94d3f472b64470422432747358028eb43a5bae82f", size = 1192514, upload-time = "2026-09-09T14:20:38.482Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/ba/e0ca68f7537979523b7ed0a0c57c4c23bc6cebfa08516c48dfbd09d09111/healpix_geo-0.4.1-cp310-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:464f8558e497f6e3252363d5b0a9f351c72d1c9f51e0422351cd06cfc61e1147", size = 1321616, upload-time = "2026-09-09T14:20:40.185Z" },
+    { url = "https://files.pythonhosted.org/packages/45/88/439110d2ec649ac7cb19e3d1b4f07a469f284c5e9588e90b853281e1dbb1/healpix_geo-0.4.1-cp310-abi3-musllinux_1_2_i686.whl", hash = "sha256:f29a39cd1bb350fd154a51cff1194627fbfffa3d2bf5e8bf4d5340c4910c3d92", size = 1330941, upload-time = "2026-09-09T14:20:41.898Z" },
+    { url = "https://files.pythonhosted.org/packages/70/b3/6a2d437536d3f4a6ff4e232222bc558c25a529c8485a43ad6d2f540fd5fa/healpix_geo-0.4.1-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:58a5b29f0e3814e13d7e20a1bea9cddd317f77a1e3851b4f662dd46725b042e5", size = 1255526, upload-time = "2026-09-09T14:20:43.651Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/db/e7d9699410c63918869c5e2246139a6adfa51488c1ead78ad6398a70a558/healpix_geo-0.4.1-cp310-abi3-win32.whl", hash = "sha256:db882c3b6bc73e0f6b05b2318a3099b88dc50311e87c03aaf7d3f46a01f21e9d", size = 770330, upload-time = "2026-09-09T14:20:45.275Z" },
+    { url = "https://files.pythonhosted.org/packages/8e/9a/7bf751bed679c3ec33a3c9fc06b55b18f9c23f41baf23d898f9bc8eb7696/healpix_geo-0.4.1-cp310-abi3-win_amd64.whl", hash = "sha256:bf1fe47623bba13845f5a2a8782a8d808b27e9afd46cf6c9053c86f4ec916cb8", size = 836509, upload-time = "2026-09-09T14:20:47.258Z" },
 ]
 
 [[package]]
