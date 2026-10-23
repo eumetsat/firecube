@@ -1371,6 +1371,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2085,6 +2113,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3198,6 +3254,34 @@
     
   
     Run Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
   
 
     
@@ -5293,9 +5377,31 @@ digest of that identifier, so claim lookup never requires listing:
   the claim, even a stale one.</li>
 <li>Release deletes the file.</li>
 <li>A claim is stale when <code>now - last_heartbeat_at &gt; stale_threshold_s</code>. A
-  crashed owner leaves a stale claim behind; operators clear stale claims with
-  the recovery tooling, which refuses to clear fresh claims unless forced.</li>
+  crashed owner leaves a stale claim behind. Operators clear stale claims with
+  <code>firecube chunks claims clear</code>, which refuses to clear fresh claims unless
+  forced.</li>
+<li>Abandoning a run releases every claim whose owner id resolves to that run
+  alone. The release applies to fresh and stale claims. The claim file stays in
+  place if its owner or <code>acquired_at</code> changed after the claims were listed.</li>
+<li>An owner id resolves through its candidates: the id itself and each prefix
+  that ends just before a <code>:</code>. The claim is released only if exactly one
+  candidate is a recorded run, and that run is the abandoned one.</li>
+<li>A sweep of stale runs also releases the claims of a run that an earlier
+  abandon already ended. A sweep that a crash interrupted therefore finishes
+  its release when it runs again.</li>
+<li>The <code>firecube chunks runs abandon --all-stale</code> sweep releases a claim of a
+  terminal run only if the claim is stale when re-read before the delete.
+  Its dry run reports the claims it would release and the claims it would leave.</li>
+<li>If the claims of the product cannot be listed, the abandon reports an error
+  and does not report success. Run the abandon again to release the claims.</li>
+<li>Acquisition does not change. A claim that the release left in place still
+  blocks acquisition of its domain.</li>
 </ul>
+<p>Known limitation: a release reads the claim again, then deletes the file. These
+are two separate operations. If two releases run at the same time, one can
+delete a claim that a successor acquired between the read and the delete.
+<code>firecube chunks claims clear</code> has the same limitation. Do not run two releases
+for the same product at the same time.</p>
 <p>See <a href="../../concepts/orchestration/write-safety/">Write Safety</a> for how claims
 coordinate concurrent writers.</p>
 <h2 id="snapshots-and-latestjson">Snapshots and <code>LATEST.json</code></h2>
@@ -5443,7 +5549,14 @@ evaluated in this order:</p>
 </table>
 <p>Refusals surface as documented control-plane errors, never as silent
 overwrites. Row 5 is the guard against pointing a changed declaration at an
-existing store; <code>firecube zarr index rebuild</code> is the explicit way through.</p>
+existing store. Use the plugin that wrote the product, or a new target.
+<code>firecube zarr index rebuild</code> does not change this row.</p>
+<p>For row 4, restore <code>index/current.json</code>. Or remove the root attrs
+<code>firecube_resolved_index_identity_hash</code> and <code>firecube_resolved_index</code>, then
+run <code>firecube zarr index rebuild</code> with the plugin that wrote the data. For
+row 7, remove the root attr <code>firecube_resolved_index_identity_hash</code>, then run
+<code>firecube zarr index rebuild</code>. The command writes the attr again from the
+record. <code>rebuild</code> refuses both states while the attrs remain.</p>
 <h2 id="slot-index-slot_indexcurrentjson">Slot Index: <code>slot_index/current.json</code></h2>
 <p>Products using slot-index models carry a parallel record with the same
 envelope discipline: <code>schema_version</code> (<code>"v1"</code>), <code>recorded_at</code>,

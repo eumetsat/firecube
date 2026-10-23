@@ -1465,6 +1465,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#pick-chunks-for-pod-written-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pick Chunks For Pod-Written Arrays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-slot-scalars" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Slot Scalars
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1538,6 +1560,34 @@
     
   
     Discover The Time Axis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
   
 
     
@@ -2274,6 +2324,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3387,6 +3465,34 @@
     
   
     Run Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../operations/fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
   
 
     
@@ -4745,6 +4851,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#pick-chunks-for-pod-written-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pick Chunks For Pod-Written Arrays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-slot-scalars" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Slot Scalars
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -5049,16 +5177,82 @@ auto-emits it only for slots it resolved from <code>IndexedWrite</code> elements
 element types mix freely in one returned list. See
 <a href="../../../reference/templates/#firecube.ingestor.api.DirectZarrIngestor.build_write_intents">Plugin Templates</a> for
 the full contract.</p>
+<h3 id="pick-chunks-for-pod-written-arrays">Pick Chunks For Pod-Written Arrays</h3>
+<p>The example uses <code>chunks=(1, 4)</code> for <code>value</code>. That is one slot per chunk, so
+<code>value</code> does not constrain the slot ranges. The example also declares
+<code>chunks=(24,)</code> for the time coordinate <code>timestamp</code>. A time coordinate that
+declares chunks constrains the slot ranges. In this example, each slot range
+must start and end on a multiple of 24 slots. Plan the ranges with
+<code>firecube zarr slots</code>. See
+<a href="../configure-zarr-chunking/#in-a-directzarringestor-schema">Configure Zarr Chunking</a>
+for the defaults and how to override them.</p>
+<h3 id="per-slot-scalars">Per-Slot Scalars</h3>
+<p>Use an engine-owned array for a value that you know per slot from the item
+header, such as a platform position. Workers never write it. <code>firecube zarr
+preallocate</code> writes it once.</p>
+<p>Set <code>engine_owned=True</code> on a rank-1 time-indexed array. Do not set it on the
+time coordinate. The group needs a known time extent.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">ZarrArraySpec</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;platform_lon&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_times</span><span class="p">,),</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">fill_value</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">),</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,),</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">engine_owned</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">)</span>
+</code></pre></div>
+<p>Return the scalar of each engine-owned array in <code>ItemInfo.values</code> for every
+item. Each key must name an engine-owned array. Items that map to the same
+slot must agree.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_platform_longitude</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">with</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">product</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">product</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;platform_lon&quot;</span><span class="p">])</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">inspect_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ItemInfo</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">materialize</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">timestamp</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">read_product_item</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="k">return</span> <span class="n">ItemInfo</span><span class="p">(</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="n">coordinate</span><span class="o">=</span><span class="n">timestamp</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;platform_lon&quot;</span><span class="p">:</span> <span class="n">read_platform_longitude</span><span class="p">(</span><span class="n">path</span><span class="p">)},</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="p">)</span>
+</code></pre></div>
+<p><code>build_write_intents</code> does not change. It still writes only the arrays that
+workers write.</p>
+<p>For an integer array, <code>firecube zarr preallocate</code> refuses these values:</p>
+<ul>
+<li>NaN</li>
+<li>infinity</li>
+<li>a fraction</li>
+<li>a number that is out of range</li>
+</ul>
+<p>It refuses the value before it creates or writes any array. The message names
+the array, the item, the value and the reason. Firecube can round a finite
+float to the dtype of the array.
+<a href="../../../reference/parallelism/#firecube.ingestor.api.ItemInfo"><code>ItemInfo</code></a>
+lists the casting rules and all refusals.</p>
+<p>Run <code>firecube zarr preallocate</code> with <code>--input-data</code> before ingest. Run it once
+for the whole product, without slot flags. Rerun it after an interruption or
+when new source slots arrive. Do not change the ownership of an array in an
+existing product.</p>
+<p>Workers reject writes to slots that preallocate did not fill. They do not
+compare <code>ItemInfo.values</code> during ingest. To check an incoming value, emit a
+slot write intent for the array. Firecube compares that value with the stored
+value. A mismatch fails the batch.</p>
+<p>See <a href="../../../operations/parallel-zarr-writes/#1-preallocate-the-product">Run Parallel Zarr Writes</a>
+for the operator steps and
+<a href="../../../reference/templates/#firecube.ingestor.api.ZarrArraySpec"><code>ZarrArraySpec</code></a>
+for the full field reference.</p>
 <h2 id="verify">Verify</h2>
 <p>Run one ingest against a small input and confirm the store is written:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input-data<span class="w"> </span>./path/to/input<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--input-data<span class="w"> </span>./path/to/input<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
 </code></pre></div>
 <p>The run should create the target store, write the declared arrays, and report no schema or index errors.</p>
 <h2 id="run-it-in-parallel">Run It In Parallel</h2>
@@ -5068,6 +5262,12 @@ worker per range. That is an operator workflow with its own page:
 <a href="../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a>. The
 <a href="../../../showcase/mtg-fci-l1c-benchmarks/">MTG FCI L1C benchmark notebook</a>
 reproduces the parallel setup with a public plugin and real observations.</p>
+<p>Each worker must own disjoint ranges of whole stored units. A stored unit is a
+shard for a sharded array. Otherwise, it is a chunk. Use <code>firecube zarr slots</code>
+to plan ranges. In staged mode, write every cell of each unit you touch. Use
+<code>--write-mode direct</code> for partial-unit updates. See
+<a href="../../../operations/parallel-zarr-writes/#chunk-ownership-refusals">Chunk Ownership Refusals</a>
+for the refusals and their fixes.</p>
 <h2 id="common-mistakes">Common Mistakes</h2>
 <table>
 <thead>
@@ -5096,6 +5296,14 @@ reproduces the parallel setup with a public plugin and real observations.</p>
 <tr>
 <td>Importing private runtime modules</td>
 <td>Import from <code>firecube.ingestor.api</code>.</td>
+</tr>
+<tr>
+<td>Writing a per-slot scalar from every worker into a shared chunk</td>
+<td>Declare the array <code>engine_owned=True</code>; see <a href="#per-slot-scalars">Per-Slot Scalars</a>.</td>
+</tr>
+<tr>
+<td>Starting workers with ranges that split a stored chunk or shard</td>
+<td>Plan ranges with <code>firecube zarr slots</code>.</td>
 </tr>
 <tr>
 <td>Calling <code>.position()</code> for every write by hand</td>

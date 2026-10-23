@@ -1534,6 +1534,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2257,6 +2285,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3370,6 +3426,34 @@
     
   
     Run Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../operations/fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
   
 
     
@@ -4785,8 +4869,9 @@
 <p>Set the chunk shape of the arrays your plugin writes. Chunking decides how
 much data one read has to fetch. Decide it before the first real run: a
 written cube keeps its chunk shape, and appends must match it, so changing
-it later means writing a new cube. Without a setting Zarr picks a shape
-itself (for a <code>(2, 720, 1440)</code> array it chose <code>(1, 180, 720)</code>).</p>
+it later means writing a new cube. Without a setting, <code>GenericZarrIngestor</code>
+lets Zarr pick a shape itself. For a <code>(2, 720, 1440)</code> array it chose
+<code>(1, 180, 720)</code>. <code>DirectZarrIngestor</code> has its own default, described below.</p>
 <table>
 <thead>
 <tr>
@@ -4870,6 +4955,17 @@ what the operator passed.</p>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">dimension_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">),</span>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">)</span>
 </code></pre></div>
+<p>For a new worker-written time-indexed array, omit <code>chunks=</code> and <code>shards=</code> to
+use one slot per chunk. Firecube creates the array without sharding. Zarr
+selects the other chunk dimensions. Set <code>chunks=</code> to choose a chunk shape. Set
+<code>shards=</code> to choose a shard shape. If you omit <code>chunks=</code>, Firecube keeps the
+declared shards.</p>
+<p>Slot ranges must cover whole stored chunks or shards. This includes the chunks
+that a time coordinate declares. See
+<a href="../../../operations/parallel-zarr-writes/#chunk-ownership-refusals">Chunk Ownership Refusals</a>.</p>
+<p>Time coordinates and engine-owned arrays use dense chunks by default. Existing
+arrays keep their layout. Firecube logs a warning only when it changes the
+chunks that Zarr selects by default.</p>
 <h2 id="verify">Verify</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">zarr</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
@@ -4898,6 +4994,10 @@ what the operator passed.</p>
 <tr>
 <td><code>zarr_chunk_shape</code> on a <code>DirectZarrIngestor</code> plugin</td>
 <td>It has no effect there. Set <code>chunks=</code> in the <code>ZarrArraySpec</code>.</td>
+</tr>
+<tr>
+<td>Slot ranges that split a stored chunk or shard</td>
+<td>Plan ranges with <code>firecube zarr slots</code>. To allow one-slot ranges, create a new array without sharding and with time chunk 1.</td>
 </tr>
 <tr>
 <td><code>get_zarr_config</code> returns the preset over the operator's options</td>

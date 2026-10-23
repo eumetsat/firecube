@@ -16,7 +16,7 @@
         <link rel="prev" href="../intake-catalog/">
       
       
-        <link rel="next" href="../zarr-compare/">
+        <link rel="next" href="../fix-chunk-ownership-refusal/">
       
       
         
@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2087,6 +2115,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3344,6 +3400,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#chunk-ownership-refusals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk Ownership Refusals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#recover-a-blocked-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3369,6 +3436,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -4742,6 +4837,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#chunk-ownership-refusals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk Ownership Refusals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#recover-a-blocked-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4799,7 +4905,8 @@ group.</p>
 <ul>
 <li>subclass <code>DirectZarrIngestor</code>;</li>
 <li>declare <code>index_spec(ctx)</code> with a regular time axis;</li>
-<li>implement <code>inspect_item(item, ctx)</code> to return <code>ItemInfo(coordinate=...)</code>;</li>
+<li>implement <code>inspect_item(item, ctx)</code> to return <code>ItemInfo(coordinate=...)</code>,
+  with <code>values=</code> when the schema has engine-owned arrays;</li>
 <li>declare the complete Zarr schema;</li>
 <li>map source values to deterministic indexes through the resolved index.</li>
 </ul>
@@ -4835,6 +4942,10 @@ command:</p>
 so a skipped window surfaces as a loud per-slot error, never as silent data
 misplacement. <code>TimeAxis.grid</code> and <code>TimeAxis.explicit</code> axes are filled from
 the declaration alone and skip this step.</p>
+<p>For a plugin with engine-owned arrays, run preallocate with <code>--input-data</code> for
+the whole product. Omit slot flags. Finish preallocation before starting
+workers. If preallocation stops, rerun it before ingest. If new source slots
+arrive, preallocate them before ingest.</p>
 <p>Add <code>--dry-run</code> to inspect the resolved index without writing any files or
 control-plane records:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>preallocate<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
@@ -4859,8 +4970,24 @@ No Zarr arrays, claim files, or index records are created.</p>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>--format<span class="w"> </span>table
 </code></pre></div>
 <p>Each row contains a group and a half-open range such as <code>[0, 144)</code>. The slot
-size must align with the indexed dimension's chunk size. Omit <code>--format table</code>
-to receive the JSON plan used by schedulers.</p>
+size must cover whole stored chunks or shards of every worker-written
+time-indexed array. It must also cover the chunks or shards that the time
+coordinate declares, and those stored in the target for every worker-written
+array. If an explicit <code>--slot-size</code> would split one, the command refuses it and
+names the multiple that the slot size needs. Omit <code>--format table</code> to receive
+the JSON plan used by schedulers.</p>
+<p>The command writes each range as it computes it. The number of ranges does not
+change its memory use. The remaining-coverage intervals and the resolved index
+stay in memory.</p>
+<p>If a plugin declares neither chunks nor shards, and no worker-written array of
+the target requires larger ranges, the command plans one range per slot. Pass
+<code>--slot-size</code> to choose a larger range.</p>
+<p>A plan of more than 100,000 ranges prints one hint on stderr. A plan of more
+than 1,000,000 ranges is refused. The refusal names the range count, and the
+range count and slot size of each group. It also names the smallest
+<code>--slot-size</code> that gives an executable plan within the limit. If no such size exists, the refusal says so.
+Use the size it names. To emit the plan anyway, add <code>--yes-i-really-mean-it</code>.
+The JSON costs about 390 bytes per range, so 44 million ranges are about 17 GB.</p>
 <p>Planning is resume-aware by default: completed ranges are excluded. Use
 <code>--no-resume</code> only when the scheduler must deliberately ignore recorded
 coverage and emit the full range.</p>
@@ -4952,6 +5079,13 @@ over <code>JOB_COMPLETION_INDEX</code> with <code>FIRECUBE_SLOT_SIZE</code> or <
 <p>Every planned range should have a completed run. If a retry remains blocked,
 use <a href="../chunk-manager/">ChunkManager Operations</a> to inspect the product's
 claims.</p>
+<h2 id="chunk-ownership-refusals">Chunk Ownership Refusals</h2>
+<p>Firecube refuses a slot range that splits a stored chunk or shard of an array
+the workers write. It raises <code>ConfigurationError</code> before the worker writes.</p>
+<p>Plan the ranges with <code>firecube zarr slots</code>, as in step 2. To see a refusal and
+its fix, follow <a href="../fix-chunk-ownership-refusal/">Fix A Chunk Ownership Refusal</a>.
+For the reasons, read <a href="../../concepts/output-formats/zarr/chunk-ownership/">Chunk Ownership</a>.
+For a blocked plan, see <a href="#recover-a-blocked-plan">Recover A Blocked Plan</a>.</p>
 <h2 id="recover-a-blocked-plan">Recover A Blocked Plan</h2>
 <p>Firecube refuses to emit or execute ranges when it cannot prove that the writes
 are disjoint and chunk-aligned.</p>
@@ -4974,6 +5108,18 @@ are disjoint and chunk-aligned.</p>
 <tr>
 <td><code>WriteIntentRangeError</code></td>
 <td>Fix the plugin's source filtering or index mapping; it emitted a write outside the worker's range.</td>
+</tr>
+<tr>
+<td><code>the stored chunk shape (...) puts slots [...) in one chunk object</code> (<code>shard</code> for a sharded array)</td>
+<td>The worker's range splits a stored chunk or shard. Plan ranges with <code>firecube zarr slots</code>. See <a href="#chunk-ownership-refusals">Chunk Ownership Refusals</a>.</td>
+</tr>
+<tr>
+<td><code>staged promotion replaces whole chunk objects</code> (<code>shard</code> for a sharded array)</td>
+<td>The staged run does not write every cell of a unit it would promote. Write every cell of the unit in one run, or use <code>--write-mode direct</code>.</td>
+</tr>
+<tr>
+<td><code>engine-owned arrays [...] are not materialized</code></td>
+<td>Preallocate has not written the per-slot arrays, or stopped before it finished. Run <code>firecube zarr preallocate</code> once with <code>--input-data</code>.</td>
 </tr>
 <tr>
 <td>An overlapping range is active</td>

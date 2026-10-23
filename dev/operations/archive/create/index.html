@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2087,6 +2115,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3229,6 +3285,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../zarr-compare/" class="md-nav__link">
         
   
@@ -3730,6 +3814,17 @@
     <span class="md-ellipsis">
       
         Verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#access-and-claims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access And Claims
       
     </span>
   </a>
@@ -4697,6 +4792,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#access-and-claims" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access And Claims
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4800,10 +4906,46 @@ them:</p>
 </code></pre></div>
 <p>Each create is recorded as an <code>archive-create-…</code> run in the source product,
 with status <code>complete</code> or <code>failed</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span>--product-name<span class="w"> </span>MY_PRODUCT.zarr
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
 </code></pre></div>
-<p>Products without a <code>.firecube/</code> control plane are archived without a record
+<p>If Firecube cannot write the record, the run can stay <code>started</code>. See
+<a href="#access-and-claims">Access And Claims</a>.</p>
+<p>The record holds the start time, group, date window, variables and size of the
+archive.</p>
+<p>Products without a <code>.firecube/schema.json</code> file are archived without a record
 and are not modified.</p>
+<h2 id="access-and-claims">Access And Claims</h2>
+<p>If the source has a <code>.firecube/schema.json</code> file, <code>archive create</code> writes to
+the control plane of the source. Use credentials with write access to the
+source.</p>
+<ul>
+<li>The command takes the maintenance claim of the product for the whole create.
+  If another claim is active on the product, the command stops and names it.</li>
+<li>The command refuses anonymous storage access (<code>--storage-anonymous</code>) and
+  exits with code 2. Use credentials that can write to the source.</li>
+<li>If the command cannot write the record, it exits with code 1. The archive
+  file stays in place. The message names the archive path and the record error.
+  The run of the failed create can stay <code>started</code>. Recover with these steps:</li>
+<li>Fix the cause of the record error.</li>
+<li>
+<p>List the runs that have the status <code>started</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span>--status<span class="w"> </span>started
+</code></pre></div>
+</li>
+<li>
+<p>Abandon the earlier <code>archive-create-…</code> run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;archive create record failed&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+</li>
+<li>
+<p>Run the create again with <code>--overwrite --yes-i-really-mean-it</code>.</p>
+</li>
+</ul>
+<p>A source without a <code>.firecube/schema.json</code> file gets no claim and no record.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../inspect/">Inspect And Validate Archives</a></strong> — inspect metadata or contents</li>

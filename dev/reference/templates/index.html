@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2087,6 +2115,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3200,6 +3256,34 @@
     
   
     Run Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
   
 
     
@@ -4803,6 +4887,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec.engine_owned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;engine_owned
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -6038,6 +6133,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compressors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrArraySpec.engine_owned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;engine_owned
       
     </span>
   </a>
@@ -8099,7 +8205,33 @@ names are rejected at write time.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Chunk shape for the array, or <code>None</code> to use the template default.</p>
+        <p>Chunk shape for the array, or <code>None</code> for the default layout.</p>
+<p>With <code>None</code> and no <code>shards</code>, a time-indexed array that pods write is
+created with one slot per chunk. If zarr's own chunks for the whole array
+already have a time chunk of 1, they are kept unchanged and nothing is
+logged. Otherwise the array gets time chunk 1, with the other dimensions
+chosen by zarr for a single slot, unsharded; Firecube logs one warning
+naming the chunks when it changes zarr's own choice this way.</p>
+<p>With <code>None</code> and <code>shards</code> declared, the declared shards are kept. A
+rank-1 time-indexed array (one that pods write, an engine-owned array, or
+the time coordinate) gets as its chunk the largest divisor of its shard
+that is at most <code>min(256, slots)</code>, where <code>slots</code> is the array's time
+extent at creation. For a time-indexed array of higher rank, zarr chooses
+the chunks.</p>
+<p>The time coordinate and engine-owned arrays that declare neither <code>chunks</code>
+nor <code>shards</code> get dense chunks of <code>min(256, slots)</code>. One exception: an
+observed time coordinate (<code>RegularTimeAxis(mode="floor")</code>) that
+<code>firecube zarr preallocate</code> creates is always unsharded and its declared
+<code>shards</code> are not used. With <code>chunks</code> undeclared it gets dense chunks of
+<code>min(256, slots)</code>; declared <code>chunks</code> are used as given.</p>
+<p>A static array's chunks are chosen by zarr. The default never rechunks an
+existing array. <code>firecube zarr preallocate</code> refuses an existing array
+whose stored chunks differ from the chunks its spec resolves to: the
+declared <code>chunks</code>, or, for a time coordinate that declares none, the
+chunks the default would create. It does not compare the chunks of an
+array that declares no <code>chunks</code> and that pods write (with or without
+<code>shards</code>), of an engine-owned or static array that declares no
+<code>chunks</code>, or of an observed time coordinate.</p>
 
     </div>
 
@@ -8334,6 +8466,94 @@ this array only.</p>
 <p>Each entry is a Zarr v3 BytesBytesCodec config dict. <code>None</code> inherits the
 template default. An empty tuple means explicitly uncompressed for this
 array.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.ZarrArraySpec.engine_owned" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">engine_owned</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">engine_owned</span> <span class="o">=</span> <span class="kc">False</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether the engine, not ingest pods, writes this per-slot array.</p>
+<p>For a rank-1, time-indexed array with one scalar per slot (a platform
+position, a per-slot calibration constant). <code>inspect_item</code> supplies the
+slot's value as <code>ItemInfo(coordinate=..., values={name: scalar})</code>;
+<code>firecube zarr preallocate --input-data ...</code> inspects every source item
+and writes the array whole, once, then marks it materialized. Ingest pods
+never write it: a write intent that targets it is checked against the
+stored value instead, and a mismatch fails the batch with
+<code>SchemaDriftError</code>. Ingest into a target where the array is not
+materialized is refused. Slot-parallel pods therefore never share a chunk
+of it, whatever its chunks; with <code>chunks=None</code> it is created with the
+dense chunks of the time coordinate.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>At construction, when <code>engine_owned=True</code> is combined
+with <code>time_indexed=False</code> or with a shape that is not rank 1.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.ConfigurationError" href="../exceptions/#firecube.ingestor.api.ConfigurationError">ConfigurationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>From <code>firecube zarr preallocate</code>, before it
+acquires its write claim or writes any array, when the array is
+the group's time coordinate (the plugin's time dimension name or
+the coordinate of the group's index axis), because the engine
+already materializes coordinates. The same command raises it when
+the group has no bounded time axis or <code>--input-data</code> is missing.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span> <span class="o">=</span> <span class="n">ZarrArraySpec</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">... </span>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;platform_lon&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">... </span>    <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">144</span><span class="p">,),</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">... </span>    <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float64&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>    <span class="n">fill_value</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">),</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span>    <span class="n">engine_owned</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">spec</span><span class="o">.</span><span class="n">engine_owned</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="go">True</span>
+</code></pre></div>
 
     </div>
 

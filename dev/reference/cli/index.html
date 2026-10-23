@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2087,6 +2115,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3200,6 +3256,34 @@
     
   
     Run Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
   
 
     
@@ -6931,8 +7015,16 @@ supports table and JSON output for scripting</p>
 <p>mark a non-terminal ingestion run as abandoned to unblock resume. a run
 stuck in 'started' state blocks future ingestion for that product. use this
 after confirming the original process is no longer active.</p>
+<p>abandoning also releases the run's write claims and prints each one; a
+claim whose owner is ambiguous stays and prints as 'Left claim'. a run that
+is already terminal keeps its status and still has its claims released.
+when the claims cannot be listed, the abandon is still recorded and the
+command exits 1; run it again to release them. a committed --all-stale
+sweep releases a claim only when it is stale, for the runs it abandons and
+runs already terminal; a fresh claim prints as 'Left claim'.</p>
 <p>--all-stale never prompts. without --yes-i-really-mean-it it lists stale
-runs as a dry run; with the flag it abandons them. single-run operations
+runs and the claims it would release as a dry run; with the flag it
+abandons them. single-run operations
 prompt in a terminal and require the flag in non-TTY contexts.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>firecube chunks runs abandon [OPTIONS]
@@ -8231,6 +8323,10 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <p>Emit chunk-aligned slot ranges for orchestrated parallel ingestion.</p>
 <p>Read-only: does NOT mutate target storage or tracking state.
 JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
+<p>Existing pod-written arrays in the target constrain the slot size by their stored chunk or shard.
+The command writes each range as it generates it, so memory does not grow with the range count.
+Above 100,000 ranges in the plan it prints one hint on stderr before the plan.
+Above 1,000,000 ranges it refuses the plan; pass --yes-i-really-mean-it to emit it anyway.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>firecube zarr slots [OPTIONS] PLUGIN
 </code></pre></div>
@@ -8296,13 +8392,19 @@ JSON output is Argo withItems / Kubeflow ParallelFor compatible.</p>
 <tr>
 <td><code>--slot-size</code></td>
 <td>integer</td>
-<td>Slot partition size (default: chunk_shape[0] of first array of first group).</td>
+<td>Slot partition size. Default per group: the least common multiple of the time units of its time-indexed arrays that are not engine-owned, the time coordinate included (declared chunks or shards, else one slot), and of the stored chunk or shard of each pod-written array the target already has; the whole axis when there is none.</td>
 <td>None</td>
 </tr>
 <tr>
 <td><code>--no-resume</code></td>
 <td>boolean</td>
 <td>Disable resume-aware narrowing; emit full [0, total_slots) ranges.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--yes-i-really-mean-it</code></td>
+<td>boolean</td>
+<td>Emit a plan with more ranges than the ceiling (1,000,000 ranges in the whole plan).</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>

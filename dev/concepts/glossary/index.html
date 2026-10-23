@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2162,6 +2190,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3287,6 +3343,34 @@
     
   
     Run Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
   
 
     
@@ -4655,6 +4739,9 @@ temporary local product before committing; <code>direct</code> writes to the tar
 path directly.</p>
 <p><strong>Pipeline worker</strong> — A worker inside one Firecube run that can prepare or write
 batches concurrently when the plugin class and output format allow it.</p>
+<p><strong>Slot</strong> — One step of the time axis of a product. The cadence of the axis sets
+the length of the step. The axis declares how many slots it has with
+<code>slot_count</code> or <code>end_date</code>. See <a href="../output-formats/zarr/chunk-ownership/#what-a-slot-is">Chunk Ownership</a>.</p>
 <p><strong>Slot range</strong> — A fixed index range assigned to a direct-Zarr worker. Slot
 ranges must be disjoint and chunk-aligned for safe parallel writes.</p>
 <h2 id="next-steps">Next Steps</h2>

@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2087,6 +2115,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3229,6 +3285,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../zarr-compare/" class="md-nav__link">
         
   
@@ -3764,6 +3848,17 @@
     <span class="md-ellipsis">
       
         Overwrite An Existing Restore Target
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recover-from-an-interrupted-overwrite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recover From An Interrupted Overwrite
       
     </span>
   </a>
@@ -4664,6 +4759,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recover-from-an-interrupted-overwrite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recover From An Interrupted Overwrite
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#failure-recovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4731,6 +4837,13 @@ a Zarr store.</p>
 </code></pre></div>
 <p>The target must be local. The output is the same as for <code>.tgm</code>, without the
 <code>restored group:</code> lines.</p>
+<p>Firecube refuses a zip entry that leaves the target. Such an entry has an
+absolute name, a backslash, or an empty, <code>.</code> or <code>..</code> segment. The check runs
+before Firecube deletes the target or restores any entry.</p>
+<p>Firecube also refuses a corrupt entry, an archive without a root <code>zarr.json</code>,
+and a <code>zarr.json</code> entry that is not valid Zarr v3 metadata. If a check fails,
+Firecube deletes and replaces no existing data. It can already have written the
+control-plane records of the restore.</p>
 <h2 id="verify-the-restored-product">Verify The Restored Product</h2>
 <p>Inspect the restored product's run history:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
@@ -4747,6 +4860,21 @@ a Zarr store.</p>
 <h2 id="overwrite-an-existing-restore-target">Overwrite An Existing Restore Target</h2>
 <p><code>--overwrite</code> replaces the whole target. Data and run history written to the
 target after the archive was created are lost.</p>
+<p>If the archive fails its checks, Firecube refuses it. It deletes and replaces
+no existing data. It can already have written the control-plane records of
+the restore. These are its claim, its run under
+<code>.firecube/runs/archive-restore-*/</code>, and <code>.firecube/schema.json</code> if that file
+was absent.</p>
+<p>On a local target, the overwrite keeps these paths under <code>.firecube/</code>:</p>
+<ul>
+<li><code>claims/</code>, which holds the claim of the restore</li>
+<li><code>schema.json</code></li>
+<li><code>runs/&lt;run-id&gt;/</code>, which holds the records of the restore itself</li>
+</ul>
+<p>Firecube deletes the rest of the old control plane and all old data. The
+restore releases its claim when it ends. If the target or a kept path is a
+symlink, Firecube refuses the overwrite and deletes nothing. Firecube treats a
+remote <code>.tgm</code> target as before.</p>
 <p>Preview:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -4761,6 +4889,37 @@ target after the archive was created are lost.</p>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
+<h2 id="recover-from-an-interrupted-overwrite">Recover From An Interrupted Overwrite</h2>
+<p>On a local target, a restore that stops during the replacement leaves a
+restore run in the <code>started</code> state. If Firecube cannot record a failure, the
+run can be <code>started</code> or <code>failed</code>. In that case the restore prints a line that
+starts with <code>Warning:</code>. A remote <code>.tgm</code> root restore replaces the whole store
+as before, so it need not leave a run to find. Take these steps:</p>
+<ol>
+<li>List the runs and read the status of the restore run:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
+</code></pre></div>
+<ol>
+<li>If the restore run is still <code>started</code>, abandon it. Its ID starts with
+   <code>archive-restore-</code>. Do not abandon a run in another status.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--run-id<span class="w"> </span><span class="s2">&quot;&lt;run-id&gt;&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;interrupted restore&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<ol>
+<li>Run the restore again:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<p>The target can hold a partial restore until step 3 ends.</p>
 <h2 id="failure-recovery">Failure Recovery</h2>
 <table>
 <thead>
@@ -4771,6 +4930,26 @@ target after the archive was created are lost.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>Invalid Tensogram archive &lt;path&gt;</code></td>
+<td>The archive failed its structural check. Firecube deleted and replaced no existing data.</td>
+<td>Do not restore this archive. Create a new archive from the source product.</td>
+</tr>
+<tr>
+<td><code>holds a symlink at</code></td>
+<td>The target or a kept path under <code>.firecube/</code> is a symlink. Firecube deleted nothing.</td>
+<td>Replace the symlink with a real directory, or restore to another target.</td>
+</tr>
+<tr>
+<td><code>Warning: archive restore failure not recorded</code></td>
+<td>The restore failed and Firecube could not record the failure.</td>
+<td>Follow the steps in "Recover From An Interrupted Overwrite".</td>
+</tr>
+<tr>
+<td><code>Warning: claim &lt;domain&gt; at &lt;path&gt; not released</code></td>
+<td>The restore ended and Firecube could not release its claim.</td>
+<td>Clear the claim: <code>firecube chunks claims clear --product-name "$RESTORED_URI" --domain "&lt;domain&gt;" --yes-i-really-mean-it</code>.</td>
+</tr>
 <tr>
 <td>Restore target exists</td>
 <td>Firecube will not replace it by default.</td>
@@ -4785,6 +4964,11 @@ target after the archive was created are lost.</p>
 <td><code>Restoring a .zip archive to a remote target is not yet supported</code></td>
 <td>Zip restores write locally only.</td>
 <td>Restore to a local target, then copy it to S3.</td>
+</tr>
+<tr>
+<td><code>Unsafe entry '&lt;name&gt;' in archive &lt;path&gt;</code></td>
+<td>The zip holds an entry that leaves the target. Firecube refused it before it restored any entry.</td>
+<td>Do not restore this archive. Create a new archive from the source product.</td>
 </tr>
 <tr>
 <td>Restored product has no expected variables</td>

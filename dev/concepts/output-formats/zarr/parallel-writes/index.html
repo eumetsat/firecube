@@ -16,7 +16,7 @@
         <link rel="prev" href="../direct-region/">
       
       
-        <link rel="next" href="../../parquet/">
+        <link rel="next" href="../chunk-ownership/">
       
       
         
@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2225,6 +2253,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3342,6 +3398,34 @@
     
   
     Run Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../operations/fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
   
 
     
@@ -4789,7 +4873,7 @@ scheduler.</p>
 <ul>
 <li>The global indexed extent and schema must remain fixed for the parallel run.</li>
 <li>Every worker must use the same coordinate-to-index mapping.</li>
-<li>Slot boundaries must align with the physical chunks of all indexed arrays.</li>
+<li>A worker range must cover whole stored units. A unit is a chunk, or a shard when the array is sharded. Firecube refuses a range that splits a unit of an array that the workers write. To plan the ranges, see <a href="../../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a>.</li>
 <li>Workers may write the same group only through their assigned ranges.</li>
 <li>Schema changes during the parallel run are not supported.</li>
 </ul>

@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2087,6 +2115,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3229,6 +3285,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../zarr-compare/" class="md-nav__link">
         
   
@@ -3516,10 +3600,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-2-preview-the-claim-sweep" class="md-nav__link">
+  <a href="#step-2-preview-the-run-sweep" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 2: Preview the Claim Sweep
+        Step 2: Preview the Run Sweep
       
     </span>
   </a>
@@ -3527,10 +3611,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-preview-the-run-sweep" class="md-nav__link">
+  <a href="#step-3-preview-the-claim-sweep" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Preview the Run Sweep
+        Step 3: Preview the Claim Sweep
       
     </span>
   </a>
@@ -3553,6 +3637,17 @@
     <span class="md-ellipsis">
       
         Step 5: Rebuild the Snapshot
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#claims-the-sweep-leaves" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claims the Sweep Leaves
       
     </span>
   </a>
@@ -4686,10 +4781,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-2-preview-the-claim-sweep" class="md-nav__link">
+  <a href="#step-2-preview-the-run-sweep" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 2: Preview the Claim Sweep
+        Step 2: Preview the Run Sweep
       
     </span>
   </a>
@@ -4697,10 +4792,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-preview-the-run-sweep" class="md-nav__link">
+  <a href="#step-3-preview-the-claim-sweep" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Preview the Run Sweep
+        Step 3: Preview the Claim Sweep
       
     </span>
   </a>
@@ -4723,6 +4818,17 @@
     <span class="md-ellipsis">
       
         Step 5: Rebuild the Snapshot
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#claims-the-sweep-leaves" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claims the Sweep Leaves
       
     </span>
   </a>
@@ -4799,11 +4905,16 @@ ingestion runs stuck and multiple write claims blocking a product. The bulk
 sweep flags let you clear all stale state in one pass instead of abandoning
 runs and clearing claims one at a time.</p>
 <div class="admonition warning">
-<p class="admonition-title">Live pods are never touched</p>
-<p><code>--all-stale</code> only clears entries that are <strong>currently stale</strong> (age &gt;=
-the configured staleness threshold). Any run or claim whose heartbeat is
-still fresh is left untouched. Confirm all writers for the product are
-stopped before running the sweep.</p>
+<p class="admonition-title">Stop all writers before the sweep</p>
+<p>Stop every writer for the product before you run the sweep. The sweep
+abandons only runs that are <strong>currently stale</strong>. A run is stale when its
+age is at least the staleness threshold. The committed run sweep also
+releases claims, but only claims that are stale. A claim is stale 120
+seconds after its last heartbeat. The sweep releases a stale claim when its
+owner is a run that the sweep abandons or a run that is already terminal.
+The sweep leaves a fresh claim in place, because a live process can still
+renew it. The dry run previews the claims that the sweep releases and
+leaves.</p>
 </div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">PRODUCT_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">PRODUCT_NAME</span><span class="o">=</span><span class="s2">&quot;MY_PRODUCT&quot;</span>
@@ -4825,88 +4936,159 @@ configuration.</p>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--status<span class="w"> </span>started
 </code></pre></div>
 <p>Expected output when runs are stuck:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Run ID                Status   State   Parts Events
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>----------------------------------------------------
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>run-20260710-abc123   started  active  4     4
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>run-20260710-def456   started  active  2     2
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Run ID                               Status     State    Parts Events
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>--------------------------------------------------------------------------------
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>run-20260710-abc123                  started    stale    1     1
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>run-20260710-def456                  started    stale    1     1
 </code></pre></div>
 <p>List all active write claims for the product:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
 </code></pre></div>
 <p>Expected output when claims are blocking:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Product       State   Owner                        Domain
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>---------------------------------------------------------------------------
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>MY_PRODUCT.zarr  active  run-20260710-abc123:F001   MY_PRODUCT:zarr_region:F001
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>MY_PRODUCT.zarr  active  run-20260710-abc123:F002   MY_PRODUCT:zarr_region:F002
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>MY_PRODUCT.zarr  active  run-20260710-def456:F003   MY_PRODUCT:zarr_region:F003
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Product                  State    Owner                    Domain
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>--------------------------------------------------------------------------------------------
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>MY_PRODUCT.zarr          stale    run-20260710-abc123:F001 MY_PRODUCT.zarr:zarr_region:F001
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>MY_PRODUCT.zarr          stale    run-20260710-abc123:F002 MY_PRODUCT.zarr:zarr_region:F002
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>MY_PRODUCT.zarr          stale    run-20260710-def456:F003 MY_PRODUCT.zarr:zarr_region:F003
 </code></pre></div>
 <p>If both lists are empty, the product is already clean. Skip to
 <a href="#resume-ingestion">Resume Ingestion</a>.</p>
-<h2 id="step-2-preview-the-claim-sweep">Step 2: Preview the Claim Sweep</h2>
-<p>Run a dry-run to see which claims <code>--all-stale</code> would clear:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
+<h2 id="step-2-preview-the-run-sweep">Step 2: Preview the Run Sweep</h2>
+<p>Run a dry-run to see which runs <code>--all-stale</code> would abandon and which claims
+it would release:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--dry-run
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;cluster-crash&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--dry-run
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Previewed stale claims:
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  - MY_PRODUCT:zarr_region:F001
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  - MY_PRODUCT:zarr_region:F002
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  - MY_PRODUCT:zarr_region:F003
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>Dry run only; no claims cleared.
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>Skipped fresh claims: 0
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>Skipped missing claims: 0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>[dry-run] Would abandon stale runs for MY_PRODUCT.zarr:
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  - run-20260710-abc123
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  - run-20260710-def456
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  Would release claim MY_PRODUCT.zarr:zarr_region:F001
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  Would release claim MY_PRODUCT.zarr:zarr_region:F002
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  Would release claim MY_PRODUCT.zarr:zarr_region:F003
 </code></pre></div>
-<p>If the dry-run output matches the claims you saw in Step 1, proceed to Step 3.
-If some claims are missing from the dry-run output, those claims are not yet
-stale. Wait for the staleness threshold to pass, or use <code>--domain</code> with
-<code>--force</code> for individual claims after confirming the writer is gone.</p>
-<h2 id="step-3-preview-the-run-sweep">Step 3: Preview the Run Sweep</h2>
-<p>Run a dry-run to see which runs <code>--all-stale</code> would abandon:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;cluster-crash&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--dry-run
+<p>A <code>Would release claim</code> line names a stale claim that the committed sweep
+deletes. A <code>Would leave claim</code> line names a claim that the committed sweep
+keeps. The sweep keeps a claim that is fresh or whose owner is ambiguous. The
+dry run judges each claim by its age at the time of the listing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>  Would leave claim MY_PRODUCT.zarr:zarr_region:F002
+</code></pre></div>
+<p>If the output matches the runs you saw in Step 1, proceed to Step 3. If a run
+is missing, it is not yet stale. Wait for the staleness threshold to pass, or
+use <code>--run-id</code> for that run after you verify its process is gone. If a claim
+shows <code>Would leave claim</code>, see <a href="#claims-the-sweep-leaves">Claims the Sweep Leaves</a>.</p>
+<h2 id="step-3-preview-the-claim-sweep">Step 3: Preview the Claim Sweep</h2>
+<p>Run a dry-run to see which claims <code>--all-stale</code> would clear:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--dry-run
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>[dry-run] Would abandon stale runs for MY_PRODUCT.zarr:
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  - run-20260710-abc123
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  - run-20260710-def456
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Previewed stale claims:
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  - MY_PRODUCT.zarr:zarr_region:F001
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>  - MY_PRODUCT.zarr:zarr_region:F002
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>  - MY_PRODUCT.zarr:zarr_region:F003
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>Dry run only; no claims cleared.
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>Skipped fresh claims: 0
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>Skipped missing claims: 0
 </code></pre></div>
+<p>If the output matches the claims you saw in Step 1, proceed to Step 4. If a
+claim is missing, it is not yet stale. Wait for the staleness threshold to
+pass, or use <code>--domain</code> with <code>--force</code> after you verify the writer is gone.</p>
 <h2 id="step-4-commit-the-sweep">Step 4: Commit the Sweep</h2>
-<p>Clear all stale claims first, then abandon all stale runs. Order matters:
-clearing claims before abandoning runs avoids a window where a run is
-abandoned but its claims still block the next ingest.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--yes-i-really-mean-it
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;cluster-crash&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span>--yes-i-really-mean-it
-</code></pre></div>
-<p>Verify the product is clean:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
+<p>Abandon the stale runs first, then clear the stale claims that remain. The
+run sweep releases a claim only if the claim is stale. The owner of the claim
+must be one run that the sweep abandons or one run that is already terminal.
+Firecube reads the age of the claim again just before it deletes the claim. If
+the heartbeat moved, the sweep keeps the claim. The claim sweep then clears the
+remaining stale claims.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--status<span class="w"> </span>started
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;cluster-crash&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
-<p>Both commands should return empty tables.</p>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Abandoned stale runs for MY_PRODUCT.zarr:
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  Abandoned:
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    - run-20260710-abc123
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    - run-20260710-def456
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  Released claim MY_PRODUCT.zarr:zarr_region:F001
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>  Released claim MY_PRODUCT.zarr:zarr_region:F002
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>  Released claim MY_PRODUCT.zarr:zarr_region:F003
+</code></pre></div>
+<p>A <code>Left claim</code> line marks a claim that the sweep kept. Do not clear it
+blindly. See <a href="#claims-the-sweep-leaves">Claims the Sweep Leaves</a>.</p>
+<p>Clear the remaining stale claims:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<p>Expected output when the run sweep released every claim:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>No stale claims found
+</code></pre></div>
+<p>If Firecube cannot list the claims, the run sweep abandons no run. It prints
+the listing error and exits 1. Fix the cause and run the sweep again.</p>
+<p>Verify the product is clean:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--status<span class="w"> </span>started
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
+</code></pre></div>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>No runs found for MY_PRODUCT.zarr.
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>No claims found.
+</code></pre></div>
 <h2 id="step-5-rebuild-the-snapshot">Step 5: Rebuild the Snapshot</h2>
 <p>After a bulk sweep, rebuild the chunk snapshot to restore fast query
 performance:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>snapshots<span class="w"> </span>rebuild<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>snapshots<span class="w"> </span>rebuild<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Rebuilt snapshot for MY_PRODUCT.zarr: N chunks indexed.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>Rebuilt snapshot for MY_PRODUCT.zarr: generation=&lt;n&gt; records=&lt;n&gt;
 </code></pre></div>
 <p>Preview first if you want to confirm what the rebuild will touch:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>snapshots<span class="w"> </span>rebuild<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span>--dry-run
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>snapshots<span class="w"> </span>rebuild<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span>--dry-run
+</code></pre></div>
+<p>Expected output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>[dry-run] Would rebuild snapshot for product &#39;MY_PRODUCT.zarr&#39;
+</code></pre></div>
+<h2 id="claims-the-sweep-leaves">Claims the Sweep Leaves</h2>
+<p>The sweep prints <code>Left claim</code> for a claim that it kept. The dry run prints
+<code>Would leave claim</code> for the same claim.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>  Left claim MY_PRODUCT.zarr:zarr_region:F002
+</code></pre></div>
+<p>The sweep keeps a claim for one of these reasons:</p>
+<ul>
+<li>The claim is fresh. Its last heartbeat is less than 120 seconds old.</li>
+<li>More than one recorded run can own the claim.</li>
+<li>Another writer replaced the claim during the release.</li>
+</ul>
+<p>A fresh claim has two possible causes. A process can still run and renew the
+claim, by default every 30 seconds. Or the process stopped less than 120
+seconds ago.</p>
+<p>If the process stopped, wait until the claim is stale. Then run the sweep
+again. The claim then has a terminal owner, and the sweep releases it.</p>
+<p>If a process still renews the claim, stop the process first. Then release the
+claim with one of these commands.</p>
+<p>Release every claim of one run, fresh or stale:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run<span class="w"> </span>id&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;&lt;text&gt;&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<p>Release one claim:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span>--domain<span class="w"> </span>&lt;domain&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span>--force<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <h2 id="flag-reference">Flag Reference</h2>
 <table>
@@ -4929,7 +5111,7 @@ performance:</p>
 <td><code>--all-stale</code></td>
 <td><code>runs abandon</code></td>
 <td>Yes (or <code>--run-id</code>)</td>
-<td>Abandon every stale non-terminal run in one pass.</td>
+<td>Abandon every stale non-terminal run in one pass. Release the stale claims that one terminal run alone owns. Keep fresh claims. With <code>--dry-run</code>, list the claims that the sweep would release or leave.</td>
 </tr>
 <tr>
 <td><code>--dry-run</code></td>
@@ -4967,6 +5149,11 @@ performance:</p>
 <td>Wait for the threshold, or use <code>--domain</code> + <code>--force</code> per claim after confirming the writer is gone.</td>
 </tr>
 <tr>
+<td><code>Left claim</code> line in the run sweep output</td>
+<td>The claim is fresh, more than one run can own it, or another writer replaced it.</td>
+<td>See <a href="#claims-the-sweep-leaves">Claims the Sweep Leaves</a>. Stop its writer before you release the claim.</td>
+</tr>
+<tr>
 <td>Dry-run shows fewer runs than <code>runs list --status started</code></td>
 <td>Some runs are not yet stale.</td>
 <td>Wait, or use <code>--run-id</code> per run.</td>
@@ -4977,6 +5164,11 @@ performance:</p>
 <td>Stop the writer and repeat the sweep.</td>
 </tr>
 <tr>
+<td><code>runs abandon --all-stale</code> exits 1 with "could not be listed"</td>
+<td>Firecube could not list the claims, so it abandoned no run.</td>
+<td>Fix the listing error and run the sweep again.</td>
+</tr>
+<tr>
 <td>Snapshot rebuild fails</td>
 <td>The event log is corrupt or missing.</td>
 <td>See <a href="../snapshots/">Snapshots</a>.</td>
@@ -4985,15 +5177,15 @@ performance:</p>
 </table>
 <h2 id="resume-ingestion">Resume Ingestion</h2>
 <p>Once the product is clean, rerun ingestion with resume enabled:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/source<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">resume_existing</span><span class="o">=</span><span class="nb">true</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/source<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">resume_existing</span><span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <h2 id="next-steps">Next Steps</h2>
 <ul>

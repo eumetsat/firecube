@@ -1373,6 +1373,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2087,6 +2115,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3229,6 +3285,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../zarr-compare/" class="md-nav__link">
         
   
@@ -3371,6 +3455,17 @@
     <span class="md-ellipsis">
       
         When To Use Each Command
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recover-from-attrs-drift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recover From Attrs Drift
       
     </span>
   </a>
@@ -4698,6 +4793,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recover-from-attrs-drift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recover From Attrs Drift
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#migration-from-v014post1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4904,7 +5010,9 @@ plugin name to check for legacy slot-index records that predate the current
 <h3 id="firecube-zarr-index-rebuild"><code>firecube zarr index rebuild</code></h3>
 <p>Rebuild the resolved-index record from a plugin's <code>index_spec()</code> declaration.
 Use this command when the record is missing, corrupted, or was written by an
-older Firecube version that used a different format.</p>
+older Firecube version that used a different format. If the root attrs of the
+product still hold the resolved-index hash, the command refuses. See
+<a href="#recover-from-attrs-drift">Recover From Attrs Drift</a>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
@@ -4975,8 +5083,12 @@ with code <code>1</code> and prints the conflict.</p>
 <td><code>verify</code></td>
 </tr>
 <tr>
-<td>Recover a missing or corrupted index record</td>
+<td>Recover a missing or corrupted index record, with no root attrs hash</td>
 <td><code>rebuild</code></td>
+</tr>
+<tr>
+<td>Recover a state that <code>verify</code> reports as attrs drift</td>
+<td><a href="#recover-from-attrs-drift">Recover From Attrs Drift</a></td>
 </tr>
 <tr>
 <td>Migrate a cube that has only a legacy slot-index record</td>
@@ -4984,6 +5096,24 @@ with code <code>1</code> and prints the conflict.</p>
 </tr>
 </tbody>
 </table>
+<h2 id="recover-from-attrs-drift">Recover From Attrs Drift</h2>
+<p><code>verify</code> exits with code 1 and reports attrs drift when the root attrs of the
+product disagree with the record. <code>rebuild</code> refuses both states below. Each
+state has its own recovery.</p>
+<ol>
+<li>If the root attr holds the hash and <code>.firecube/index/current.json</code> is
+   absent, restore the file from a backup. Or remove the root attrs
+   <code>firecube_resolved_index_identity_hash</code> and <code>firecube_resolved_index</code>,
+   then run <code>firecube zarr index rebuild</code> with the plugin that wrote the data.</li>
+<li>If the record exists and the root attr
+   <code>firecube_resolved_index_identity_hash</code> differs from it, remove that attr.
+   Then run <code>firecube zarr index rebuild</code>. The command writes the attr again
+   from the record.</li>
+<li>Run <code>firecube zarr index verify</code> to confirm the result.</li>
+</ol>
+<p>If <code>firecube zarr slots</code> warns that the plugin resolved index differs from the
+record, use the plugin that wrote the product, or a new target.
+<code>rebuild</code> does not change the record in that case.</p>
 <h2 id="migration-from-v014post1">Migration From v0.1.4.post1</h2>
 <p>Cubes written by Firecube v0.1.4.post1 and earlier used a legacy slot-index
 format. Run <code>firecube zarr index verify</code> to detect the legacy format, then

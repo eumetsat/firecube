@@ -16,7 +16,7 @@
         <link rel="prev" href="../direct-zarr/">
       
       
-        <link rel="next" href="../add-config-options/">
+        <link rel="next" href="../declare-a-calendar/">
       
       
         
@@ -1512,6 +1512,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../declare-a-calendar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Declare A Calendar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2235,6 +2263,34 @@
     
   
     How Parallel Writes Stay Safe
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chunk Ownership
   
 
     
@@ -3348,6 +3404,34 @@
     
   
     Run Parallel Zarr Writes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../operations/fix-chunk-ownership-refusal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fix A Chunk Ownership Refusal
   
 
     
@@ -4854,6 +4938,9 @@ the earliest observation regardless of file naming or discovery order.</p>
 <li>Return <code>ItemInfo(coordinate=timestamp)</code> for every item that belongs in the
   cube.</li>
 <li>Return <code>None</code> to skip an item entirely.</li>
+<li>Add <code>values={"&lt;array name&gt;": &lt;scalar&gt;}</code> when the schema has engine-owned
+  per-slot arrays. See
+  <a href="../direct-zarr/#per-slot-scalars">Per-Slot Scalars</a>.</li>
 <li>Return <code>ItemInfo(coordinate=None)</code> only when the item exists but its
   timestamp cannot be read; Firecube then fails discovery loudly instead of
   writing a cube with a hole.</li>
