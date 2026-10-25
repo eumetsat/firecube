@@ -637,10 +637,14 @@ def write_dataset_to_zarr(
             chunk_shape=effective_chunk_shape,
         )
 
+    # zarr's "w" deletes everything under the group path; under the root group that
+    # path is the whole store, `.firecube/` included. A first write there creates its
+    # arrays with "a" instead, which leaves every other key of the store alone.
+    to_zarr_mode = "a" if mode == "w" and not str(group).strip("/") else mode
     to_zarr_common: dict[str, Any] = {
         **zarr_kwargs,
         "group": group,
-        "mode": mode,
+        "mode": to_zarr_mode,
         "zarr_format": zarr_format,
         "consolidated": False,
         "safe_chunks": False,
