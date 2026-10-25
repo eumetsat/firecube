@@ -152,12 +152,15 @@ def zarr_to_tgm(
         groups_to_archive: list[str | None] = [group]
     else:
         zroot = session.zarr.open_group(source_uri, mode="r")
+        members = list(zroot.members())
         groups_to_archive = sorted(
-            (name for name, member in zroot.members() if isinstance(member, zarr.Group)),
+            (name for name, member in members if isinstance(member, zarr.Group)),
             key=str,
         )
-        if not groups_to_archive:
-            groups_to_archive = [None]
+        # A cube at the store root keeps its arrays beside its subgroups (for example multires/).
+        has_root_arrays = any(isinstance(member, zarr.Array) for _, member in members)
+        if has_root_arrays or not groups_to_archive:
+            groups_to_archive = [None, *groups_to_archive]
 
     target_path.parent.mkdir(parents=True, exist_ok=True)
     archived_groups: list[str] = []
