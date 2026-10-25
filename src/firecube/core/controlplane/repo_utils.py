@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import unquote
 
 _POD_SLOT_RE = re.compile(r"__slot=(?P<start>\d+)-(?P<end>\d+)$")
 _POD_GROUP_RE = re.compile(r"__group=(?P<group>.+?)__slot=\d+-\d+$")
@@ -52,13 +53,15 @@ def parse_pod_run_id_slot(
     Returns ``(None, None)`` for any run id that does not carry the
     canonical ``__group=NAME__slot=START-END`` (or ``__slot=START-END``)
     suffix, or whose suffix is malformed. Never raises.
+
+    The group is percent-decoded, because ``derive_pod_run_id`` quotes it.
     """
     try:
         if "__group=" in run_id:
             group_match = _POD_GROUP_RE.search(run_id)
             if group_match is None:
                 return (None, None)
-            group: str | None = group_match.group("group")
+            group: str | None = unquote(group_match.group("group"))
         else:
             group = None
 
