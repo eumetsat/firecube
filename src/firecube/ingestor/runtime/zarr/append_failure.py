@@ -202,7 +202,8 @@ def repair_failed_group(
     """Undo the tail and mark the regions of a group whose batch write failed.
 
     Opens the store without consolidated metadata so the repair sees the
-    arrays as they are on disk. A fresh group is deleted outright; an
+    arrays as they are on disk. A fresh group is deleted outright, except
+    that a fresh root group loses only its arrays; an
     existing group has every append-dimension array resized back to
     ``touched.batch_start_cursor`` and its region slots set to state 3.
 
@@ -234,7 +235,13 @@ def repair_failed_group(
 
     if touched.fresh_group:
         try:
-            if group in root:
+            if not str(group).strip("/"):
+                # Deleting the root group deletes the whole store, `.firecube/` included.
+                # A fresh root group loses its arrays and keeps its document and keys.
+                for name in sorted(root.array_keys()):
+                    del root[name]
+                outcome.group_removed = True
+            elif group in root:
                 del root[group]
                 outcome.group_removed = True
         except Exception as exc:
