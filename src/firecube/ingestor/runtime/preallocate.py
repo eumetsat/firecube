@@ -200,6 +200,10 @@ def preallocate_product(
     )
     from firecube.core.uris import storage_uri_from_target
     from firecube.ingestor.api import IndexedRegionStrategy
+    from firecube.ingestor.runtime.zarr.root_group import (
+        refuse_root_beside_named_groups,
+        refuse_root_group_attrs,
+    )
 
     identity = session.product
     plugin_target = identity.product_uri.to_str()
@@ -321,6 +325,12 @@ def preallocate_product(
             raise SchemaDriftError(str(exc) if exc.message is None else exc.message) from exc
         _preallocate_can_record_failure = True
         schema = ingestor.zarr_schema(plugin_ctx)
+        try:
+            refuse_root_beside_named_groups(schema)
+            refuse_root_group_attrs(schema)
+        except ConfigurationError:
+            _preallocate_can_record_failure = False  # a refusal records nothing: target untouched
+            raise
         all_specs = [array for group in schema for array in group.arrays]
         from firecube.ingestor.templates.config import (
             ZarrTemplateConfig,

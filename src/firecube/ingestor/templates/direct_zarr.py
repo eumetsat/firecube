@@ -90,6 +90,10 @@ from firecube.ingestor.runtime.zarr.direct_region_adapter import (
     DirectRegionAdapter,
     open_zarr_array,
 )
+from firecube.ingestor.runtime.zarr.root_group import (
+    refuse_root_beside_named_groups,
+    refuse_root_group_attrs,
+)
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import (
     RegionZarrWriter,
     ensure_group_ancestors,
@@ -1179,7 +1183,10 @@ class DirectZarrIngestor(BaseIngestor):
             self._zarr_schema_cache_by_ctx = cache = {}
         key = id(getattr(ctx, "_ctx", ctx))
         if key not in cache:
-            cache[key] = self.zarr_schema(ctx)
+            schema = self.zarr_schema(ctx)
+            refuse_root_beside_named_groups(schema)
+            refuse_root_group_attrs(schema)
+            cache[key] = schema
         return cache[key]
 
     def get_batch_groups(self, items: Sequence[Any], ctx: PluginContext) -> list[str]:

@@ -873,6 +873,14 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             ):
                 self._bind_index_at_startup(runtime_plugin_ctx)
 
+                # Schema refusals of the root group run after this context's index
+                # is bound and before anything touches the target.
+                from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+
+                schema_host: Any = self
+                if isinstance(schema_host, DirectZarrIngestor):
+                    schema_host._cached_zarr_schema(runtime_plugin_ctx)
+
                 binding = getattr(self, "_index_binding", None)
                 if binding is not None:
                     from firecube.ingestor.errors import UnboundedAxisError
