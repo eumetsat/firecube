@@ -42,12 +42,18 @@ log = logging.getLogger("firecube.core.zarr.multires")
 
 @dataclass
 class MultiresConfig:
-    """Configuration for building multiresolution Zarr layers."""
+    """Configuration for building multiresolution Zarr layers.
+
+    `group` is the group that holds the dataset; empty means the root. `lat_name` and
+    `lon_name` name the 1-D coordinates to coarsen.
+    """
 
     product: str
     group: str
     resolutions: list[float]
     time_dim_name: str = "timestamp"
+    lat_name: str = "lat"
+    lon_name: str = "lon"
 
 
 class ZarrMultiresBuilder:
@@ -162,6 +168,8 @@ class ZarrMultiresBuilder:
             strict=True,
             session=self._session_for(cfg),
             time_dim_name=cfg.time_dim_name,
+            lat_name=cfg.lat_name,
+            lon_name=cfg.lon_name,
         )
 
         log.info(
