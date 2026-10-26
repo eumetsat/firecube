@@ -15,16 +15,18 @@
 from __future__ import annotations
 
 import importlib
+import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
 
+import numpy as np
 import pytest
 import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
+from firecube.ingestor.api import WriteIntent, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.registry import loader as _loader
 
 pytestmark = pytest.mark.integration
@@ -161,3 +163,123 @@ def test_dimension_names_written(tmp_path: Path) -> None:
     lat = cast(Any, root["data/lat"])
     assert data.metadata.dimension_names == ("timestamp", "x")
     assert lat.metadata.dimension_names == ("lat",)
+
+
+# --- group attributes on the preallocate path and attributes on the root group "/" ----------
+
+_GROUP_ATTRS = {"title": "root cube", "institution": "EUMETSAT"}
+
+
+def _declare_group(monkeypatch: pytest.MonkeyPatch, group: str, attrs: dict[str, Any]) -> None:
+    """Swap the fixture plugin's single group for ``group`` carrying ``attrs``."""
+    import direct_zarr_capable_test_plugin as plugin_module
+
+    cls = plugin_module.DirectZarrCapableTestIngestor
+    original_schema = cls.zarr_schema
+    original_index = cls.index_spec
+
+    def zarr_schema(self: Any, ctx: Any) -> list[ZarrGroupSpec]:
+        (spec,) = original_schema(self, ctx)
+        return [ZarrGroupSpec(group=group, arrays=spec.arrays, attrs=attrs)]
+
+    def index_spec(self: Any, ctx: Any) -> Any:
+        spec = original_index(self, ctx)
+        (axis,) = spec.groups.values()
+        return type(spec)(name=spec.name, groups={group: axis})
+
+    def build_write_intents(self: Any, batch: Any, ctx: Any) -> list[Any]:
+        resolved = self.resolved_index(ctx)
+        intents: list[Any] = []
+        for item in batch.items:
+            info = self.inspect_item(item, ctx)
+            if info is None:
+                continue
+            intents.append(
+                WriteIntent(
+                    group=group,
+                    array="data",
+                    ts_index=resolved.position(group, info.coordinate),
+                    data=np.full((10,), float(item), dtype="float32"),
+                    kind="1d",
+                )
+            )
+        intents.append(
+            WriteIntent(
+                group=group,
+                array="lat",
+                ts_index=0,
+                data=np.arange(10, dtype=np.float64),
+                kind="static",
+            )
+        )
+        return intents
+
+    monkeypatch.setattr(cls, "zarr_schema", zarr_schema)
+    monkeypatch.setattr(cls, "index_spec", index_spec)
+    monkeypatch.setattr(cls, "build_write_intents", build_write_intents)
+
+
+def _group_attributes(target_path: Path, group: str) -> dict[str, Any]:
+    zarr_json = target_path / group / "zarr.json" if group != "/" else target_path / "zarr.json"
+    return json.loads(zarr_json.read_text())["attributes"]
+
+
+def test_repro_root_attrs_window_group_attrs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A named group's declared attrs reach its zarr.json after preallocate and a window pod."""
+    _declare_group(monkeypatch, "data", _GROUP_ATTRS)
+    target_path = tmp_path / "out.zarr"
+
+    prealloc = CliRunner().invoke(cli, _preallocate_args(target_path))
+    window = CliRunner().invoke(
+        cli, [*_ingest_args(target_path), "--slot-start", "0", "--slot-end", "100"]
+    )
+
+    assert prealloc.exit_code == 0, prealloc.output
+    assert window.exit_code == 0, window.output
+    assert _group_attributes(target_path, "data") == _GROUP_ATTRS
+
+
+def test_repro_root_attrs_preallocate_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Preallocate accepts plugin attrs on the root group and keeps the index mirror beside them."""
+    _declare_group(monkeypatch, "/", _GROUP_ATTRS)
+    target_path = tmp_path / "out.zarr"
+
+    result = CliRunner().invoke(cli, _preallocate_args(target_path))
+
+    assert result.exit_code == 0, result.output
+    attributes = _group_attributes(target_path, "/")
+    assert {k: attributes.get(k) for k in _GROUP_ATTRS} == _GROUP_ATTRS
+    assert "firecube_resolved_index" in attributes
+    assert "firecube_resolved_index_identity_hash" in attributes
+
+
+def test_repro_root_attrs_serial_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A serial direct ingest of a root-group plugin keeps its attrs and the index mirror."""
+    _declare_group(monkeypatch, "/", _GROUP_ATTRS)
+    target_path = tmp_path / "out.zarr"
+
+    result = CliRunner().invoke(cli, _ingest_args(target_path))
+
+    assert result.exit_code == 0, result.output
+    attributes = _group_attributes(target_path, "/")
+    assert {k: attributes.get(k) for k in _GROUP_ATTRS} == _GROUP_ATTRS
+    assert "firecube_resolved_index" in attributes
+    assert "firecube_resolved_index_identity_hash" in attributes
+
+
+def test_repro_root_attrs_staged_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Staged promotion of a root-group plugin keeps its attrs and the index mirror."""
+    _declare_group(monkeypatch, "/", _GROUP_ATTRS)
+    target_path = tmp_path / "out.zarr"
+    args = _ingest_args(target_path)
+    args[args.index("direct")] = "staged"
+
+    result = CliRunner().invoke(cli, args)
+
+    assert result.exit_code == 0, result.output
+    attributes = _group_attributes(target_path, "/")
+    assert {k: attributes.get(k) for k in _GROUP_ATTRS} == _GROUP_ATTRS
+    assert "firecube_resolved_index" in attributes
+    assert "firecube_resolved_index_identity_hash" in attributes
