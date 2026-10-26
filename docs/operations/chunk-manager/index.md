@@ -44,10 +44,10 @@ is enabled. The command result is the table or JSON payload.
 
 ## Storage Configuration For Deletion
 
-If you pass the full product URI to `--product-name`, `chunks delete` needs no
-storage type, no storage driver and no `[storage]` section to name the product.
-The command deletes the storage objects through a filesystem bound to that
-product. This holds for a dry run and for a real run.
+If you pass the full product URI to `--product-name`, the URI names the product.
+Then `chunks delete` needs no storage type, no storage driver and no `[storage]`
+section. The command deletes the storage objects through a filesystem bound to
+that product. This holds for a dry run and for a real run.
 
 A `[storage]` target path in the configuration does not change where a run with
 a product URI deletes.

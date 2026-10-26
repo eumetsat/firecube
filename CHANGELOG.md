@@ -630,11 +630,13 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   calendar coordinate as duplicates. It still reports a repeated value on every
   other coordinate.
 - A `DirectZarrIngestor` plugin can declare attributes on the root group
-  `"/"`. Before, firecube refused every root-group attribute. Now it refuses
-  only the four names of the index mirror: `firecube_resolved_index`,
-  `firecube_resolved_index_identity_hash`, `firecube_slot_index_model` and
-  `firecube_slot_index_model_identity_hash`. The root document keeps the
-  mirror beside the plugin attributes.
+  `"/"`. Before, firecube refused every root-group attribute. Now the
+  root-specific refusal covers only the four names of the index mirror:
+  `firecube_resolved_index`, `firecube_resolved_index_identity_hash`,
+  `firecube_slot_index_model` and `firecube_slot_index_model_identity_hash`.
+  The root document keeps the mirror beside the plugin attributes. When
+  `zarr preallocate` stamps the attributes, it still rejects the reserved
+  array-attribute names, for example `firecube_run_id` and `_FillValue`.
 - `firecube zarr preallocate` writes the attributes of every declared group.
   Before, it left the attributes of a group empty. If a cube was preallocated
   without them, run `firecube zarr preallocate` again to add them.
@@ -652,8 +654,10 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   - It no longer fails because DirectZarr records a state array that does not
     exist. It takes the removed slots from the chunk grids of the arrays.
   - The dry run counts only the chunk keys that exist in the store.
-- `firecube chunks delete` deletes chunk objects through the storage driver
-  of the product. It deletes the one object that a chunk record names.
+- `firecube chunks delete` deletes the chunk objects of a chunk record through
+  the storage driver of the product. It deletes the one object that the record
+  names. This covers chunk-record objects only. The deletion of span payloads
+  and of control-plane files is unchanged.
   - Glob characters in a product name or key, such as `[` or `*`, no longer
     reach the objects of another product.
   - A chunk record whose key is absolute, holds `.` or `..`, or points
@@ -672,9 +676,9 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   Before, a failed run left the half-written archive in place.
 - `firecube archive validate` reports a `.tgm` archive with no messages as
   not valid.
-- `firecube archive create` and `firecube archive list` print `(root)` as the
-  name of the root group. Before, `create` printed an empty name and `list`
-  printed `message <n>`.
+- `firecube archive create` and `firecube archive list` print `(root)` for a
+  group whose recorded name is empty. Before, `create` printed an empty name
+  and `list` printed `message <n>`. A group recorded as `/` prints as `/`.
 - `firecube archive restore` restores the compressors of a `.tgm` archive on
   the locked xarray version. Before, it dropped them without a message, and
   on xarray 2026.9.0 it failed. If firecube cannot rebuild a compressor, it

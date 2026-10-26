@@ -11,8 +11,9 @@ PRODUCT_NAME="MY_PRODUCT"
 ## Preflight
 
 The full URI locates the product and the storage objects to delete. If you pass
-it to `--product-name`, `chunks delete` needs no storage type, no storage driver
-and no `[storage]` section, for a dry run or a real run.
+it to `--product-name`, `chunks delete` needs no storage type and no storage
+driver. It needs no `[storage]` section either. This holds for a dry run and a
+real run.
 
 The URI does not supply S3 access. For an `s3://` product, make working
 credentials available through the normal credential chain of the default driver.

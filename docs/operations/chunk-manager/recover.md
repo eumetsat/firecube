@@ -247,9 +247,9 @@ firecube zarr validate \
 Check that the JSON report has `is_valid: true` and the command exits 0. If it
 exits 1, resolve the reported validation issues before using the product.
 
-Check that `arrays_checked` lists the arrays of the group. A report that
-checked no array is not valid: the command exits 1 and `info_notes` holds this
-note:
+If the group is a time-indexed group, check that `arrays_checked` lists its
+arrays. A report for such a group that checked no array is not valid. The
+command exits 1 and `info_notes` holds this note:
 
 ```text
 no array of data was checked: no time dimension found; pass --time-dim to name it
