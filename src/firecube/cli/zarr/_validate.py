@@ -90,7 +90,8 @@ See also: firecube chunks list, firecube parquet validate
         "time-dimension name used to classify arrays for the static-marker "
         "check; must match the cube's ``BaseIngestor.time_dim_name`` ClassVar. "
         "When omitted, the name is auto-detected from the stored "
-        "``firecube_timestamp_state`` array. Pass this flag explicitly when "
+        "``firecube_timestamp_state`` array or from a marked time coordinate. "
+        "Pass this flag explicitly when "
         "the plugin uses a non-default dimension name (e.g. ``--time-dim time``)."
     ),
 )

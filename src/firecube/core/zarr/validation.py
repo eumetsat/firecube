@@ -47,6 +47,7 @@ from firecube.core.filesystem.protocol import StorageFilesystem
 from firecube.core.filesystem.store_factory import create_zarr_store
 from firecube.core.storage.uri import StorageUri
 from firecube.core.time.calendar import is_gregorian_like
+from firecube.core.zarr._coord_lifecycle import CoordLifecycleState, resolve_coord_lifecycle
 from firecube.core.zarr._reserved_attrs import FIRECUBE_STATIC_WRITTEN_ATTR
 
 if TYPE_CHECKING:
@@ -974,6 +975,18 @@ def _candidate_time_dim(
     log.info("No explicit time dimension name provided; auto-detecting from stored Zarr metadata")
     if state is not None and len(state.shape) == 1 and state.dim_names:
         return state.dim_names[0]
+    return _marked_time_coord_dim(parent_arrays)
+
+
+def _marked_time_coord_dim(parent_arrays: list[_ArrayInfo]) -> str | None:
+    """Return the first dimension of a rank-1 array that carries a time-coordinate marker."""
+    marked = (CoordLifecycleState.PREALLOCATED, CoordLifecycleState.COORD_MANAGED)
+    for info in parent_arrays:
+        if info.array is None or len(info.shape) != 1 or not info.dim_names:
+            continue
+        attrs = dict(getattr(info.array, "attrs", {}) or {})
+        if resolve_coord_lifecycle(attrs) in marked:
+            return info.dim_names[0]
     return None
 
 
@@ -1245,7 +1258,9 @@ def validate_group_with_fs(
         time_dim_name: Explicit time-dimension name to treat as
             time-indexed when classifying arrays for the static-marker check.
             Defaults to ``None``; when ``None`` the time dimension is
-            auto-detected per parent group.
+            auto-detected per parent group from the state array or from a
+            rank-1 array marked preallocated or coordinate-managed. A report
+            that checks no array is not valid and carries a note.
         state_var_name: Leaf name of the state array whose first dimension is
             also treated as time-indexed. Defaults to the reserved
             ``firecube_timestamp_state`` name.
@@ -1404,6 +1419,15 @@ def validate_group_with_fs(
         static_target_paths,
         state_var_name=state_var_name,
     )
+    if not arrays_checked:
+        info_notes.append(
+            Message(
+                "no array of {group} was checked: no time dimension found; "
+                "pass {time_dim} to name it",
+                group=normalized_group or "/",
+                time_dim=Param("time_dim"),
+            )
+        )
 
     return ZarrValidationReport(
         product=product,
@@ -1420,7 +1444,7 @@ def validate_group_with_fs(
         info_notes=info_notes,
         validity_issues=validity_issues,
         static_marker_failures=static_marker_failures,
-        is_valid=not (validity_issues or static_marker_failures),
+        is_valid=bool(arrays_checked) and not (validity_issues or static_marker_failures),
     )
 
 
