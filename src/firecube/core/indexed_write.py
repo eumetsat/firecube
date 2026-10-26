@@ -55,11 +55,12 @@ class IndexedWrite:
       for every compiled slot; plugins never resolve or emit them on this
       path.
 
-    For `region`, ``data`` may be an eager ``numpy.ndarray`` or a zero-arg
-    callable ``Callable[[], np.ndarray]`` resolved exactly once at dispatch
-    time, in dispatch order, on the same terms as ``WriteIntent`` — so large
-    payloads are not held in memory while the batch is assembled. `slot`
-    requires an eager array; a callable is rejected at compile time.
+    For both `region` and `slot`, ``data`` may be an eager
+    ``numpy.ndarray`` or a zero-arg callable ``Callable[[], np.ndarray]``
+    resolved exactly once at dispatch time, in dispatch order, on the same
+    terms as ``WriteIntent`` — so large payloads are not held in memory while
+    the batch is assembled. `region` writes ``arr[slot, y_slice, ...]`` and
+    supports target arrays of any rank >= 3.
     """
 
     group: str
@@ -179,8 +180,8 @@ class IndexedWrite:
             coordinate: Raw slot key (e.g. ``datetime``, ``numpy.datetime64``,
                 or ``int``). Resolved to a slot index by the engine at compile
                 time. Must not be ``None``.
-            data: Eager 1-D array payload. Unlike `region`, a callable is
-                rejected when the compiled write is validated.
+            data: The slot's payload (shape ``arr.shape[1:]``), or a zero-arg
+                callable returning it, resolved once at dispatch time.
 
         Returns:
             An `IndexedWrite` describing a 1-D per-slot write.

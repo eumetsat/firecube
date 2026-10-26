@@ -1122,9 +1122,9 @@ class IndexedRegionStrategy:
         source: str,
     ) -> _RegionSelection:
         rank = len(shape)
-        if rank not in (3, 4):
+        if rank < 3:
             raise ValueError(
-                "Concurrent region writes support rank-3 and rank-4 arrays only: "
+                "Concurrent region writes support arrays of rank 3 or more only: "
                 f"group={intent.group!r} array={intent.array!r} {source} rank={rank}."
             )
         if any(axis <= 0 for axis in shape[1:]):
@@ -1181,6 +1181,12 @@ class IndexedRegionStrategy:
 
         if channel_index is None:
             return _RegionSelection(ts_index, y_start, y_stop, None)
+        if rank > 4:
+            raise ValueError(
+                "Concurrent region writes support channel_index for rank-4 arrays "
+                f"only: group={intent.group!r} array={intent.array!r} rank={rank} "
+                f"channel_index={channel_index!r}."
+            )
         channel = IndexedRegionStrategy._as_non_negative_int(
             channel_index,
             field="channel_index",
@@ -1306,11 +1312,12 @@ class IndexedRegionStrategy:
                 channel_index=intent.channel_index,
             )
         elif intent.kind == "1d":
+            data = cast(np.ndarray, intent.data() if callable(intent.data) else intent.data)
             writer.write_1d(
                 group=intent.group,
                 array_name=intent.array,
                 ts_index=intent.ts_index,
-                data=intent.data,
+                data=data,
             )
         elif intent.kind == "timestamp":
             writer.write_timestamp(

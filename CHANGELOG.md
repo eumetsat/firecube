@@ -9,6 +9,15 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- `DirectZarrIngestor` region writes (`IndexedWrite.region`,
+  `WriteIntent.region`) accept arrays of any rank of 3 or more. `y_slice`
+  selects the first axis after time and later axes are written in full, so a
+  forecast or ensemble cube such as `(time, realization, forecast_period,
+  level, y, x)` can be written one member at a time instead of one whole slot.
+  `channel_index` stays a rank-4 selection and is refused on higher ranks.
+- `IndexedWrite.slot` and `WriteIntent.slot` accept a zero-argument callable
+  payload, resolved once at dispatch like region and static payloads, so a
+  whole-slot payload is read only when it is written.
 - `ZarrArraySpec(engine_owned=True)` and `ItemInfo(values={...})` declare
   rank-1 per-slot arrays in `DirectZarrIngestor` plugins. `firecube zarr
   preallocate` inspects every source item, on any time axis, and requires
