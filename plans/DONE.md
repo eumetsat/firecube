@@ -1,5 +1,15 @@
 # Done
 
+## 2026-10-26 — stac:// is a source scheme, admitted by a sibling of the URI rule (97-source-files-from-stac-apis)
+
+**Decision.** `stac://<host>/<api-root>/collections/<id>` names a source, never a storage location. `StorageUri` does not accept it, and `parse_and_validate_uri` keeps refusing it for every option. Source options admit it through `parse_and_validate_source_uri(value, *, param_hint) -> StorageUri | StacCollectionUri` in `src/firecube/cli/_uri_policy.py`. This amends design item 2 of #97, which put `stac://` into `parse_and_validate_uri` itself.
+
+- Why not widen `StorageUri`. `StorageUri` is a storage location. `src/firecube/core/filesystem/obstore_backend.py:371` routes every non-`file` `StorageUri` into `S3Store`, so a `stac://` URI would become an S3 bucket named after the catalogue host. About 70 consumers assume `.path` and a storage type. `parse_and_validate_uri` also admits `--target`, `--source` and `--archive`; there `apply_smart_default` indexes `SCHEME_TO_STORAGE_TYPE` and would raise `KeyError` on `stac`.
+- The sibling. A `file://` or `s3://` value returns the same `StorageUri` with the same refusals as `parse_and_validate_uri`. A `stac://` value returns a frozen `StacCollectionUri(host, api_root, collection)` (`src/firecube/core/discovery/_types.py`). It refuses a non-lowercase scheme, a missing host, a path that does not end in `/collections/<id>`, a `?`, a `#` and a control character. The rules are `StacCollectionUri.parse`, which the STAC discovery backend also uses, so the CLI and the library parse a source alike. The CLI wraps its `ValueError` as `click.BadParameter`, exit 2.
+- Who uses it. Only the `--input-data` of `ingest`, `zarr preallocate` and `zarr slots`, through `admit_input_sources`. Only `stac://` values go through it; local paths and other schemes stay exempt, as before, because a plugin interprets them. Every other option keeps `parse_and_validate_uri`. A command without a STAC branch refuses the `StacCollectionUri` variant in its body with a `click.UsageError` before any I/O; none exists today.
+- The gate rows of `test_cli_parses_uris_only_in_uri_policy` are unchanged: the scheme of an `--input-data` value is split only in `_uri_policy.py`, and `ingest` keeps one `is_remote_target` and one `local_path_from_target` call.
+- These tests pin it: `tests/cli/test_uri_policy_stac.py` (admission, the same refusals for `file://` and `s3://`, each `stac://` refusal, `parse_and_validate_uri` refusing `stac://` for `--target`, `--source`, `--archive` and an argument, and `StorageUri.parse` refusing `stac`), and `tests/integration/test_ingest_stac_options.py` (the three commands).
+
 ## 2026-10-24 — One URI rule for every CLI option (17-cli-archive-create-restore-accept-bare-local-paths)
 
 **Decision.** One function, `parse_and_validate_uri(value, *, param_hint)` in `src/firecube/cli/_uri_policy.py`, admits every CLI option and argument that takes a product or artifact URI. It returns core's `StorageUri`, and command code reads the scheme and the path only from that value. One signed commit replaces 300f48e on the branch. Nothing is pushed.

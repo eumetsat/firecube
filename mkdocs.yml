@@ -177,6 +177,7 @@ nav:
     - Overview: operations/index.md
     - Storage And Data Access:
       - Configure S3 Access: operations/s3-access.md
+      - Ingest From A STAC API: operations/ingest-from-a-stac-api.md
       - Create an Intake Catalog: operations/intake-catalog.md
     - Zarr:
       - Run Parallel Zarr Writes: operations/parallel-zarr-writes.md

@@ -51,7 +51,7 @@ them; when a command changes here, change those copies and
 Counts are `--collect-only` totals at the time of writing and move with the
 suite; the commands do not.
 
-The `--strict-deps` flag (registered in `tests/conftest.py`) causes pytest collection to **FAIL** with `pytest.UsageError` if a required test-extra package is missing. This catches dependency drift at collection time instead of producing silent skips. This is the canonical list; it mirrors the guard in `tests/conftest.py`: `trollsift`, `tensogram`, `obstore`, `moto`, `healpix-geo` and `griffe` (installed by the `griffelib` package), plus `moto.server` (the `moto[server]` extra, which provides `ThreadedMotoServer`).
+The `--strict-deps` flag (registered in `tests/conftest.py`) causes pytest collection to **FAIL** with `pytest.UsageError` if a required test-extra package is missing. This catches dependency drift at collection time instead of producing silent skips. This is the canonical list; it mirrors the guard in `tests/conftest.py`: `trollsift`, `tensogram`, `obstore`, `moto`, `healpix-geo`, `griffe` (installed by the `griffelib` package) and `pystac-client`, plus `moto.server` (the `moto[server]` extra, which provides `ThreadedMotoServer`).
 
 `pyproject.toml` sets `addopts = "-ra -q --strict-markers -m 'not race'"`. A CLI
 `-m` expression REPLACES that `-m 'not race'` filter, so every explicit `-m`

@@ -1,8 +1,8 @@
 # Core Utilities
 
 This reference covers the helper functions exported from `firecube.core.api`
-for use inside plugin hooks: URI and filesystem handling, dataset
-preparation, and time conversion.
+for use inside plugin hooks: URI and filesystem handling, source discovery,
+dataset preparation, and time conversion.
 
 `RESERVED_ARRAY_ATTRS`, `assert_attrs_safe()`, and
 `FIRECUBE_STATIC_WRITTEN_ATTR` describe the array attribute keys Firecube
@@ -23,6 +23,9 @@ Zarr stores and returns `ZarrCompareReport`.
     "path_stats",
     "ensure_directory",
     "delete_path",
+    "discover",
+    "DiscoveryRequest",
+    "SourceItem",
     "discover_input_files",
     "prepare_netcdf_for_zarr",
     "clean_netcdf_encoding",
@@ -65,6 +68,12 @@ Zarr stores and returns `ZarrCompareReport`.
 ::: firecube.core.api.delete_path
 
 ## Source Discovery
+
+::: firecube.core.api.discover
+
+::: firecube.core.api.DiscoveryRequest
+
+::: firecube.core.api.SourceItem
 
 ::: firecube.core.api.discover_input_files
 

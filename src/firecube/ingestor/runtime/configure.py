@@ -37,8 +37,8 @@ from typing import Any
 
 from firecube.core.config import DATABASE_DUCKDB_KEYS
 from firecube.core.controlplane import ChunkManager
+from firecube.core.discovery import reject_legacy_input_patterns
 from firecube.core.errors import Message, Param
-from firecube.core.formats.input_filters import reject_legacy_input_patterns
 from firecube.ingestor.config.engine import (
     SYSTEM_KEYS,
     EngineConfig,
@@ -154,8 +154,10 @@ def configure_ingestor(
     options: Mapping[str, object],
     run_id: str,
     source: str = "",
+    sources: tuple[str, ...] = (),
     storage: Any = None,
     input_filters: list[str] | None = None,
+    stac_search: dict[str, Any] | None = None,
 ) -> PluginContext:
     """Configure an ingestor without the CLI and return its plugin context.
 
@@ -168,9 +170,13 @@ def configure_ingestor(
         target: Product URI the operation writes to.
         options: Already-typed option values, keyed by option name. The mapping is not mutated.
         run_id: Run identifier recorded in the context.
-        source: Source URI. Empty when the operation reads no source.
+        source: Source URI of an operation with one source. Empty when the operation
+            reads no source.
+        sources: Every source of the operation, in order; takes precedence over
+            ``source`` when given.
         storage: Storage context passed through unchanged; ``None`` leaves storage unbound.
         input_filters: Input filter patterns added to ``options`` when given.
+        stac_search: STAC item search filter added to ``options`` when given.
 
     Returns:
         The plugin context built for the configured ingestor.
@@ -182,8 +188,11 @@ def configure_ingestor(
     resolved_options = dict(options)
     if input_filters is not None:
         resolved_options["input_filters"] = input_filters
+    if stac_search is not None:
+        resolved_options["stac_search"] = stac_search
     ingest_ctx = IngestContext(
         source=source,
+        sources=tuple(sources),
         target=target,
         in_memory=True,
         output_format="zarr",

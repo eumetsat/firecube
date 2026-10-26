@@ -34,6 +34,7 @@ from firecube.core.controlplane.types import (
     SourceRefKind,
     validate_manifest_entries,
 )
+from firecube.core.discovery import SourceItem
 from firecube.core.errors import (
     DuplicateIrregularCoordinateError,
     MissingIrregularCoordinateError,
@@ -196,11 +197,17 @@ def _iter_runtime_items(ingestor: Any, ctx: Any) -> Iterable[Any]:
 
 
 def _source_description(ctx: Any) -> str | None:
+    # ``source`` refuses a run with several sources; name them all instead.
+    sources = getattr(ctx, "sources", None)
+    if sources:
+        return ", ".join(str(source) for source in sources)
     source = getattr(ctx, "source", None)
     return str(source) if source is not None else None
 
 
 def _source_ref(item: Any) -> tuple[str, SourceRefKind]:
+    if isinstance(item, SourceItem):
+        item = item.href
     uri = getattr(item, "uri", None)
     if isinstance(uri, str) and uri:
         return uri, "uri"
@@ -222,6 +229,9 @@ def _source_ref(item: Any) -> tuple[str, SourceRefKind]:
 
 
 def _item_identity_hash(item: Any) -> str:
+    if isinstance(item, SourceItem) and item.identity != item.href:
+        # A STAC asset is identified by collection/item/asset, not by its href.
+        return hashlib.sha256(f"identifier\0{item.identity}".encode()).hexdigest()
     source_ref, source_ref_kind = _source_ref(item)
     if source_ref_kind != "path":
         return hashlib.sha256(f"{source_ref_kind}\0{source_ref}".encode()).hexdigest()

@@ -12,53 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Validation and splitting for explicit input-file filters."""
+"""Deprecated module path: input filters moved to ``firecube.core.discovery``."""
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+import warnings
 
-from firecube.core.errors import Message, Param
-
-LEGACY_INPUT_PATTERNS_MESSAGE = Message(
-    "include_patterns has been removed; use {input_filters} "
-    'or input_filters = ["*.csv"] in configuration.',
-    input_filters=Param("input_filters", '["*.csv"]'),
+from firecube.core.discovery import (
+    LEGACY_INPUT_PATTERNS_MESSAGE,
+    reject_legacy_input_patterns,
+    split_input_filters,
+    validate_input_filters,
 )
 
+warnings.warn(
+    "firecube.core.formats.input_filters is deprecated; use firecube.core.discovery.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-def reject_legacy_input_patterns(options: Mapping[str, object]) -> None:
-    """Reject the removed option before unknown-key checks or CLI overrides."""
-    if "include_patterns" in options:
-        raise ValueError(LEGACY_INPUT_PATTERNS_MESSAGE)
-
-
-def validate_input_filters(value: object) -> list[str] | None:
-    """Validate a configured filter list without coercing strings or members."""
-    if value is None:
-        return None
-    if not isinstance(value, list):
-        raise ValueError(
-            'input_filters must be a list of strings, for example ["*.csv", "!draft_*"]'
-        )
-    for pattern in value:
-        if not isinstance(pattern, str) or not pattern or pattern == "!":
-            raise ValueError(
-                "input_filters entries must be non-empty strings; '!' needs a filename glob"
-            )
-    return list(value)
-
-
-def split_input_filters(patterns: Iterable[str] | None) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Separate inclusion and exclusion globs, interpreting each prefix once."""
-    filters = validate_input_filters(list(patterns) if patterns is not None else None)
-    included: list[str] = []
-    excluded: list[str] = []
-    for pattern in filters or ():
-        if pattern.startswith("\\!"):
-            included.append(pattern[1:])
-        elif pattern.startswith("!"):
-            excluded.append(pattern[1:])
-        else:
-            included.append(pattern)
-    return tuple(included), tuple(excluded)
+__all__ = [
+    "LEGACY_INPUT_PATTERNS_MESSAGE",
+    "reject_legacy_input_patterns",
+    "split_input_filters",
+    "validate_input_filters",
+]

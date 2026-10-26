@@ -124,6 +124,29 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   parse as a Gregorian date. An example is 30 February on a `360_day`
   calendar. The error names each span, and `delete` deletes nothing. Spans
   with ordinary bounds filter as before.
+- `--input-data stac://<host>/<api-root>/collections/<id>` reads the source
+  granules of one STAC API collection. `firecube ingest`, `firecube zarr
+  preallocate` and `firecube zarr slots` search the API at
+  `https://<host>/<api-root>`, read every result page, and hand the href of
+  each asset whose roles contain `data` to the plugin. The default suffix list
+  does not apply; `--input-filters` narrows the assets on the basename of the
+  href. Requires the new `stac` extra: `uv pip install 'firecube[stac]'`.
+  Static `catalog.json` catalogues and reading `https://` hrefs are not
+  supported.
+- `--stac-search <json>` filters the item search of every `stac://` source
+  with the keys `datetime`, `bbox`, `intersects` and `ids`. Any other key,
+  `collections` included, exits with code 2, and so does `--stac-search`
+  without a `stac://` source. The run record keeps the `stac://` sources,
+  the filter as given and the resolved item ids.
+- `--input-data` may be repeated, and its schemes may be mixed in one run.
+  `PluginContext.sources` holds every source; `PluginContext.source` raises
+  `ConfigurationError` when there are several.
+- A plugin class that declares `SOURCE_ITEMS = True` receives `SourceItem`
+  objects instead of href strings in `filter_item`, `inspect_item` and the
+  build hooks. A STAC item carries its collection, item id, asset key,
+  datetime, bbox, media type and roles.
+- `discover()`, `DiscoveryRequest` and `SourceItem` in `firecube.core.api`
+  discover the sources of a run from library code.
 
 ### Changed
 - The refusal for a legacy index record now names the library function that
@@ -317,6 +340,13 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - `firecube ingest` words its storage-type refusal like the other commands. The
   message now reads `--storage-type '<type>' is incompatible with URI scheme
   '<scheme>'`.
+
+### Deprecated
+- The module paths `firecube.core.formats.discovery` and
+  `firecube.core.formats.input_filters` emit a `DeprecationWarning` on import.
+  Discovery moved to `firecube.core.discovery`; import `discover_input_files`
+  from `firecube.core.api`. `firecube.core.formats` still exports
+  `discover_input_files` and `KNOWN_EXTENSIONS` without a warning.
 
 ### Fixed
 

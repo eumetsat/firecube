@@ -64,6 +64,7 @@ def pytest_configure(config):
         "moto": "moto",
         "healpix_geo": "healpix-geo",
         "griffe": "griffelib",
+        "pystac_client": "pystac-client",
     }
     for module_name, package_name in required.items():
         try:

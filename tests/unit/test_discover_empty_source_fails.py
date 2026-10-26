@@ -34,7 +34,8 @@ from tests.helpers.rows import table_row
 
 pytestmark = pytest.mark.unit
 
-_DISCOVERY_TARGET = "firecube.ingestor.runtime.base.discover_input_files"
+# The file-tree walk of a local source, below the default discovery.
+_DISCOVERY_TARGET = "firecube.core.discovery._walk._list_input_files"
 
 
 class _MinimalIngestor(BaseIngestor):

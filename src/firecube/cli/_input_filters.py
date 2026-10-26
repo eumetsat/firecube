@@ -24,11 +24,11 @@ import click
 
 from firecube.cli._errors import render
 from firecube.core.config import get_plugin_defaults, load_config_file
-from firecube.core.errors import ConfigFileError
-from firecube.core.formats.input_filters import (
+from firecube.core.discovery import (
     reject_legacy_input_patterns,
     validate_input_filters,
 )
+from firecube.core.errors import ConfigFileError
 
 
 def _parse_input_filters(

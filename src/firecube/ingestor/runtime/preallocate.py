@@ -141,7 +141,7 @@ def preallocate_product(
     storage_config: StorageConfig | None,
     run_id: str,
     write_mode: str,
-    input_data: str | None = None,
+    input_data: str | tuple[str, ...] | None = None,
     slot_start: int | None = None,
     slot_end: int | None = None,
     slot_group: str | None = None,
@@ -171,7 +171,8 @@ def preallocate_product(
             `session`'s store; `None` lets the writer open the target URI itself.
         run_id: The run id recorded in the control plane.
         write_mode: The write mode recorded in telemetry.
-        input_data: Raw plugin input. Engine-owned arrays and observed coordinates need it.
+        input_data: Raw plugin input, one source or several; `None` when there is none.
+            Engine-owned arrays and observed coordinates need it.
         slot_start: First slot of the window. `None` starts at slot 0.
         slot_end: Slot after the last of the window. `None` ends at the group's extent.
         slot_group: The one group the window applies to. Other groups get their
@@ -568,7 +569,9 @@ def preallocate_product(
                         slot_start=windows_by_group[group_name][0],
                         slot_end=windows_by_group[group_name][1],
                         has_input_data=input_data is not None,
-                        input_data=input_data,
+                        input_data=(
+                            ", ".join(input_data) if isinstance(input_data, tuple) else input_data
+                        ),
                         report=report,
                         target=regular_coord_targets[group_name],
                     )
@@ -899,7 +902,7 @@ def _discover_engine_owned_values(
     resolved_index: Any,
     schema: Any,
     global_expected: dict[str, int],
-    input_data: str | None,
+    input_data: str | tuple[str, ...] | None,
 ) -> dict[str, dict[str, dict[int, Any]]]:
     """Validate the engine-owned declarations and collect their values from every item.
 

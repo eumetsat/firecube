@@ -25,6 +25,12 @@ from firecube.core.controlplane.types import (
     ResolvedIndexRecord,
     validate_manifest_entries,
 )
+from firecube.core.discovery import (
+    DiscoveryRequest,
+    SourceItem,
+    discover,
+    discover_input_files,
+)
 from firecube.core.errors import (
     DuplicateIrregularCoordinateError,
     IndexedWriteCompilationError,
@@ -39,7 +45,6 @@ from firecube.core.filesystem import (
 )
 from firecube.core.formats import (
     clean_netcdf_encoding,
-    discover_input_files,
     extract_all_from_zips,
     materialize_hdf5_path,
     normalize_string_vars,
@@ -125,6 +130,7 @@ __all__ = [
     "AxisSpec",
     "BatchResourceRegistry",
     "CatalogGroupInfo",
+    "DiscoveryRequest",
     "DuplicateIrregularCoordinateError",
     "ExtentUnknownError",
     "IndexSpec",
@@ -143,6 +149,7 @@ __all__ = [
     "RunInfo",
     "SlotAxis",
     "SlotIndexModel",
+    "SourceItem",
     "StorageConfig",
     "TimeAxis",
     "ZarrCompareReport",
@@ -159,6 +166,7 @@ __all__ = [
     "decode_time_array",
     "delete_path",
     "describe_control_plane",
+    "discover",
     "discover_input_files",
     "encode_time_array",
     "ensure_directory",

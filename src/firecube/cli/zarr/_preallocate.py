@@ -18,13 +18,14 @@ from __future__ import annotations
 
 import contextlib
 import uuid
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import echo_rendered, render, wrap_user_facing_errors
 from firecube.cli._input_filters import input_filters_option, resolve_input_filters
+from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import (
@@ -99,19 +100,9 @@ See also: firecube zarr slots, firecube zarr validate
     required=True,
     type=click.Choice(["staged", "direct"], case_sensitive=False),
 )
-@click.option(
-    "-i",
-    "--input-data",
-    "input_data",
-    type=str,
-    required=False,
-    default=None,
-    help=(
-        "Raw plugin input data: local path, file:///abs/path, or s3:// prefix. "
-        "Interpreted by the plugin."
-    ),
-)
+@input_data_option()
 @input_filters_option
+@stac_search_option
 @click.option(
     "--slot-start",
     "slot_start",
@@ -156,8 +147,9 @@ def preallocate(
     storage_driver: str,
     storage_anonymous: bool | None,
     write_mode: str,
-    input_data: str | None,
+    input_data: tuple[str, ...],
     input_filters: list[str] | None,
+    stac_search: dict[str, Any] | None,
     slot_start: int | None,
     slot_end: int | None,
     option: tuple[tuple[str, object], ...],
@@ -177,6 +169,7 @@ def preallocate(
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
+    sources = admit_sources(input_data, stac_search, command="firecube zarr preallocate")
     if (slot_start is None) ^ (slot_end is None):
         raise click.UsageError("--slot-start and --slot-end must be provided together")
     from firecube.cli._slot_env import resolve_slot_range_from_env
@@ -225,9 +218,10 @@ def preallocate(
         plugin_ctx = _configure_ingestor_for_cli(
             ingestor,
             target=target,
-            source=input_data or "",
+            sources=sources,
             options=option,
             input_filters=input_filters,
+            stac_search=stac_search,
             run_id="zarr-preallocate",
         )
 
@@ -243,7 +237,7 @@ def preallocate(
                 storage_config=storage_config,
                 run_id=preallocate_run_id,
                 write_mode=write_mode,
-                input_data=input_data,
+                input_data=sources or None,
                 slot_start=resolved_slot_start,
                 slot_end=resolved_slot_end,
                 slot_group=resolved_slot_group,

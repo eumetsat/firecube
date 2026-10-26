@@ -22,6 +22,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -35,6 +36,7 @@ from firecube.cli._formatter import (
     install_option_groups_patch,
 )
 from firecube.cli._input_filters import input_filters_option, resolve_input_filters
+from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._rename_hints import install_rename_hints
 from firecube.cli._shared_options import (
     storage_driver_option,
@@ -576,15 +578,9 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
 """,
 )
 @click.argument("plugin")
-@click.option(
-    "-i",
-    "--input-data",
-    "input_data",
-    type=str,
-    required=False,
-    help="Raw plugin input data: local path, file:///abs/path, or s3:// prefix. Interpreted by the plugin.",
-)
+@input_data_option()
 @input_filters_option
+@stac_search_option
 @click.option(
     "-t",
     "--target",
@@ -688,8 +684,9 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
 def ingest(
     ctx: click.Context,
     plugin: str,
-    input_data: str | None,
+    input_data: tuple[str, ...],
     input_filters: list[str] | None,
+    stac_search: dict[str, Any] | None,
     target: str | None,
     product_name: str | None,
     storage_type: str | None,
@@ -758,15 +755,15 @@ def ingest(
         _print_plugin_options(plugin, ingestor_cls)
         return
 
-    if input_data:
-        input_data_str = str(input_data)
-        if not is_remote_target(input_data_str):
-            local_source = local_path_from_target(input_data_str)
+    sources: list[str] = []
+    for value in admit_sources(input_data, stac_search, command="firecube ingest"):
+        if value and not is_remote_target(value):
+            local_source = local_path_from_target(value)
             if not local_source.exists():
-                raise click.ClickException(f"Input data not found: {input_data}")
-            input_data = str(local_source)
-        else:
-            input_data = input_data_str
+                raise click.ClickException(f"Input data not found: {value}")
+            value = str(local_source)
+        if value:
+            sources.append(value)
 
     from firecube.core import observability
 
@@ -786,6 +783,8 @@ def ingest(
             resolved_filters = resolve_input_filters(ctx, plugin, input_filters, defaults=options)
             if resolved_filters is not None:
                 options["input_filters"] = resolved_filters
+            if stac_search is not None:
+                options["stac_search"] = stac_search
             from firecube.cli._slot_env import resolve_slot_range_from_env
 
             resolved_slot_start, resolved_slot_end, resolved_slot_group = (
@@ -892,7 +891,7 @@ def ingest(
                 run_id = f"{plugin}-{hostname}-{uuid.uuid4().hex}"
 
             ingest_ctx = IngestContext(
-                source=input_data or "",
+                sources=tuple(sources),
                 target=plugin_target,
                 in_memory=ingest_cfg.in_memory,
                 output_format=final_output_format,

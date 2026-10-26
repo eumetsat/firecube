@@ -241,6 +241,18 @@ Internal contributor material. These are the gaps the structured-errors plan (`p
 
 ---
 
+### Open after STAC source discovery (2026-10-26)
+
+Internal contributor material. STAC source discovery (#97, `plans/DONE.md`, 2026-10-26) left these out of scope on purpose. Each is recorded, not scheduled.
+
+- **Reading `https://` asset hrefs (out of scope, recorded).** The STAC backend hands each data-asset href to the plugin as the API publishes it, often `https://`. Firecube opens nothing over https: `open_source_filesystem` and the materializer serve `file://` and `s3://`. A plugin that reads such an href opens it itself. Signing URLs for APIs that need it is part of the same work.
+- **Static `catalog.json` catalogues (out of scope, recorded).** `stac://` names one collection of a STAC API with item search. A static catalogue has no search endpoint; walking its links is a separate backend.
+- **Zarr prefixes as source (out of scope, recorded).** An asset whose href is a Zarr store is handed through as an href, nothing more. Discovery does not open it, list it or treat its groups as granules.
+- **Multi-collection joins (out of scope, recorded).** One `stac://` URI names one collection, and several sources are deduplicated and sorted, never joined. A plugin that pairs items across collections overrides `discover_source_files` and calls `discover` once per collection.
+- **Item identity reaches the engine only for `SOURCE_ITEMS` plugins (recorded, not scheduled, read).** `SourceItem.identity` is `collection/item_id/asset_key` for a STAC asset. A plugin without `SOURCE_ITEMS` receives href strings, so `files_hash` (`src/firecube/ingestor/runtime/batching.py`) and the AUTO-axis item manifest (`_item_identity_hash` in `src/firecube/ingestor/runtime/index_binding.py`) hash the href. No resume path reads `files_hash` today; `ResumeGuard` decides on WAL state and `slice_meta_keys`. Item-keyed resume is its own change.
+- **A walk href and a STAC asset with the same href are not deduplicated (recorded, not scheduled, read).** Their identities differ (href vs `collection/item_id/asset_key`), so a plugin without `SOURCE_ITEMS` can receive the same href twice when a file-tree source and a STAC source both reach it.
+- **`cli_test_plugin` cannot complete a run against a `file://` target (recorded, not scheduled, ran).** Its `_process_batch` returns `OutputPaths(primary=Path(ctx.target))`, which turns `file:///x` into `file:/x`; the run then fails with `ValueError: Malformed URI`. Reproduced on clean HEAD (14e7f94) with `firecube ingest cli_test_plugin --input-data <dir> --target file:///<dir>/out.zarr ...`. `tests/integration/test_ingest_stac_options.py` patches `_process_batch`.
+
 ### Open after the CLI URI rule (2026-10-24)
 
 Internal contributor material. The CLI URI rule (`plans/DONE.md`, 2026-10-24) left these gaps on purpose. Each is recorded, not scheduled.

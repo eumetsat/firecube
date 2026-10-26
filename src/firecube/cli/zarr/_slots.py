@@ -28,6 +28,7 @@ import click
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
 from firecube.cli._input_filters import input_filters_option, resolve_input_filters
+from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     format_option,
@@ -164,13 +165,12 @@ Examples:
     type=click.Choice(["staged", "direct"], case_sensitive=False),
     help="Write mode.",
 )
-@click.option(
-    "--input-data",
-    "input_data",
-    default=None,
-    help="Source input URI or path for AUTO discovery (optional).",
+@input_data_option(
+    short=False,
+    help="Source path, s3:// prefix or stac:// collection for AUTO discovery (optional, repeatable).",
 )
 @input_filters_option
+@stac_search_option
 @click.option(
     "--slot-size",
     "slot_size",
@@ -216,8 +216,9 @@ def slots(
     storage_driver: str,
     storage_anonymous: bool | None,
     write_mode: str,
-    input_data: str | None,
+    input_data: tuple[str, ...],
     input_filters: list[str] | None,
+    stac_search: dict[str, Any] | None,
     slot_size: int | None,
     no_resume: bool,
     yes_i_really_mean_it: bool,
@@ -238,6 +239,7 @@ def slots(
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
+    sources = admit_sources(input_data, stac_search, command="firecube zarr slots")
 
     storage_config = get_storage_config(
         ctx,
@@ -269,9 +271,7 @@ def slots(
         raise click.ClickException(f"Unknown plugin '{plugin}'.")
     ingestor_cls = cast(Any, plugins[plugin])
 
-    ingestor = (
-        ingestor_cls(chunk_manager=chunk_manager) if input_data is not None else ingestor_cls()
-    )
+    ingestor = ingestor_cls(chunk_manager=chunk_manager) if sources else ingestor_cls()
 
     if not isinstance(ingestor, DirectZarrIngestor):
         raise click.ClickException(
@@ -284,7 +284,8 @@ def slots(
             target=target,
             options=option,
             input_filters=input_filters,
-            source=input_data or "",
+            stac_search=stac_search,
+            sources=sources,
             run_id="zarr-slots",
         )
 
@@ -309,7 +310,7 @@ def slots(
             target=target,
             storage_config=storage_config,
             coverage_storage_config=coverage_storage_config,
-            input_data=input_data,
+            input_data=sources or None,
             slot_size=slot_size,
             resume=not no_resume,
             allow_above_ceiling=yes_i_really_mean_it,

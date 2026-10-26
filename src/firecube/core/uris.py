@@ -23,9 +23,11 @@ from __future__ import annotations
 
 import logging
 import os
+import posixpath
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 from fsspec.utils import infer_storage_options
 
@@ -120,6 +122,17 @@ def infer_target_protocol(target: str) -> str:
     Returns "file" for local paths and file:// URIs.
     """
     return parse_uri(target)["protocol"]
+
+
+def href_basename(href: str) -> str:
+    """Return the last path segment of a URL, URI or local path.
+
+    A query string and fragment are not part of the name, so the basename of
+    ``https://host/a/b.nc?sig=x`` is ``b.nc``.
+    """
+    if _looks_like_uri(href):
+        return posixpath.basename(urlsplit(href).path.rstrip("/"))
+    return Path(href).name
 
 
 def is_remote_target(target: str) -> bool:

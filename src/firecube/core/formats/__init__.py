@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Generic input format helpers (ZIP, HDF5, NetCDF, file discovery).
+"""Generic input format helpers (ZIP, HDF5, NetCDF).
 
-Public imports remain stable at ``firecube.core.formats``.
+Public imports remain stable at ``firecube.core.formats``. ``discover_input_files``
+and ``KNOWN_EXTENSIONS`` moved to ``firecube.core.discovery`` and are still served
+here; prefer ``firecube.core.api``.
 """
 
-from firecube.core.formats.discovery import KNOWN_EXTENSIONS, discover_input_files
+from typing import TYPE_CHECKING, Any
+
 from firecube.core.formats.hdf5 import materialize_hdf5_path, read_hdf5_array
 from firecube.core.formats.netcdf import (
     clean_netcdf_encoding,
@@ -30,6 +33,22 @@ from firecube.core.formats.zip import (
     extract_hdf5_from_zip,
     stream_hdf5_from_zip,
 )
+
+if TYPE_CHECKING:
+    from firecube.core.discovery import KNOWN_EXTENSIONS, discover_input_files
+
+_MOVED_TO_DISCOVERY = frozenset({"KNOWN_EXTENSIONS", "discover_input_files"})
+
+
+def __getattr__(name: str) -> Any:
+    # Resolved on first access: firecube.core.discovery imports formats.hdf5, so an
+    # import at module load would be circular.
+    if name in _MOVED_TO_DISCOVERY:
+        import firecube.core.discovery as discovery
+
+        return getattr(discovery, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "KNOWN_EXTENSIONS",

@@ -75,15 +75,23 @@ mutates a single existing array in place and has no staging path).
 are always strict artifact URIs; `--input-data`, `--config-file`,
 `--target-dir`, `--workspace` and the `--output` of `firecube completion` are
 exempt from the strict-URI policy. `--input-data` accepts a local path or an
-`s3://` prefix, which the plugin interprets. The others are local paths.
+`s3://` prefix, which the plugin interprets, and a
+`stac://<host>/<api-root>/collections/<id>` STAC API collection. It may be
+repeated. The others are local paths.
 `tests/unit/test_cli_completion.py` pins the `completion --output` behaviour.
 
-One function admits every URI option and argument of the CLI:
+One function admits every storage URI option and argument of the CLI:
 `parse_and_validate_uri` in `src/firecube/cli/_uri_policy.py`. It accepts lowercase
-`file://` and `s3://` only. A `file://` URI names no host, `localhost`
+`file://` and `s3://` only, and refuses `stac://`. A `file://` URI names no host, `localhost`
 included, and a path below the root. An `s3://` URI names a bucket. The
 function refuses a `?`, a `#` and a control character. It uses the `file://`
-path literally and does not decode `%20`.
+path literally and does not decode `%20`. Source options (the `--input-data` of
+`ingest`, `zarr preallocate` and `zarr slots`) admit a `stac://` value through its
+sibling `parse_and_validate_source_uri` in the same module, which returns a
+`StacCollectionUri` (`src/firecube/core/discovery/_types.py`) for `stac://` and
+otherwise exactly what `parse_and_validate_uri` returns or refuses. `stac://` is a
+source scheme only: `StorageUri` never holds it. A command without a STAC branch
+refuses a `StacCollectionUri` in its body with a `click.UsageError` before any I/O.
 
 ## Architectural invariants
 
@@ -126,6 +134,7 @@ in `plans/TODO.md`.
   - `DuplicateAxisInstantError(FirecubeError, ValueError)` in `src/firecube/core/index_resolve.py` has the fields `coordinate` and `slots`. It reports two values that fall on one instant of the axis calendar.
 - Zarr CLI command package: `src/firecube/cli/zarr/` — group wiring in `__init__.py`, one module per command family, shared helpers in `_common.py`.
 - CLI URI rule: `parse_and_validate_uri(value, *, param_hint)` in `src/firecube/cli/_uri_policy.py` returns a `StorageUri`. Each refusal is a `click.BadParameter` with `param_hint` (the flag or the argument name) as its hint, so the text reads `Invalid value for '--target': <sentence>`. Command code reads the scheme and the path only from the returned value. `resolve_product_identity` in `src/firecube/cli/_product.py` takes that value. A command admits a value in its body, not in a Click callback, so the order of its refusals does not change.
+  - `parse_and_validate_source_uri(value, *, param_hint)` beside it returns `StorageUri | StacCollectionUri`. `admit_input_sources` sends only the `stac://` values of `--input-data` through it; other values stay exempt. The stac rules themselves are `StacCollectionUri.parse` in `src/firecube/core/discovery/_types.py`, which the STAC discovery backend also uses.
   - `zarr index` keeps `_manager(target: str, product_name)` with a `str` argument. `_manager` admits the value inside, as its first step.
   - `zarr compare` refuses in this order: a bare argument check of A_URI and B_URI first, then the admission and coherence of A, then B. It passes the raw strings to `compare_zarr_stores`.
   - `IngestCommandConfig` calls the same function for `--target` and appends the refusal text to its error list.

@@ -168,7 +168,7 @@ class TestDiscoverInputFiles:
 
     @pytest.mark.parametrize("as_path", [False, True], ids=["str", "path"])
     def test_accepts_str_and_path_with_exact_suffix_filtering(self, tmp_path, as_path: bool):
-        from firecube.core.formats import discover_input_files
+        from firecube.core.discovery import discover_input_files
 
         keep = tmp_path / "file.nc"
         drop = tmp_path / "file.txt"
