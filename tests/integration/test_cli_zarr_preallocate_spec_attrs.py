@@ -29,7 +29,7 @@ from firecube.cli.main import cli
 from firecube.ingestor.api import WriteIntent, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.registry import loader as _loader
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.contract]
 
 PLUGIN = "direct_zarr_capable_test_plugin"
 PRODUCT = "direct_zarr_capable_test_product"
@@ -283,3 +283,60 @@ def test_repro_root_attrs_staged_root(tmp_path: Path, monkeypatch: pytest.Monkey
     assert {k: attributes.get(k) for k in _GROUP_ATTRS} == _GROUP_ATTRS
     assert "firecube_resolved_index" in attributes
     assert "firecube_resolved_index_identity_hash" in attributes
+
+
+def _add_groups(monkeypatch: pytest.MonkeyPatch, *extra: ZarrGroupSpec) -> None:
+    import direct_zarr_capable_test_plugin as plugin_module
+
+    cls = plugin_module.DirectZarrCapableTestIngestor
+    declared = cls.zarr_schema
+    monkeypatch.setattr(cls, "zarr_schema", lambda self, ctx: [*extra, *declared(self, ctx)])
+
+
+def _outside_control_plane(target_path: Path, command: str, expect: str) -> list[str]:
+    build = _preallocate_args if command == "preallocate" else _ingest_args
+    result = CliRunner().invoke(cli, build(target_path))
+    assert result.exit_code != 0
+    assert expect in result.output
+    return [p.name for p in target_path.glob("*") if p.name != ".firecube"]
+
+
+@pytest.mark.parametrize("command", ["preallocate", "ingest"])
+def test_guard_root_reserved_attr_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str
+) -> None:
+    _declare_group(monkeypatch, "/", {"firecube_resolved_index": {"forged": True}})
+
+    written = _outside_control_plane(tmp_path / "o.zarr", command, "firecube_resolved_index")
+
+    assert written == []
+
+
+@pytest.mark.parametrize("command", ["preallocate", "ingest"])
+def test_guard_root_beside_named_group_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str
+) -> None:
+    _declare_group(monkeypatch, "/", {})
+    _add_groups(monkeypatch, ZarrGroupSpec(group="extra", arrays=[]))
+
+    assert _outside_control_plane(tmp_path / "o.zarr", command, "beside named groups") == []
+
+
+def test_preallocate_parent_group_attrs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _declare_group(monkeypatch, "science/data", {})
+    _add_groups(
+        monkeypatch,
+        ZarrGroupSpec(group="science", arrays=[], attrs={"title": "parent"}),
+        ZarrGroupSpec(group="aux/info", arrays=[], attrs={"comment": "nested"}),
+    )
+    target_path = tmp_path / "out.zarr"
+
+    for rerun in (False, True):
+        result = CliRunner().invoke(cli, _preallocate_args(target_path))
+        assert result.exit_code == 0, result.output
+        assert _group_attributes(target_path, "science") == {"title": "parent"}
+        assert _group_attributes(target_path, "aux/info") == {"comment": "nested"}
+        for group in () if rerun else ("science", "aux/info"):
+            (zarr_json := target_path / group / "zarr.json").write_text(
+                json.dumps({**json.loads(zarr_json.read_text()), "attributes": {}})
+            )
