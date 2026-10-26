@@ -231,6 +231,65 @@ def test_record_only_plan_needs_no_local_target_base(tmp_path: Path) -> None:
     assert result["records_without_storage"] == 1
 
 
+@pytest.mark.parametrize(
+    "bad_key",
+    ["../other-product.zarr", ".", "{root}/other-product.zarr", "a/../../x"],
+    ids=["sibling", "dot", "absolute", "dotdot-escape"],
+)
+def test_filesystem_deletion_refuses_chunk_key_outside_product(
+    tmp_path: Path, bad_key: str
+) -> None:
+    from firecube.core.controlplane.types import EVENT_RECORD_UPSERT, SCHEMA_VERSION
+
+    product, good_key, bad_key = "product.zarr", "data/chunk", bad_key.format(root=tmp_path)
+    binding = make_test_binding(tmp_path, product=product)
+    objects = {
+        tmp_path / product / good_key: "good",
+        tmp_path / product / "keep": "own payload",
+        tmp_path / "other-product.zarr" / "payload": "sibling",
+        tmp_path / "x": "escape target",
+    }
+    for path, text in objects.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    run = {
+        "product": product,
+        "run_id": "run-001",
+        "output_path": f"file://{tmp_path / product}",
+        "output_format": "zarr",
+        "meta": {"plugin": "test"},
+    }
+    writer_manager = ChunkManager(binding=binding, workspace=tmp_path / "ws")
+    try:
+        writer_manager.record_run_started(**run, size=0)
+        # Chunk records have no producer in the facade (legacy manifests only), so this
+        # one helper step reaches into the WAL writer, as test_cli_chunks_delete does.
+        for key in (good_key, bad_key):
+            record = {"type": "chunk", "key": key, "size": 1, "timestamp": 1.0}
+            writer_manager.repo._writer(product, "run-001", resume_existing=True).append(
+                EVENT_RECORD_UPSERT,
+                {**record, "schema_version": SCHEMA_VERSION},
+                meta={},
+                flush=True,
+            )
+        writer_manager.record_run_terminal(**run, size=2, status="complete")
+    finally:
+        writer_manager.close()
+    manager = ChunkManager(
+        binding=binding, workspace=tmp_path / "ws", filesystem=create_filesystem(binding)
+    )
+
+    plan = manager.create_deletion_plan(product=product, chunk_type="chunk")
+    result = manager.execute_deletion(
+        plan, delete_storage=True, delete_manifest=False, storage_config=None, dry_run=False
+    )
+
+    assert {c.key for c in plan.chunks} == {good_key, bad_key}
+    assert len(result["storage_errors"]) == 1 and bad_key in result["storage_errors"][0]
+    survivors = {p for p in objects if p.exists()}
+    assert survivors == set(objects) - {tmp_path / product / good_key}, "only the valid key goes"
+
+
 def test_delete_spans_no_bypass(tmp_path: Path) -> None:
     import zarr
 

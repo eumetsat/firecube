@@ -411,8 +411,12 @@ class TestDeletionMeasuresAlignmentFromStore:
         )
 
 
-def _directzarr_shaped_store_and_span(tmp_path: Path):
-    """Arrays under ``data/``; a span recorded the DirectZarr way (bare names, group in meta)."""
+def _directzarr_shaped_store_and_span(tmp_path: Path, time_marks: dict | None = None):
+    """Arrays under ``data/``; a span recorded the DirectZarr way (bare names, group in meta).
+
+    ``time_marks`` adds a 300-slot ``time`` coordinate (chunk 256) carrying those attrs,
+    a ``counts`` of time chunk 1, and a span of the single slot 5 that lists both.
+    """
     import zarr
 
     from firecube.core.controlplane.deletion import DeletionEngine
@@ -433,6 +437,30 @@ def _directzarr_shaped_store_and_span(tmp_path: Path):
         overwrite=True,
     )
     arr[:] = np.ones((8, 2), dtype=np.float32)
+    span_record = {"arrays": ["counts"], "time_index_ranges": [[0, 3]], "aligned": True}
+    if time_marks is not None:
+        data = root["data"]
+        counts = data.create_array(
+            "counts",
+            shape=(300, 2),
+            chunks=(1, 2),
+            dtype="f4",
+            dimension_names=("time", "x"),
+            overwrite=True,
+        )
+        counts[:] = np.ones((300, 2), dtype=np.float32)
+        coord = data.create_array(
+            "time", shape=(300,), chunks=(256,), dtype="i8", dimension_names=("time",)
+        )
+        coord[:] = np.arange(300)
+        coord.attrs.update(time_marks)
+        span_record = {
+            "arrays": ["counts", "time"],
+            "time_index_ranges": [[5, 5]],
+            "aligned": True,
+            "state_array": "data/firecube_timestamp_state",
+            "time_dim_name": "time",
+        }
 
     repo = ManifestRepository(
         binding=make_test_binding(tmp_path, product=product), workspace=tmp_path
@@ -445,7 +473,7 @@ def _directzarr_shaped_store_and_span(tmp_path: Path):
         timestamp=1.0,
         manifest_path=f"{repo.base_uri.rstrip('/')}/{product}/.firecube",
         meta={"group": "data"},
-        record={"span": {"arrays": ["counts"], "time_index_ranges": [[0, 3]], "aligned": True}},
+        record={"span": span_record},
     )
     return DeletionEngine(repo), span, store_root
 
@@ -471,3 +499,103 @@ def test_repro_span_bare_names_delete(tmp_path: Path) -> None:
     assert result["deleted_keys"] == 1
     assert not (chunk_dir / "0" / "0").exists(), "the span's chunk must be removed"
     assert (chunk_dir / "1" / "0").exists(), "the chunk of the other slots must stay"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("present", "recorded", "removed"),
+    [
+        (["g/sub/x", "sub/x"], "sub/x", "g/sub/x"),
+        (["g/g/x"], "g/x", "g/g/x"),
+        (["g/x", "g/g/x"], "g/x", None),
+    ],
+    ids=["root-decoy-kept", "group-named-prefix", "both-present-refused"],
+)
+def test_delete_span_resolves_recorded_name_against_the_store(
+    tmp_path: Path, present: list[str], recorded: str, removed: str | None
+) -> None:
+    import zarr
+
+    from firecube.core.controlplane.deletion import DeletionEngine
+    from firecube.core.controlplane.repo import ManifestRepository
+    from firecube.core.controlplane.types import ChunkInfo
+    from tests.helpers.storage import make_test_binding
+
+    store_root = tmp_path / "product.zarr"
+    root = zarr.open_group(store=str(store_root), mode="w", zarr_format=3)
+    for path in present:
+        arr = root.create_array(
+            path, shape=(2, 2), chunks=(1, 2), dtype="f4", dimension_names=("timestamp", "x")
+        )
+        arr[:] = np.ones((2, 2), dtype=np.float32)
+    repo = ManifestRepository(
+        binding=make_test_binding(tmp_path, product="product.zarr"), workspace=tmp_path
+    )
+    span = ChunkInfo(
+        key="span_run1_b1_g",
+        product="product.zarr",
+        chunk_type="span",
+        size=0,
+        timestamp=1.0,
+        manifest_path=f"{repo.base_uri.rstrip('/')}/product.zarr/.firecube",
+        meta={"group": "g"},
+        record={"span": {"arrays": [recorded], "time_index_ranges": [[0, 0]], "aligned": True}},
+    )
+
+    result = DeletionEngine(repo).delete_spans(
+        [span], dry_run=False, force=False, update_manifest=False
+    )
+
+    assert {p: (store_root / p / "c/0/0").exists() for p in present} == {
+        p: p != removed for p in present
+    }, "slot 0 chunk still stored, per array path"
+    if removed is None:
+        assert len(result["errors"]) == 1 and all(p in result["errors"][0] for p in present)
+        assert result["deleted_spans"] == 0, "a refused span stays active"
+    else:
+        assert result["errors"] == []
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("marks", "outcome"),
+    [
+        ({"firecube_coord_managed": True}, "kept"),
+        ({"firecube_preallocated": True}, "kept"),
+        ({}, "misaligned"),
+        ({"firecube_coord_managed": True, "firecube_preallocated": True}, "drift"),
+    ],
+    ids=["managed", "preallocated", "unmarked", "both-markers"],
+)
+def test_delete_span_keeps_managed_time_coordinate(
+    tmp_path: Path, marks: dict, outcome: str
+) -> None:
+    from firecube.core.errors import SchemaDriftError
+
+    engine, span, store_root = _directzarr_shaped_store_and_span(tmp_path, time_marks=marks)
+    counts, time_dir = store_root / "data/counts/c", store_root / "data/time/c"
+    time_objects = sorted(p.name for p in time_dir.iterdir())
+
+    if outcome == "drift":
+        with pytest.raises(SchemaDriftError):
+            engine.delete_spans([span], dry_run=False, force=False, update_manifest=False)
+        result = None
+    else:
+        result = engine.delete_spans([span], dry_run=False, force=False, update_manifest=False)
+
+    if outcome == "kept":
+        assert result is not None
+        assert result["errors"] == [], f"a managed time coordinate is not measured; {result}"
+        assert result["deleted_keys"] == 1
+        assert not (counts / "5" / "0").exists(), "the span's counts chunk must be removed"
+        assert (counts / "4" / "0").exists() and (counts / "6" / "0").exists()
+    else:
+        assert (counts / "5" / "0").exists(), "a refused deletion removes nothing"
+        if result is not None:
+            assert result["deleted_keys"] == 0
+            assert any("not time-chunk aligned" in m for m in result["errors"]), result["errors"]
+    assert sorted(p.name for p in time_dir.iterdir()) == time_objects, "time chunks must stay"
+    import zarr
+
+    values = zarr.open_group(str(store_root), mode="r", use_consolidated=False)["data/time"]
+    assert list(values[:]) == list(range(300))
