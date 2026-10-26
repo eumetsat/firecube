@@ -53,6 +53,15 @@ def build_dataset(self, group, items, ctx):
 `zarr_schema` and names the group on each write. See
 [Declare The Schema And Index](direct-zarr.md).
 
+## The Root Group Is A Single-Group Layout
+
+The root group `"/"` is a single-group layout. On `DirectZarrIngestor`,
+Firecube refuses a schema that declares `"/"` beside a named group. On
+`GenericZarrIngestor`, return only `["/"]` from `get_batch_groups`. On
+`DirectZarrIngestor`, declare only `ZarrGroupSpec(group="/")`. See
+[Write At The Store Root](generic-zarr.md#write-at-the-store-root) and
+[Write The Cube At The Store Root](direct-zarr.md#write-the-cube-at-the-store-root).
+
 ## Verify
 
 Run your plugin on a small input, then open one group and confirm it holds
