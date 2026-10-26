@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -31,7 +32,7 @@ def _seed_group(
     *,
     timestamps: np.ndarray,
     state_values: np.ndarray | None,
-    coord_attrs: dict[str, object] | None = None,
+    coord_attrs: dict[str, Any] | None = None,
 ) -> None:
     root = zarr.open_group(store=str(store_path), mode="w", zarr_format=3)
     group = root.require_group("G")

@@ -40,7 +40,7 @@ import json
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pytest
@@ -280,7 +280,7 @@ def test_root_slash_first_write_keeps_control_plane(tmp_path: Path, write_mode: 
     _engine_run(tmp_path, days=[3], group="/", write_mode=write_mode, resume_existing=True)
 
     root = zarr.open_group(str(target), mode="r", use_consolidated=False)
-    assert np.asarray(root["temperature"][:]).reshape(-1).tolist() == [
+    assert np.asarray(cast(Any, root["temperature"])[:]).reshape(-1).tolist() == [
         _TEMPERATURE[d] for d in range(4)
     ]
 
@@ -317,7 +317,7 @@ def test_root_slash_failed_first_batch_repaired(tmp_path: Path, mocker: MockerFi
     _engine_run(tmp_path, days=[0, 1], group="/", write_mode="direct", resume_existing=True)
 
     root = zarr.open_group(str(target), mode="r", use_consolidated=False)
-    assert np.asarray(root["temperature"][:]).reshape(-1).tolist() == [
+    assert np.asarray(cast(Any, root["temperature"])[:]).reshape(-1).tolist() == [
         _TEMPERATURE[0],
         _TEMPERATURE[1],
     ]

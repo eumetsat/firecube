@@ -27,6 +27,7 @@ from __future__ import annotations
 import logging
 import warnings
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -439,7 +440,7 @@ def _directzarr_shaped_store_and_span(tmp_path: Path, time_marks: dict | None = 
     arr[:] = np.ones((8, 2), dtype=np.float32)
     span_record = {"arrays": ["counts"], "time_index_ranges": [[0, 3]], "aligned": True}
     if time_marks is not None:
-        data = root["data"]
+        data = cast(Any, root["data"])
         counts = data.create_array(
             "counts",
             shape=(300, 2),
@@ -597,5 +598,6 @@ def test_delete_span_keeps_managed_time_coordinate(
     assert sorted(p.name for p in time_dir.iterdir()) == time_objects, "time chunks must stay"
     import zarr
 
-    values = zarr.open_group(str(store_root), mode="r", use_consolidated=False)["data/time"]
+    group = zarr.open_group(str(store_root), mode="r", use_consolidated=False)
+    values = cast(Any, group["data/time"])
     assert list(values[:]) == list(range(300))
