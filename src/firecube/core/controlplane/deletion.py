@@ -39,8 +39,9 @@ from firecube.core.controlplane.types import (
     DeletionPlan,
     WriteDomain,
 )
-from firecube.core.errors import ClaimConflictError, ManifestError, Message, Param
+from firecube.core.errors import ClaimConflictError, ManifestError, Message, Param, StorageError
 from firecube.core.runtime import identity_from_storage_config
+from firecube.core.storage.session import _literal_delete
 from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.validation import _STATE_ARRAY_NAME
 
@@ -1013,10 +1014,24 @@ class DeletionEngine:
             return self._delete_from_local(chunks, storage_config)
 
     def _delete_with_filesystem(self, chunks: list[ChunkInfo], filesystem: Any) -> list[str]:
+        """Delete the one object each chunk record names, its key taken literally.
+
+        An absent object is not an error. A failed or impossible delete is returned as an
+        error string.
+        """
         errors: list[str] = []
         if not self.repo.base_uri:
             return ["Missing base URI; cannot delete without a base URI"]
         base_uri = StorageUri.parse(self.repo.base_uri)
+        try:
+            # The protocol's rm expands glob characters, which are legal in a product
+            # name or key, and so can delete objects of another product.
+            delete_object = _literal_delete(filesystem)
+        except StorageError:
+            return [
+                f"Cannot delete chunk objects through {type(filesystem).__name__}: "
+                "it offers no single-object delete"
+            ]
         for chunk in chunks:
             try:
                 uri = _chunk_object_uri(base_uri, chunk)
@@ -1025,7 +1040,9 @@ class DeletionEngine:
                 continue
             try:
                 if filesystem.exists(uri):
-                    filesystem.rm(uri, recursive=True)
+                    delete_object(uri)
+            except FileNotFoundError:
+                continue
             except Exception as e:
                 errors.append(f"Failed to delete {uri.to_str()}: {e}")
         return errors
