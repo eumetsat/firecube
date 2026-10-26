@@ -41,6 +41,8 @@ from firecube.core.controlplane.types import (
     ResolvedIndexRecord,
     canonical_index_bytes,
 )
+from firecube.core.index_resolve import resolve_index_spec
+from firecube.core.index_spec import IndexSpec, RegularTimeAxis
 from firecube.ingestor.runtime.index_record import verify_index_record
 from tests.helpers.cli_hints import parse_hint
 from tests.helpers.rows import table_row
@@ -396,6 +398,56 @@ def test_verify_attrs_drift_advice_recovers_by_removing_hash_attr(tmp_path: Path
     assert zarr.open(str(cube)).attrs[RESOLVED_INDEX_IDENTITY_HASH_ATTR] == record.identity_hash
     verified = CliRunner().invoke(cli, _verify_args(cube, "index_spec_single"))
     assert verified.exit_code == 0 and "VERIFIED" in verified.stdout
+
+
+def _seed_calendar_record(cube: Path, slot_count: int) -> ResolvedIndexRecord:
+    spec = IndexSpec(
+        name="regular_axis_calendar_v1",
+        groups={
+            "data": RegularTimeAxis(
+                coordinate="time",
+                epoch="2049-01-01T00:00:00Z",
+                cadence_s=86400,
+                slot_count=slot_count,
+                calendar="360_day",
+            )
+        },
+    )
+    record = resolve_index_spec(spec, time_dim_name="time").as_resolved_index_record(run_id="seed")
+    index_dir = cube / ".firecube" / INDEX_DIRNAME
+    index_dir.mkdir(parents=True)
+    (index_dir / INDEX_CURRENT_FILENAME).write_bytes(record.to_json_bytes())
+    return record
+
+
+def _calendar_verify_args(cube: Path, *extras: str) -> list[str]:
+    plugin = "regular_axis_calendar"
+    return _verify_args(cube, plugin, "--plugin", plugin, *extras)
+
+
+def test_repro_index_option_verify(tmp_path: Path) -> None:
+    cube = tmp_path / "cube"
+    record = _seed_calendar_record(cube, slot_count=5)
+
+    result = CliRunner().invoke(cli, _calendar_verify_args(cube, "--option", "slot_count=5"))
+
+    assert result.exit_code == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert "VERIFIED" in result.stdout
+    assert record.identity_hash[:16] in result.stdout
+    bare = _verify_args(cube, "regular_axis_calendar", "--option", "slot_count=5")
+    no_plugin = CliRunner().invoke(cli, bare)
+    assert no_plugin.exit_code == 2, f"stdout={no_plugin.stdout!r} stderr={no_plugin.stderr!r}"
+
+
+def test_repro_index_option_drift(tmp_path: Path) -> None:
+    cube = tmp_path / "cube"
+    # 90 is the plugin's default slot count: an implementation that drops --option verifies.
+    _seed_calendar_record(cube, slot_count=90)
+
+    result = CliRunner().invoke(cli, _calendar_verify_args(cube, "--option", "slot_count=7"))
+
+    assert result.exit_code == 1, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert "index drift" in result.stderr
 
 
 @pytest.mark.parametrize("state", ["without-record", "drift"])
