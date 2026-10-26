@@ -1207,14 +1207,16 @@ def _collect_static_marker_failures(
     target_paths: list[str],
     *,
     state_var_name: str,
-) -> list[dict[str, str]]:
-    """Return static-array marker failures for validated arrays, read-only.
+) -> tuple[list[dict[str, str]], int]:
+    """Return static-array marker failures and the count of arrays evaluated, read-only.
 
     An array counts as static (and therefore must carry the
     ``firecube_static_written`` marker) when its first dimension is neither
-    the effective time-dimension name nor the state-array name.
+    the effective time-dimension name nor the state-array name. Each such
+    array is evaluated, whether or not it passes.
     """
     failures: list[dict[str, str]] = []
+    evaluated = 0
     for array_path in target_paths:
         meta = all_metadata.get(array_path)
         if meta is None:
@@ -1230,11 +1232,12 @@ def _collect_static_marker_failures(
         skip_names = {state_var_name, effective_time_dim}
         if first_dimension in skip_names:
             continue
+        evaluated += 1
         attrs = meta.get("attributes") or {}
         if attrs.get(FIRECUBE_STATIC_WRITTEN_ATTR):
             continue
         failures.append({"array": array_path, "reason": "missing_or_false_static_marker"})
-    return failures
+    return failures, evaluated
 
 
 def validate_group_with_fs(
@@ -1413,13 +1416,14 @@ def validate_group_with_fs(
                     time_dim=Param("time_dim"),
                 )
             )
-    static_marker_failures = _collect_static_marker_failures(
+    static_marker_failures, static_arrays_evaluated = _collect_static_marker_failures(
         all_metadata,
         candidate_time_dims_by_parent,
         static_target_paths,
         state_var_name=state_var_name,
     )
-    if not arrays_checked:
+    something_checked = bool(arrays_checked) or static_arrays_evaluated > 0
+    if not something_checked:
         info_notes.append(
             Message(
                 "no array of {group} was checked: no time dimension found; "
@@ -1444,7 +1448,7 @@ def validate_group_with_fs(
         info_notes=info_notes,
         validity_issues=validity_issues,
         static_marker_failures=static_marker_failures,
-        is_valid=bool(arrays_checked) and not (validity_issues or static_marker_failures),
+        is_valid=something_checked and not (validity_issues or static_marker_failures),
     )
 
 
