@@ -76,15 +76,14 @@ def _prepare_target(target: str, *, overwrite: bool, keep_run_id: str | None) ->
     if not local_target_path.exists():
         return
 
-    # A directory that contains ONLY .firecube/ (control-plane state from claim
-    # acquisition) is not a Zarr store yet — do not treat it as an existing store.
-    # Only raise if the directory contains actual Zarr metadata (zarr.json or .zarray).
-    if local_target_path.is_dir():
-        has_zarr_metadata = (local_target_path / "zarr.json").exists() or (
-            local_target_path / ".zarray"
-        ).exists()
-        if not has_zarr_metadata:
-            return
+    # An empty directory, or one that contains ONLY .firecube/ (control-plane state from
+    # claim acquisition), is not a Zarr store yet. Any other content counts as an existing
+    # store, whether or not it has a root zarr.json, because the restore writes the root
+    # group in append mode and would leave that content beside the restored arrays.
+    if local_target_path.is_dir() and all(
+        entry.name == CONTROL_DIRNAME for entry in local_target_path.iterdir()
+    ):
+        return
 
     if not overwrite:
         raise FileExistsError(
@@ -113,17 +112,26 @@ def _refuse_structural_issues(tensogram: Any, source_path: str) -> None:
         raise ValueError(f"Invalid Tensogram archive {source_path}: {'; '.join(issues)}")
 
 
-def _reconstruct_compressor(config: dict[str, Any] | None) -> Any | None:
-    """Reconstruct a numcodecs compressor from a config dict."""
+def _reconstruct_compressor(config: dict[str, Any] | None, *, array_name: str = "") -> Any | None:
+    """Rebuild a zarr codec from its archived ``{"name", "configuration"}`` dict.
+
+    Return ``None`` for no config. Warn with the array and codec name and return ``None``
+    when the codec cannot be rebuilt.
+    """
     if config is None:
         return None
 
     try:
-        import numcodecs
+        from zarr.registry import get_codec_class
 
-        return numcodecs.get_codec(config)
+        return get_codec_class(config["name"]).from_dict(config)
     except Exception:
-        logger.debug("Could not reconstruct compressor from config: %s", config, exc_info=True)
+        logger.warning(
+            "Could not rebuild compressor %r of array %r; restoring it without the compressor",
+            config.get("name", config.get("id", config)),
+            array_name,
+            exc_info=True,
+        )
         return None
 
 
@@ -140,9 +148,13 @@ def _build_encoding(base_entries: list[dict[str, Any]]) -> dict[str, dict[str, A
             variable_encoding["chunks"] = tuple(zarr_chunks)
 
         if "zarr_compressor" in base_entry:
-            variable_encoding["compressor"] = _reconstruct_compressor(
-                cast(dict[str, Any] | None, base_entry.get("zarr_compressor"))
+            codec = _reconstruct_compressor(
+                cast(dict[str, Any] | None, base_entry.get("zarr_compressor")),
+                array_name=str(var_name),
             )
+            # An empty tuple writes no compressor. Omitting the key would let zarr add a
+            # default ZstdCodec the archive never held.
+            variable_encoding["compressors"] = () if codec is None else (codec,)
 
         if "zarr_fill_value" in base_entry:
             variable_encoding["fill_value"] = base_entry.get("zarr_fill_value")
@@ -337,7 +349,9 @@ def tgm_to_zarr(
                 controlplane_restored = True
                 continue
 
-            group_name = cast(str | None, firecube_meta.get("group") or None)
+            # "/" and "" both name the root group
+            recorded_group = cast(str | None, firecube_meta.get("group"))
+            group_name = None if recorded_group in (None, "", "/") else recorded_group
             restored = _restore_data_message(
                 tensogram_file,
                 i,
