@@ -409,3 +409,65 @@ class TestDeletionMeasuresAlignmentFromStore:
             "Expected alignment error when stored grid disagrees with WAL flag; "
             f"errors={result['errors']}"
         )
+
+
+def _directzarr_shaped_store_and_span(tmp_path: Path):
+    """Arrays under ``data/``; a span recorded the DirectZarr way (bare names, group in meta)."""
+    import zarr
+
+    from firecube.core.controlplane.deletion import DeletionEngine
+    from firecube.core.controlplane.repo import ManifestRepository
+    from firecube.core.controlplane.types import ChunkInfo
+    from tests.helpers.storage import make_test_binding
+
+    product = "product.zarr"
+    store_root = tmp_path / product
+    store_root.mkdir(parents=True, exist_ok=True)
+    root = zarr.open_group(store=str(store_root), mode="w", zarr_format=3)
+    arr = root.require_group("data").create_array(
+        "counts",
+        shape=(8, 2),
+        chunks=(4, 2),
+        dtype="f4",
+        dimension_names=("timestamp", "x"),
+        overwrite=True,
+    )
+    arr[:] = np.ones((8, 2), dtype=np.float32)
+
+    repo = ManifestRepository(
+        binding=make_test_binding(tmp_path, product=product), workspace=tmp_path
+    )
+    span = ChunkInfo(
+        key="span_run1_b1_data",
+        product=product,
+        chunk_type="span",
+        size=0,
+        timestamp=1.0,
+        manifest_path=f"{repo.base_uri.rstrip('/')}/{product}/.firecube",
+        meta={"group": "data"},
+        record={"span": {"arrays": ["counts"], "time_index_ranges": [[0, 3]], "aligned": True}},
+    )
+    return DeletionEngine(repo), span, store_root
+
+
+def test_repro_span_bare_names_alignment(tmp_path: Path) -> None:
+    engine, span, _store_root = _directzarr_shaped_store_and_span(tmp_path)
+
+    result = engine.delete_spans([span], dry_run=True, force=False, update_manifest=False)
+
+    assert result["errors"] == [], (
+        f"bare array names must resolve under the span's group; errors={result['errors']}"
+    )
+    assert result["deleted_keys"] == 1, "chunk 0 of data/counts must be planned for deletion"
+
+
+def test_repro_span_bare_names_delete(tmp_path: Path) -> None:
+    engine, span, store_root = _directzarr_shaped_store_and_span(tmp_path)
+    chunk_dir = store_root / "data" / "counts" / "c"
+
+    result = engine.delete_spans([span], dry_run=False, force=False, update_manifest=False)
+
+    assert result["errors"] == [], f"errors={result['errors']}"
+    assert result["deleted_keys"] == 1
+    assert not (chunk_dir / "0" / "0").exists(), "the span's chunk must be removed"
+    assert (chunk_dir / "1" / "0").exists(), "the chunk of the other slots must stay"

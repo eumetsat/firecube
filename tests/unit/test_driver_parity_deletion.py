@@ -117,6 +117,8 @@ def test_chunk_manager_deletion_uses_injected_filesystem(tmp_path: Path) -> None
         expected_suffix=f"/{product}/{key}",
     )
     manager = ChunkManager(binding=binding, workspace=tmp_path / "workspace", filesystem=fs)
+    (tmp_path / product / "data").mkdir(parents=True)
+    (tmp_path / product / key).write_text("payload", encoding="utf-8")
 
     result = manager.execute_deletion(
         _single_chunk_plan(product, key),
@@ -128,9 +130,34 @@ def test_chunk_manager_deletion_uses_injected_filesystem(tmp_path: Path) -> None
 
     assert result["storage_errors"] == []
     deleted_chunk_paths = [
-        uri for uri in fs.rm_calls if isinstance(uri, str) and uri.endswith(f"/{product}/{key}")
+        uri
+        for uri in fs.rm_calls
+        if isinstance(uri, StorageUri) and uri.path.endswith(f"/{product}/{key}")
     ]
     assert deleted_chunk_paths, "Injected filesystem was not used for storage deletion"
+
+
+def test_repro_scrub_filesystem_delete(tmp_path: Path) -> None:
+    product = "product.zarr"
+    key = "data/chunk"
+    binding = make_test_binding(tmp_path, product=product)
+    manager = ChunkManager(
+        binding=binding, workspace=tmp_path / "workspace", filesystem=create_filesystem(binding)
+    )
+    chunk_file = tmp_path / product / key
+    chunk_file.parent.mkdir(parents=True)
+    chunk_file.write_text("payload", encoding="utf-8")
+
+    result = manager.execute_deletion(
+        _single_chunk_plan(product, key),
+        delete_storage=True,
+        delete_manifest=False,
+        storage_config=None,
+        dry_run=False,
+    )
+
+    assert result["storage_errors"] == []
+    assert not chunk_file.exists(), "filesystem deletion left the chunk object on disk"
 
 
 def test_local_deletion_without_target_base_fails_closed(
