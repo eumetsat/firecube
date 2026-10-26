@@ -113,8 +113,22 @@ The JSON report includes `static_marker_failures`. An empty list means the
 validated array either moves with the time axis or carries the
 `firecube_static_written` marker. A non-empty list after a parallel run means
 the static-owner worker did not finish its static writes: re-run the owner's
-slot range, then validate again. Arrays whose first dimension is `timestamp`,
-`time`, or `firecube_timestamp_state` never require the marker.
+slot range, then validate again.
+
+The command finds the time dimension of each group in this order:
+
+1. The `--time-dim` option, if you pass it.
+2. The first dimension of the `firecube_timestamp_state` array.
+3. The first dimension of a rank-1 array that carries the marker of a
+   preallocated or coordinate-managed time coordinate.
+
+An array whose first dimension is the time dimension, or `firecube_timestamp_state`,
+never requires the marker. A DirectZarr cube has no `firecube_timestamp_state`
+array, so the command uses the marker of its time coordinate.
+
+A report that checked no array is not valid. The command then exits 1 and the
+report carries a note that names `--time-dim`. Pass the time dimension of the
+plugin to the command, for example `--time-dim time`.
 
 ## If Memory Is Tight
 
