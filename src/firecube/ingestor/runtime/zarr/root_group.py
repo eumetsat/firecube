@@ -20,6 +20,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from firecube.core.errors import ConfigurationError, Message
+from firecube.core.zarr._reserved_root_attrs import RESERVED_ROOT_ATTRS
 from firecube.core.zarr.guard._unit_locks import canonical_array_path
 
 
@@ -45,19 +46,23 @@ def refuse_root_beside_named_groups(schema: Iterable[Any]) -> None:
 
 
 def refuse_root_group_attrs(schema: Iterable[Any]) -> None:
-    """Refuse a schema that declares group attributes on the root group.
+    """Refuse root-group attributes that carry the name of a firecube index-mirror attribute.
 
-    The root document holds the control-plane mirror, so plugin attributes go on a named group.
+    The root document holds the index mirror beside the plugin's attributes. Other names are allowed.
 
     Raises:
-        ConfigurationError: The root group (``""`` or ``"/"``) declares non-empty ``attrs``.
+        ConfigurationError: The root group (``""`` or ``"/"``) declares a key of `RESERVED_ROOT_ATTRS`.
     """
     for spec in schema:
-        if spec.attrs and not canonical_array_path(spec.group):
+        if not spec.attrs or canonical_array_path(spec.group):
+            continue
+        reserved = sorted(RESERVED_ROOT_ATTRS.intersection(spec.attrs))
+        if reserved:
             raise ConfigurationError(
                 Message(
-                    "Group attributes cannot be declared on the root group {group!r}: its "
-                    "document holds firecube's index mirror. Declare them on a named group.",
+                    "The root group {group!r} cannot declare the attributes {reserved}: they "
+                    "hold firecube's index mirror. Remove them from ZarrGroupSpec.attrs.",
                     group=spec.group,
+                    reserved=reserved,
                 )
             )

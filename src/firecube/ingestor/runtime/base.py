@@ -494,6 +494,9 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         ``build_dataset`` is then invoked once per group with the full batch
         item list, and the plugin routes items to the group it is building.
 
+        A GenericZarr plugin returns ``["/"]`` to write its dataset at the store
+        root instead of in a named group.
+
         Implementations MUST be deterministic and return a stable, sorted
         list so grouping stays consistent across runs.
 

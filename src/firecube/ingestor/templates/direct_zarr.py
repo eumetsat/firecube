@@ -694,9 +694,19 @@ class ZarrGroupSpec:
     """
 
     group: str
+    """Group path inside the store.
+
+    ``"/"`` names the root group. A schema that declares it declares no other group.
+    """
     arrays: list[ZarrArraySpec] = field(default_factory=list)
     coord_names: frozenset[str] = frozenset({"y", "x", "channel"})
     attrs: Mapping[str, Any] | None = None
+    """Attributes merged into the group's ``zarr.json`` by ``zarr preallocate`` and by ingest.
+
+    On the root group ``"/"``, firecube refuses the four index-mirror names
+    ``firecube_resolved_index``, ``firecube_resolved_index_identity_hash``,
+    ``firecube_slot_index_model`` and ``firecube_slot_index_model_identity_hash``.
+    """
 
     def __post_init__(self) -> None:
         if self.attrs is not None and not isinstance(self.attrs, Mapping):
