@@ -51,6 +51,8 @@ class _RebuildPlugin:
     time_dim_name: ClassVar[str] = "time"
     name = "index_rebuild_plugin"
     size: ClassVar[int] = 3
+    template_config_class: ClassVar[None] = None
+    plugin_config_class: ClassVar[None] = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
@@ -456,6 +458,8 @@ def test_rebuild_none_spec_clear_error(tmp_path: Path, monkeypatch: pytest.Monke
         PRODUCT_NAME: ClassVar[str] = "index_rebuild_product"
         time_dim_name: ClassVar[str] = "time"
         name = "index-rebuild-none"
+        template_config_class: ClassVar[None] = None
+        plugin_config_class: ClassVar[None] = None
 
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass

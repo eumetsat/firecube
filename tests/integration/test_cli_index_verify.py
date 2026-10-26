@@ -338,6 +338,9 @@ def test_verify_plugin_click_exception_from_index_spec_is_reraised_unchanged(
 
     class _RaisingPlugin:
         time_dim_name = "time"
+        name = "index_spec_single"
+        template_config_class = None
+        plugin_config_class = None
 
         def index_spec(self, ctx: object) -> None:
             raise click.ClickException("plugin says no")
