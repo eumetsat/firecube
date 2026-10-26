@@ -86,6 +86,32 @@ firecube zarr index verify \
   --plugin my_plugin
 ```
 
+If the plugin needs an option to declare its index, pass the option with
+`--option KEY=VALUE`. The command configures the plugin before it reads the
+index spec. Without the option, a plugin such as `mtg_fci_l1c` refuses:
+
+```text
+Error: Plugin 'mtg_fci_l1c' failed to resolve index_spec: product_type is required. Pass --option product_type=FDHSI or --option product_type=HRFI.
+```
+
+Pass each option once:
+
+```bash
+firecube zarr index verify \
+  --target file:///data/products/my_product.zarr \
+  --product-name my_product \
+  --plugin mtg_fci_l1c \
+  --option product_type=FDHSI \
+  --option time_epoch=2024-01-01 \
+  --option time_slots=3
+```
+
+Expected output resembles:
+
+```text
+VERIFIED resolved index 7998667a5eba8d09
+```
+
 **Required flags:**
 
 | Flag | Description |
@@ -98,13 +124,15 @@ firecube zarr index verify \
 | Flag | Description |
 |---|---|
 | `--plugin` | Plugin name for legacy-record detection. |
+| `--option KEY=VALUE` | Plugin option. Repeat the flag for each option. Requires `--plugin`. |
 
 **Exit codes:**
 
 | Code | Meaning |
 |---|---|
 | `0` | Record verified. |
-| `1` | Record is a legacy format or cannot be read. |
+| `1` | Record is a legacy format or cannot be read, or the plugin cannot resolve its spec. |
+| `2` | The command received `--option` without `--plugin`. |
 | `3` | No index record found. |
 
 ### `firecube zarr index rebuild`
@@ -128,6 +156,25 @@ already exists with the same identity hash, the command reports "unchanged" and
 exits cleanly. If the existing record has a different hash, the command exits
 with code `1` and prints the conflict.
 
+If the plugin needs an option to declare its index, pass it with
+`--option KEY=VALUE`. Repeat the flag for each option:
+
+```bash
+firecube zarr index rebuild \
+  --target file:///data/products/my_product.zarr \
+  --plugin mtg_fci_l1c \
+  --product-name my_product \
+  --option product_type=FDHSI \
+  --option time_epoch=2024-01-01 \
+  --option time_slots=3
+```
+
+Expected output when the record already matches:
+
+```text
+Index record unchanged: identity_hash=7998667a5eba8d09
+```
+
 **Required flags:**
 
 | Flag | Description |
@@ -135,6 +182,12 @@ with code `1` and prints the conflict.
 | `--target` | Product Zarr URI (`file://` or `s3://`). |
 | `--plugin` | Plugin name used to resolve the index spec. |
 | `--product-name` | Logical product name. |
+
+**Optional flags:**
+
+| Flag | Description |
+|---|---|
+| `--option KEY=VALUE` | Plugin option. Repeat the flag for each option. |
 
 **Exit codes:**
 

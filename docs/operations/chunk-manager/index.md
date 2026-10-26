@@ -42,19 +42,38 @@ Summary: 3 chunks, 0.0 MB total
 `firecube chunks` may also print storage-configuration log lines when logging
 is enabled. The command result is the table or JSON payload.
 
-## Local Storage Preflight
+## Storage Configuration For Deletion
 
-Commands that delete storage data also need a storage type and driver. The full
-URI still supplies the product location:
+If you pass the full product URI to `--product-name`, `chunks delete` needs no
+storage type, no storage driver and no `[storage]` section to name the product.
+The command deletes the storage objects through a filesystem bound to that
+product. This holds for a dry run and for a real run.
+
+A `[storage]` target path in the configuration does not change where a run with
+a product URI deletes.
+
+The URI does not supply S3 access. If the URI starts with `s3://`, the command
+uses the default driver and the normal credential chain of that driver. Anonymous
+access is off. Make working credentials available before you run the command. If
+you use a custom endpoint, set it in the storage configuration.
+
+Two cases still need a storage configuration:
+
+- A bare product name given to `--product-name`.
+- `--all-products`.
+
+For these, set the storage type and driver:
 
 ```bash
 export FIRECUBE_STORAGE_TYPE=local
 export FIRECUBE_STORAGE_DRIVER=fsspec
 ```
 
-Without this storage configuration, `chunks delete` fails before deleting or
-previewing matched storage records. Record-only deletion with `--manifest-only`
-does not require it.
+Without it, these runs fail before they delete or preview any record.
+Record-only deletion with `--manifest-only` does not need it.
+
+`chunks delete` also needs a scope. A run with neither `--product-name` nor
+`--all-products` exits with code 2 and `MissingScope`. Pass one of the two flags.
 
 ## Next Steps
 
