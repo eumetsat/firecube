@@ -88,6 +88,160 @@ def _span_group_name(span: ChunkInfo) -> str:
     return str(meta["group"]).strip("/")
 
 
+def _span_array_store_path(array_name: str, group: str, has_array: Callable[[str], bool]) -> str:
+    """Return the store path of a data array a span records under its meta ``group``.
+
+    A name with a leading ``/`` is root-relative. Any other name is group-relative,
+    unless it already starts with ``<group>/`` (GenericZarr). There ``has_array``
+    picks between ``<name>`` and ``<group>/<name>``.
+
+    Raises:
+        ValueError: Both candidate arrays exist, so the record cannot name one.
+    """
+    raw = str(array_name)
+    clean = raw.strip("/")
+    group_path = group.strip("/")
+    if raw.startswith("/") or not group_path:
+        return clean
+    joined = f"{group_path}/{clean}"
+    if not clean.startswith(f"{group_path}/"):
+        return joined
+    # A DirectZarr array whose name starts with its group's name looks like
+    # the GenericZarr `<group>/<name>` record; only the store tells them apart.
+    if has_array(joined):
+        if has_array(clean):
+            raise ValueError(
+                f"recorded array {raw!r} of group {group_path!r} matches both {clean} and "
+                f"{joined} in the store; refusing to guess which one the span wrote"
+            )
+        return joined
+    return clean
+
+
+def _span_array_store_paths(
+    arrays: Iterable[Any], group: str, has_array: Callable[[str], bool]
+) -> list[str]:
+    """Resolve a span's recorded array names to unique store paths, in order."""
+    return list(
+        dict.fromkeys(_span_array_store_path(str(name), group, has_array) for name in arrays)
+    )
+
+
+def _store_array_probe(store_uri: str, storage_config: Any) -> Callable[[str], bool]:
+    """Return a cached check of whether the live store holds an array at a path."""
+    import zarr
+
+    from firecube.core.filesystem.store_factory import create_zarr_store
+
+    root: list[Any] = []
+    known: dict[str, bool] = {}
+
+    def has_array(path: str) -> bool:
+        if path not in known:
+            if any(part in (".", "..") for part in path.split("/")):
+                known[path] = False
+                return False
+            if not root:
+                handle = create_zarr_store(uri=store_uri, storage_config=storage_config, mode="r")
+                try:
+                    root.append(
+                        zarr.open_group(
+                            **handle.zarr_kwargs(), mode="r", zarr_format=3, use_consolidated=False
+                        )
+                    )
+                except FileNotFoundError:
+                    root.append(None)
+            try:
+                known[path] = root[0] is not None and isinstance(root[0][path], zarr.Array)
+            except KeyError:
+                known[path] = False
+        return known[path]
+
+    return has_array
+
+
+def _chunk_object_uri(base_uri: StorageUri, chunk: ChunkInfo) -> StorageUri:
+    """Return the URI of a chunk record's object inside its product.
+
+    Raises:
+        ValueError: The product or key is empty, absolute, or holds a ``.`` or ``..``
+            component, or the URI falls outside the product.
+    """
+    product, key = str(chunk.product), str(chunk.key)
+    for label, value in (("product", product), ("key", key)):
+        parts = value.strip("/").split("/")
+        if not value.strip("/") or value.startswith("/") or any(p in (".", "..") for p in parts):
+            raise ValueError(
+                f"Refused to delete chunk record {key!r} of product {product!r}: its {label} "
+                "is not a relative path inside the product"
+            )
+    product_uri = base_uri.join(product)
+    uri = product_uri.join(key)
+    inside = (
+        uri.protocol == product_uri.protocol
+        and uri.authority == product_uri.authority
+        and uri.path.startswith(f"{product_uri.path.rstrip('/')}/")
+        and product_uri.path.startswith(f"{base_uri.path.rstrip('/')}/")
+    )
+    if not inside:
+        raise ValueError(
+            f"Refused to delete chunk record {key!r} of product {product!r}: "
+            f"{uri.to_str()} is outside {product_uri.to_str()}"
+        )
+    return uri
+
+
+def _is_managed_time_coordinate(store_uri: str, path: str, storage_config: Any) -> bool:
+    """Return whether the array at ``path`` carries a preallocated or coordinate-managed marker.
+
+    An absent array, a group and an unmarked (legacy) array return ``False``.
+
+    Raises:
+        SchemaDriftError: The array carries an inconsistent marker set.
+    """
+    import zarr
+
+    from firecube.core.filesystem.store_factory import create_zarr_store
+    from firecube.core.zarr._coord_lifecycle import (
+        CoordLifecycleState,
+        raise_if_invalid,
+        resolve_coord_lifecycle,
+    )
+
+    handle = create_zarr_store(uri=store_uri, storage_config=storage_config, mode="r")
+    root = cast(
+        Any,
+        zarr.open_group(**handle.zarr_kwargs(), mode="r", zarr_format=3, use_consolidated=False),
+    )
+    try:
+        node = root[path]
+    except KeyError:
+        return False
+    if not isinstance(node, zarr.Array):
+        return False
+    state = resolve_coord_lifecycle(dict(node.attrs))
+    raise_if_invalid(state, path)
+    return state in (CoordLifecycleState.PREALLOCATED, CoordLifecycleState.COORD_MANAGED)
+
+
+def _expand_ranges_over_grids(
+    time_ranges: Sequence[Any],
+    per_array_grids: dict[str, tuple[list[str], list[int], list[int], int]],
+) -> list[list[int]]:
+    """Return the slots whose chunks a chunk-key deletion removes, over every grid."""
+    from firecube.core.zarr.state import expand_time_index_ranges_to_chunk_boundaries
+
+    slots: set[int] = set()
+    for _dim_names, shape, chunk_shape, time_dim in per_array_grids.values():
+        for start, end in expand_time_index_ranges_to_chunk_boundaries(
+            time_ranges,
+            chunk_len=int(chunk_shape[time_dim] or 0),
+            length=int(shape[time_dim] or 0),
+        ):
+            slots.update(range(start, end + 1))
+    return [[start, end] for start, end in _contiguous_ranges(sorted(slots))]
+
+
 def _span_state_array_name(
     *, spec: dict[str, Any], group: str, default: str = _STATE_ARRAY_NAME
 ) -> str:
@@ -862,16 +1016,18 @@ class DeletionEngine:
         errors: list[str] = []
         if not self.repo.base_uri:
             return ["Missing base URI; cannot delete without a base URI"]
-        base_path = self.repo.base_uri.rstrip("/")
+        base_uri = StorageUri.parse(self.repo.base_uri)
         for chunk in chunks:
-            path = f"{base_path}/{chunk.product.strip('/')}/{chunk.key.lstrip('/')}".replace(
-                "//", "/"
-            )
             try:
-                if filesystem.exists(path):
-                    filesystem.rm(path, recursive=True)
+                uri = _chunk_object_uri(base_uri, chunk)
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
+            try:
+                if filesystem.exists(uri):
+                    filesystem.rm(uri, recursive=True)
             except Exception as e:
-                errors.append(f"Failed to delete {path}: {e}")
+                errors.append(f"Failed to delete {uri.to_str()}: {e}")
         return errors
 
     def _delete_from_s3(self, chunks: list[ChunkInfo]) -> list[str]:
@@ -885,8 +1041,14 @@ class DeletionEngine:
         fs, base_path = self.repo._get_fs(base_uri)
         base_path = str(base_path).rstrip("/")
 
+        product_base = StorageUri.parse(self.repo.base_uri)
         s3_paths: list[str] = []
         for chunk in chunks:
+            try:
+                _chunk_object_uri(product_base, chunk)
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
             p = f"{base_path}/{chunk.product.strip('/')}/{chunk.key.lstrip('/')}".replace("//", "/")
             s3_paths.append(p)
 
@@ -916,7 +1078,13 @@ class DeletionEngine:
             return [
                 "Missing local target base; cannot delete local storage without a file:// product URI"
             ]
+        local_base = StorageUri.from_local_path(base)
         for c in chunks:
+            try:
+                _chunk_object_uri(local_base, c)
+            except ValueError as exc:
+                errors.append(str(exc))
+                continue
             try:
                 p = base / c.product / c.key
                 if p.exists():
@@ -1052,6 +1220,7 @@ class DeletionEngine:
         per_array_grids: dict[str, tuple[list[str], list[int], list[int], int]],
         product: str,
         target_span_keys: set[str],
+        has_array: Callable[[str], bool],
         all_spans: Sequence[ChunkInfo] | None = None,
     ) -> list[ChunkInfo]:
         """Return OTHER active spans whose slot data lives in the physical
@@ -1064,7 +1233,8 @@ class DeletionEngine:
         ``time_index_ranges`` entry that intersects the expanded physical
         range is treated as collateral: force-deleting the target span will
         also destroy its data because they share the same physical chunk keys
-        on disk.
+        on disk. ``arrays`` holds store paths; each other span's names are
+        resolved under its own meta group before the comparison.
         """
         per_array_physical: dict[str, list[tuple[int, int]]] = {}
         for array_path in arrays:
@@ -1117,10 +1287,14 @@ class DeletionEngine:
             other_ranges = other_spec.get("time_index_ranges")
             if not isinstance(other_arrays, list) or not isinstance(other_ranges, list):
                 continue
+            other_meta = other.meta if isinstance(other.meta, dict) else {}
+            other_paths = set(
+                _span_array_store_paths(other_arrays, str(other_meta.get("group") or ""), has_array)
+            )
 
             hit = False
             for array_path, physical_ranges in per_array_physical.items():
-                if array_path not in other_arrays:
+                if array_path not in other_paths:
                     continue
                 for pair in other_ranges:
                     if not (isinstance(pair, (list, tuple)) and len(pair) == 2):
@@ -1231,9 +1405,28 @@ class DeletionEngine:
         all_spans: Sequence[ChunkInfo],
         target_span_keys: set[str],
     ) -> dict[str, Any]:
-        del group_name
         from firecube.core.zarr.validation import read_chunk_grid
 
+        has_array = _store_array_probe(store_uri, self.repo.storage_config)
+        try:
+            store_paths = _span_array_store_paths(arrays, group_name, has_array)
+        except ValueError as exc:
+            return {
+                "deleted_keys": 0,
+                "deleted_spans": 0,
+                "errors": [f"Span {span.key}: {exc}"],
+                "warnings": [],
+            }
+        # A marked time coordinate is engine-managed: pods never refill its slots,
+        # so the span's deletion neither removes nor measures its chunks.
+        coord_path = _span_array_store_path(expected_time_dim_name, group_name, has_array)
+        if coord_path in store_paths and _is_managed_time_coordinate(
+            store_uri, coord_path, self.repo.storage_config
+        ):
+            store_paths.remove(coord_path)
+            self.log.info(
+                "span %s: keeping engine-managed time coordinate %s", span.key, coord_path
+            )
         deleted_keys = 0
         already_absent_keys = 0
         span_paths_added = 0
@@ -1246,7 +1439,7 @@ class DeletionEngine:
         measured_aligned, per_array_grids, grid_read_errors, skipped_arrays = (
             self._measure_span_alignment(
                 store_uri=store_uri,
-                arrays=arrays,
+                arrays=store_paths,
                 time_ranges=time_ranges,
                 expected_time_dim_name=expected_time_dim_name,
                 span_key=span.key,
@@ -1282,25 +1475,44 @@ class DeletionEngine:
             return {"deleted_keys": 0, "deleted_spans": 0, "errors": errors, "warnings": warnings}
 
         if not measured_aligned and force:
-            collateral_spans = self._find_collateral_spans(
-                arrays=arrays,
-                time_ranges=time_ranges,
-                per_array_grids=per_array_grids,
-                product=product,
-                target_span_keys=target_span_keys,
-                all_spans=all_spans,
-            )
+            try:
+                collateral_spans = self._find_collateral_spans(
+                    arrays=store_paths,
+                    time_ranges=time_ranges,
+                    per_array_grids=per_array_grids,
+                    product=product,
+                    target_span_keys=target_span_keys,
+                    has_array=has_array,
+                    all_spans=all_spans,
+                )
+            except ValueError as exc:
+                # Another span's record is ambiguous: its share of the chunks is unknown.
+                errors.append(f"Span {span.key}: collateral check refused: {exc}")
+                return {
+                    "deleted_keys": 0,
+                    "deleted_spans": 0,
+                    "errors": errors,
+                    "warnings": warnings,
+                }
 
         def _flush_pending() -> None:
             nonlocal pending_paths, deleted_keys, already_absent_keys
             if not pending_paths:
                 return
-            if dry_run:
-                deleted_keys += len(pending_paths)
-                pending_paths = []
-                return
             for path in pending_paths:
                 uri = StorageUri.parse(path) if "://" in path else StorageUri.from_local_path(path)
+                if dry_run:
+                    # A preview counts only the keys the store holds, as the deletion would.
+                    try:
+                        present = fs.exists(uri)
+                    except Exception as e:
+                        errors.append(f"Failed to check {path}: {e}")
+                        continue
+                    if present:
+                        deleted_keys += 1
+                    else:
+                        already_absent_keys += 1
+                    continue
                 try:
                     fs.rm(uri, recursive=False)
                     deleted_keys += 1
@@ -1350,7 +1562,7 @@ class DeletionEngine:
             else:
                 collateral_span_keys = [c.key for c in collateral_spans]
 
-        for array_path in arrays:
+        for array_path in store_paths:
             grid = per_array_grids.get(array_path)
             if grid is None:
                 continue
@@ -1397,9 +1609,11 @@ class DeletionEngine:
         _flush_pending()
 
         if update_state:
-            state_path = spec.get("state_array")
+            recorded_state_path = spec.get("state_array")
             state_value = spec.get("state_deleted_value", STATE_DELETED_BY_FIRECUBE)
-            if state_path:
+            if recorded_state_path:
+                # The recorded state path is store-relative, possibly a sibling of the group.
+                state_path = str(recorded_state_path).strip("/")
                 try:
                     from firecube.core.zarr.state import (
                         expand_time_index_ranges_to_chunk_boundaries,
@@ -1407,7 +1621,19 @@ class DeletionEngine:
                     )
 
                     effective_ranges = time_ranges
-                    if not measured_aligned and force:
+                    expand = not measured_aligned and force
+                    if expand and not _zarr_group_has_array(
+                        store_uri=store_uri,
+                        group="",
+                        array_name=state_path,
+                        storage_config=self.repo.storage_config,
+                    ):
+                        # DirectZarr records a state array it never creates: the
+                        # removed slots follow the chunk grids of the span's arrays.
+                        effective_ranges = (
+                            _expand_ranges_over_grids(time_ranges, per_array_grids) or time_ranges
+                        )
+                    elif expand:
                         try:
                             dim_names, shape, chunk_shape = read_chunk_grid(
                                 store_uri, state_path, storage_config=self.repo.storage_config
