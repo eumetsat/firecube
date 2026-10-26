@@ -36,6 +36,7 @@ on plain resume-appends (NO ``force_reingest``):
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Iterator
 from pathlib import Path
@@ -46,6 +47,7 @@ import pytest
 import xarray as xr
 import zarr
 from click.testing import CliRunner
+from pytest_mock import MockerFixture
 
 from firecube.cli.main import cli
 from firecube.core.api import IndexedWrite, IndexSpec, ItemInfo, RegularTimeAxis
@@ -57,6 +59,7 @@ from firecube.ingestor.api import (
     ZarrGroupSpec,
 )
 from firecube.ingestor.registry import loader as _loader
+from firecube.ingestor.runtime.zarr import append as append_module
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration
@@ -98,7 +101,7 @@ class _PartialChunkZarr(GenericZarrIngestor):
         return list(ctx.option("x_days") or [])
 
     def get_batch_groups(self, items, ctx: PluginContext) -> list[str]:
-        return [_GROUP]
+        return [ctx.option("x_group") or _GROUP]
 
     def build_dataset(self, group: str, items: list[int], ctx: PluginContext) -> xr.Dataset:
         _ = group
@@ -112,11 +115,14 @@ def _engine_run(
     attrs: dict[str, Any] | None = None,
     pipeline_batch_size: int = 8,
     resume_existing: bool = False,
+    group: str | None = None,
+    write_mode: str = "staged",
 ) -> None:
-    """Drive one ingest through ``host.run(ctx)`` in staged write mode."""
+    """Drive one ingest through ``host.run(ctx)``; staged write mode unless told otherwise."""
     host = _PartialChunkZarr()
     options: dict[str, Any] = {
-        "write_mode": "staged",
+        "write_mode": write_mode,
+        "x_group": group,
         "x_days": days,
         "x_attrs": attrs,
         "pipeline_workers": 1,
@@ -238,6 +244,83 @@ def test_multi_batch_resume_append_preserves_first_write_attrs_engine_driven(
             f"layout_tags should round-trip to list ['weather','eu'], got "
             f"{ds.attrs.get('layout_tags')!r}"
         )
+
+
+@pytest.mark.parametrize("write_mode", ["direct", "staged"])
+def test_root_slash_first_write_keeps_control_plane(tmp_path: Path, write_mode: str) -> None:
+    """A cube at the root group "/" keeps ``.firecube/`` through its first write.
+
+    The arrays land at the store root, the schema and the run records the
+    control plane wrote before the first batch are still there afterwards, and
+    a second run appends to the same root cube.
+    """
+    target = tmp_path / _PRODUCT
+    _engine_run(tmp_path, days=[0, 1, 2], group="/", write_mode=write_mode)
+
+    root = zarr.open_group(str(target), mode="r", use_consolidated=False)
+    assert "temperature" in root, f"arrays are not at the root: {sorted(root.keys())}"
+    assert (target / ".firecube" / "schema.json").is_file(), (
+        "the first write at '/' deleted the control plane"
+    )
+    events = [
+        json.loads(line)
+        for segment in sorted((target / ".firecube" / "runs").glob("*/events-*.jsonl"))
+        for line in segment.read_text().splitlines()
+        if line
+    ]
+    run_ids = {event["run_id"] for event in events}
+    assert len(run_ids) == 1, f"expected the events of one run, got {sorted(run_ids)}"
+    assert {event["event_type"] for event in events} >= {"run_started", "run_completed"}, (
+        f"the first run's started and completed records are not persisted: {events}"
+    )
+    assert {p.parent.name for p in (target / ".firecube" / "runs").glob("*/events-*.jsonl")} == (
+        run_ids
+    ), "an event segment is not under the directory of its run id"
+
+    _engine_run(tmp_path, days=[3], group="/", write_mode=write_mode, resume_existing=True)
+
+    root = zarr.open_group(str(target), mode="r", use_consolidated=False)
+    assert np.asarray(root["temperature"][:]).reshape(-1).tolist() == [
+        _TEMPERATURE[d] for d in range(4)
+    ]
+
+
+def test_root_slash_failed_first_batch_repaired(tmp_path: Path, mocker: MockerFixture) -> None:
+    """A first batch that fails at "/" is repaired without deleting the store.
+
+    The repair removes the half-written arrays only: ``.firecube/`` stays, and
+    a resumed run writes every slot.
+    """
+    target = tmp_path / _PRODUCT
+    real_write = append_module.write_dataset_to_zarr
+    calls: list[int] = []
+
+    def _write_then_fail(ds: xr.Dataset, **kwargs: Any) -> None:
+        real_write(ds, **kwargs)
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("injected failure after the first write")
+
+    mocker.patch.object(append_module, "write_dataset_to_zarr", _write_then_fail)
+
+    with pytest.raises(Exception, match="injected failure"):
+        _engine_run(tmp_path, days=[0, 1], group="/", write_mode="direct")
+
+    root = zarr.open_group(str(target), mode="r", use_consolidated=False)
+    assert "temperature" not in root, (
+        f"the repair left the failed batch's arrays at the root: {sorted(root.keys())}"
+    )
+    assert (target / ".firecube" / "schema.json").is_file(), (
+        "the repair of a failed first batch at '/' deleted the control plane"
+    )
+
+    _engine_run(tmp_path, days=[0, 1], group="/", write_mode="direct", resume_existing=True)
+
+    root = zarr.open_group(str(target), mode="r", use_consolidated=False)
+    assert np.asarray(root["temperature"][:]).reshape(-1).tolist() == [
+        _TEMPERATURE[0],
+        _TEMPERATURE[1],
+    ]
 
 
 # --- DirectZarr staged promotion of units rewritten to the fill value -----------------
