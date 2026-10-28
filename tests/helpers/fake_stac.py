@@ -14,7 +14,7 @@
 
 """An in-process STAC API for discovery tests: no network, real pystac-client paging.
 
-`FakeStacIO` replaces the HTTP layer of pystac-client (`StacApiIO.request`). Each
+`install_fake_stac` replaces the HTTP layer of pystac-client (`StacApiIO.request`). Each
 `FakeStacApi` serves one API root: a landing page that conforms to item search, and a
 POST ``/search`` that filters its items by the posted ``collections`` and pages them with
 ``next`` links whose body is merged into the next POST, as STAC APIs do. Every request is
@@ -93,6 +93,15 @@ class FakeStacApi:
     items: list[dict[str, Any]]
     page_size: int = 2
     fail_search: bool = False
+    # Page indexes at which an empty page that carries a next link is served; the
+    # items continue on the following page.
+    empty_pages_at: tuple[int, ...] = ()
+    # Page index -> page index its next link points to (a repeated request when it is
+    # the page's own index or an earlier one).
+    repeat_next_at: dict[int, int] = field(default_factory=dict)
+    # The test fails once more search requests than this have been served, so a paging
+    # loop that never ends fails instead of hanging the run.
+    max_search_requests: int = 50
     requests: list[tuple[str, str, dict[str, Any]]] = field(default_factory=list)
 
     @property
@@ -138,6 +147,11 @@ class FakeStacApi:
         }
 
     def _page(self, parameters: dict[str, Any]) -> dict[str, Any]:
+        if self.search_pages > self.max_search_requests:
+            pytest.fail(
+                f"{self.base} served more than {self.max_search_requests} search requests: "
+                "the client does not stop paging"
+            )
         wanted = set(parameters.get("collections") or ())
         ids = set(parameters.get("ids") or ())
         matching = [
@@ -146,49 +160,57 @@ class FakeStacApi:
             if item["collection"] in wanted and (not ids or item["id"] in ids)
         ]
         index = int(str(parameters.get("token", "page-0")).split("-")[1])
-        start = index * self.page_size
-        page = matching[start : start + self.page_size]
+        if self.page_size == 0:
+            # Endless empty pages, each with a new token.
+            page: list[dict[str, Any]] = []
+            next_index: int | None = index + 1
+        else:
+            pages = [
+                matching[start : start + self.page_size]
+                for start in range(0, len(matching), self.page_size)
+            ]
+            for empty_at in sorted(self.empty_pages_at):
+                pages.insert(empty_at, [])
+            page = pages[index] if index < len(pages) else []
+            next_index = index + 1 if index + 1 < len(pages) else None
+        if index in self.repeat_next_at:
+            next_index = self.repeat_next_at[index]
         links: list[dict[str, Any]] = []
-        if start + self.page_size < len(matching):
+        if next_index is not None:
             links.append(
                 {
                     "rel": "next",
                     "href": f"{self.base}/search",
                     "type": "application/geo+json",
                     "method": "POST",
-                    "body": {"token": f"page-{index + 1}"},
+                    "body": {"token": f"page-{next_index}"},
                     "merge": True,
                 }
             )
         return {"type": "FeatureCollection", "features": page, "links": links}
 
 
-class FakeStacIO(StacApiIO):
-    """`StacApiIO` that answers from `FakeStacApi` roots instead of the network."""
+def install_fake_stac(monkeypatch: pytest.MonkeyPatch, *apis: FakeStacApi) -> None:
+    """Route every STAC request of the test to ``apis`` at the transport.
 
-    def __init__(self, apis: list[FakeStacApi]):
-        super().__init__()
-        self._apis = apis
+    Whatever `StacApiIO` object the code under test builds, and any ``get_pages`` it
+    overrides, runs; only ``StacApiIO.request`` answers from the fake.
+    """
 
     def request(
-        self,
+        self: StacApiIO,
         href: str,
         method: str | None = None,
         headers: dict[str, str] | None = None,
         parameters: dict[str, Any] | None = None,
     ) -> str:
-        _ = headers
+        _ = (self, headers)
         # Round-trip through JSON, as the request body on the wire does.
         sent = json.loads(json.dumps(parameters or {}))
-        for api in self._apis:
+        for api in apis:
             if href.rstrip("/") == api.base or href.startswith(f"{api.base}/"):
                 body = api.respond(href, (method or "GET").upper(), sent)
                 return json.dumps(body)
         raise APIError(f"no fake STAC API serves {href}")
 
-
-def install_fake_stac(monkeypatch: pytest.MonkeyPatch, *apis: FakeStacApi) -> None:
-    """Route every STAC discovery request of the test to ``apis``."""
-    monkeypatch.setattr(
-        "firecube.core.discovery._stac._new_stac_io", lambda: FakeStacIO(list(apis))
-    )
+    monkeypatch.setattr(StacApiIO, "request", request)
