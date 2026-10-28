@@ -25,8 +25,16 @@ import threading
 import uuid
 from pathlib import Path
 from typing import IO, Any, Protocol
+from urllib.parse import urlsplit
 
-from firecube.core.filesystem.ops import open_source_filesystem
+from firecube.core.discovery import SourceItem
+from firecube.core.filesystem.ops import download_http_source, open_source_filesystem
+from firecube.core.storage.uri import SUPPORTED_PROTOCOLS
+from firecube.core.uris import infer_target_protocol, local_path_from_target
+from firecube.ingestor.errors import UnsupportedSourceSchemeError
+
+# Schemes downloaded over HTTP; StorageUri never holds them.
+_HTTP_SCHEMES = frozenset({"http", "https"})
 
 
 # Re-export LocalSourceFile so it remains available via this module
@@ -41,9 +49,15 @@ class SourceFile(Protocol):
 
 
 class LocalSourceFile:
-    """Implementation of SourceFile for local filesystem."""
+    """Implementation of SourceFile for local filesystem.
+
+    Args:
+        path: A local path, or a ``file://`` URI whose path is taken literally, without percent-decoding.
+    """
 
     def __init__(self, path: Path | str):
+        if isinstance(path, str) and path.startswith("file://"):
+            path = local_path_from_target(path)
         self._path = Path(path).resolve()
 
     @property
@@ -134,12 +148,29 @@ class WorkspaceManager:
         return tempfile.TemporaryDirectory(dir=str(self._temp_root))
 
     def materialize(self, source: Any) -> Path:
-        """Materialize a source file to local disk (cached) safely."""
-        from firecube.core.uris import is_remote_target
+        """Return a local path for a source, downloading a remote one into the cache.
 
-        # Handle remote URI strings — download to local cache
-        if isinstance(source, str) and is_remote_target(source):
-            return self._materialize_remote_uri(source)
+        A `SourceItem` is read by its ``href``. The href's own scheme chooses the reader.
+        A local path or ``file://`` href returns the file itself. An ``http://`` or
+        ``https://`` href is downloaded anonymously; other remote hrefs go through the
+        run's storage configuration.
+
+        Args:
+            source: A path, an href string, a `SourceItem` or a `SourceFile`.
+
+        Returns:
+            The local file.
+
+        Raises:
+            UnsupportedSourceSchemeError: If the href's scheme is one Firecube cannot open.
+        """
+        if isinstance(source, SourceItem):
+            source = source.href
+
+        if isinstance(source, str):
+            scheme = infer_target_protocol(source)
+            if scheme != "file":
+                return self._materialize_remote_uri(source, scheme)
 
         # 1. Resolve to SourceFile-like
         src_file: Any = source
@@ -196,13 +227,16 @@ class WorkspaceManager:
 
         return final_path
 
-    def _materialize_remote_uri(self, uri: str) -> Path:
+    def _materialize_remote_uri(self, uri: str, scheme: str) -> Path:
         """Download a remote URI to local cache and return the local Path."""
+        if scheme not in _HTTP_SCHEMES and scheme not in SUPPORTED_PROTOCOLS:
+            raise UnsupportedSourceSchemeError(uri, scheme)
         if not self._temp_root:
             raise RuntimeError("Cannot materialize remote URI without a workspace/temp_root")
 
         uri_hash = hashlib.sha256(uri.encode()).hexdigest()[:16]
-        last_segment = uri.rsplit("/", 1)[-1]
+        # The cache name keeps the suffix of the path, never of a query or fragment.
+        last_segment = urlsplit(uri).path.rsplit("/", 1)[-1]
         suffix = last_segment.rsplit(".", 1)[-1] if "." in last_segment else ""
         cache_name = f"{uri_hash}.{suffix}" if suffix else uri_hash
 
@@ -231,9 +265,13 @@ class WorkspaceManager:
 
                 self._log.info("Downloading remote file %s to cache", uri)
                 try:
-                    fs, uri_obj = open_source_filesystem(uri, self._storage_config)
-                    with fs.open(uri_obj, "rb") as src_f, open(partial_path, "wb") as dst_f:
-                        shutil.copyfileobj(src_f, dst_f)
+                    if scheme in _HTTP_SCHEMES:
+                        # Never through the run's storage: an http host is not a bucket.
+                        download_http_source(uri, partial_path)
+                    else:
+                        fs, uri_obj = open_source_filesystem(uri, self._storage_config)
+                        with fs.open(uri_obj, "rb") as src_f, open(partial_path, "wb") as dst_f:
+                            shutil.copyfileobj(src_f, dst_f)
                     os.replace(partial_path, final_path)
                 except Exception:
                     if partial_path.exists():

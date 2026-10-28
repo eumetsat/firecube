@@ -463,3 +463,26 @@ def open_source_filesystem(
         driver=StorageDriverConfig.from_storage_config(storage_config),
     )
     return create_filesystem(binding), uri_obj
+
+
+def download_http_source(href: str, destination: Path) -> None:
+    """Download an ``http://`` or ``https://`` source to a local file.
+
+    The download is one streaming GET without Range requests, so a server that
+    ignores Range still works. It sends no credentials and no extra headers.
+
+    Args:
+        href: The ``http://`` or ``https://`` URL, query included.
+        destination: The local file to write; an existing file is overwritten.
+
+    Raises:
+        ValueError: If ``href`` is not an ``http://`` or ``https://`` URL.
+        FileNotFoundError: If the server answers 404.
+    """
+    from urllib.parse import urlsplit
+
+    scheme = urlsplit(href).scheme.lower()
+    if scheme not in ("http", "https"):
+        raise ValueError(f"not an http:// or https:// URL: {href!r}")
+    fs = fsspec.filesystem(scheme)
+    fs.get_file(href, str(destination))
