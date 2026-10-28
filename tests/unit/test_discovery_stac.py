@@ -16,6 +16,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -81,13 +84,37 @@ def test_search_body_takes_collections_from_the_uri_only(monkeypatch, api_a):
     assert {item.collection for item in items} == {"coll-a"}
 
 
-def test_next_links_are_followed_until_the_last_page(monkeypatch, api_a):
-    install_fake_stac(monkeypatch, api_a)
+@pytest.mark.parametrize(
+    ("layout", "refused", "pages"),
+    [
+        pytest.param({}, False, 2, id="complete"),
+        pytest.param({"empty_pages_at": (1,)}, False, 3, id="empty_page_in_the_middle"),
+        pytest.param({"page_size": 0}, True, None, id="endless_empty_pages"),
+        pytest.param(
+            {"empty_pages_at": (2,), "repeat_next_at": {2: 2}},
+            True,
+            None,
+            id="empty_last_page_repeats_its_own_next",
+        ),
+        pytest.param({"repeat_next_at": {1: 1}}, True, None, id="next_repeats_an_earlier_request"),
+    ],
+)
+def test_next_links_are_followed_until_the_last_page(monkeypatch, layout, refused, pages):
+    items = [_granule_item(f"a-{n}", "coll-a", API_A) for n in (3, 1, 2)]
+    api = FakeStacApi(API_A, items, **{"page_size": 2, "max_search_requests": 20, **layout})
+    install_fake_stac(monkeypatch, api)
 
-    items = discover(DiscoveryRequest(sources=(SRC_A,)))
+    if refused:
+        # An early or endless end of paging must be an error, not a silent short result.
+        with pytest.raises(StacApiError, match=r"stac-a\.test"):
+            discover(DiscoveryRequest(sources=(SRC_A,)))
+        assert api.search_pages < api.max_search_requests
+        return
 
-    assert api_a.search_pages == 2
-    assert sorted(str(item.item_id) for item in items) == ["a-1", "a-2", "a-3"]
+    found = discover(DiscoveryRequest(sources=(SRC_A,)))
+
+    assert api.search_pages == pages
+    assert sorted(str(item.item_id) for item in found) == ["a-1", "a-2", "a-3"]
 
 
 def test_data_assets_are_kept_and_metadata_assets_dropped(monkeypatch, api_a):
@@ -170,20 +197,34 @@ def test_stac_item_fields_and_identity(monkeypatch, api_a):
     assert items[0].identity == "coll-a/a-1/data"
 
 
-def test_dedup_and_ordering_are_deterministic(monkeypatch, api_a, api_b):
+@pytest.mark.parametrize(
+    "lookalikes",
+    [
+        pytest.param((), id="plain"),
+        pytest.param((("b/c", "d"), ("b", "c/d")), id="slash_moves_between_id_and_asset"),
+        pytest.param((("b/c", "data"), ("b%2Fc", "data")), id="slash_against_its_escape"),
+    ],
+)
+def test_dedup_and_ordering_are_deterministic(monkeypatch, api_a, api_b, lookalikes):
+    for n, (item_id, asset_key) in enumerate(lookalikes):
+        href = f"https://data.test/coll-b/look-{n}.nc"
+        api_b.items.append(stac_item(item_id, "coll-b", {asset_key: (href, ["data"])}, base=API_B))
     install_fake_stac(monkeypatch, api_a, api_b)
 
     forward = discover(DiscoveryRequest(sources=(SRC_A, SRC_B, SRC_A)))
     backward = discover(DiscoveryRequest(sources=(SRC_B, SRC_A)))
 
     assert forward == backward
-    assert [item.identity for item in forward] == [
-        "coll-a/a-1/data",
-        "coll-a/a-2/data",
-        "coll-a/a-3/data",
-        "coll-b/b-1/data",
-    ]
-    assert len({item.identity for item in forward}) == len(forward)
+    identities = [item.identity for item in forward]
+    assert len(forward) == 4 + len(lookalikes)
+    assert len(set(identities)) == len(forward)
+    if not lookalikes:
+        assert identities == [
+            "coll-a/a-1/data",
+            "coll-a/a-2/data",
+            "coll-a/a-3/data",
+            "coll-b/b-1/data",
+        ]
 
 
 def test_walk_and_stac_sources_mix_in_one_request(monkeypatch, api_b, tmp_path: Path):
@@ -271,6 +312,32 @@ def test_validate_stac_search_accepts_the_allowed_keys(value):
         ("datetime", "JSON object"),
     ],
 )
-def test_validate_stac_search_refuses_other_keys(value, match):
+def test_validate_stac_search_refuses_other_keys(monkeypatch, api_a, value, match):
+    install_fake_stac(monkeypatch, api_a)
+
     with pytest.raises(StacSearchError, match=match):
         validate_stac_search(value)
+    with pytest.raises(StacSearchError, match=match):
+        discover(DiscoveryRequest(sources=(SRC_A,), stac_search=value))
+
+    assert api_a.searches == []
+
+
+@pytest.mark.contract
+def test_core_api_import_does_not_load_the_stac_client():
+    repo_root = Path(__file__).resolve().parents[2]
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, firecube.core.api; print('pystac_client' in sys.modules)",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        env={**os.environ, "PYTHONPATH": str(repo_root / "src")},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "False"
