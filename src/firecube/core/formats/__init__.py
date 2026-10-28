@@ -14,12 +14,8 @@
 
 """Generic input format helpers (ZIP, HDF5, NetCDF).
 
-Public imports remain stable at ``firecube.core.formats``. ``discover_input_files``
-and ``KNOWN_EXTENSIONS`` moved to ``firecube.core.discovery`` and are still served
-here; prefer ``firecube.core.api``.
+Public imports remain stable at ``firecube.core.formats``.
 """
-
-from typing import TYPE_CHECKING, Any
 
 from firecube.core.formats.hdf5 import materialize_hdf5_path, read_hdf5_array
 from firecube.core.formats.netcdf import (
@@ -34,26 +30,8 @@ from firecube.core.formats.zip import (
     stream_hdf5_from_zip,
 )
 
-if TYPE_CHECKING:
-    from firecube.core.discovery import KNOWN_EXTENSIONS, discover_input_files
-
-_MOVED_TO_DISCOVERY = frozenset({"KNOWN_EXTENSIONS", "discover_input_files"})
-
-
-def __getattr__(name: str) -> Any:
-    # Resolved on first access: firecube.core.discovery imports formats.hdf5, so an
-    # import at module load would be circular.
-    if name in _MOVED_TO_DISCOVERY:
-        import firecube.core.discovery as discovery
-
-        return getattr(discovery, name)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 __all__ = [
-    "KNOWN_EXTENSIONS",
     "clean_netcdf_encoding",
-    "discover_input_files",
     "extract_all_from_zips",
     "extract_hdf5_from_zip",
     "materialize_hdf5_path",
