@@ -70,6 +70,16 @@ def input_filters_option(f: Any) -> Any:
     )(f)
 
 
+def load_plugin_defaults(ctx: click.Context, plugin: str) -> dict[str, Any]:
+    """Read the ``[plugins.<plugin>]`` table of the configuration file, if any."""
+    config_file = (ctx.obj or {}).get("config_file")
+    try:
+        cfg = load_config_file(config_file, strict=config_file is not None)
+    except ConfigFileError as exc:
+        raise click.UsageError(render(exc, ctx), ctx=ctx) from exc
+    return get_plugin_defaults(cfg, plugin)
+
+
 def resolve_input_filters(
     ctx: click.Context,
     plugin: str,
@@ -79,12 +89,7 @@ def resolve_input_filters(
 ) -> list[str] | None:
     """Resolve only input filters, keeping other command defaults untouched."""
     if defaults is None:
-        config_file = (ctx.obj or {}).get("config_file")
-        try:
-            cfg = load_config_file(config_file, strict=config_file is not None)
-        except ConfigFileError as exc:
-            raise click.UsageError(render(exc, ctx), ctx=ctx) from exc
-        defaults = get_plugin_defaults(cfg, plugin)
+        defaults = load_plugin_defaults(ctx, plugin)
     try:
         reject_legacy_input_patterns(defaults)
         configured = validate_input_filters(defaults.get("input_filters"))

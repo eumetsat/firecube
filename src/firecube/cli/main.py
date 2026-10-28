@@ -755,8 +755,19 @@ def ingest(
         _print_plugin_options(plugin, ingestor_cls)
         return
 
+    explicit_config = ctx.obj.get("config_file")
+    cfg = load_config_file(explicit_config, strict=explicit_config is not None)
+    options = get_plugin_defaults(cfg, plugin)
+    resolved_filters = resolve_input_filters(ctx, plugin, input_filters, defaults=options)
+    if resolved_filters is not None:
+        options["input_filters"] = resolved_filters
+    admitted, stac_search = admit_sources(
+        ctx, plugin, input_data, stac_search, command="firecube ingest", defaults=options
+    )
+    if stac_search is not None:
+        options["stac_search"] = stac_search
     sources: list[str] = []
-    for value in admit_sources(input_data, stac_search, command="firecube ingest"):
+    for value in admitted:
         if value and not is_remote_target(value):
             local_source = local_path_from_target(value)
             if not local_source.exists():
@@ -776,15 +787,7 @@ def ingest(
                 "firecube.write_mode": str(write_mode or ""),
             },
         ):
-            explicit_config = ctx.obj.get("config_file")
-            cfg = load_config_file(explicit_config, strict=explicit_config is not None)
             assert ingest_cfg is not None
-            options = get_plugin_defaults(cfg, plugin)
-            resolved_filters = resolve_input_filters(ctx, plugin, input_filters, defaults=options)
-            if resolved_filters is not None:
-                options["input_filters"] = resolved_filters
-            if stac_search is not None:
-                options["stac_search"] = stac_search
             from firecube.cli._slot_env import resolve_slot_range_from_env
 
             resolved_slot_start, resolved_slot_end, resolved_slot_group = (

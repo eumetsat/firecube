@@ -17,12 +17,13 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import click
 
 from firecube.cli._errors import render
+from firecube.cli._input_filters import load_plugin_defaults
 from firecube.cli._uri_policy import admit_input_sources
 from firecube.core.discovery import StacSearchError, require_stac, validate_stac_search
 
@@ -69,40 +70,62 @@ def stac_search_option(f: Any) -> Any:
         help=(
             "STAC item search filter for every stac:// --input-data, as one JSON object "
             "with any of the keys datetime, bbox, intersects and ids. The collection "
-            "comes from the stac:// URI."
+            "comes from the stac:// URI. Replaces a stac_search table of the plugin "
+            "configuration."
         ),
     )(f)
 
 
 def admit_sources(
-    values: Sequence[str], stac_search: dict[str, Any] | None, *, command: str
-) -> tuple[str, ...]:
+    ctx: click.Context,
+    plugin: str,
+    values: Sequence[str],
+    stac_search: dict[str, Any] | None,
+    *,
+    command: str,
+    defaults: Mapping[str, object] | None = None,
+) -> tuple[tuple[str, ...], dict[str, Any] | None]:
     """Admit the sources of one command, before any network or store access.
 
-    Refuses a bad ``stac://`` value, a ``--stac-search`` without a ``stac://`` source,
-    and a ``stac://`` source when the ``stac`` extra is missing.
+    Merges ``--stac-search`` with the ``stac_search`` table of the plugin configuration; the flag
+    replaces the table whole. Refuses a bad ``stac://`` value, a search without a ``stac://``
+    source, and a ``stac://`` source when the ``stac`` extra is missing.
 
     Args:
+        ctx: The Click context, which names the configuration file.
+        plugin: The plugin whose configuration table applies.
         values: The ``--input-data`` values, in order.
         stac_search: The parsed ``--stac-search`` value, or ``None``.
         command: The running command, named when the extra is missing.
+        defaults: The plugin's configuration table, when the caller has loaded it already.
 
     Returns:
-        The values, in order.
+        The values in order, and the search to apply, or ``None``.
 
     Raises:
         click.BadParameter: A ``stac://`` value breaks the URI rule (exit 2).
-        click.UsageError: ``--stac-search`` was given and no source is ``stac://`` (exit 2).
+        click.UsageError: The configured search is invalid, or a search was given and no source
+            is ``stac://`` (exit 2).
         click.ClickException: A source is ``stac://`` and the ``stac`` extra is missing.
     """
     sources, has_stac = admit_input_sources(values, param_hint="--input-data")
+    from_config = stac_search is None
+    if from_config:
+        if defaults is None:
+            defaults = load_plugin_defaults(ctx, plugin)
+        if defaults.get("stac_search") is not None:
+            try:
+                stac_search = validate_stac_search(defaults["stac_search"])
+            except StacSearchError as exc:
+                raise click.UsageError(render(exc, ctx), ctx=ctx) from exc
     if stac_search is not None and not has_stac:
+        origin = "stac_search in the plugin configuration" if from_config else "--stac-search"
         raise click.UsageError(
-            "--stac-search applies to stac:// sources only, and no --input-data names one."
+            f"{origin} applies to stac:// sources only, and no --input-data names one."
         )
     if has_stac:
         try:
             require_stac(command)
         except ImportError as exc:
             raise click.ClickException(str(exc)) from exc
-    return sources
+    return sources, stac_search

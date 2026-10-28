@@ -169,7 +169,9 @@ def preallocate(
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
-    sources = admit_sources(input_data, stac_search, command="firecube zarr preallocate")
+    sources, stac_search = admit_sources(
+        ctx, plugin, input_data, stac_search, command="firecube zarr preallocate"
+    )
     if (slot_start is None) ^ (slot_end is None):
         raise click.UsageError("--slot-start and --slot-end must be provided together")
     from firecube.cli._slot_env import resolve_slot_range_from_env
