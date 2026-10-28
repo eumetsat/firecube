@@ -12,28 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Optional pystac-client dependency with graceful fallback."""
+"""Optional pystac-client dependency, located without importing it.
 
-# pyright: reportMissingImports=false
+Importing this module does not import ``pystac_client``. Callers import the client
+classes inside the functions that use them, after `require_stac`.
+"""
 
 from __future__ import annotations
 
-from typing import Any
+import importlib.util
 
-Client: Any
-StacApiIO: Any
-
-try:
-    from pystac_client import Client
-    from pystac_client.exceptions import APIError
-    from pystac_client.stac_api_io import StacApiIO
-
-    HAS_PYSTAC_CLIENT = True
-except ImportError:
-    HAS_PYSTAC_CLIENT = False
-    Client = None
-    StacApiIO = None
-    APIError = OSError  # type: ignore[assignment,misc]
+# Read by `require_stac` at call time, so a test can set it to simulate the missing extra.
+HAS_PYSTAC_CLIENT = importlib.util.find_spec("pystac_client") is not None
 
 
 def require_stac(operation: str) -> None:

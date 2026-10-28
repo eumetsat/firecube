@@ -15,7 +15,7 @@
 """File-tree discovery: the backend of ``file://``, ``s3://`` and bare-path sources.
 
 Format-agnostic discovery that walks a local path or remote URI and returns
-candidate input file URIs (ZIP, HDF5, NetCDF, ...). This is the only caller of
+candidate input file URIs (ZIP, HDF5, NetCDF, ...). It opens each source with
 ``open_source_filesystem``.
 """
 

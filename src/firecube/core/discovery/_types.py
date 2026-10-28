@@ -148,10 +148,21 @@ class SourceItem:
 
         ``collection/item_id/asset_key`` for a STAC item, so the same asset keeps its
         identity when an API changes its hrefs; ``href`` for every other item.
+
+        Each STAC part has ``%`` written as ``%25`` and ``/`` as ``%2F``, so distinct
+        assets never share an identity. A part without either character is unchanged.
         """
         if self.collection is not None and self.item_id is not None:
-            return f"{self.collection}/{self.item_id}/{self.asset_key}"
+            return "/".join(
+                _escape_identity_part(str(part))
+                for part in (self.collection, self.item_id, self.asset_key)
+            )
         return self.href
+
+
+def _escape_identity_part(part: str) -> str:
+    """Percent-encode ``%`` and ``/``, so ``/`` can join the parts of an identity."""
+    return part.replace("%", "%25").replace("/", "%2F")
 
 
 @dataclass(frozen=True, slots=True)

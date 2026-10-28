@@ -65,9 +65,10 @@ def discover(request: DiscoveryRequest) -> list[SourceItem]:
       item. The default suffix list does not apply; ``input_filters`` narrow on the
       basename of the href.
 
-    Items are deduplicated on `SourceItem.identity` (the first occurrence wins), then
-    sorted once by href basename and identity, so the result does not depend on the
-    order of the sources or of the API's pages.
+    ``stac_search`` is validated before any source is opened. Items are deduplicated on
+    `SourceItem.identity` (the first occurrence wins), then sorted once by href basename
+    and identity, so the result does not depend on the order of the sources or of the
+    API's pages.
 
     Args:
         request: The sources and how to narrow them.
@@ -76,9 +77,11 @@ def discover(request: DiscoveryRequest) -> list[SourceItem]:
         The items, deduplicated and sorted. Empty when nothing matches.
 
     Raises:
+        StacSearchError: If ``stac_search`` is not a mapping of the allowed keys.
         UnknownSourceSchemeError: If a source names a scheme no backend reads.
         ImportError: If a source is ``stac://`` and the ``stac`` extra is not installed.
-        StacApiError: If a STAC API cannot be opened or searched.
+        StacApiError: If a STAC API cannot be opened or searched, a ``next`` link repeats an
+            earlier request, or five empty pages in a row carry a ``next`` link.
         ValueError: If a file-tree source cannot be opened or listed, or a filter is
             invalid.
 
@@ -96,6 +99,8 @@ def discover(request: DiscoveryRequest) -> list[SourceItem]:
             )
             hrefs = [item.href for item in items]
     """
+    if request.stac_search is not None:
+        validate_stac_search(request.stac_search)
     found: dict[str, SourceItem] = {}
     for source in request.sources:
         for item in backend_for(source)(source, request):
