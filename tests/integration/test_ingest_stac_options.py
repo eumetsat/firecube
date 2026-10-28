@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import importlib
 import json
 from pathlib import Path
 from typing import Any, ClassVar
@@ -57,6 +58,27 @@ SEARCH = {"datetime": "2025-06-01T00:00:00Z/2025-06-30T23:59:59Z", "bbox": [10, 
 # The day of June 2025 each fake item is observed on; the plugins below place items by it.
 _ITEM_DAY = {"a-1": 1, "a-2": 2, "b-1": 3}
 _STAC_ITEM_IDS = ["coll-a/a-1", "coll-a/a-2", "coll-b/b-1"]
+_REMOTE_SOURCE_OPENS: list[str] = []  # filled by the `apis` fixture's spy
+REPLACING = {"datetime": "2025-06-01T00:00:00Z/2025-06-15T00:00:00Z"}
+# (--stac-search, stac_search of the plugin configuration, the search the API must receive).
+# Only the flag replaces the configured table, whole; the two never merge.
+_SEARCH_ORIGINS = [
+    pytest.param(SEARCH, None, SEARCH, id="search_from_flag"),
+    pytest.param(None, SEARCH, SEARCH, id="search_from_config"),
+    pytest.param(REPLACING, SEARCH, REPLACING, id="flag_replaces_config"),
+]
+# (--stac-search, configured stac_search, text naming where the refused search came from).
+_REFUSED_ORIGINS = [
+    pytest.param(
+        SEARCH, None, "--stac-search applies to stac:// sources only", id="search_from_flag"
+    ),
+    pytest.param(
+        None,
+        SEARCH,
+        "stac_search in the plugin configuration applies to stac:// sources only",
+        id="search_from_config",
+    ),
+]
 
 
 def _api(base: str, collection: str, ids: tuple[str, ...]) -> FakeStacApi:
@@ -181,19 +203,41 @@ def apis(monkeypatch: pytest.MonkeyPatch) -> tuple[FakeStacApi, FakeStacApi]:
     api_a = _api(API_A, "coll-a", ("a-2", "a-1"))
     api_b = _api(API_B, "coll-b", ("b-1",))
     install_fake_stac(monkeypatch, api_a, api_b)
+    _REMOTE_SOURCE_OPENS.clear()
+    for module in ("firecube.core.discovery._walk", "firecube.ingestor.runtime.workspace"):
+        original = importlib.import_module(module).open_source_filesystem
+
+        def spy(uri, storage_config, _original=original):
+            if "://" in uri and not uri.startswith("file://"):
+                _REMOTE_SOURCE_OPENS.append(uri)
+            return _original(uri, storage_config)
+
+        monkeypatch.setattr(f"{module}.open_source_filesystem", spy)
     return api_a, api_b
 
 
 def _ingest(
-    tmp_path: Path, *extra: str, command: str = "ingest", plugin: str = "cli_test_plugin"
+    tmp_path: Path,
+    *extra: str,
+    command: str = "ingest",
+    plugin: str = "cli_test_plugin",
+    search: dict[str, Any] | None = None,
+    config_search: dict[str, Any] | None = None,
 ) -> list[str]:
+    """CLI args; ``search`` is the ``--stac-search`` flag, ``config_search`` the plugin's table."""
     config = tmp_path / "config.toml"
-    config.write_text("", encoding="utf-8")
+    # A JSON scalar or array is also valid TOML.
+    table = [f"{key} = {json.dumps(value)}" for key, value in (config_search or {}).items()]
+    config.write_text(
+        f"[plugins.{plugin}.stac_search]\n" + "\n".join(table) + "\n" if table else "",
+        encoding="utf-8",
+    )
     return [
         "--config-file",
         str(config),
         *command.split(),
         plugin,
+        *(["--stac-search", json.dumps(search)] if search is not None else []),
         "--target",
         (tmp_path / "out.zarr").as_uri(),
         "--product-name",
@@ -230,10 +274,14 @@ def _event_metas(target: Path, event_type: str) -> list[dict[str, Any]]:
 
 
 def _no_requests(*apis: FakeStacApi) -> bool:
-    return all(not api.requests for api in apis)
+    """No STAC request was served and no remote source filesystem was opened."""
+    return all(not api.requests for api in apis) and not _REMOTE_SOURCE_OPENS
 
 
-def test_stac_search_without_a_stac_source_exits_2_before_any_access(tmp_path, apis):
+@pytest.mark.parametrize(("flag", "config", "refusal"), _REFUSED_ORIGINS)
+def test_stac_search_without_a_stac_source_exits_2_before_any_access(
+    tmp_path, apis, flag, config, refusal
+):
     result = CliRunner().invoke(
         cli,
         _ingest(
@@ -242,14 +290,13 @@ def test_stac_search_without_a_stac_source_exits_2_before_any_access(tmp_path, a
             "s3://bucket/a",
             "--input-data",
             "s3://bucket/b",
-            "--stac-search",
-            json.dumps(SEARCH),
+            search=flag,
+            config_search=config,
         ),
     )
 
     assert result.exit_code == 2, result.output
-    assert "--stac-search" in result.output
-    assert "stac://" in result.output
+    assert refusal in result.output
     assert _no_requests(*apis)
     assert not (tmp_path / "out.zarr").exists()
 
@@ -297,8 +344,9 @@ def test_a_bad_stac_uri_exits_2_naming_input_data(tmp_path, apis):
 
 
 @pytest.mark.parametrize("plugin", ["cli_test_plugin", "stac_auto_axis"])
+@pytest.mark.parametrize(("flag", "config", "expected"), _SEARCH_ORIGINS)
 def test_valid_filter_reaches_both_stac_searches_and_the_run_record(
-    tmp_path, apis, subtests, plugin
+    tmp_path, apis, subtests, plugin, flag, config, expected
 ):
     api_a, api_b = apis
 
@@ -310,9 +358,9 @@ def test_valid_filter_reaches_both_stac_searches_and_the_run_record(
             SRC_A,
             "--input-data",
             SRC_B,
-            "--stac-search",
-            json.dumps(SEARCH),
             plugin=plugin,
+            search=flag,
+            config_search=config,
         ),
     )
 
@@ -321,12 +369,10 @@ def test_valid_filter_reaches_both_stac_searches_and_the_run_record(
         with subtests.test(msg=collection):
             assert len(api.searches) == 1
             body = api.searches[0]
-            assert body["collections"] == [collection]
-            assert body["datetime"] == SEARCH["datetime"]
-            assert body["bbox"] == SEARCH["bbox"]
+            assert body == {"collections": [collection], **expected}
 
     recorded = _run_started_meta(tmp_path / "out.zarr")["stac_discovery"]
-    assert recorded == {"sources": [SRC_A, SRC_B], "search": SEARCH, "item_ids": _STAC_ITEM_IDS}
+    assert recorded == {"sources": [SRC_A, SRC_B], "search": expected, "item_ids": _STAC_ITEM_IDS}
 
 
 def test_failed_ingest_records_stac_provenance(tmp_path, apis, monkeypatch):
@@ -485,35 +531,53 @@ def test_an_empty_stac_collection_ends_with_the_no_source_files_refusal(tmp_path
 
 
 @pytest.mark.parametrize("command", ["zarr preallocate", "zarr slots"])
-def test_zarr_commands_refuse_stac_search_without_a_stac_source(tmp_path, apis, command):
+@pytest.mark.parametrize(("flag", "config", "refusal"), _REFUSED_ORIGINS)
+def test_zarr_commands_refuse_stac_search_without_a_stac_source(
+    tmp_path, apis, command, flag, config, refusal
+):
     result = CliRunner().invoke(
         cli,
         _ingest(
             tmp_path,
             "--input-data",
             "s3://bucket/a",
-            "--stac-search",
-            json.dumps(SEARCH),
             command=command,
+            search=flag,
+            config_search=config,
         ),
     )
 
     assert result.exit_code == 2, result.output
-    assert "--stac-search applies to stac:// sources only" in result.output
+    assert refusal in result.output
     assert _no_requests(*apis)
     assert not (tmp_path / "out.zarr").exists()
 
 
 @pytest.mark.parametrize("command", ["zarr preallocate", "zarr slots"])
-def test_zarr_commands_admit_stac_uris_through_the_uri_rule(tmp_path, apis, command):
+@pytest.mark.parametrize(("flag", "config", "expected"), _SEARCH_ORIGINS)
+def test_zarr_commands_admit_stac_uris_through_the_uri_rule(
+    tmp_path, apis, subtests, command, flag, config, expected
+):
+    api_a, _api_b = apis
+
     result = CliRunner().invoke(
         cli,
-        _ingest(tmp_path, "--input-data", "stac:///api/collections/x", command=command),
+        _ingest(
+            tmp_path,
+            "--input-data",
+            SRC_A,
+            command=command,
+            plugin="stac_auto_axis",
+            search=flag,
+            config_search=config,
+        ),
     )
 
-    assert result.exit_code == 2, result.output
-    assert "Invalid value for '--input-data': stac:// URI must name a host" in result.output
-    assert _no_requests(*apis)
+    assert result.exit_code == 0, result.output
+    assert api_a.searches
+    for number, body in enumerate(api_a.searches):
+        with subtests.test(msg=f"search {number}"):
+            assert body == {"collections": ["coll-a"], **expected}
 
 
 def test_second_preallocate_on_one_instance_discovers_again(tmp_path, apis, subtests):
