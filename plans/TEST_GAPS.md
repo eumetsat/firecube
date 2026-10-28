@@ -64,6 +64,16 @@ assertion-light mock tests.
 5. Tighten storage summaries and driver reporting.
    Add direct-S3 result-summary tests where metrics storage is absent and the
    selected driver must still be reported accurately.
+
+6. The fake STAC API filters only by collection, id and page token.
+   `tests/helpers/fake_stac.py` honours `collections`, `ids` and the page token.
+   It ignores `datetime`, `bbox` and `intersects`.
+   `STAC_SEARCH_KEYS` admits these three and `ids`, and `discover()` refuses every other key.
+   The tests for the three ignored keys prove that Firecube forwards them.
+   They do not prove that a search narrows the result. Teach the fake to filter
+   each of the three, then assert the discovered items, not the request body.
+   The tests that pin the refusal of any other key stay as they are.
+
 ## P2 - Lower-Risk Gaps
 
 1. WAL negative branches: malformed records, duplicate run IDs, and missing
