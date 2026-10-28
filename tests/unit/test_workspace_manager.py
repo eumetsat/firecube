@@ -15,13 +15,16 @@
 from __future__ import annotations
 
 import os
+import socket
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from firecube.ingestor.runtime.workspace import WorkspaceManager
+from firecube.core.discovery import SourceItem
+from firecube.core.errors import FirecubeError
+from firecube.ingestor.runtime.workspace import LocalSourceFile, WorkspaceManager
 
 
 @pytest.mark.unit
@@ -40,6 +43,58 @@ def test_workspace_setup_does_not_mutate_global_temp_settings(temp_workspace):
         assert os.environ.get("TMPDIR") == original_env_tmpdir
     finally:
         manager.teardown(cleanup_dir=False)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "kind",
+    ["file_uri", "source_item_path", "source_item_file_uri", "local_source_file_uri"],
+)
+def test_materialize_returns_the_file_a_local_href_names(tmp_path, kind):
+    data = tmp_path / "small.nc"
+    data.write_bytes(b"payload")
+    href = f"file://{data.resolve()}"
+    source = {
+        "file_uri": href,
+        "source_item_path": SourceItem(href=str(data.resolve()), scheme="stac"),
+        "source_item_file_uri": SourceItem(href=href, scheme="stac"),
+        "local_source_file_uri": LocalSourceFile(href),
+    }[kind]
+    manager = WorkspaceManager(prefix="unit_ws")
+    manager._configure_temp_root(tmp_path / "ws")
+
+    assert manager.materialize(source) == data.resolve()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("kind", ["gopher", "malformed_s3", "https"])
+def test_materialize_refuses_a_scheme_it_cannot_open(tmp_path, kind):
+    manager = WorkspaceManager(prefix="unit_ws")
+    workspace = tmp_path / "ws"
+    manager._configure_temp_root(workspace)
+
+    if kind == "gopher":
+        href = "gopher://x/y"
+        with pytest.raises(FirecubeError) as caught:
+            manager.materialize(href)
+        assert "Firecube cannot open gopher:// sources" in str(caught.value)
+        assert href in str(caught.value)
+        assert not [p for p in workspace.rglob("*") if p.is_file()]
+    elif kind == "malformed_s3":
+        with pytest.raises(ValueError) as caught:
+            manager.materialize("s3://bucket/key?x=1")
+        assert "cannot open s3:// sources" not in str(caught.value)
+    else:
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+        # fsspec's HTTP client raises aiohttp's ClientConnectorError (an OSError)
+        # whose os_error is the refused connection.
+        with pytest.raises(OSError) as caught:
+            manager.materialize(f"https://127.0.0.1:{port}/a.nc")
+        assert isinstance(getattr(caught.value, "os_error", None), ConnectionRefusedError)
+        assert "cannot open https:// sources" not in str(caught.value)
+        assert "unsupported protocol" not in str(caught.value)
 
 
 @pytest.mark.unit

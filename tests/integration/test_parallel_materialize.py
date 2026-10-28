@@ -22,12 +22,19 @@ from __future__ import annotations
 import io
 import threading
 import time
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pytest
+import xarray as xr
 
+from firecube.core.config import StorageConfig
+from firecube.core.discovery import SourceItem
 from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.runtime.workspace import WorkspaceManager
 
@@ -292,3 +299,107 @@ def test_refcount_prevents_race_on_failed_download(
     assert retry_path.read_bytes() == f"payload for {uri}".encode()
     assert max_active_downloads == 1
     _assert_no_uri_lock_leaks(workspace)
+
+
+class _HttpSource:
+    """A directory served over HTTP that counts GETs per path, records every Range header and always serves the whole file."""
+
+    def __init__(self, directory: Path) -> None:
+        self.directory = directory
+        self.gets: dict[str, int] = {}
+        self.ranges: list[str] = []
+        self._lock = threading.Lock()
+        outer = self
+
+        class _Handler(SimpleHTTPRequestHandler):
+            def do_GET(self) -> None:
+                with outer._lock:
+                    path = self.path.split("?")[0]
+                    outer.gets[path] = outer.gets.get(path, 0) + 1
+                    if "Range" in self.headers:
+                        outer.ranges.append(self.headers["Range"])
+                super().do_GET()
+
+            def log_message(self, *args: object) -> None:
+                pass
+
+        self._server = ThreadingHTTPServer(
+            ("127.0.0.1", 0), partial(_Handler, directory=str(directory))
+        )
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    def url(self, name: str) -> str:
+        return f"http://127.0.0.1:{self._server.server_address[1]}/{name}"
+
+
+@pytest.fixture
+def http_source(tmp_path: Path) -> Iterator[_HttpSource]:
+    served = tmp_path / "served"
+    served.mkdir()
+    source = _HttpSource(served)
+    source._thread.start()
+    try:
+        yield source
+    finally:
+        source._server.shutdown()
+        source._server.server_close()
+        source._thread.join(timeout=_FUTURE_TIMEOUT_S)
+
+
+def _write_netcdf(path: Path, n: int) -> None:
+    values = np.random.default_rng(0).random(n)
+    xr.Dataset({"v": ("x", values)}).to_netcdf(path, engine="h5netcdf")
+
+
+@pytest.mark.parametrize("kind", ["string", "source_item", "signed_query", "s3_run_storage"])
+def test_materialize_downloads_an_http_href_into_the_cache(
+    tmp_path: Path, http_source: _HttpSource, kind: str
+) -> None:
+    served = http_source.directory / "a.nc"
+    _write_netcdf(served, 1000)
+    href = http_source.url("a.nc")
+    source: Any = href
+    if kind == "source_item":
+        source = SourceItem(href=href, scheme="stac")
+    elif kind == "signed_query":
+        source = f"{href}?token=abc"
+    storage = (
+        StorageConfig(storage_type="s3", storage_driver="fsspec")
+        if kind == "s3_run_storage"
+        else None
+    )
+    workspace = WorkspaceManager("http-materialize-test", storage_config=storage)
+    workspace._configure_temp_root(tmp_path / "workspace")
+
+    path = workspace.materialize(source)
+
+    assert path.is_file()
+    assert (tmp_path / "workspace") in path.parents
+    assert path.name.endswith(".nc")
+    assert path.read_bytes() == served.read_bytes()
+    assert http_source.gets == {"/a.nc": 1}
+    assert http_source.ranges == []
+    with xr.open_dataset(path, engine="h5netcdf") as ds:
+        assert ds["v"].shape == (1000,)
+
+
+def test_parallel_same_http_href_downloads_once(tmp_path: Path, http_source: _HttpSource) -> None:
+    served = http_source.directory / "big.nc"
+    _write_netcdf(served, 800_000)  # about 6.4 MB, above fsspec's 5 MiB HTTP block size
+    assert served.stat().st_size > 5 * 1024 * 1024
+    workspace = _workspace(tmp_path)
+    href = http_source.url("big.nc")
+    barrier = threading.Barrier(_THREADS)
+
+    def materialize() -> Path:
+        barrier.wait(timeout=_FUTURE_TIMEOUT_S)
+        return workspace.materialize(href)
+
+    with ThreadPoolExecutor(max_workers=_THREADS) as pool:
+        futures = [pool.submit(materialize) for _ in range(_THREADS)]
+        paths = [future.result(timeout=30) for future in futures]
+
+    assert len(set(paths)) == 1
+    assert http_source.gets == {"/big.nc": 1}
+    assert http_source.ranges == []
+    assert paths[0].read_bytes() == served.read_bytes()
