@@ -320,7 +320,7 @@ class _HttpSource:
                         outer.ranges.append(self.headers["Range"])
                 super().do_GET()
 
-            def log_message(self, *args: object) -> None:
+            def log_message(self, format: str, *args: object) -> None:
                 pass
 
         self._server = ThreadingHTTPServer(
