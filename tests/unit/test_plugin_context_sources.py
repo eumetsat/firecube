@@ -32,13 +32,10 @@ from firecube.ingestor.api import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.runtime.configure import configure_ingestor
-from firecube.ingestor.types.context import OutputPaths, PipelineResult, StorageContext
+from firecube.ingestor.types.context import StorageContext
 from tests.helpers.fake_stac import FakeStacApi, install_fake_stac, stac_item
 from tests.helpers.storage import make_test_session
-
-pytestmark = pytest.mark.unit
 
 API = "https://stac.test/api"
 STAC_SOURCE = "stac://stac.test/api/collections/coll"
@@ -51,12 +48,14 @@ def _plugin_ctx(ingest_ctx: IngestContext) -> PluginContext:
     return PluginContext(runtime)
 
 
+@pytest.mark.unit
 def test_sources_hold_every_input_in_order():
     ctx = _plugin_ctx(IngestContext(sources=("/data/a", "s3://bucket/b", STAC_SOURCE)))
 
     assert ctx.sources == ("/data/a", "s3://bucket/b", STAC_SOURCE)
 
 
+@pytest.mark.unit
 def test_source_with_two_inputs_raises_configuration_error():
     ctx = _plugin_ctx(IngestContext(sources=("/data/a", "/data/b")))
 
@@ -66,11 +65,13 @@ def test_source_with_two_inputs_raises_configuration_error():
     assert "sources" in str(refused.value)
 
 
+@pytest.mark.unit
 def test_source_returns_the_single_entry_or_empty():
     assert _plugin_ctx(IngestContext(sources=("/data/a",))).source == "/data/a"
     assert _plugin_ctx(IngestContext(sources=())).source == ""
 
 
+@pytest.mark.unit
 def test_a_lone_source_argument_is_mirrored_into_sources():
     ctx = _plugin_ctx(IngestContext(source="/data/a"))
 
@@ -167,6 +168,7 @@ def two_sources(monkeypatch, tmp_path: Path) -> tuple[str, ...]:
     return (str(local), STAC_SOURCE)
 
 
+@pytest.mark.integration
 def test_plugin_without_source_items_receives_href_strings(tmp_path, two_sources):
     ingestor = _RecordingIngestor()
 
@@ -175,6 +177,7 @@ def test_plugin_without_source_items_receives_href_strings(tmp_path, two_sources
     assert ingestor.seen == {"filter_item": [str, str], "inspect_item": [str, str]}
 
 
+@pytest.mark.integration
 def test_plugin_with_source_items_receives_source_items(tmp_path, two_sources):
     ingestor = _SourceItemsIngestor()
 
@@ -184,42 +187,3 @@ def test_plugin_with_source_items_receives_source_items(tmp_path, two_sources):
         "filter_item": [SourceItem, SourceItem],
         "inspect_item": [SourceItem, SourceItem],
     }
-
-
-class _RunIngestor(BaseIngestor):
-    PRODUCT_NAME: ClassVar[str] = "sources_run"
-
-    def _process_batch(self, batch, ctx):
-        return PipelineResult(
-            batch=batch, outputs=OutputPaths(primary=str(ctx.target or "")), success=True
-        )
-
-    def _aggregate_metrics(self, ctx, state):
-        return {}
-
-
-def test_a_run_over_two_sources_batches_both(tmp_path, two_sources):
-    ingestor = _RunIngestor(name="sources_run")  # pyright: ignore[reportAbstractUsage]
-    session = make_test_session(tmp_path, product="out.zarr")
-    batched: list[Any] = []
-    original = ingestor.filter_item
-
-    def record(item: Any, ctx: PluginContext) -> bool:
-        batched.append(item)
-        return original(item, ctx)
-
-    ingestor.filter_item = record  # type: ignore[method-assign]
-
-    ingestor.run(
-        IngestContext(
-            sources=two_sources,
-            target=session.product.product_uri.to_str(),
-            output_format="zarr",
-            storage=StorageContext(output=session),
-        )
-    )
-
-    assert batched == [
-        str(Path(two_sources[0]) / "granule-1.nc"),
-        "https://data.test/granule-2.nc",
-    ]

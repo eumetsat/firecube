@@ -30,14 +30,11 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.api import AUTO, IndexSpec, IrregularTimeAxis, ItemInfo, RegularTimeAxis
 from firecube.core.controlplane import ChunkManager
-from firecube.core.product.resolver import ProductResolver
+from firecube.core.discovery import DiscoveryRequest, discover
 from firecube.core.runtime import resolve_storage_config
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.ingestor.api import (
     DirectZarrIngestor,
-    IndexedWrite,
     OutputPaths,
     PipelineResult,
     ZarrArraySpec,
@@ -47,6 +44,7 @@ from firecube.ingestor.registry import loader
 from firecube.ingestor.runtime.configure import configure_ingestor
 from firecube.ingestor.runtime.preallocate import preallocate_product
 from tests.helpers.fake_stac import FakeStacApi, install_fake_stac, stac_item
+from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.integration
 
@@ -100,12 +98,8 @@ def _api(base: str, collection: str, ids: tuple[str, ...]) -> FakeStacApi:
     )
 
 
-def _observed(item: Any) -> dt.datetime:
-    return dt.datetime.fromisoformat(item.datetime.replace("Z", "+00:00"))
-
-
 class _StacPlugin(DirectZarrIngestor):
-    """Three STAC items placed by their datetime; no write intent reads an href."""
+    """Three STAC items placed by their datetime; the batches write nothing."""
 
     PRODUCT_NAME: ClassVar[str] = "stac_plugin"
     SOURCE_ITEMS: ClassVar[bool] = True
@@ -130,7 +124,8 @@ class _StacPlugin(DirectZarrIngestor):
 
     def inspect_item(self, item, ctx):
         values = {"owned": float(_ITEM_DAY[item.item_id])} if self.owned else None
-        return ItemInfo(coordinate=_observed(item), values=values)
+        observed = dt.datetime.fromisoformat(item.datetime.replace("Z", "+00:00"))
+        return ItemInfo(coordinate=observed, values=values)
 
     def zarr_schema(self, ctx):
         n = 3 if self.auto else 5
@@ -149,20 +144,7 @@ class _StacPlugin(DirectZarrIngestor):
         return [ZarrGroupSpec(group=group, arrays=arrays) for group in self.groups]
 
     def build_write_intents(self, batch, ctx):
-        return [
-            IndexedWrite.slot(
-                group=self.groups[0],
-                array="values",
-                coordinate=_observed(item),
-                data=np.asarray(1.0, dtype="float32"),
-            )
-            for item in batch.items
-            if self.auto
-        ]
-
-
-class _StacAutoAxis(_StacPlugin):
-    pass
+        return []
 
 
 class _StacAutoAxisOwned(_StacPlugin):
@@ -178,7 +160,7 @@ class _StacObservedAxis(_StacPlugin):
 @pytest.fixture(autouse=True)
 def _register_stac_plugins(monkeypatch: pytest.MonkeyPatch) -> None:
     for name, cls in (
-        ("stac_auto_axis", _StacAutoAxis),
+        ("stac_auto_axis", _StacPlugin),
         ("stac_auto_axis_owned", _StacAutoAxisOwned),
         ("stac_observed_axis", _StacObservedAxis),
     ):
@@ -254,15 +236,6 @@ def _ingest(
     ]
 
 
-def _run_started_meta(target: Path) -> dict[str, Any]:
-    for wal in sorted((target / ".firecube").rglob("events-*.jsonl")):
-        for line in wal.read_text(encoding="utf-8").splitlines():
-            event = json.loads(line)
-            if event.get("event_type") == "run_started":
-                return event["meta"]
-    raise AssertionError(f"no run_started event under {target}")
-
-
 def _event_metas(target: Path, event_type: str) -> list[dict[str, Any]]:
     """The ``meta`` of every WAL event of one type under the product's ``.firecube``."""
     return [
@@ -278,9 +251,10 @@ def _no_requests(*apis: FakeStacApi) -> bool:
     return all(not api.requests for api in apis) and not _REMOTE_SOURCE_OPENS
 
 
+@pytest.mark.parametrize("command", ["ingest", "zarr preallocate", "zarr slots"])
 @pytest.mark.parametrize(("flag", "config", "refusal"), _REFUSED_ORIGINS)
 def test_stac_search_without_a_stac_source_exits_2_before_any_access(
-    tmp_path, apis, flag, config, refusal
+    tmp_path, apis, command, flag, config, refusal
 ):
     result = CliRunner().invoke(
         cli,
@@ -290,6 +264,7 @@ def test_stac_search_without_a_stac_source_exits_2_before_any_access(
             "s3://bucket/a",
             "--input-data",
             "s3://bucket/b",
+            command=command,
             search=flag,
             config_search=config,
         ),
@@ -371,7 +346,7 @@ def test_valid_filter_reaches_both_stac_searches_and_the_run_record(
             body = api.searches[0]
             assert body == {"collections": [collection], **expected}
 
-    recorded = _run_started_meta(tmp_path / "out.zarr")["stac_discovery"]
+    recorded = _event_metas(tmp_path / "out.zarr", "run_started")[0]["stac_discovery"]
     assert recorded == {"sources": [SRC_A, SRC_B], "search": expected, "item_ids": _STAC_ITEM_IDS}
 
 
@@ -388,11 +363,9 @@ def test_failed_ingest_records_stac_provenance(tmp_path, apis, monkeypatch):
         _ingest(tmp_path, "--input-data", SRC_A, "--stac-search", json.dumps(SEARCH)),
     )
 
-    target = tmp_path / "out.zarr"
     assert result.exit_code != 0
     assert "batch planning failed" in result.output + str(result.exception)
-    assert _event_metas(target, "run_started")
-    (failed,) = _event_metas(target, "run_failed")
+    (failed,) = _event_metas(tmp_path / "out.zarr", "run_failed")
     assert failed["stac_discovery"] == {
         "sources": [SRC_A],
         "search": SEARCH,
@@ -400,47 +373,31 @@ def test_failed_ingest_records_stac_provenance(tmp_path, apis, monkeypatch):
     }
 
 
-def _group(target: Path, path: str) -> Any:
-    return zarr.open_group(str(target), mode="r", use_consolidated=False)[path]
-
-
 @pytest.mark.parametrize(
-    ("plugin", "dry_run"),
+    ("plugin", "groups", "dry_run"),
     [
-        pytest.param("stac_auto_axis_owned", False, id="auto_axis"),
-        pytest.param("stac_observed_axis", False, id="observed_axis"),
-        pytest.param("stac_observed_axis", True, id="observed_axis_dry_run"),
+        pytest.param("stac_auto_axis_owned", ("g",), False, id="auto_axis"),
+        pytest.param("stac_observed_axis", ("g1", "g2"), False, id="observed_axis"),
+        pytest.param("stac_observed_axis", ("g1", "g2"), True, id="observed_axis_dry_run"),
     ],
 )
 def test_preallocate_discovers_once_and_records_stac_provenance(
-    tmp_path, apis, subtests, plugin, dry_run
+    tmp_path, apis, subtests, plugin, groups, dry_run
 ):
-    api_a, api_b = apis
     target = tmp_path / "out.zarr"
-
-    args = _ingest(
-        tmp_path,
-        "--input-data",
-        SRC_A,
-        "--input-data",
-        SRC_B,
-        "--stac-search",
-        json.dumps(SEARCH),
-        *(["--dry-run"] if dry_run else []),
-        command="zarr preallocate",
-        plugin=plugin,
-    )
+    both = ("--input-data", SRC_A, "--input-data", SRC_B)
+    dry = ["--dry-run"] if dry_run else []
+    args = _ingest(tmp_path, *both, *dry, command="zarr preallocate", plugin=plugin, search=SEARCH)
 
     result = CliRunner().invoke(cli, args)
 
     assert result.exit_code == 0, result.output
-    for api in (api_a, api_b):
+    for api in apis:
         with subtests.test(msg=api.base):
             assert len(api.searches) == 1
     if dry_run:
         assert not target.exists()
         return
-
     expected = {"sources": [SRC_A, SRC_B], "search": SEARCH, "item_ids": _STAC_ITEM_IDS}
     for event_type in ("run_started", "run_completed"):
         with subtests.test(msg=event_type):
@@ -448,17 +405,13 @@ def test_preallocate_discovers_once_and_records_stac_provenance(
             assert metas
             assert [meta.get("stac_discovery") for meta in metas] == [expected] * len(metas)
     observed = np.array([f"2025-06-0{day}T00:00:07" for day in (1, 2, 3)], dtype="datetime64[ns]")
-    if plugin == "stac_auto_axis_owned":
-        with subtests.test(msg="g"):
-            np.testing.assert_array_equal(_group(target, "g/owned")[:], [1, 2, 3])
-            np.testing.assert_array_equal(_group(target, "g/time")[:], observed)
-        return
-    for group in ("g1", "g2"):
+    expected_owned = [1, 2, 3] if groups == ("g",) else [1, 2, 3, np.nan, np.nan]
+    for group in groups:
         with subtests.test(msg=group):
-            np.testing.assert_array_equal(
-                _group(target, f"{group}/owned")[:], [1, 2, 3, np.nan, np.nan]
-            )
-            np.testing.assert_array_equal(_group(target, f"{group}/time")[:3], observed)
+            owned = zarr.open_array(str(target), path=f"{group}/owned", mode="r")
+            times = zarr.open_array(str(target), path=f"{group}/time", mode="r")
+            np.testing.assert_array_equal(owned[:], expected_owned)
+            np.testing.assert_array_equal(times[:3], observed)
 
 
 def test_file_and_stac_sources_mix_in_one_run(tmp_path, apis, monkeypatch):
@@ -481,7 +434,7 @@ def test_file_and_stac_sources_mix_in_one_run(tmp_path, apis, monkeypatch):
 
     assert result.exit_code == 0, result.output
     assert seen == ["https://data.test/coll-b/b-1.nc", str(local / "local-1.nc")]
-    assert "stac_discovery" in _run_started_meta(tmp_path / "out.zarr")
+    assert "stac_discovery" in _event_metas(tmp_path / "out.zarr", "run_started")[0]
 
 
 def test_a_run_over_local_sources_records_no_stac_discovery(tmp_path, apis):
@@ -492,8 +445,18 @@ def test_a_run_over_local_sources_records_no_stac_discovery(tmp_path, apis):
     result = CliRunner().invoke(cli, _ingest(tmp_path, "--input-data", str(local)))
 
     assert result.exit_code == 0, result.output
-    assert "stac_discovery" not in _run_started_meta(tmp_path / "out.zarr")
+    assert "stac_discovery" not in _event_metas(tmp_path / "out.zarr", "run_started")[0]
     assert _no_requests(*apis)
+
+
+def test_a_walked_file_beside_stac_items_is_identified_by_its_path(tmp_path, apis):
+    (tmp_path / "local-0.nc").write_bytes(b"")
+
+    walked = discover(DiscoveryRequest(sources=(str(tmp_path), SRC_B)))[-1]
+
+    fields = (walked.scheme, walked.collection, walked.item_id, walked.asset_key, walked.roles)
+    assert fields == ("file", None, None, None, ())
+    assert walked.identity == walked.href == str(tmp_path / "local-0.nc")
 
 
 def test_missing_stac_extra_names_the_command_before_any_access(tmp_path, apis, monkeypatch):
@@ -531,29 +494,6 @@ def test_an_empty_stac_collection_ends_with_the_no_source_files_refusal(tmp_path
 
 
 @pytest.mark.parametrize("command", ["zarr preallocate", "zarr slots"])
-@pytest.mark.parametrize(("flag", "config", "refusal"), _REFUSED_ORIGINS)
-def test_zarr_commands_refuse_stac_search_without_a_stac_source(
-    tmp_path, apis, command, flag, config, refusal
-):
-    result = CliRunner().invoke(
-        cli,
-        _ingest(
-            tmp_path,
-            "--input-data",
-            "s3://bucket/a",
-            command=command,
-            search=flag,
-            config_search=config,
-        ),
-    )
-
-    assert result.exit_code == 2, result.output
-    assert refusal in result.output
-    assert _no_requests(*apis)
-    assert not (tmp_path / "out.zarr").exists()
-
-
-@pytest.mark.parametrize("command", ["zarr preallocate", "zarr slots"])
 @pytest.mark.parametrize(("flag", "config", "expected"), _SEARCH_ORIGINS)
 def test_zarr_commands_admit_stac_uris_through_the_uri_rule(
     tmp_path, apis, subtests, command, flag, config, expected
@@ -580,7 +520,7 @@ def test_zarr_commands_admit_stac_uris_through_the_uri_rule(
             assert body == {"collections": ["coll-a"], **expected}
 
 
-def test_second_preallocate_on_one_instance_discovers_again(tmp_path, apis, subtests):
+def test_second_preallocate_on_one_instance_discovers_again(tmp_path, apis):
     api_a, api_b = apis
     target = tmp_path / "out.zarr"
     storage_config = resolve_storage_config(
@@ -588,10 +528,7 @@ def test_second_preallocate_on_one_instance_discovers_again(tmp_path, apis, subt
         overrides={"storage_type": "local", "storage_driver": "fsspec"},
         set_global=False,
     )
-    identity = ProductResolver.resolve(target.as_uri(), format="zarr", product_name="out")
-    binding = StorageBinding(
-        identity=identity, driver=StorageDriverConfig.from_storage_config(storage_config)
-    )
+    binding = make_test_binding(tmp_path, product="out.zarr")
     chunk_manager = ChunkManager(binding=binding)
     try:
         ingestor = _StacObservedAxis(chunk_manager=chunk_manager)
@@ -624,8 +561,5 @@ def test_second_preallocate_on_one_instance_discovers_again(tmp_path, apis, subt
 
     assert len(api_a.searches) == searched_by_first[0]
     assert len(api_b.searches) > searched_by_first[1]
-    for group in ("g1", "g2"):
-        with subtests.test(msg=group):
-            np.testing.assert_array_equal(
-                _group(target, f"{group}/owned")[:], [1, 2, 3, np.nan, np.nan]
-            )
+    owned = zarr.open_array(str(target), path="g1/owned", mode="r")
+    np.testing.assert_array_equal(owned[:], [1, 2, 3, np.nan, np.nan])

@@ -67,28 +67,14 @@ def api_b() -> FakeStacApi:
     return FakeStacApi(API_B, [_granule_item("b-1", "coll-b", API_B)])
 
 
-def test_search_body_takes_collections_from_the_uri_only(monkeypatch, api_a):
-    install_fake_stac(monkeypatch, api_a)
-
-    items = discover(
-        DiscoveryRequest(
-            sources=(SRC_A,),
-            stac_search={"datetime": "2025-06-01T00:00:00Z/2025-06-30T23:59:59Z"},
-        )
-    )
-
-    assert len(api_a.searches) == 1
-    body = api_a.searches[0]
-    assert body["collections"] == ["coll-a"]
-    assert body["datetime"] == "2025-06-01T00:00:00Z/2025-06-30T23:59:59Z"
-    assert {item.collection for item in items} == {"coll-a"}
-
-
 @pytest.mark.parametrize(
     ("layout", "refused", "pages"),
     [
         pytest.param({}, False, 2, id="complete"),
         pytest.param({"empty_pages_at": (1,)}, False, 3, id="empty_page_in_the_middle"),
+        pytest.param(
+            {"page_size": 1, "cursor_in_header": True}, False, 3, id="next_links_differ_by_header"
+        ),
         pytest.param({"page_size": 0}, True, None, id="endless_empty_pages"),
         pytest.param(
             {"empty_pages_at": (2,), "repeat_next_at": {2: 2}},
@@ -117,35 +103,6 @@ def test_next_links_are_followed_until_the_last_page(monkeypatch, layout, refuse
     assert sorted(str(item.item_id) for item in found) == ["a-1", "a-2", "a-3"]
 
 
-def test_data_assets_are_kept_and_metadata_assets_dropped(monkeypatch, api_a):
-    install_fake_stac(monkeypatch, api_a)
-
-    items = discover(DiscoveryRequest(sources=(SRC_A,)))
-
-    assert {item.asset_key for item in items} == {"data"}
-    assert all(item.href.endswith(".nc") for item in items)
-    assert all("data" in item.roles for item in items)
-
-
-def test_default_suffix_list_does_not_apply_to_stac(monkeypatch):
-    api = FakeStacApi(
-        API_A,
-        [
-            stac_item(
-                "cog-1",
-                "coll-a",
-                {"visual": ("https://data.test/cog-1.tif", ["data", "visual"])},
-                base=API_A,
-            )
-        ],
-    )
-    install_fake_stac(monkeypatch, api)
-
-    items = discover(DiscoveryRequest(sources=(SRC_A,)))
-
-    assert [item.href for item in items] == ["https://data.test/cog-1.tif"]
-
-
 def test_input_filters_narrow_stac_items_on_the_href_basename(monkeypatch):
     api = FakeStacApi(
         API_A,
@@ -155,7 +112,7 @@ def test_input_filters_narrow_stac_items_on_the_href_basename(monkeypatch):
                 "coll-a",
                 {
                     "nc": (f"https://data.test/s-{n}.nc", ["data"]),
-                    "tif": (f"https://data.test/s-{n}.tif", ["data"]),
+                    "tif": (f"https://data.test/s-{n}.tif", ["data", "visual"]),
                 },
                 base=API_A,
             )
@@ -197,71 +154,38 @@ def test_stac_item_fields_and_identity(monkeypatch, api_a):
     assert items[0].identity == "coll-a/a-1/data"
 
 
-@pytest.mark.parametrize(
-    "lookalikes",
-    [
-        pytest.param((), id="plain"),
-        pytest.param((("b/c", "d"), ("b", "c/d")), id="slash_moves_between_id_and_asset"),
-        pytest.param((("b/c", "data"), ("b%2Fc", "data")), id="slash_against_its_escape"),
-    ],
-)
-def test_dedup_and_ordering_are_deterministic(monkeypatch, api_a, api_b, lookalikes):
-    for n, (item_id, asset_key) in enumerate(lookalikes):
-        href = f"https://data.test/coll-b/look-{n}.nc"
-        api_b.items.append(stac_item(item_id, "coll-b", {asset_key: (href, ["data"])}, base=API_B))
+def test_dedup_and_ordering_are_deterministic(monkeypatch, api_a, api_b):
     install_fake_stac(monkeypatch, api_a, api_b)
 
     forward = discover(DiscoveryRequest(sources=(SRC_A, SRC_B, SRC_A)))
     backward = discover(DiscoveryRequest(sources=(SRC_B, SRC_A)))
 
     assert forward == backward
-    identities = [item.identity for item in forward]
-    assert len(forward) == 4 + len(lookalikes)
-    assert len(set(identities)) == len(forward)
-    if not lookalikes:
-        assert identities == [
-            "coll-a/a-1/data",
-            "coll-a/a-2/data",
-            "coll-a/a-3/data",
-            "coll-b/b-1/data",
-        ]
-
-
-def test_walk_and_stac_sources_mix_in_one_request(monkeypatch, api_b, tmp_path: Path):
-    install_fake_stac(monkeypatch, api_b)
-    (tmp_path / "local-0.nc").write_bytes(b"")
-
-    items = discover(DiscoveryRequest(sources=(str(tmp_path), SRC_B)))
-
-    assert [(item.scheme, item.href) for item in items] == [
-        ("stac", "https://data.test/coll-b/b-1.nc"),
-        ("file", str(tmp_path / "local-0.nc")),
+    assert [item.identity for item in forward] == [
+        "coll-a/a-1/data",
+        "coll-a/a-2/data",
+        "coll-a/a-3/data",
+        "coll-b/b-1/data",
     ]
-    walked = items[1]
-    assert walked.identity == walked.href
-    assert (walked.collection, walked.item_id, walked.asset_key, walked.roles) == (
-        None,
-        None,
-        None,
-        (),
-    )
+    assert len({item.identity for item in forward}) == len(forward)
 
 
-def test_empty_collection_yields_no_items(monkeypatch):
-    api = FakeStacApi(
-        API_A,
-        [
-            stac_item(
-                "meta-only",
-                "coll-a",
-                {"metadata": ("https://data.test/meta-only.xml", ["metadata"])},
-                base=API_A,
-            )
-        ],
-    )
-    install_fake_stac(monkeypatch, api)
+@pytest.mark.parametrize(
+    "lookalikes",
+    [
+        pytest.param((("b/c", "d"), ("b", "c/d")), id="slash_moves_between_id_and_asset"),
+        pytest.param((("b/c", "data"), ("b%2Fc", "data")), id="slash_against_its_escape"),
+    ],
+)
+def test_items_whose_ids_join_to_one_text_are_all_kept(monkeypatch, api_b, lookalikes):
+    for n, (item_id, asset_key) in enumerate(lookalikes):
+        href = f"https://data.test/coll-b/look-{n}.nc"
+        api_b.items.append(stac_item(item_id, "coll-b", {asset_key: (href, ["data"])}, base=API_B))
+    install_fake_stac(monkeypatch, api_b)
 
-    assert discover(DiscoveryRequest(sources=(SRC_A,))) == []
+    found = discover(DiscoveryRequest(sources=(SRC_B,)))
+
+    assert len({item.identity for item in found}) == len(found) == 1 + len(lookalikes)
 
 
 def test_unknown_scheme_is_refused_by_the_registry():

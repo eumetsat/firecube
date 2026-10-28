@@ -93,15 +93,10 @@ class FakeStacApi:
     items: list[dict[str, Any]]
     page_size: int = 2
     fail_search: bool = False
-    # Page indexes at which an empty page that carries a next link is served; the
-    # items continue on the following page.
-    empty_pages_at: tuple[int, ...] = ()
-    # Page index -> page index its next link points to (a repeated request when it is
-    # the page's own index or an earlier one).
-    repeat_next_at: dict[int, int] = field(default_factory=dict)
-    # The test fails once more search requests than this have been served, so a paging
-    # loop that never ends fails instead of hanging the run.
-    max_search_requests: int = 50
+    empty_pages_at: tuple[int, ...] = ()  # empty pages that carry a next link
+    repeat_next_at: dict[int, int] = field(default_factory=dict)  # page -> page its next goes to
+    max_search_requests: int = 50  # more than this fails the test instead of hanging it
+    cursor_in_header: bool = False  # the next link carries the page as an X-Cursor header only
     requests: list[tuple[str, str, dict[str, Any]]] = field(default_factory=list)
 
     @property
@@ -117,14 +112,20 @@ class FakeStacApi:
     def search_pages(self) -> int:
         return sum(1 for _m, href, _p in self.requests if href == f"{self.base}/search")
 
-    def respond(self, href: str, method: str, parameters: dict[str, Any]) -> dict[str, Any]:
+    def respond(
+        self,
+        href: str,
+        method: str,
+        parameters: dict[str, Any],
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         self.requests.append((method, href, dict(parameters)))
         if href.rstrip("/") == self.base:
             return self._landing()
         if href == f"{self.base}/search":
             if self.fail_search:
                 raise APIError("503 Service Unavailable")
-            return self._page(parameters)
+            return self._page(parameters, headers or {})
         raise APIError(f"404 Not Found: {href}")
 
     def _landing(self) -> dict[str, Any]:
@@ -146,7 +147,7 @@ class FakeStacApi:
             ],
         }
 
-    def _page(self, parameters: dict[str, Any]) -> dict[str, Any]:
+    def _page(self, parameters: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
         if self.search_pages > self.max_search_requests:
             pytest.fail(
                 f"{self.base} served more than {self.max_search_requests} search requests: "
@@ -159,7 +160,10 @@ class FakeStacApi:
             for item in self.items
             if item["collection"] in wanted and (not ids or item["id"] in ids)
         ]
-        index = int(str(parameters.get("token", "page-0")).split("-")[1])
+        if self.cursor_in_header:
+            index = int(headers.get("X-Cursor", 0))
+        else:
+            index = int(str(parameters.get("token", "page-0")).split("-")[1])
         if self.page_size == 0:
             # Endless empty pages, each with a new token.
             page: list[dict[str, Any]] = []
@@ -177,25 +181,26 @@ class FakeStacApi:
             next_index = self.repeat_next_at[index]
         links: list[dict[str, Any]] = []
         if next_index is not None:
+            cursor = (
+                {"headers": {"X-Cursor": str(next_index)}}
+                if self.cursor_in_header
+                else {"body": {"token": f"page-{next_index}"}}
+            )
             links.append(
                 {
                     "rel": "next",
                     "href": f"{self.base}/search",
                     "type": "application/geo+json",
                     "method": "POST",
-                    "body": {"token": f"page-{next_index}"},
                     "merge": True,
+                    **cursor,
                 }
             )
         return {"type": "FeatureCollection", "features": page, "links": links}
 
 
 def install_fake_stac(monkeypatch: pytest.MonkeyPatch, *apis: FakeStacApi) -> None:
-    """Route every STAC request of the test to ``apis`` at the transport.
-
-    Whatever `StacApiIO` object the code under test builds, and any ``get_pages`` it
-    overrides, runs; only ``StacApiIO.request`` answers from the fake.
-    """
+    """Answer every STAC request of the test from ``apis``, at `StacApiIO.request` only."""
 
     def request(
         self: StacApiIO,
@@ -204,12 +209,12 @@ def install_fake_stac(monkeypatch: pytest.MonkeyPatch, *apis: FakeStacApi) -> No
         headers: dict[str, str] | None = None,
         parameters: dict[str, Any] | None = None,
     ) -> str:
-        _ = (self, headers)
+        _ = self
         # Round-trip through JSON, as the request body on the wire does.
         sent = json.loads(json.dumps(parameters or {}))
         for api in apis:
             if href.rstrip("/") == api.base or href.startswith(f"{api.base}/"):
-                body = api.respond(href, (method or "GET").upper(), sent)
+                body = api.respond(href, (method or "GET").upper(), sent, headers)
                 return json.dumps(body)
         raise APIError(f"no fake STAC API serves {href}")
 
