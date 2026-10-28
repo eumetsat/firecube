@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import AbstractContextManager
 from typing import Any
 
@@ -256,9 +256,22 @@ def discover_regular_observed_coord_values(
     group_name: str,
     slot_start: int,
     slot_end: int,
+    items: Iterable[Any] | None = None,
 ) -> dict[int, Any]:
+    """Return the observed coordinate of every slot in ``[slot_start, slot_end)`` of a group.
+
+    *items* are the source items the command already discovered; ``None``
+    calls ``ingestor.discover_source_files``. Each kept item is inspected once.
+
+    Raises:
+        ConfigurationError: ``inspect_item`` raises, or its coordinate maps to no slot.
+        SchemaDriftError: Two items put different values on one slot.
+    """
     observed: dict[int, Any] = {}
-    for item in ingestor.discover_source_files(plugin_ctx):
+    source_items: Iterable[Any] = (
+        ingestor.discover_source_files(plugin_ctx) if items is None else items
+    )
+    for item in source_items:
         if not ingestor.filter_item(item, plugin_ctx):
             continue
         try:
@@ -488,6 +501,7 @@ def materialize_regular_coord_array(
     input_data: str | None = None,
     report: Callable[[str], None] = _noop_report,
     target: RegularCoordTarget | None = None,
+    items: Iterable[Any] | None = None,
 ) -> None:
     """Materialize a dense regular time coordinate at ``{group_name}/{axis.coordinate}``.
 
@@ -511,6 +525,10 @@ def materialize_regular_coord_array(
     *target*, when given, is the `RegularCoordTarget` that
     `check_regular_coord_rematerialization` returned for the same group, axis
     and spec; it replaces resolving the encoding and nominal values again.
+
+    *items*, when given, are the source items the command already discovered.
+    An observed coordinate reads them instead of calling
+    ``ingestor.discover_source_files``.
 
     Raises:
         ValueError: If ``axis.slot_count`` is ``None`` and *resolved_index*
@@ -559,6 +577,7 @@ def materialize_regular_coord_array(
             group_name=group_name,
             slot_start=slot_start,
             slot_end=effective_slot_end,
+            items=items,
         )
         # Stamping firecube_coord_managed on a NaT-shell coord (zero
         # writes) traps every subsequent ingest in the NaT-under-marker

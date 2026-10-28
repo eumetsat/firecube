@@ -191,7 +191,15 @@ def _discover_auto_irregular_axis(
 
 
 def _iter_runtime_items(ingestor: Any, ctx: Any) -> Iterable[Any]:
-    for item in ingestor.discover_source_files(ctx):
+    from firecube.ingestor.runtime.base import BaseIngestor
+
+    # A BaseIngestor hands every consumer of one command the same discovery.
+    items = (
+        ingestor.discovered_source_files(ctx)
+        if isinstance(ingestor, BaseIngestor)
+        else ingestor.discover_source_files(ctx)
+    )
+    for item in items:
         if ingestor.filter_item(item, ctx):
             yield item
 

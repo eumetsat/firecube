@@ -317,6 +317,14 @@ class PreallocateHost(Protocol):
         """Return the source items of the run."""
         ...
 
+    def discovered_source_files(self, ctx: PluginContext) -> tuple[Any, ...]:
+        """Return the command's source items, calling `discover_source_files` once per context."""
+        ...
+
+    def stac_discovery_record(self, ctx: PluginContext) -> dict[str, Any] | None:
+        """Return the STAC provenance a run record keeps, or `None` without a stac:// source."""
+        ...
+
     def filter_item(self, item: Any, ctx: PluginContext) -> bool:
         """Return whether one discovered item proceeds."""
         ...

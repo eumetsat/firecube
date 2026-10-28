@@ -25,6 +25,7 @@ import inspect
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar, cast, get_type_hints
 
@@ -168,6 +169,25 @@ def _binding_from_context(ctx: IngestContext, product: str) -> StorageBinding:
     return _minimal_binding(product, fmt)
 
 
+@dataclass(frozen=True)
+class _SourceSnapshot:
+    """What one command's discovery returned, held for every consumer of that command."""
+
+    context: object
+    """The run context the discovery ran for; another context discovers again."""
+
+    files: tuple[Any, ...]
+    """The items ``discover_source_files`` returned."""
+
+    items: tuple[SourceItem, ...]
+    """The items the default discovery resolved; empty when the plugin overrides it."""
+
+
+def _context_key(ctx: object) -> object:
+    """The run context behind a plugin context, which a new command replaces."""
+    return getattr(ctx, "_ctx", ctx)
+
+
 class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     """Orchestrating base class for all Firecube ingestors.
 
@@ -267,6 +287,10 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     engine_config: EngineConfig
     template_config: TemplateConfig | None = None
     plugin_config: PluginConfig | None = None
+
+    # The current command's discovery (discovered_source_files). A class default,
+    # so an instance built without __init__ still discovers.
+    _source_snapshot: _SourceSnapshot | None = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Build-time validation for ingestor class contracts."""
@@ -368,7 +392,8 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         self._firecube_engine = None  # Lazy init for PipelineExecutor
         self._parallel_execution_state: _ParallelExecutionState | None = None
         self._discovered_source_files: tuple[Any, ...] | None = None
-        # What the default discovery resolved this run, whatever SOURCE_ITEMS hands on.
+        # What the default discovery resolved in its last call, whatever SOURCE_ITEMS
+        # hands on; discovered_source_files keeps it in the command's snapshot.
         self._discovered_source_items: tuple[SourceItem, ...] = ()
         # True once the engine-owned resolved-index record has been ensured in
         # this pod process; fast-path in _ensure_index_record_at_startup.
@@ -420,9 +445,12 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         hooks; return path or URI strings unless the plugin's own hooks
         handle richer item objects end to end.
 
-        The engine calls this hook once per run and materialises the returned
-        iterable in full before the first batch is planned; the held items
-        are then reused for batching and never re-discovered. Returning an
+        The engine calls this hook at most once per command, through
+        `discovered_source_files`, and only when the command needs the items.
+        A fixed-grid preallocate without engine-owned arrays never calls it. It
+        materialises the returned iterable in full before the first batch is
+        planned; index binding, batching and preallocation then reuse the held
+        items and never re-discover them. Returning an
         iterator or generator is fine for large listings and avoids building
         a second container in the plugin, but it is consumed completely up
         front, so it cannot defer or stream discovery across batches.
@@ -475,27 +503,76 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         self._log.info("Found %d files", len(files))
         return files
 
-    def _stac_discovery_record(self, ctx: PluginContext) -> dict[str, Any] | None:
-        """What the run record keeps of STAC discovery, or ``None`` without a stac:// source.
+    def discovered_source_files(self, ctx: PluginContext) -> tuple[Any, ...]:
+        """Return what ``discover_source_files`` returned for this command.
 
-        The ``stac://`` sources, the search filter as given, and the
-        ``collection/item_id`` of every STAC item the default discovery resolved.
-        A plugin that overrides ``discover_source_files`` records no item ids.
+        The first call for a context runs the hook; later calls for the same
+        context return the same items, so every consumer of one command reads
+        one discovery. A call for another context discovers again. Not a hook:
+        override ``discover_source_files`` instead.
+
+        Args:
+            ctx: The plugin context of the command.
+
+        Returns:
+            The discovered items, unfiltered.
+        """
+        key = _context_key(ctx)
+        snapshot = self._source_snapshot
+        if snapshot is None or snapshot.context is not key:
+            self._discovered_source_items = ()
+            files = tuple(self.discover_source_files(ctx))
+            snapshot = _SourceSnapshot(
+                context=key, files=files, items=self._discovered_source_items
+            )
+            self._source_snapshot = snapshot
+        return snapshot.files
+
+    def _forget_discovery(self) -> None:
+        """Drop the held discovery, so the next command discovers its own items."""
+        self._source_snapshot = None
+        self._discovered_source_items = ()
+
+    def stac_discovery_record(self, ctx: PluginContext) -> dict[str, Any] | None:
+        """Return what a run record keeps of STAC discovery, or ``None`` without a stac:// source.
+
+        The record holds the ``stac://`` sources, the search filter as given,
+        and the ``collection/item_id`` of every STAC item the default discovery
+        resolved for this command. A plugin that overrides
+        ``discover_source_files``, or a command that has not discovered, records
+        no item ids.
+
+        Args:
+            ctx: The plugin context of the command.
+
+        Returns:
+            The ``sources``, ``search`` and ``item_ids`` of the record, or ``None``.
         """
         stac_sources = [source for source in ctx.sources if infer_target_protocol(source) == "stac"]
         if not stac_sources:
             return None
         engine_config: EngineConfig | None = getattr(self, "engine_config", None)
+        snapshot = self._source_snapshot
+        discovered = (
+            snapshot.items if snapshot is not None and snapshot.context is _context_key(ctx) else ()
+        )
         item_ids = {
-            f"{item.collection}/{item.item_id}"
-            for item in self._discovered_source_items
-            if item.scheme == "stac"
+            f"{item.collection}/{item.item_id}" for item in discovered if item.scheme == "stac"
         }
         return {
             "sources": stac_sources,
             "search": engine_config.stac_search if engine_config else None,
             "item_ids": sorted(item_ids),
         }
+
+    def _run_record_meta(self, ctx: PluginContext) -> dict[str, Any]:
+        """The meta of the run's started and failed records: slice meta, plugin, STAC provenance."""
+        meta = self.slice_meta(ctx)
+        meta.setdefault("plugin", self.name)
+        stac_record = self.stac_discovery_record(ctx)
+        if stac_record is not None:
+            meta["stac_discovery"] = stac_record
+        return meta
 
     def filter_item(self, item: Any, ctx: PluginContext) -> bool:
         """Decide whether one discovered item proceeds to batching (Hook).
@@ -704,9 +781,13 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     def bind_index_at_startup(self, ctx: PluginContext) -> None:
         """Bind the plugin's index spec to a resolved index for `ctx`.
 
+        Call it first in a command. It drops the source items an earlier
+        command discovered, so `discovered_source_files` discovers again.
+
         Args:
             ctx: The plugin context of the run.
         """
+        self._forget_discovery()
         self._bind_index_at_startup(ctx)
 
     def _bind_index_at_startup(self, ctx: PluginContext) -> None:
@@ -844,6 +925,8 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             materializer=self._materialize,
         )
         runtime_plugin_ctx = PluginContext(runtime_ctx)
+        # The run reads only the sources it discovers itself.
+        self._forget_discovery()
 
         # 2. Configuration
         self.engine_config, self.template_config, self.plugin_config = self._configurator.configure(
@@ -996,9 +1079,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     validation_group=self.validation_group(runtime_plugin_ctx),
                 )
 
-                self._discovered_source_files = tuple(
-                    self.discover_source_files(runtime_plugin_ctx)
-                )
+                self._discovered_source_files = self.discovered_source_files(runtime_plugin_ctx)
                 output_ownership.enter_context(
                     fresh_output_run(
                         runtime_ctx,
@@ -1009,11 +1090,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 )
 
                 # 5. Runtime control-plane lifecycle
-                slice_meta = self.slice_meta(runtime_plugin_ctx)
-                slice_meta.setdefault("plugin", self.name)
-                stac_record = self._stac_discovery_record(runtime_plugin_ctx)
-                if stac_record is not None:
-                    slice_meta["stac_discovery"] = stac_record
+                slice_meta = self._run_record_meta(runtime_plugin_ctx)
                 self._span_recorder.register_run_started(
                     run_id=run_id,
                     product=product,
@@ -1098,8 +1175,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             # both complete_output() and register_run() succeed.
             if run_started_recorded and not execution_result.registered:
                 with contextlib.suppress(Exception):
-                    slice_meta = self.slice_meta(runtime_plugin_ctx)
-                    slice_meta.setdefault("plugin", self.name)
+                    slice_meta = self._run_record_meta(runtime_plugin_ctx)
                     self._span_recorder.register_run_failure(
                         run_id=run_id,
                         product=product,
@@ -1113,6 +1189,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
         finally:
             self._discovered_source_files = None
+            self._forget_discovery()
             close_failed = False
             try:
                 self._close_run_state()
