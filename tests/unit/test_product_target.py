@@ -67,11 +67,11 @@ def test_resolve_local_absolute(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-def test_resolve_file_localhost() -> None:
-    target = Path("/tmp/x.zarr")
+def test_resolve_file_localhost(tmp_path: Path) -> None:
+    target = (tmp_path / "x.zarr").resolve()
 
     resolved = ProductTarget.resolve(
-        "file://localhost/tmp/x.zarr",
+        f"file://localhost{target}",
         StorageDriverConfig(driver="fsspec"),
         product_name="x",
         plugin_default_format="zarr",
@@ -81,6 +81,25 @@ def test_resolve_file_localhost() -> None:
     assert resolved.product_uri.to_str() == target.as_uri()
     assert resolved.output_base_uri.to_str() == target.parent.as_uri()
     assert resolved.control_root_uri.to_str() == f"{target.as_uri()}/.firecube"
+
+
+@pytest.mark.unit
+def test_resolve_follows_symlinks(tmp_path: Path) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    link = tmp_path / "link"
+    link.symlink_to(real, target_is_directory=True)
+
+    resolved = ProductTarget.resolve(
+        f"file://{link}/x.zarr",
+        StorageDriverConfig(driver="fsspec"),
+        product_name="x",
+        plugin_default_format="zarr",
+    )
+
+    assert resolved.product_uri.to_str() == (real / "x.zarr").as_uri()
+    assert resolved.output_base_uri.to_str() == real.as_uri()
+    assert resolved.control_root_uri.to_str() == f"{(real / 'x.zarr').as_uri()}/.firecube"
 
 
 @pytest.mark.unit
