@@ -8171,7 +8171,9 @@ messages and chunk-key construction.</p>
             <td>
               <div class="doc-md-description">
                 <p>Full target array shape. Rank 3 is interpreted as
-<code>(time, y, x)</code>; rank 4 as <code>(time, y, x, channel)</code>.</p>
+<code>(time, y, x)</code>; rank 4 as <code>(time, y, x, channel)</code>; rank 5 or
+more as <code>(time, y, ...)</code> with every axis after <code>y</code> written in
+full.</p>
               </div>
             </td>
             <td>

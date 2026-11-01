@@ -8606,7 +8606,7 @@ dimension name; the latter is configured separately via
 returns one. It is resolved exactly once at dispatch time, in dispatch
 order. The callable must close over stable inputs (paths, configuration),
 not open file handles or per-batch scratch objects. Callable data is
-supported for <code>kind="region"</code> and <code>kind="static"</code> only. Passing a
+supported for <code>kind="region"</code>, <code>kind="static"</code> and <code>kind="1d"</code>. Passing a
 callable for other kinds raises <code>TypeError</code> at construction. Any
 callable exception propagates with the same error surface as an eager
 payload rejection.</p>
@@ -8681,8 +8681,9 @@ the actual dim/coord name comes from <code>IndexedRegionStrategy.time_coord_name
 scalars, per-slot vectors, or any array where each slot contributes
 one row. The array must be declared with <code>time_indexed=True</code> in
 <code>ZarrArraySpec</code>.</p>
-<p><code>data</code> must be an eager <code>np.ndarray</code>; callable payloads are not
-supported for <code>kind="1d"</code> and raise <code>TypeError</code> at construction.</p>
+<p><code>data</code> may be an eager <code>np.ndarray</code> or a zero-arg callable that
+returns one; a callable is resolved once, at dispatch time, so a large
+whole-slot payload is only read when it is written.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -9360,11 +9361,12 @@ factory:</p>
   for every compiled slot; plugins never resolve or emit them on this
   path.</li>
 </ul>
-<p>For <code>region</code>, <code>data</code> may be an eager <code>numpy.ndarray</code> or a zero-arg
-callable <code>Callable[[], np.ndarray]</code> resolved exactly once at dispatch
-time, in dispatch order, on the same terms as <code>WriteIntent</code> — so large
-payloads are not held in memory while the batch is assembled. <code>slot</code>
-requires an eager array; a callable is rejected at compile time.</p>
+<p>For both <code>region</code> and <code>slot</code>, <code>data</code> may be an eager
+<code>numpy.ndarray</code> or a zero-arg callable <code>Callable[[], np.ndarray]</code>
+resolved exactly once at dispatch time, in dispatch order, on the same
+terms as <code>WriteIntent</code> — so large payloads are not held in memory while
+the batch is assembled. <code>region</code> writes <code>arr[slot, y_slice, ...]</code> and
+supports target arrays of any rank &gt;= 3.</p>
 
 
 
@@ -9823,8 +9825,8 @@ time. Must not be <code>None</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Eager 1-D array payload. Unlike <code>region</code>, a callable is
-rejected when the compiled write is validated.</p>
+                <p>The slot's payload (shape <code>arr.shape[1:]</code>), or a zero-arg
+callable returning it, resolved once at dispatch time.</p>
               </div>
             </td>
             <td>

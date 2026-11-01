@@ -5135,12 +5135,12 @@ this template.</p>
 <tr>
 <td>Common path</td>
 <td><code>IndexedWrite.slot(...)</code></td>
-<td>1-D writes keyed by timestamp; Firecube resolves the slot.</td>
+<td>One whole slot keyed by timestamp; Firecube resolves the slot.</td>
 </tr>
 <tr>
 <td>Common path</td>
 <td><code>IndexedWrite.region(...)</code></td>
-<td>2-D region writes keyed by timestamp.</td>
+<td>Part of one slot keyed by timestamp: <code>y_slice</code> selects the first axis after time, in arrays of rank 3 or more (for example one member of an ensemble cube).</td>
 </tr>
 <tr>
 <td>Common path</td>
