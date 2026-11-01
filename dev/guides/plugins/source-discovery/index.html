@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.">
+        <meta name="description" content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.">
       
       
       
@@ -4854,9 +4854,12 @@
 plugin code, how each one reaches the plugin, and how to widen or narrow that
 selection with filters.</p>
 <h2 id="use-built-in-discovery">Use Built-In Discovery</h2>
-<p>By default a plugin discovers files below <code>--input-data</code> (<code>ctx.source</code>), which
-may be a local path, a <code>file://</code> URI, or an <code>s3://</code> prefix reached through the
-run's storage configuration. The default selection is:</p>
+<p>By default a plugin discovers files below each <code>--input-data</code> value. Each value
+is a <code>file://</code>, <code>s3://</code> or <code>stac://</code> URI. The plugin receives it as given in
+<code>ctx.sources</code>. If the run has exactly one value, <code>ctx.source</code> is that value.
+To get the local path of a <code>file://</code> value, call <code>local_path_from_target</code> from
+<code>firecube.core.api</code>. A library caller can pass a local path instead of a URI.
+The default selection for a <code>file://</code> or <code>s3://</code> source is:</p>
 <ul>
 <li>files ending in <code>.zip</code>, <code>.h5</code>, <code>.nc</code>, <code>.nc4</code>, <code>.hdf</code>, or <code>.he5</code>, in any letter case</li>
 <li>extensionless files whose content looks like HDF5 (local sources only)</li>
@@ -4878,7 +4881,7 @@ which receives each file as a local path:</p>
 <code>my_plugin</code>, the product name, and paths with your own; the plugin must have a
 reader for each included format. This command also writes the output product:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/raw<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
@@ -4906,7 +4909,7 @@ clear saved filters and return to built-in discovery. The same flag works with
 <p>Run the plugin and check the log line discovery emits, before anything else
 in the pipeline runs:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/raw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/raw<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/out.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;Found&quot;</span>

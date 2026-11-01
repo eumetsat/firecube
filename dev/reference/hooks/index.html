@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.">
+        <meta name="description" content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.">
       
       
       
@@ -5808,10 +5808,9 @@ and raises <code>ConfigurationError</code> without it. It discovers every
 source of the run, in order, deduplicates the items and sorts them
 once:</p>
 <ul>
-<li>A local path or a remote URI reached through the run's storage
-  configuration is searched recursively for <code>.zip</code>, <code>.h5</code>,
-  <code>.nc</code>, <code>.nc4</code>, <code>.hdf</code>, and <code>.he5</code> files plus local files
-  with unselected or absent suffixes whose content looks like HDF5.
+<li>A file tree, given as a <code>file://</code> or <code>s3://</code> URI, is searched
+  recursively for <code>.zip</code>, <code>.h5</code>, <code>.nc</code>, <code>.nc4</code>, <code>.hdf</code>, and <code>.he5</code>
+  files plus local files with unselected or absent suffixes whose content looks like HDF5.
   Positive <code>input_filters</code> entries add files to that set; entries
   starting with <code>!</code> exclude matches, overriding suffix and content
   selection regardless of list order.</li>
@@ -5821,6 +5820,8 @@ once:</p>
   list does not apply; <code>input_filters</code> narrow the assets on the
   basename of their href.</li>
 </ul>
+<p>Each entry of <code>ctx.sources</code> from the CLI is a <code>file://</code>, <code>s3://</code>
+or <code>stac://</code> URI, as given. A library caller may pass a local path.</p>
 <p>Pass <code>--input-filters</code> as one JSON list. Filters match
 case-sensitively, including for single-file sources. Items are
 returned as href strings, or as <code>SourceItem</code> objects when the class

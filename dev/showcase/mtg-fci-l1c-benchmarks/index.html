@@ -5,7 +5,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<meta content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes." name="description"/>
+<meta content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes." name="description"/>
 <link href="https://eumetsat.github.io/firecube/dev/showcase/mtg-fci-l1c-benchmarks/" rel="canonical"/>
 <link href="../sentinel3-fire-detections/" rel="prev"/>
 <link href="../../contributing/" rel="next"/>
@@ -3308,7 +3308,7 @@ Create the arrays and time coordinates before starting the clock.
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="err">!</span><span class="n">firecube</span> <span class="n">zarr</span> <span class="n">preallocate</span> <span class="n">mtg_fci_l1c</span> <span class="p">{</span><span class="n">common</span><span class="p">}</span> \
-    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"</span><span class="si">{source}</span><span class="s2">"</span> \
+    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"file://</span><span class="si">{source}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">slot</span><span class="o">-</span><span class="n">start</span> <span class="mi">0</span> \
     <span class="o">--</span><span class="n">slot</span><span class="o">-</span><span class="n">end</span> <span class="mi">12</span> \
     <span class="o">&gt;</span> <span class="s2">"</span><span class="si">{run_dir}</span><span class="s2">/preallocate.log"</span> <span class="mi">2</span><span class="o">&gt;&amp;</span><span class="mi">1</span>
@@ -3316,7 +3316,7 @@ Create the arrays and time coordinates before starting the clock.
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Cube ready: 12 time slots at 1 km and 2 km"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7">!firecube zarr preallocate mtg_fci_l1c {common} \
-    --input-data "{source}" \
+    --input-data "file://{source}" \
     --slot-start 0 \
     --slot-end 12 \
     &gt; "{run_dir}/preallocate.log" 2&gt;&amp;1
@@ -3443,7 +3443,7 @@ static grids. The timer covers process startup and ingestion.</p>
 <span class="err">!</span><span class="k">for</span> <span class="n">lo</span> <span class="ow">in</span> <span class="p">{</span><span class="n">starts</span><span class="p">};</span> <span class="n">do</span> \
     <span class="n">hi</span><span class="o">=</span><span class="err">$</span><span class="p">(</span><span class="n">expr</span> <span class="err">$$</span><span class="n">lo</span> <span class="o">+</span> <span class="p">{</span><span class="n">slot_size</span><span class="p">});</span> \
     <span class="p">(</span><span class="n">firecube</span> <span class="n">ingest</span> <span class="n">mtg_fci_l1c</span> <span class="p">{</span><span class="n">common</span><span class="p">}</span> \
-        <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"</span><span class="si">{source}</span><span class="s2">"</span> \
+        <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"file://</span><span class="si">{source}</span><span class="s2">"</span> \
         <span class="o">--</span><span class="n">option</span> <span class="n">force_reingest</span><span class="o">=</span><span class="n">true</span> \
         <span class="o">--</span><span class="n">suppress</span><span class="o">-</span><span class="n">static</span><span class="o">-</span><span class="n">emission</span><span class="o">-</span><span class="k">for</span><span class="o">-</span><span class="n">non</span><span class="o">-</span><span class="n">owner</span> \
         <span class="o">--</span><span class="n">static</span><span class="o">-</span><span class="n">owner</span><span class="o">-</span><span class="n">slot</span><span class="o">-</span><span class="n">start</span> <span class="mi">0</span> \
@@ -3462,7 +3462,7 @@ started = time.perf_counter()
 !for lo in {starts}; do \
     hi=$(expr $$lo + {slot_size}); \
     (firecube ingest mtg_fci_l1c {common} \
-        --input-data "{source}" \
+        --input-data "file://{source}" \
         --option force_reingest=true \
         --suppress-static-emission-for-non-owner \
         --static-owner-slot-start 0 \

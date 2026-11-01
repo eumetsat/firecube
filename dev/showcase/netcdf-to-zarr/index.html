@@ -5,7 +5,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<meta content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes." name="description"/>
+<meta content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes." name="description"/>
 <link href="https://eumetsat.github.io/firecube/dev/showcase/netcdf-to-zarr/" rel="canonical"/>
 <link href="../" rel="prev"/>
 <link href="../sentinel3-fire-detections/" rel="next"/>
@@ -3327,7 +3327,7 @@ Verifying installed plugins...
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="err">!</span><span class="n">firecube</span> <span class="n">ingest</span> <span class="n">incremental_sst</span> \
-    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"</span><span class="si">{first_arrival}</span><span class="s2">"</span> \
+    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"file://</span><span class="si">{first_arrival}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">target</span> <span class="s2">"</span><span class="si">{target_uri}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">product</span><span class="o">-</span><span class="n">name</span> <span class="n">incremental_sst</span> \
     <span class="o">--</span><span class="n">write</span><span class="o">-</span><span class="n">mode</span> <span class="n">direct</span> \
@@ -3340,7 +3340,7 @@ Verifying installed plugins...
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Cube: 3 days · 1-3 July"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-7">!firecube ingest incremental_sst \
-    --input-data "{first_arrival}" \
+    --input-data "file://{first_arrival}" \
     --target "{target_uri}" \
     --product-name incremental_sst \
     --write-mode direct \
@@ -3413,7 +3413,7 @@ contains only the new dates.</p>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="err">!</span><span class="n">firecube</span> <span class="n">ingest</span> <span class="n">incremental_sst</span> \
-    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"</span><span class="si">{second_arrival}</span><span class="s2">"</span> \
+    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"file://</span><span class="si">{second_arrival}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">target</span> <span class="s2">"</span><span class="si">{target_uri}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">product</span><span class="o">-</span><span class="n">name</span> <span class="n">incremental_sst</span> \
     <span class="o">--</span><span class="n">write</span><span class="o">-</span><span class="n">mode</span> <span class="n">direct</span> \
@@ -3428,7 +3428,7 @@ contains only the new dates.</p>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Cube: 6 days · 1-6 July · first three days unchanged"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-8">!firecube ingest incremental_sst \
-    --input-data "{second_arrival}" \
+    --input-data "file://{second_arrival}" \
     --target "{target_uri}" \
     --product-name incremental_sst \
     --write-mode direct \
@@ -3582,7 +3582,7 @@ already stored, and the cube must stay unchanged.</p>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="err">!</span><span class="n">firecube</span> <span class="n">ingest</span> <span class="n">incremental_sst</span> \
-    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"</span><span class="si">{second_arrival}</span><span class="s2">"</span> \
+    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"file://</span><span class="si">{second_arrival}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">target</span> <span class="s2">"</span><span class="si">{target_uri}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">product</span><span class="o">-</span><span class="n">name</span> <span class="n">incremental_sst</span> \
     <span class="o">--</span><span class="n">write</span><span class="o">-</span><span class="n">mode</span> <span class="n">direct</span> \
@@ -3601,7 +3601,7 @@ already stored, and the cube must stay unchanged.</p>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Still 6 unique days · values unchanged"</span><span class="p">)</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-10">!firecube ingest incremental_sst \
-    --input-data "{second_arrival}" \
+    --input-data "file://{second_arrival}" \
     --target "{target_uri}" \
     --product-name incremental_sst \
     --write-mode direct \

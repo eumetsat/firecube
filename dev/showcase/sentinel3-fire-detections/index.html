@@ -5,7 +5,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<meta content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes." name="description"/>
+<meta content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes." name="description"/>
 <link href="https://eumetsat.github.io/firecube/dev/showcase/sentinel3-fire-detections/" rel="canonical"/>
 <link href="../netcdf-to-zarr/" rel="prev"/>
 <link href="../mtg-fci-l1c-benchmarks/" rel="next"/>
@@ -3387,6 +3387,7 @@ print("Plugin source:", plugin_directory / "src/firecube_sentinel3_frp/ingestor.
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">firecube.core.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">local_path_from_target</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">GenericParquetIngestor</span><span class="p">,</span>
     <span class="n">PipelineBatch</span><span class="p">,</span>
@@ -3400,7 +3401,7 @@ print("Plugin source:", plugin_directory / "src/firecube_sentinel3_frp/ingestor.
     <span class="n">PRODUCT_NAME</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"sentinel3_frp"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">discover_source_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">):</span>
-        <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">directory</span> <span class="o">=</span> <span class="n">local_path_from_target</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
         <span class="n">manifest</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">((</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"manifest.json"</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">directory</span> <span class="o">/</span> <span class="n">item</span><span class="p">[</span><span class="s2">"filename"</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">"products"</span><span class="p">]]</span>
 
@@ -3435,6 +3436,7 @@ from typing import ClassVar
 
 import pandas as pd
 
+from firecube.core.api import local_path_from_target
 from firecube.ingestor.api import (
     GenericParquetIngestor,
     PipelineBatch,
@@ -3448,7 +3450,7 @@ class Sentinel3FrpIngestor(GenericParquetIngestor):
     PRODUCT_NAME: ClassVar[str] = "sentinel3_frp"
 
     def discover_source_files(self, ctx: PluginContext):
-        directory = Path(ctx.source)
+        directory = local_path_from_target(ctx.source)
         manifest = json.loads((directory / "manifest.json").read_text())
         return [directory / item["filename"] for item in manifest["products"]]
 
@@ -3666,7 +3668,7 @@ Options Sections:
 <span class="n">source_directory</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">input_directory</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
 
 <span class="err">!</span><span class="n">firecube</span> <span class="n">ingest</span> <span class="n">sentinel3_frp</span> \
-    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"</span><span class="si">{source_directory}</span><span class="s2">"</span> \
+    <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"file://</span><span class="si">{source_directory}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">target</span> <span class="s2">"</span><span class="si">{product_uri}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">product</span><span class="o">-</span><span class="n">name</span> <span class="n">sentinel3_frp</span> \
     <span class="o">--</span><span class="n">output</span><span class="o">-</span><span class="nb">format</span> <span class="n">parquet</span> \
@@ -3686,7 +3688,7 @@ summary_path = run_directory / "run-summary.json"
 source_directory = str(input_directory.resolve())
 
 !firecube ingest sentinel3_frp \
-    --input-data "{source_directory}" \
+    --input-data "file://{source_directory}" \
     --target "{product_uri}" \
     --product-name sentinel3_frp \
     --output-format parquet \

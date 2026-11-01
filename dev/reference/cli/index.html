@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.">
+        <meta name="description" content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.">
       
       
       
@@ -5880,11 +5880,12 @@
 <p>This page is generated from the live Click command tree. Use
 <code>firecube &lt;command&gt; --help</code> for the same information in your terminal.</p>
 <h2 id="firecube">firecube</h2>
-<p>batch ingestion tool for EO datasets</p>
-<p>Batch ingestion and management tool for Earth Observation datasets.
-Writes Zarr and Parquet stores with built-in resume safety, idempotent
-chunk tracking, and multi-resolution support. Run firecube ingest to
-start a job, or explore subcommands for storage management and diagnostics.</p>
+<p>Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes</p>
+<p>Firecube handles the operational work of building and maintaining cubes,
+so you can focus on the data. Writes Zarr and Parquet stores with
+built-in resume safety, idempotent chunk tracking, and multi-resolution
+support. Run firecube ingest to start a job, or explore subcommands for
+storage management and diagnostics.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>firecube [OPTIONS] COMMAND [ARGS]...
 </code></pre></div>
@@ -7346,7 +7347,7 @@ a plugin.</p>
 <tr>
 <td><code>-i</code>, <code>--input-data</code></td>
 <td>text</td>
-<td>Raw plugin input data: local path, file:///abs/path, s3:// prefix, or stac://host/api-root/collections/<id> (one STAC API collection). Repeat to read several sources in one run. Interpreted by the plugin.</td>
+<td>Plugin input data as a URI: file:///abs/path, s3://bucket/prefix or stac://host/api-root/collections/<id> (one STAC API collection). Repeat to read several sources in one run. The plugin gets each URI as given.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -8342,7 +8343,7 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <tr>
 <td><code>-i</code>, <code>--input-data</code></td>
 <td>text</td>
-<td>Raw plugin input data: local path, file:///abs/path, s3:// prefix, or stac://host/api-root/collections/<id> (one STAC API collection). Repeat to read several sources in one run. Interpreted by the plugin.</td>
+<td>Plugin input data as a URI: file:///abs/path, s3://bucket/prefix or stac://host/api-root/collections/<id> (one STAC API collection). Repeat to read several sources in one run. The plugin gets each URI as given.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -8450,7 +8451,7 @@ Above 1,000,000 ranges it refuses the plan; pass --yes-i-really-mean-it to emit 
 <tr>
 <td><code>--input-data</code></td>
 <td>text</td>
-<td>Source path, s3:// prefix or stac:// collection for AUTO discovery (optional, repeatable).</td>
+<td>Source URI for AUTO discovery: file://, s3:// or stac:// (optional, repeatable).</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>

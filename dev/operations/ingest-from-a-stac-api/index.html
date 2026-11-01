@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.">
+        <meta name="description" content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.">
       
       
       
@@ -4838,9 +4838,11 @@ for a local source.</p>
   opens an asset through Firecube, an <code>https://</code> or <code>http://</code> href is
   downloaded to the workspace of the run. The download happens the first time
   the plugin opens the asset. It is anonymous: Firecube sends no signature and
-  no credentials. Firecube reads an <code>s3://</code> href like any other S3 source, with the
-  credentials in <a href="../s3-access/">Configure S3 Access</a>. Firecube refuses an href
-  with any other scheme it cannot open.</li>
+  no credentials. Firecube reads an <code>s3://</code> href with the storage settings of the run.
+  A public bucket, such as the one behind <code>cop-dem-glo-30</code>, needs
+  <code>--storage-anonymous</code>. A private bucket uses the credentials in
+  <a href="../s3-access/">Configure S3 Access</a>. Firecube refuses an href with any other
+  scheme it cannot open.</li>
 <li>The API supports STAC item search. A static <code>catalog.json</code> catalogue is not
   supported.</li>
 </ul>
@@ -4877,7 +4879,8 @@ for a local source.</p>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--product-name<span class="w"> </span>dem<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--storage-anonymous<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
 </code></pre></div>
 <p>Firecube reads every result page and keeps each asset whose roles contain
    <code>data</code>. The default file-suffix list does not apply.</p>
@@ -4896,21 +4899,24 @@ for a local source.</p>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--product-name<span class="w"> </span>dem<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>--storage-anonymous<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
 </code></pre></div>
 <ol>
 <li>To read several collections, or a collection and a local directory, repeat
-   <code>--input-data</code>. <code>--stac-search</code> applies to every <code>stac://</code> source:</li>
+   <code>--input-data</code>. Each value is a <code>file://</code>, <code>s3://</code> or <code>stac://</code> URI.
+   <code>--stac-search</code> applies to every <code>stac://</code> source:</li>
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>PLUGIN_NAME<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--input-data<span class="w"> </span>stac://earth-search.aws.element84.com/v1/collections/cop-dem-glo-30<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--input-data<span class="w"> </span>/data/raw/extra-tiles<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/raw/extra-tiles<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--stac-search<span class="w"> </span><span class="s1">&#39;{&quot;datetime&quot;: &quot;2021-01-01T00:00:00Z/2021-12-31T23:59:59Z&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/dem.zarr<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--product-name<span class="w"> </span>dem<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span>--storage-anonymous<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
 </code></pre></div>
 <p>Firecube ingests a STAC asset once when two <code>stac://</code> sources return it.
    Two results are the same asset when the collection, the item id and the asset
@@ -4976,6 +4982,11 @@ printed.</p>
 <td><code>firecube ingest requires the stac extra</code></td>
 <td><code>pystac-client</code> is not installed</td>
 <td>Run <code>uv pip install 'firecube[stac]'</code></td>
+</tr>
+<tr>
+<td><code>Unable to locate credentials</code></td>
+<td>Firecube read a public <code>s3://</code> asset without credentials</td>
+<td>Pass <code>--storage-anonymous</code></td>
 </tr>
 <tr>
 <td><code>Cannot search STAC source stac://...</code></td>

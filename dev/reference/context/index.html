@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.">
+        <meta name="description" content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.">
       
       
       
@@ -6351,8 +6351,10 @@ outside the documented surface raises <code>AttributeError</code>.</p>
     <div class="doc doc-contents ">
 
         <p>The single input data location of this run, as provided by the caller.</p>
-<p>A local path or remote URI (e.g. the <code>--input-data</code> CLI option);
-<code>""</code> when the run has none. Plugins with custom discovery may
+<p>From the CLI, the <code>--input-data</code> value as given: a <code>file://</code>, <code>s3://</code>
+or <code>stac://</code> URI. <code>local_path_from_target</code> from <code>firecube.core.api</code>
+gives the local path of a <code>file://</code> value. A library caller may pass a
+local path. <code>""</code> when the run has none. Plugins with custom discovery may
 interpret it freely. A run may have several inputs; read <code>sources</code>
 to handle them.</p>
 
@@ -6813,7 +6815,8 @@ cleanup. Local source files remain caller-owned.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A local path, URI string, or source-file object.</p>
+                <p>A local path, a <code>file://</code> or <code>s3://</code> URI, a discovered
+<code>SourceItem</code>, or a source-file object.</p>
               </div>
             </td>
             <td>

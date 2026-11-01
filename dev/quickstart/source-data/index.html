@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.">
+        <meta name="description" content="Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.">
       
       
       
@@ -4743,9 +4743,9 @@
 <p>Firecube expects you to provide source datasets. In normal use, these files
 may come from a data provider, an existing local source, or object storage.
 You are responsible for staging source files that match what your installed
-plugin accepts, then passing their directory or storage prefix to
-<code>--input-data</code>. The installed plugin decides which formats, filenames, and
-dataset structure it accepts; nothing about that is generic.</p>
+plugin accepts. Pass the <code>file://</code> URI of their directory, or their <code>s3://</code>
+prefix, to <code>--input-data</code>. The installed plugin decides which formats,
+filenames, and dataset structure it accepts. Nothing about that is generic.</p>
 <p>The <code>quickstart_plugin</code> plugin from the previous page expects time-indexed
 NetCDF files. It ships a script that generates four matching example files, so
 this quickstart does not require you to source real data.</p>
@@ -4761,8 +4761,8 @@ this quickstart does not require you to source real data.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sample01.nc  sample02.nc  sample03.nc  sample04.nc
 </code></pre></div>
 <p>Each file contains one timestamp of <code>temperature_c</code> and <code>humidity_pct</code> on the
-same 2 by 3 latitude-longitude grid. The ingestion command passes their parent
-directory to the plugin.</p>
+same 2 by 3 latitude-longitude grid. The ingestion command passes the <code>file://</code>
+URI of their parent directory to the plugin.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../ingestion/">Run Ingestion</a></strong>: convert the four NetCDF files into one
