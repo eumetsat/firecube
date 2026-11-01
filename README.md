@@ -48,7 +48,7 @@ class. This example also spells out the storage and output choices:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data ./source-data \
+  --input-data "file://${PWD}/source-data" \
   --target "file://${PWD}/my_product.zarr" \
   --product-name my_product \
   --storage-type local \
@@ -60,7 +60,7 @@ firecube ingest <plugin> \
 ```bash
 # use another supported storage driver explicitly
 firecube ingest <plugin> \
-  --input-data ./source-data \
+  --input-data "file://${PWD}/source-data" \
   --target "file://${PWD}/my_product.zarr" \
   --product-name my_product \
   --storage-type local \
