@@ -72,6 +72,11 @@ class IngestContext:
     for callers with one input: a lone ``source`` is mirrored into ``sources``, and
     when ``sources`` is given, ``source`` becomes its single entry, or ``""`` when it
     has none or several.
+
+    The CLI passes each ``--input-data`` value as given: a ``file://``, ``s3://`` or
+    ``stac://`` URI. A library caller may pass a local path. Use
+    ``local_path_from_target`` from ``firecube.core.api`` for the local path of a
+    ``file://`` value.
     """
 
     source: str = ""
@@ -265,11 +270,12 @@ class PluginContext:
     def sources(self) -> tuple[str, ...]:
         """Every input data location of this run, in the order the caller gave them.
 
-        Each entry is a local path, a ``file://`` or ``s3://`` URI, or a
-        ``stac://<host>/<api-root>/collections/<id>`` STAC API collection (the
-        ``--input-data`` CLI option, which may be repeated). Empty when the run
-        has no input. The default ``discover_source_files`` implementation
-        discovers items from all of them.
+        From the CLI, each entry is an ``--input-data`` value as given: a ``file://``
+        or ``s3://`` URI, or a ``stac://<host>/<api-root>/collections/<id>`` STAC API
+        collection. ``local_path_from_target`` from ``firecube.core.api`` gives the
+        local path of a ``file://`` entry. A library caller may pass a local path.
+        Empty when the run has no input. The default ``discover_source_files``
+        implementation discovers items from all of them.
         """
         return self._ctx.sources
 
@@ -277,8 +283,10 @@ class PluginContext:
     def source(self) -> str:
         """The single input data location of this run, as provided by the caller.
 
-        A local path or remote URI (e.g. the ``--input-data`` CLI option);
-        ``""`` when the run has none. Plugins with custom discovery may
+        From the CLI, the ``--input-data`` value as given: a ``file://``, ``s3://``
+        or ``stac://`` URI. ``local_path_from_target`` from ``firecube.core.api``
+        gives the local path of a ``file://`` value. A library caller may pass a
+        local path. ``""`` when the run has none. Plugins with custom discovery may
         interpret it freely. A run may have several inputs; read `sources`
         to handle them.
 
@@ -428,7 +436,8 @@ class PluginContext:
         cleanup. Local source files remain caller-owned.
 
         Args:
-            source: A local path, URI string, or source-file object.
+            source: A local path, a ``file://`` or ``s3://`` URI, a discovered
+                ``SourceItem``, or a source-file object.
 
         Returns:
             Local filesystem path to the materialized file.

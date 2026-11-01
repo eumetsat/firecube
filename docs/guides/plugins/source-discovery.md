@@ -8,9 +8,12 @@ selection with filters.
 
 ## Use Built-In Discovery
 
-By default a plugin discovers files below `--input-data` (`ctx.source`), which
-may be a local path, a `file://` URI, or an `s3://` prefix reached through the
-run's storage configuration. The default selection is:
+By default a plugin discovers files below each `--input-data` value. Each value
+is a `file://`, `s3://` or `stac://` URI. The plugin receives it as given in
+`ctx.sources`. If the run has exactly one value, `ctx.source` is that value.
+To get the local path of a `file://` value, call `local_path_from_target` from
+`firecube.core.api`. A library caller can pass a local path instead of a URI.
+The default selection for a `file://` or `s3://` source is:
 
 - files ending in `.zip`, `.h5`, `.nc`, `.nc4`, `.hdf`, or `.he5`, in any letter case
 - extensionless files whose content looks like HDF5 (local sources only)
@@ -42,7 +45,7 @@ reader for each included format. This command also writes the output product:
 
 ```bash
 firecube ingest my_plugin \
-  --input-data /data/raw \
+  --input-data file:///data/raw \
   --target "file://$PWD/out.zarr" \
   --product-name my_product \
   --write-mode direct \
@@ -80,7 +83,7 @@ in the pipeline runs:
 
 ```bash
 firecube ingest my_plugin \
-  --input-data /data/raw \
+  --input-data file:///data/raw \
   --target "file://$PWD/out.zarr" \
   --product-name my_product \
   --write-mode direct 2>&1 | grep "Found"

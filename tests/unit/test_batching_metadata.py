@@ -64,3 +64,18 @@ def test_batch_metadata_contains_stable_files_hash():
     assert batch.metadata["item_uris_total"] == 120
     assert batch.metadata["item_uris_truncated"] is True
     assert batch.metadata["files_hash"] == expected_hash
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("source", ["file:///data/raw", "/data/raw"])
+def test_batch_data_path_is_the_local_path_of_a_file_uri_source(source: str):
+    runtime_ctx = RuntimeIngestContext.from_ingest_context(
+        IngestContext(sources=(source,)),
+        run_id="batching-test",
+        temp_root=Path("."),
+        materializer=lambda p: Path(p),
+    )
+
+    batch = next(iter(BatchPlanner().create_batches(_Host(), PluginContext(runtime_ctx), 200)))
+
+    assert batch.data_path == Path("/data/raw")

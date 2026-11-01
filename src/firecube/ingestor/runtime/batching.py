@@ -28,10 +28,21 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from firecube.core.discovery import SourceItem
+from firecube.core.uris import local_path_from_target
 from firecube.ingestor.contracts.interfaces import SourceFile
 from firecube.ingestor.types.context import PipelineBatch, PluginContext
 
 log = logging.getLogger("firecube.ingestor.batching")
+
+
+def _batch_data_path(sources: Sequence[str]) -> Path:
+    """Return the data path of a batch: the one source's local path, else ``Path("")``."""
+    if len(sources) != 1:
+        return Path("")
+    source = sources[0]
+    if source.startswith("file://"):
+        return local_path_from_target(source)
+    return Path(source)
 
 
 @runtime_checkable
@@ -151,7 +162,7 @@ class BatchPlanner:
 
             return PipelineBatch(
                 batch_id=batch_id,
-                data_path=Path(ctx.sources[0] if len(ctx.sources) == 1 else ""),
+                data_path=_batch_data_path(ctx.sources),
                 items=list(b_items),  # Copy to avoid mutation issues
                 metadata={
                     "item_uris": item_uris,

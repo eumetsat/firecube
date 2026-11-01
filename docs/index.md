@@ -12,7 +12,7 @@ title: Firecube
 </p>
 
 <p align="center">
-  <strong>A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.</strong>
+  <strong>Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.</strong>
 </p>
 
 <p align="center">

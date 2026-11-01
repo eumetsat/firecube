@@ -124,7 +124,7 @@ def _args(target: Path, source: Path) -> list[str]:
         "--write-mode",
         "direct",
         "--input-data",
-        str(source),
+        source.as_uri(),
     ]
 
 

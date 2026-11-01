@@ -140,7 +140,7 @@ def test_ingest_cli_opens_operator_span(monkeypatch, tmp_path):
             "ingest",
             "probe",
             "--input-data",
-            str(source),
+            source.as_uri(),
             "--target",
             (tmp_path / "out.zarr").as_uri(),
             "--product-name",

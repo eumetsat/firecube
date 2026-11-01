@@ -15,7 +15,7 @@ products, dates, regions, or other independent work at the external job level.
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \
@@ -52,7 +52,7 @@ from scratch:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \
@@ -105,7 +105,7 @@ and clean it up on successful runs:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target s3://bucket/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type s3 \

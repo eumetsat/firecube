@@ -134,7 +134,14 @@ def _ingest_calendar(tmp_path: Path, *, mode: str, start: str, **flags: str) -> 
     source.mkdir(exist_ok=True)
     (source / "dummy.nc").touch()
     options = ["no_progress=true", f"x_start={start}", *(f"{k}={v}" for k, v in flags.items())]
-    args = ["ingest", "cf_time_dim_calendar", "--input-data", str(source), "--product-name", "cal"]
+    args = [
+        "ingest",
+        "cf_time_dim_calendar",
+        "--input-data",
+        source.as_uri(),
+        "--product-name",
+        "cal",
+    ]
     args += ["--target", f"file://{tmp_path / 'cal.zarr'}", "--write-mode", mode]
     args += [a for o in options for a in ("--option", o)]
     result = CliRunner().invoke(cli, args)

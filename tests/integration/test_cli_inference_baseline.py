@@ -51,7 +51,7 @@ def _run_ingest(
                 "ingest",
                 "cli_test_plugin",
                 "--input-data",
-                str(source),
+                source.as_uri(),
                 "--target",
                 target,
                 "--output-format",

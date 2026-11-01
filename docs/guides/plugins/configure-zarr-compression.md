@@ -9,7 +9,7 @@ same options reach `GenericZarrIngestor` and `DirectZarrIngestor`.
 
 ```bash
 firecube ingest my_plugin \
-  --input-data /data/raw \
+  --input-data file:///data/raw \
   --target "file://$PWD/out.zarr" \
   --product-name my_product \
   --write-mode direct \

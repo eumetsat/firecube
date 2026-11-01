@@ -94,7 +94,7 @@ def _ingest(source: Path, target: Path, *, resume_existing: bool = False) -> dic
         "ingest",
         "precip_daily",
         "--input-data",
-        str(source),
+        source.as_uri(),
         "--target",
         target.as_uri(),
         "--product-name",

@@ -28,9 +28,9 @@ from firecube.cli._uri_policy import admit_input_sources
 from firecube.core.discovery import StacSearchError, require_stac, validate_stac_search
 
 INPUT_DATA_HELP = (
-    "Raw plugin input data: local path, file:///abs/path, s3:// prefix, or "
+    "Plugin input data as a URI: file:///abs/path, s3://bucket/prefix or "
     "stac://host/api-root/collections/<id> (one STAC API collection). Repeat to read "
-    "several sources in one run. Interpreted by the plugin."
+    "several sources in one run. The plugin gets each URI as given."
 )
 
 
@@ -88,8 +88,9 @@ def admit_sources(
     """Admit the sources of one command, before any network or store access.
 
     Merges ``--stac-search`` with the ``stac_search`` table of the plugin configuration; the flag
-    replaces the table whole. Refuses a bad ``stac://`` value, a search without a ``stac://``
-    source, and a ``stac://`` source when the ``stac`` extra is missing.
+    replaces the table whole. Drops empty values and refuses a value that is not a ``file://``,
+    ``s3://`` or valid ``stac://`` URI, a search without a ``stac://`` source, and a ``stac://``
+    source when the ``stac`` extra is missing.
 
     Args:
         ctx: The Click context, which names the configuration file.
@@ -100,10 +101,10 @@ def admit_sources(
         defaults: The plugin's configuration table, when the caller has loaded it already.
 
     Returns:
-        The values in order, and the search to apply, or ``None``.
+        The non-empty values as given, in order, and the search to apply, or ``None``.
 
     Raises:
-        click.BadParameter: A ``stac://`` value breaks the URI rule (exit 2).
+        click.BadParameter: A value breaks the source URI rule (exit 2).
         click.UsageError: The configured search is invalid, or a search was given and no source
             is ``stac://`` (exit 2).
         click.ClickException: A source is ``stac://`` and the ``stac`` extra is missing.

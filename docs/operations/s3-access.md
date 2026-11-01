@@ -45,7 +45,7 @@ supported by the installed plugin:
 
 ```bash
 firecube ingest PLUGIN_NAME \
-  --input-data /absolute/path/to/source-data \
+  --input-data file:///absolute/path/to/source-data \
   --target s3://your-bucket/products/my_product.zarr \
   --product-name my_product \
   --storage-type s3 \

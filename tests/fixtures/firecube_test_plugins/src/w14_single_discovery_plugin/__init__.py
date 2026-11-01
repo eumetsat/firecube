@@ -35,6 +35,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, ClassVar
 
+from firecube.core.api import local_path_from_target
 from firecube.ingestor.api import (
     BaseIngestor,
     OutputPaths,
@@ -80,7 +81,7 @@ class CounterSuccessIngestor(_Base):
 
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
         _bump()
-        return [Path(ctx.source) / "one.nc"]
+        return [local_path_from_target(ctx.source) / "one.nc"]
 
 
 @register_ingestor("w14_lazy_success")
@@ -91,4 +92,4 @@ class LazySuccessIngestor(_Base):
         _bump()
         if int(Path(os.environ["W14_DISCOVERY_COUNTER"]).read_text(encoding="utf-8")) > 1:
             raise RuntimeError("discover_source_files called more than once")
-        yield Path(ctx.source) / "one.nc"
+        yield local_path_from_target(ctx.source) / "one.nc"

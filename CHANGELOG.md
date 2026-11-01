@@ -160,7 +160,10 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   list does not apply. `--input-filters` narrows the assets on the basename of
   the href. Requires the new `stac` extra: `uv pip install
   'firecube[stac]'`. Firecube imports the STAC client only when a search runs.
-  Static `catalog.json` catalogues are not supported.
+  Static `catalog.json` catalogues are not supported. If every source of a
+  run is a `stac://` URI and the search finds no asset, the refusal names
+  `--stac-search` and lists no file suffixes. If the run also reads a file
+  tree, the refusal keeps the suffix list and names both.
 - The command refuses a `stac://` source in two cases of broken paging. In
   the first, a `next` link repeats an earlier request. In the second, five
   empty result pages in a row each carry a `next` link. The error says that
@@ -197,6 +200,21 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   discover the sources of a run from library code.
 
 ### Changed
+
+- **Breaking.** `--input-data` of `firecube ingest`, `firecube zarr preallocate`
+  and `firecube zarr slots` takes `file://`, `s3://` and `stac://` URIs only.
+  - A bare or relative path, another scheme or an uppercase scheme exits with
+    code 2. The message suggests the `file://` URI for a path.
+  - To migrate, write `--input-data file:///abs/path` instead of
+    `--input-data /abs/path`.
+  - An empty value counts as no `--input-data` in all three commands.
+    `firecube zarr preallocate` and `firecube zarr slots` passed it on before.
+  - The plugin receives each URI as given. `firecube ingest` no longer turns a
+    `file://` value into a local path.
+  - If a plugin needs a local path, call `local_path_from_target` from
+    `firecube.core.api`.
+  - If a run has one `file://` source, `PipelineBatch.data_path` holds its
+    local path.
 - The refusal for a legacy index record now names the library function that
   rebuilds the index. A Python caller reads that name in the message. The CLI
   prints the command `firecube zarr index rebuild` instead. The
@@ -1488,7 +1506,7 @@ the migration procedure including `firecube zarr index rebuild`.
 - `firecube chunks runs` now accepts `--target` to resolve the backend store
   for remote slot-index I/O via the driver-aware Zarr store.
 
-### Changed (breaking)
+### Changed
 
 - CLI now enforces strict URI form everywhere: only `file:///abs/path` and
   `s3://bucket/key` accepted; bare paths rejected with `"URI scheme required

@@ -26,7 +26,7 @@ a shared filesystem:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target file:///data/products/demo.zarr \
   --product-name demo \
   --storage-type local \
@@ -45,7 +45,7 @@ storage:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target s3://bucket/products/demo.zarr \
   --product-name demo \
   --storage-type s3 \

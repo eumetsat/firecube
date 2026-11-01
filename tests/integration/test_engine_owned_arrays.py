@@ -169,7 +169,7 @@ def test_preallocate_then_pods_preserve_engine_arrays_and_layout(
     budget_plugin.owned, budget_plugin.axis = True, axis
     budget_plugin.items = [0, 1, 3]
     target = tmp_path / "cube.zarr"
-    result = cli_run(target, "zarr preallocate", "direct", "--input-data", str(tmp_path))
+    result = cli_run(target, "zarr preallocate", "direct", "--input-data", tmp_path.as_uri())
     assert result.exit_code == 0, result.output
     r = root(target)
     np.testing.assert_array_equal(r["data/owned"][:], [100, 101, np.nan, 103])
@@ -179,7 +179,7 @@ def test_preallocate_then_pods_preserve_engine_arrays_and_layout(
     assert r["data/img"].chunks == (1, 2, 2)
     watched = target / "data" / "owned"
     before = payload_snapshot(watched)
-    result = cli_run(target, "zarr preallocate", "direct", "--input-data", str(tmp_path))
+    result = cli_run(target, "zarr preallocate", "direct", "--input-data", tmp_path.as_uri())
     assert result.exit_code == 0, result.output
     assert payload_snapshot(watched) == before
     for lo, hi in [(0, 2), (2, 4)]:
@@ -207,7 +207,7 @@ def test_engine_owned_refusals_leave_payload_untouched(tmp_path, budget_plugin, 
     target = tmp_path / "cube.zarr"
     if case in ("no-input", "missing-value", "unmaterialized"):
         budget_plugin.missing = case == "missing-value"
-        extra = [] if case == "no-input" else ["--input-data", str(tmp_path)]
+        extra = [] if case == "no-input" else ["--input-data", tmp_path.as_uri()]
         command = "ingest" if case == "unmaterialized" else "zarr preallocate"
         result = cli_run(target, command, "direct", *extra)
         assert result.exit_code != 0
@@ -216,7 +216,7 @@ def test_engine_owned_refusals_leave_payload_untouched(tmp_path, budget_plugin, 
         return
     if case == "late-item":
         budget_plugin.items = [0, 1, 3]
-    result = cli_run(target, "zarr preallocate", "direct", "--input-data", str(tmp_path))
+    result = cli_run(target, "zarr preallocate", "direct", "--input-data", tmp_path.as_uri())
     assert result.exit_code == 0, result.output
     if case == "mismatch":
         budget_plugin.pod_offset = 1
@@ -239,7 +239,7 @@ def test_batch_for_a_slot_preallocate_did_not_materialize_is_refused(tmp_path, b
     budget_plugin.owned = True
     budget_plugin.items = [0, 1, 3]
     target = tmp_path / "cube.zarr"
-    result = cli_run(target, "zarr preallocate", "direct", "--input-data", str(tmp_path))
+    result = cli_run(target, "zarr preallocate", "direct", "--input-data", tmp_path.as_uri())
     assert result.exit_code == 0, result.output
     # Slot 2 holds NaN and the pod sends NaN: only the slot check can refuse.
     budget_plugin.items = [2]

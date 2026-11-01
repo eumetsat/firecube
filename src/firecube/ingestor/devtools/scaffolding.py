@@ -254,7 +254,7 @@ ingestion: a store that a plain run created cannot be preallocated afterwards.
 
 ```bash
 uv run firecube zarr preallocate {plugin_name} \\
-  --input-data /path/to/your/input \\
+  --input-data file:///path/to/your/input \\
   --target file:///tmp/{plugin_name}_out.zarr \\
   --product-name {plugin_name} \\
   --write-mode direct \\
@@ -272,7 +272,7 @@ process, with the same input data:
 
 ```bash
 uv run firecube ingest {plugin_name} \\
-  --input-data /path/to/your/input \\
+  --input-data file:///path/to/your/input \\
   --target file:///tmp/{plugin_name}_out.zarr \\
   --product-name {plugin_name} \\
   --output-format zarr \\

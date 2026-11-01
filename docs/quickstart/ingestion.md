@@ -16,7 +16,7 @@ confirm the data cube looks the way you expect.
 
 ```bash
 firecube ingest quickstart_plugin \
-  --input-data sample_data \
+  --input-data "file://${PWD}/sample_data" \
   --target "file://${PWD}/sample_data/quickstart_plugin_out.zarr" \
   --product-name quickstart_plugin \
   --storage-type local \

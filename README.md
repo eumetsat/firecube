@@ -3,7 +3,11 @@
 </p>
 
 <p align="center">
-  <strong>Plugin-driven CLI for turning Earth Observation products into analysis-ready datacubes</strong>
+  <strong>Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes</strong>
+</p>
+
+<p align="center">
+  Firecube handles the operational work of building and maintaining cubes, so you can focus on the data.
 </p>
 
 <p align="center">
@@ -48,7 +52,7 @@ class. This example also spells out the storage and output choices:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data ./source-data \
+  --input-data "file://${PWD}/source-data" \
   --target "file://${PWD}/my_product.zarr" \
   --product-name my_product \
   --storage-type local \
@@ -60,7 +64,7 @@ firecube ingest <plugin> \
 ```bash
 # use another supported storage driver explicitly
 firecube ingest <plugin> \
-  --input-data ./source-data \
+  --input-data "file://${PWD}/source-data" \
   --target "file://${PWD}/my_product.zarr" \
   --product-name my_product \
   --storage-type local \
@@ -145,9 +149,9 @@ available as optional runtime extras:
 | `tensogram` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
 | `tensogram-xarray` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
 | `tensogram-zarr` | 0.22.0 | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `tensogram` extra dependency. |
-| `healpix-geo` | 0.2.1 | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `healpix` extra dependency. |
+| `healpix-geo` | 0.4.1 | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `healpix` extra dependency. |
 | `trollsift` | 1.0.1 | Apache-2.0 |  | https://pypi.org/project/trollsift/ | Direct optional `patterns` extra dependency. |
-| `virtualizarr` | 2.7.3 | Apache-2.0 |  | https://github.com/zarr-developers/VirtualiZarr | Direct optional `virtualzarr` extra dependency. |
+| `virtualizarr` | 2.8.0 | Apache-2.0 |  | https://github.com/zarr-developers/VirtualiZarr | Direct optional `virtualzarr` extra dependency. |
 
 ### Direct Build, Edit, And Test Dependencies
 
@@ -162,11 +166,11 @@ documentation, or testing:
 | `tensogram-xarray` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `tensogram-zarr` | 0.22.0 | Development tools | Apache-2.0 |  | https://sites.ecmwf.int/docs/tensogram/main | Direct optional `test` extra dependency. |
 | `obstore` | 0.11.0 | Development tools | MIT |  | https://developmentseed.org/obstore | Direct optional `test` extra dependency. |
-| `healpix-geo` | 0.2.1 | Development tools | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `test` extra dependency. |
+| `healpix-geo` | 0.4.1 | Development tools | Apache-2.0 |  | https://pypi.org/project/healpix-geo/ | Direct optional `test` extra dependency. |
 | `moto` | 5.2.2 | Development tools | Apache-2.0 |  | https://github.com/getmoto/moto | Direct optional `test` extra dependency. |
 | `griffelib` | 2.1.0 | Development tools | ISC |  | https://pypi.org/project/griffelib/ | Direct optional `test` extra dependency; static docstring inspection for the API docs coverage test. |
 | `pytest` | 9.1.1 | Development tools | MIT |  | https://docs.pytest.org/en/latest/ | Direct `dev` dependency group entry. |
-| `ruff` | 0.16.7 | Development tools | MIT |  | https://docs.astral.sh/ruff | Direct `dev` dependency group entry. |
+| `ruff` | 0.17.1 | Development tools | MIT |  | https://docs.astral.sh/ruff | Direct `dev` dependency group entry. |
 | `pytest-cov` | 7.1.0 | Development tools | MIT |  | https://pytest-cov.readthedocs.io/en/latest/changelog.html | Direct `dev` dependency group entry. |
 | `pytest-xdist` | 3.8.0 | Development tools | MIT |  | https://github.com/pytest-dev/pytest-xdist | Direct `dev` dependency group entry. |
 | `pytest-mock` | 3.15.1 | Development tools | MIT |  | https://github.com/pytest-dev/pytest-mock/ | Direct `dev` dependency group entry. |

@@ -65,7 +65,7 @@ export KFP_RUN_ID="<external-job-id>"
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target s3://bucket/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type s3 \

@@ -298,7 +298,7 @@ def _ingest_args(
         "ingest",
         _PLUGIN,
         "--input-data",
-        str(input_dir),
+        input_dir.as_uri(),
         "--target",
         f"file://{target}",
         "--product-name",

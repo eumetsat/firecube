@@ -1,5 +1,5 @@
 site_name: Firecube
-site_description: A plugin-based batch ingestion CLI for turning Earth Observation products into analysis-ready datacubes.
+site_description: Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.
 not_in_nav: |
   concepts/plugins/index.md
   quickstart/catalogs.md

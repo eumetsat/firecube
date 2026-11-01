@@ -56,7 +56,7 @@ def _ingest(source: Path, target: Path, *extra: str) -> subprocess.CompletedProc
             "ingest",
             "precip_daily",
             "--input-data",
-            str(source),
+            source.as_uri(),
             "--target",
             target.as_uri(),
             "--product-name",

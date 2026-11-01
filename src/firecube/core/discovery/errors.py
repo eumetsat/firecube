@@ -46,11 +46,10 @@ class UnknownSourceSchemeError(DiscoveryError):
         super().__init__(
             Message(
                 "Source {source!r} has the scheme {scheme!r}, which source discovery does "
-                "not read. {input_data} accepts a local path, a file:// or s3:// prefix, "
+                "not read. Source discovery reads a local path, a file:// or s3:// prefix, "
                 "or a stac:// collection.",
                 source=source,
                 scheme=scheme,
-                input_data=Param("input_data"),
             )
         )
 

@@ -48,6 +48,7 @@ from firecube.cli._typed_options import (
     TypedOptionsParam,
     coerce_options_for_plugin,
 )
+from firecube.cli._uri_policy import parse_and_validate_source_uri
 from firecube.cli.advise import advise as advise_group
 from firecube.cli.archive import archive as archive_group
 from firecube.cli.catalog import catalog as catalog_group
@@ -62,10 +63,7 @@ from firecube.core.product.resolver import ProductResolver
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
-from firecube.core.uris import (
-    is_remote_target,
-    local_path_from_target,
-)
+from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.api import IngestContext, StorageContext
 from firecube.ingestor.registry.loader import discover_ingestors
 
@@ -528,12 +526,13 @@ OPTION_GROUPS.update(
 )
 @click.pass_context
 def cli(ctx: click.Context, config_file: Path | None) -> None:
-    """batch ingestion tool for EO datasets
+    """Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes
 
-    Batch ingestion and management tool for Earth Observation datasets.
-    Writes Zarr and Parquet stores with built-in resume safety, idempotent
-    chunk tracking, and multi-resolution support. Run firecube ingest to
-    start a job, or explore subcommands for storage management and diagnostics.
+    Firecube handles the operational work of building and maintaining cubes,
+    so you can focus on the data. Writes Zarr and Parquet stores with
+    built-in resume safety, idempotent chunk tracking, and multi-resolution
+    support. Run firecube ingest to start a job, or explore subcommands for
+    storage management and diagnostics.
     """
     ctx.ensure_object(dict)
     if config_file is not None:
@@ -547,7 +546,7 @@ Examples:
   firecube ingest <plugin> --show-options
   # run ingestion from a local source to a local target
   firecube ingest <plugin> \\
-    --input-data /path/to/input \\
+    --input-data file:///path/to/input \\
     --target file:///path/to/output.zarr \\
     --product-name <name> \\
     --storage-type local \\
@@ -556,7 +555,7 @@ Examples:
     --write-mode direct
   # run with staged write mode (write locally then upload)
   firecube ingest <plugin> \\
-    --input-data /data/raw \\
+    --input-data file:///data/raw \\
     --target s3://bucket/output.zarr \\
     --product-name <name> \\
     --storage-type s3 \\
@@ -565,7 +564,7 @@ Examples:
     --write-mode staged
   # pass plugin-specific options
   firecube ingest <plugin> \\
-    --input-data /data/ \\
+    --input-data file:///data/ \\
     --target file:///tmp/output.zarr \\
     --product-name <name> \\
     --storage-type local \\
@@ -766,15 +765,15 @@ def ingest(
     )
     if stac_search is not None:
         options["stac_search"] = stac_search
-    sources: list[str] = []
-    for value in admitted:
-        if value and not is_remote_target(value):
-            local_source = local_path_from_target(value)
-            if not local_source.exists():
-                raise click.ClickException(f"Input data not found: {value}")
-            value = str(local_source)
-        if value:
-            sources.append(value)
+    sources = list(admitted)
+    for value in sources:
+        source_uri = parse_and_validate_source_uri(value, param_hint="--input-data")
+        if (
+            isinstance(source_uri, StorageUri)
+            and source_uri.protocol == "file"
+            and not Path(source_uri.path).exists()
+        ):
+            raise click.ClickException(f"Input data not found: {value}")
 
     from firecube.core import observability
 

@@ -42,7 +42,7 @@ def _ingest(target: Path, source: Path) -> subprocess.CompletedProcess[str]:
             "ingest",
             "cf_time_dim",
             "--input-data",
-            str(source),
+            source.as_uri(),
             "--target",
             f"file://{target}",
             "--product-name",

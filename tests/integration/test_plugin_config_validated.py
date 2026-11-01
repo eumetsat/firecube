@@ -57,7 +57,7 @@ def _ingest(
             "ingest",
             plugin,
             "--input-data",
-            str(source),
+            source.as_uri(),
             "--target",
             target.as_uri(),
             "--product-name",

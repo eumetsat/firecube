@@ -90,8 +90,6 @@ _URI_CALL = re.compile(
     r"|local_path_from_target|storage_uri_from_target|parse_target)\(|.*\.(removeprefix)\('file://'\)$"
 )
 _URI_PARSE_ROWS = {  # "path below src/firecube | qualified scope | callee xN" -> tag
-    "cli/main.py | ingest | is_remote_target x1": "PERMANENT: --input-data is exempt",
-    "cli/main.py | ingest | local_path_from_target x1": "PERMANENT: --input-data is exempt",
     "cli/chunks/_manager.py | _storage_uri_from_base | StorageUri.parse x1": (
         "PERMANENT: parses the base URI of the [storage] config, not a CLI value"
     ),

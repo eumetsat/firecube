@@ -155,10 +155,9 @@ def test_callable_dispatch_exercises_region_and_static_kinds(tmp_path: Path) -> 
         live. A regression that accumulates payloads (e.g. materializing all
         callables into a list before writing) would violate this bound.
 
-    The hard-number guard for retained peak lives in the benchmark harness
-    under ``tests/benchmarks/lazy_writeintent_harness/`` and requires the FCI
-    plugin — this integration test only asserts the structural coverage that
-    both kinds ran, which is a prerequisite for the harness's bound to apply.
+    No test in the repository measures retained peak memory. This integration
+    test only asserts the structural coverage that both kinds ran, which is a
+    prerequisite for any such bound to apply.
 
     Assertion strategy: both arrays must be present and non-fill. If dispatch
     had skipped either the region or the static callable, the corresponding

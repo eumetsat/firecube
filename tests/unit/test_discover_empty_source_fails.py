@@ -24,12 +24,14 @@ from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.types.context import (
+    IngestContext,
     OutputPaths,
     PipelineBatch,
     PipelineResult,
     PluginContext,
     RuntimeIngestContext,
 )
+from tests.helpers.fake_stac import FakeStacApi, install_fake_stac
 from tests.helpers.rows import table_row
 
 pytestmark = pytest.mark.unit
@@ -112,6 +114,45 @@ def test_empty_discovery_is_refused(subtests: Any, tmp_path: Path) -> None:
             pytest.raises(ConfigurationError, match=message),
         ):
             _discover(ingestor_cls, config, workdir / "source", [])
+
+
+_STAC_API = "https://stac.test/api"
+_STAC_SOURCE = "stac://stac.test/api/collections/coll"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("with_file_tree", "suffix_list_named"),
+    [(False, False), (True, True)],
+    ids=["stac_only", "mixed"],
+)
+def test_empty_discovery_text_follows_the_kind_of_source(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, with_file_tree: bool, suffix_list_named: bool
+) -> None:
+    install_fake_stac(monkeypatch, FakeStacApi(_STAC_API, []))
+    tree = tmp_path / "source"
+    tree.mkdir()
+    sources = (str(tree), _STAC_SOURCE) if with_file_tree else (_STAC_SOURCE,)
+    runtime = RuntimeIngestContext.from_ingest_context(
+        IngestContext(sources=sources, target="/tmp/target"),
+        run_id="run-1",
+        temp_root=None,
+        materializer=None,
+    )
+    ingestor = _MinimalIngestor()
+    ingestor.engine_config = EngineConfig(allow_empty_source=False)
+
+    with (
+        patch(_DISCOVERY_TARGET, return_value=[]),
+        pytest.raises(ConfigurationError) as refused,
+    ):
+        list(ingestor.discover_source_files(PluginContext(runtime)))
+
+    text = str(refused.value)
+    assert text.startswith("No source files found after applying input filters.")
+    assert "stac_search" in text
+    assert "allow_empty_source" in text
+    assert (".he5" in text) is suffix_list_named
 
 
 # (row id, ingestor class, engine config, files the walk finds)

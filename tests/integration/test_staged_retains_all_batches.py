@@ -117,7 +117,7 @@ def _ingest_staged(
             "ingest",
             "precip_daily",
             "--input-data",
-            str(source),
+            source.as_uri(),
             "--target",
             target_uri,
             "--product-name",

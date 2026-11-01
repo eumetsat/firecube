@@ -55,7 +55,7 @@ firecube zarr preallocate <plugin> \
   --storage-type local \
   --storage-driver fsspec \
   --write-mode direct \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --slot-start 0 \
   --slot-end 432
 ```
@@ -160,7 +160,7 @@ Pass one planned range to each ingestion process:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target file:///data/products/my_product.zarr \
   --product-name my_product \
   --storage-type local \
@@ -184,7 +184,7 @@ command, using the `static_owner` value from the plan in step 2:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target file:///data/products/my_product.zarr \
   --product-name my_product \
   --storage-type local \
@@ -214,7 +214,7 @@ export JOB_COMPLETION_INDEX="0"
 export FIRECUBE_SLOT_SIZE="144"
 
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target file:///data/products/my_product.zarr \
   --product-name my_product \
   --storage-type local \

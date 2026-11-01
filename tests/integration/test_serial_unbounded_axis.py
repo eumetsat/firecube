@@ -118,7 +118,7 @@ def _ingest_args(tmp_path: Path, *extra: str) -> list[str]:
         "ingest",
         _PLUGIN,
         "--input-data",
-        str(input_dir),
+        input_dir.as_uri(),
         "--target",
         f"file://{tmp_path / 'cube.zarr'}",
         "--product-name",

@@ -24,9 +24,11 @@ for a local source.
   opens an asset through Firecube, an `https://` or `http://` href is
   downloaded to the workspace of the run. The download happens the first time
   the plugin opens the asset. It is anonymous: Firecube sends no signature and
-  no credentials. Firecube reads an `s3://` href like any other S3 source, with the
-  credentials in [Configure S3 Access](s3-access.md). Firecube refuses an href
-  with any other scheme it cannot open.
+  no credentials. Firecube reads an `s3://` href with the storage settings of the run.
+  A public bucket, such as the one behind `cop-dem-glo-30`, needs
+  `--storage-anonymous`. A private bucket uses the credentials in
+  [Configure S3 Access](s3-access.md). Firecube refuses an href with any other
+  scheme it cannot open.
 - The API supports STAC item search. A static `catalog.json` catalogue is not
   supported.
 
@@ -52,6 +54,7 @@ for a local source.
      --product-name dem \
      --storage-type local \
      --storage-driver fsspec \
+     --storage-anonymous \
      --write-mode direct
    ```
 
@@ -76,21 +79,24 @@ for a local source.
      --product-name dem \
      --storage-type local \
      --storage-driver fsspec \
+     --storage-anonymous \
      --write-mode direct
    ```
 
 3. To read several collections, or a collection and a local directory, repeat
-   `--input-data`. `--stac-search` applies to every `stac://` source:
+   `--input-data`. Each value is a `file://`, `s3://` or `stac://` URI.
+   `--stac-search` applies to every `stac://` source:
 
    ```bash
    firecube ingest PLUGIN_NAME \
      --input-data stac://earth-search.aws.element84.com/v1/collections/cop-dem-glo-30 \
-     --input-data /data/raw/extra-tiles \
+     --input-data file:///data/raw/extra-tiles \
      --stac-search '{"datetime": "2021-01-01T00:00:00Z/2021-12-31T23:59:59Z"}' \
      --target file:///data/products/dem.zarr \
      --product-name dem \
      --storage-type local \
      --storage-driver fsspec \
+     --storage-anonymous \
      --write-mode direct
    ```
 
@@ -135,6 +141,7 @@ printed.
 | `stac_search in the plugin configuration applies to stac:// sources only, and no --input-data names one.` | The plugin configuration holds a `stac_search` table and no `--input-data` is a `stac://` URI | Remove the table, or add a `stac://` source |
 | `Firecube cannot open ftp:// sources: ftp://host/file.nc` | The plugin opened an asset href through Firecube, and Firecube cannot open its scheme, here `ftp://` | Use an API that publishes `https://` or `s3://` assets, or open the asset in the plugin |
 | `firecube ingest requires the stac extra` | `pystac-client` is not installed | Run `uv pip install 'firecube[stac]'` |
+| `Unable to locate credentials` | Firecube read a public `s3://` asset without credentials | Pass `--storage-anonymous` |
 | `Cannot search STAC source stac://...` | The API did not answer, or refused the search | Open the landing page in a browser and retry; check the host and API root |
 
 ## Next Steps

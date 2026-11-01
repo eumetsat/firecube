@@ -83,7 +83,7 @@ def _ingest(source: Path, target: Path, *, batch_size: int) -> subprocess.Comple
         "ingest",
         "precip_daily",
         "--input-data",
-        str(source),
+        source.as_uri(),
         "--target",
         target.as_uri(),
         "--product-name",

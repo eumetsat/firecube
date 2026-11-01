@@ -205,7 +205,7 @@ firecube zarr preallocate my_plugin \
   --write-mode direct
 
 firecube ingest my_plugin \
-  --input-data ./input \
+  --input-data "file://$PWD/input" \
   --target file:///tmp/my_product.zarr \
   --product-name my_product \
   --write-mode direct
@@ -280,7 +280,7 @@ Ingest the first batch:
 
 ```bash
 firecube ingest my_plugin \
-  --input-data ./first-batch \
+  --input-data "file://$PWD/first-batch" \
   --target file:///tmp/my_plugin_out.zarr \
   --product-name my_plugin \
   --write-mode direct
@@ -290,7 +290,7 @@ Firecube refuses a second run into the same store unless you opt in. Add `--opti
 
 ```bash
 firecube ingest my_plugin \
-  --input-data ./second-batch \
+  --input-data "file://$PWD/second-batch" \
   --target file:///tmp/my_plugin_out.zarr \
   --product-name my_plugin \
   --write-mode direct \

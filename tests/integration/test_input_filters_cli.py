@@ -77,7 +77,7 @@ def args(tmp_path, command="ingest", plugin=None):
         *prefix,
         plugin or (_FilterReader.name if command == "ingest" else SLOT_PLUGIN),
         "--input-data",
-        str(tmp_path / "inputs"),
+        (tmp_path / "inputs").as_uri(),
         "--target",
         (tmp_path / "output.zarr").as_uri(),
         "--product-name",

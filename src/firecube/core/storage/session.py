@@ -197,7 +197,7 @@ class StorageSession:
         *,
         multipart_threshold: int = 64 * 1024 * 1024,
     ) -> int:
-        from firecube.core.filesystem.protocol import Multipart  # pyright: ignore[reportAttributeAccessIssue]  # noqa: I001
+        from firecube.core.filesystem.protocol import Multipart  # pyright: ignore[reportAttributeAccessIssue]
 
         file_size = local_path.stat().st_size
         fs = cast(Any, self.fs())
@@ -761,7 +761,7 @@ def _publish_object(fs: Any, dst_uri: StorageUri, write: Callable[[StorageUri], 
 
 
 def _upload_tree_multipart(fs: Any, local_path: Path, remote_path: str) -> bool:
-    from firecube.core.filesystem.fsspec_backend import FsspecFilesystem  # noqa: I001
+    from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
     from firecube.core.filesystem.instrumentation import InstrumentedFilesystem
     from firecube.core.filesystem.obstore_backend import ObstoreFilesystem
     from firecube.core.filesystem.protocol import Multipart  # pyright: ignore[reportAttributeAccessIssue]

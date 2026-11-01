@@ -116,23 +116,16 @@ def test_storage_uri_never_holds_a_stac_location() -> None:
 
 
 def test_admit_input_sources_keeps_order_and_reports_stac() -> None:
-    values = ("/data/raw", "stac://host/api/collections/X", "s3://bucket/prefix")
+    values = ("file:///data/raw", "stac://host/api/collections/X", "", "s3://bucket/prefix")
 
     admitted, has_stac = admit_input_sources(values, param_hint="--input-data")
 
-    assert admitted == values
+    assert admitted == ("file:///data/raw", "stac://host/api/collections/X", "s3://bucket/prefix")
     assert has_stac is True
-
-
-def test_admit_input_sources_without_stac_passes_values_through() -> None:
-    values = ("relative/dir", "s3://bucket/prefix", "file:///abs/dir", "https://plugin/own")
-
-    admitted, has_stac = admit_input_sources(values, param_hint="--input-data")
-
-    assert admitted == values
-    assert has_stac is False
 
 
 def test_admit_input_sources_refuses_a_bad_stac_value() -> None:
     with pytest.raises(click.UsageError, match="must name a host"):
-        admit_input_sources(("/data", "stac:///api/collections/X"), param_hint="--input-data")
+        admit_input_sources(
+            ("file:///data", "stac:///api/collections/X"), param_hint="--input-data"
+        )

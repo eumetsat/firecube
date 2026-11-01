@@ -418,10 +418,9 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         source of the run, in order, deduplicates the items and sorts them
         once:
 
-        - A local path or a remote URI reached through the run's storage
-          configuration is searched recursively for ``.zip``, ``.h5``,
-          ``.nc``, ``.nc4``, ``.hdf``, and ``.he5`` files plus local files
-          with unselected or absent suffixes whose content looks like HDF5.
+        - A file tree, given as a ``file://`` or ``s3://`` URI, is searched
+          recursively for ``.zip``, ``.h5``, ``.nc``, ``.nc4``, ``.hdf``, and ``.he5``
+          files plus local files with unselected or absent suffixes whose content looks like HDF5.
           Positive ``input_filters`` entries add files to that set; entries
           starting with ``!`` exclude matches, overriding suffix and content
           selection regardless of list order.
@@ -430,6 +429,9 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
           every asset whose roles contain ``data`` is collected. The suffix
           list does not apply; ``input_filters`` narrow the assets on the
           basename of their href.
+
+        Each entry of ``ctx.sources`` from the CLI is a ``file://``, ``s3://``
+        or ``stac://`` URI, as given. A library caller may pass a local path.
 
         Pass ``--input-filters`` as one JSON list. Filters match
         case-sensitively, including for single-file sources. Items are
@@ -484,19 +486,44 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             allow_empty = engine_cfg is not None and engine_cfg.allow_empty_source
             in_slot_range = engine_cfg is not None and engine_cfg.slot_start is not None
             if not allow_empty and not in_slot_range:
-                raise ConfigurationError(
-                    Message(
+                kinds = {infer_target_protocol(source) == "stac" for source in ctx.sources}
+                context = {"plugin": self.name, "product_uri": ctx.target, "run_id": ctx.run_id}
+                if kinds == {True}:
+                    message = Message(
+                        "No source files found after applying input filters. "
+                        "The STAC search found no asset with the data role that passes "
+                        "the input filters. Adjust {stac_search} or {input_filters}, or "
+                        "set {allow_empty_source} to proceed with an empty source.",
+                        stac_search=Param("stac_search"),
+                        input_filters=Param("input_filters"),
+                        allow_empty_source=PluginOption("allow_empty_source", "true"),
+                        **context,
+                    )
+                elif True in kinds:
+                    message = Message(
+                        "No source files found after applying input filters. "
+                        "The default discovery looks for files ending in: "
+                        ".zip, .h5, .nc, .nc4, .hdf, .he5 below a path or prefix, "
+                        "and the STAC search found no asset with the data role that "
+                        "passes the input filters. To match different files, pass "
+                        "{input_filters} or adjust {stac_search}, or set "
+                        "{allow_empty_source} to proceed with an empty source.",
+                        stac_search=Param("stac_search"),
+                        input_filters=Param("input_filters", '["*.csv"]'),
+                        allow_empty_source=PluginOption("allow_empty_source", "true"),
+                        **context,
+                    )
+                else:
+                    message = Message(
                         "No source files found after applying input filters. The default discovery looks for files ending in: "
                         ".zip, .h5, .nc, .nc4, .hdf, .he5. To match different files, pass "
                         "{input_filters} or set "
                         "{allow_empty_source} to proceed with an empty source.",
                         input_filters=Param("input_filters", '["*.csv"]'),
                         allow_empty_source=PluginOption("allow_empty_source", "true"),
-                        plugin=self.name,
-                        product_uri=ctx.target,
-                        run_id=ctx.run_id,
+                        **context,
                     )
-                )
+                raise ConfigurationError(message)
             self._log.warning("No input files found in %s", ", ".join(ctx.sources))
             return iter(())
 
