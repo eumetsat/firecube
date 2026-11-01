@@ -526,12 +526,13 @@ OPTION_GROUPS.update(
 )
 @click.pass_context
 def cli(ctx: click.Context, config_file: Path | None) -> None:
-    """batch ingestion tool for EO datasets
+    """Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes
 
-    Batch ingestion and management tool for Earth Observation datasets.
-    Writes Zarr and Parquet stores with built-in resume safety, idempotent
-    chunk tracking, and multi-resolution support. Run firecube ingest to
-    start a job, or explore subcommands for storage management and diagnostics.
+    Firecube handles the operational work of building and maintaining cubes,
+    so you can focus on the data. Writes Zarr and Parquet stores with
+    built-in resume safety, idempotent chunk tracking, and multi-resolution
+    support. Run firecube ingest to start a job, or explore subcommands for
+    storage management and diagnostics.
     """
     ctx.ensure_object(dict)
     if config_file is not None:

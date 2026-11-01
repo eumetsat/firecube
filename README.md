@@ -3,7 +3,11 @@
 </p>
 
 <p align="center">
-  <strong>Plugin-driven CLI for turning Earth Observation products into analysis-ready datacubes</strong>
+  <strong>Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes</strong>
+</p>
+
+<p align="center">
+  Firecube handles the operational work of building and maintaining cubes, so you can focus on the data.
 </p>
 
 <p align="center">
