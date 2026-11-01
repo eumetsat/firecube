@@ -91,7 +91,7 @@ def validate_existing_time_array_schema(
         is_root = not str(group).strip("/")
         # `root[""]` reloads the consolidated snapshot, so the root uses the live handle.
         node = root if is_root else root[group]
-        if is_root and not any(True for _ in node.array_keys()):
+        if is_root and not any(True for _ in root.array_keys()):
             # The root document exists before any cube array does, and a failed-batch
             # repair of a fresh root group keeps it: a root without arrays is new.
             return
