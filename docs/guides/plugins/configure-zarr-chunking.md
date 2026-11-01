@@ -20,7 +20,7 @@ The value is a JSON object keyed by dimension name, so quote the option:
 
 ```bash
 firecube ingest my_plugin \
-  --input-data /data/raw \
+  --input-data file:///data/raw \
   --target "file://$PWD/out.zarr" \
   --product-name my_product \
   --write-mode direct \
