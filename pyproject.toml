@@ -148,8 +148,7 @@ markers = [
     "concurrency: concurrency tests",
     "race: multi-process race regression on legacy per-slot chunks; RED by design; excluded from default lane; run explicitly via -m race",
     "gate: promoted regression gates that must stay GREEN under the shipped mechanism",
-    "benchmark: peak-retained-payload regression-smoke harness (Linux + /usr/bin/time -v; skips gracefully otherwise)",
-    "benchmark_evidence: long-form high-fidelity benchmark evidence (manual; not part of default CI lane)",
+    "benchmark: remote-reader timing check against FIRECUBE_OBJSTORE_URL; skips when unset",
 ]
 
 [tool.bandit]

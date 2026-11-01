@@ -97,9 +97,8 @@ uv run pytest tests/unit/test_chunk_manager.py -q
 | `gate` | Deterministic concurrency-invariant gates (e.g. coordinate-materialization serialization). Run in the default lane; use `-m gate` to run them alone. |
 | `concurrency` | Tests parallel/concurrent behaviour |
 | `benchmark` | Remote-reader timing check: the one test carrying it, `test_remote_open_time` in `tests/integration/test_open_time_default_reader.py`, opens the store at `FIRECUBE_OBJSTORE_URL` with default reader settings and asserts elapsed time within a budget; it skips when `FIRECUBE_OBJSTORE_URL` is unset, so it skips in the fast lane unless that variable is set |
-| `benchmark_evidence` | Long-form, high-fidelity benchmark evidence; manual, not part of the default CI lane |
 
-`pyproject.toml` registers these 14 markers. `--strict-markers` is on, so an unregistered marker is a collection error.
+`pyproject.toml` registers these 13 markers. `--strict-markers` is on, so an unregistered marker is a collection error.
 
 Mark tests at definition time. Unmarked tests are still collected; markers exist to let you filter, not to gate collection.
 

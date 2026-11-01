@@ -453,9 +453,7 @@ def test_cross_plan_c_alignment_callable_payload_passes_through_compile_and_disp
        and assert the compiled ``WriteIntent.data`` is the *exact same
        callable object* — no invocation, no wrapping, no ``.copy()``. If
        compile eagerly resolved the callable it would materialise
-       payloads at plan time, breaking the lazy-payload memory bound
-       (see the callable-payload harness in
-       ``tests/benchmarks/lazy_writeintent_harness/``).
+       payloads at plan time, breaking the lazy-payload memory bound.
     2. *Full-pipeline dispatch*: run
        ``indexed_write_with_statics`` end-to-end. Its schema pre-
        allocates ``data/lat`` at ``fill_value=0.0`` and the static write
