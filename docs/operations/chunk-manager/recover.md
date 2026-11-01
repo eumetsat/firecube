@@ -197,7 +197,7 @@ already succeeded:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target "$PRODUCT_URI" \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \

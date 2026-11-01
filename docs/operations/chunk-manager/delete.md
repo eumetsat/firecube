@@ -240,7 +240,7 @@ NaN-filled 1 spans and deleted 0 chunk keys from storage
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source/2024-03-01 \
+  --input-data file:///data/source/2024-03-01 \
   --target "$PRODUCT_URI" \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
@@ -265,7 +265,7 @@ delete step is required.
 
 ```bash
 firecube ingest <plugin> \
-  --input-data ./replacement-data \
+  --input-data "file://$PWD/replacement-data" \
   --target "$PRODUCT_URI" \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
