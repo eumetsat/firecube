@@ -4950,6 +4950,23 @@ plugin name to check for legacy slot-index records that predate the current
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin
 </code></pre></div>
+<p>If the plugin needs an option to declare its index, pass the option with
+<code>--option KEY=VALUE</code>. The command configures the plugin before it reads the
+index spec. Without the option, a plugin such as <code>mtg_fci_l1c</code> refuses:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Error: Plugin &#39;mtg_fci_l1c&#39; failed to resolve index_spec: product_type is required. Pass --option product_type=FDHSI or --option product_type=HRFI.
+</code></pre></div>
+<p>Pass each option once:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--plugin<span class="w"> </span>mtg_fci_l1c<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">product_type</span><span class="o">=</span>FDHSI<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">time_epoch</span><span class="o">=</span><span class="m">2024</span>-01-01<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">time_slots</span><span class="o">=</span><span class="m">3</span>
+</code></pre></div>
+<p>Expected output resembles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>VERIFIED resolved index 7998667a5eba8d09
+</code></pre></div>
 <p><strong>Required flags:</strong></p>
 <table>
 <thead>
@@ -4982,6 +4999,10 @@ plugin name to check for legacy slot-index records that predate the current
 <td><code>--plugin</code></td>
 <td>Plugin name for legacy-record detection.</td>
 </tr>
+<tr>
+<td><code>--option KEY=VALUE</code></td>
+<td>Plugin option. Repeat the flag for each option. Requires <code>--plugin</code>.</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Exit codes:</strong></p>
@@ -4999,7 +5020,11 @@ plugin name to check for legacy slot-index records that predate the current
 </tr>
 <tr>
 <td><code>1</code></td>
-<td>Record is a legacy format or cannot be read.</td>
+<td>Record is a legacy format or cannot be read, or the plugin cannot resolve its spec.</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>The command received <code>--option</code> without <code>--plugin</code>.</td>
 </tr>
 <tr>
 <td><code>3</code></td>
@@ -5013,16 +5038,29 @@ Use this command when the record is missing, corrupted, or was written by an
 older Firecube version that used a different format. If the root attrs of the
 product still hold the resolved-index hash, the command refuses. See
 <a href="#recover-from-attrs-drift">Recover From Attrs Drift</a>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
 </code></pre></div>
 <p>The command loads the named plugin, calls <code>index_spec()</code>, resolves the spec,
 and writes the resulting record to <code>.firecube/index/current.json</code>. If a record
 already exists with the same identity hash, the command reports "unchanged" and
 exits cleanly. If the existing record has a different hash, the command exits
 with code <code>1</code> and prints the conflict.</p>
+<p>If the plugin needs an option to declare its index, pass it with
+<code>--option KEY=VALUE</code>. Repeat the flag for each option:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--plugin<span class="w"> </span>mtg_fci_l1c<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">product_type</span><span class="o">=</span>FDHSI<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">time_epoch</span><span class="o">=</span><span class="m">2024</span>-01-01<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">time_slots</span><span class="o">=</span><span class="m">3</span>
+</code></pre></div>
+<p>Expected output when the record already matches:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Index record unchanged: identity_hash=7998667a5eba8d09
+</code></pre></div>
 <p><strong>Required flags:</strong></p>
 <table>
 <thead>
@@ -5043,6 +5081,21 @@ with code <code>1</code> and prints the conflict.</p>
 <tr>
 <td><code>--product-name</code></td>
 <td>Logical product name.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Optional flags:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--option KEY=VALUE</code></td>
+<td>Plugin option. Repeat the flag for each option.</td>
 </tr>
 </tbody>
 </table>
@@ -5118,15 +5171,15 @@ record, use the plugin that wrote the product, or a new target.
 <p>Cubes written by Firecube v0.1.4.post1 and earlier used a legacy slot-index
 format. Run <code>firecube zarr index verify</code> to detect the legacy format, then
 <code>firecube zarr index rebuild</code> to write the current record:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>verify<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>rebuild<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/my_product.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span>--plugin<span class="w"> </span>my_plugin<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product
 </code></pre></div>
 <p>After rebuilding, run <code>firecube zarr index show</code> to confirm the record is present
 and the identity hash matches the plugin's current <code>index_spec()</code> declaration.</p>

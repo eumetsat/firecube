@@ -1178,6 +1178,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#write-at-the-store-root" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write At The Store Root
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#common-mistakes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4823,6 +4834,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#write-at-the-store-root" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write At The Store Root
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#common-mistakes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5034,8 +5056,23 @@ the <code>TIME_DIM</code> values, and at least one known data value:</p>
 <p>A second run into the same store is refused. Add
 <code>--option resume_existing=true</code> to skip timestamps already written and append
 new ones.</p>
+<p>To write the dataset at the store root, see
+<a href="#write-at-the-store-root">Write At The Store Root</a>.</p>
 <p>If built-in discovery does not include the product's source names, pass
 <code>--input-filters</code> or customize discovery before verifying ingestion.</p>
+<h2 id="write-at-the-store-root">Write At The Store Root</h2>
+<p><code>GenericZarrIngestor</code> writes into the group <code>default</code>, because the inherited
+<code>get_batch_groups</code> returns <code>["default"]</code>. To write at the store root, override
+<code>get_batch_groups</code> and return <code>["/"]</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_batch_groups</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">PluginContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>        <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;/&quot;</span><span class="p">]</span>
+</code></pre></div>
+<p>Firecube then calls <code>build_dataset</code> with <code>group="/"</code>. Return the whole dataset
+from that call.</p>
+<p>The verification step then opens the root, not the <code>default</code> group. Leave out
+the <code>group=</code> argument:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">print</span><span class="p">(</span><span class="n">xr</span><span class="o">.</span><span class="n">open_zarr</span><span class="p">(</span><span class="s2">&quot;/tmp/my_plugin_out.zarr&quot;</span><span class="p">,</span> <span class="n">consolidated</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+</code></pre></div>
 <h2 id="common-mistakes">Common Mistakes</h2>
 <table>
 <thead>

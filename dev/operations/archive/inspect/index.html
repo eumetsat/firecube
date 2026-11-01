@@ -3805,6 +3805,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#root-group-label" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Group Label
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validate-integrity" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4726,6 +4737,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#root-group-label" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Group Label
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validate-integrity" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4837,33 +4859,47 @@
 <a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>[control-plane]
 <a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>  Product: product.zarr
 </code></pre></div>
+<h2 id="root-group-label">Root Group Label</h2>
+<p>If the archive holds the root group of the source product, the commands label
+that group <code>(root)</code>. <code>archive info</code> and <code>archive list</code> print <code>Group: (root)</code>.
+<code>archive info</code> prints <code>(root)</code> in the <code>Groups:</code> line. <code>archive create</code> prints it
+in its own <code>Groups:</code> line.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Groups:         (root)
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Group: (root)
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  Source:    file:///data/products/MY_PRODUCT.zarr
+</code></pre></div>
 <h2 id="validate-integrity">Validate Integrity</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>validate<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>validate<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span>
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
 </code></pre></div>
 <p>Use <code>--quick</code> for a structure-only check:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>validate<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span>--quick
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>validate<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span>--quick
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
+</code></pre></div>
+<p>A <code>.tgm</code> archive with no messages is invalid. The command exits with code 1:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>INVALID: /data/archives/EMPTY.tgm (1 issue(s))
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>  [file] offset=0: Archive contains no messages.
 </code></pre></div>
 <h2 id="zip-archives">Zip Archives</h2>
 <p><code>info</code>, <code>list</code>, and <code>validate</code> accept <code>.zip</code> archives with the same flags:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>info<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.zarr.zip&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>info<span class="w"> </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.zarr.zip&quot;</span>
 </code></pre></div>
 <p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Path:           /data/archives/MY_PRODUCT.zarr.zip
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>Format:         zip
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Size:           0.01 MB
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>Entries:        18
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>Groups:         (root), data
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>Control-plane:  present
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>Group: data
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>  Variables:
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    temperature: shape=[4, 2, 3] dtype=float64 chunks=[4, 2, 3] codec=zstd
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>Path:           /data/archives/MY_PRODUCT.zarr.zip
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>Format:         zip
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>Size:           0.01 MB
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>Entries:        18
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>Groups:         (root), data
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>Control-plane:  present
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>Group: data
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>  Variables:
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>    temperature: shape=[4, 2, 3] dtype=float64 chunks=[4, 2, 3] codec=zstd
 </code></pre></div>
 <p><code>archive list</code> prints each group as an xarray dataset. <code>archive validate</code>
 checks the CRC of every entry and that the archive opens as Zarr; <code>--quick</code>
@@ -4887,6 +4923,16 @@ skips the CRC check.</p>
 <td><code>requires the tensogram extras</code></td>
 <td><code>.tgm</code> support is not installed.</td>
 <td>Install <code>firecube[tensogram]</code> in the active environment.</td>
+</tr>
+<tr>
+<td><code>INVALID: ...</code> with <code>Archive contains no messages.</code></td>
+<td>The <code>.tgm</code> archive holds no messages. <code>archive validate</code> exits with code 1.</td>
+<td>Recreate the archive from the source product.</td>
+</tr>
+<tr>
+<td><code>Error: Archive contains no messages.</code></td>
+<td><code>archive info</code> reads a <code>.tgm</code> archive with no messages and exits with code 1.</td>
+<td>Recreate the archive from the source product.</td>
 </tr>
 <tr>
 <td>Validation fails</td>

@@ -1190,6 +1190,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#directzarr-refuses-the-root-group-beside-a-named-group" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DirectZarr Refuses The Root Group Beside A Named Group
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4746,6 +4757,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#directzarr-refuses-the-root-group-beside-a-named-group" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DirectZarr Refuses The Root Group Beside A Named Group
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4840,6 +4862,13 @@ the list is empty and returning <code>None</code> skips that group for this batc
 <p><code>DirectZarrIngestor</code> works differently: it declares its groups in
 <code>zarr_schema</code> and names the group on each write. See
 <a href="../direct-zarr/">Declare The Schema And Index</a>.</p>
+<h2 id="directzarr-refuses-the-root-group-beside-a-named-group">DirectZarr Refuses The Root Group Beside A Named Group</h2>
+<p><code>DirectZarrIngestor</code> refuses a schema that declares the root group <code>"/"</code> beside
+a named group. To write the cube at the store root, declare only
+<code>ZarrGroupSpec(group="/")</code>. For the same layout on <code>GenericZarrIngestor</code>,
+return only <code>["/"]</code> from <code>get_batch_groups</code>. See
+<a href="../generic-zarr/#write-at-the-store-root">Write At The Store Root</a> and
+<a href="../direct-zarr/#write-the-cube-at-the-store-root">Write The Cube At The Store Root</a>.</p>
 <h2 id="verify">Verify</h2>
 <p>Run your plugin on a small input, then open one group and confirm it holds
 only its own variables. Swap the group name to check the next one:</p>

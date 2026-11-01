@@ -4840,13 +4840,21 @@ replace a written span.</p>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">PRODUCT_NAME</span><span class="o">=</span><span class="s2">&quot;MY_PRODUCT&quot;</span>
 </code></pre></div>
 <h2 id="preflight">Preflight</h2>
-<p>The full URI locates the product. Deleting storage objects also requires the
-storage type and driver. For a local product:</p>
+<p>The full URI locates the product and the storage objects to delete. If you pass
+it to <code>--product-name</code>, <code>chunks delete</code> needs no storage type and no storage
+driver. It needs no <code>[storage]</code> section either. This holds for a dry run and a
+real run.</p>
+<p>The URI does not supply S3 access. For an <code>s3://</code> product, make working
+credentials available through the normal credential chain of the default driver.
+Anonymous access is off. If you use a custom endpoint, set it in the storage
+configuration.</p>
+<p>A bare product name and <code>--all-products</code> still need the storage type and driver.
+For a local product:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_STORAGE_TYPE</span><span class="o">=</span><span class="nb">local</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_STORAGE_DRIVER</span><span class="o">=</span>fsspec
 </code></pre></div>
-<p><code>--manifest-only</code> does not require this storage configuration because it keeps
-the product data.</p>
+<p><code>--manifest-only</code> does not need this storage configuration because it keeps the
+product data.</p>
 <p>Confirm no writer is using the product, then inspect the tracked records:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span>--include-span
 </code></pre></div>
@@ -5028,9 +5036,19 @@ existing data), incoming or existing duplicates, and NaT values. State=2
 </thead>
 <tbody>
 <tr>
-<td><code>Storage configuration not available</code></td>
-<td>Storage deletion needs a storage type and driver even when the product URI is explicit.</td>
-<td>Set <code>FIRECUBE_STORAGE_TYPE</code> and <code>FIRECUBE_STORAGE_DRIVER</code>; also configure credentials for S3.</td>
+<td><code>Chunk operations require a full product URI or a [storage] configuration</code></td>
+<td>The run has a bare product name or <code>--all-products</code>, and no storage configuration.</td>
+<td>Pass the full product URI to <code>--product-name</code>. Or set <code>FIRECUBE_STORAGE_TYPE</code> and <code>FIRECUBE_STORAGE_DRIVER</code>.</td>
+</tr>
+<tr>
+<td><code>MissingScope</code> (exit code 2)</td>
+<td>The run has neither <code>--product-name</code> nor <code>--all-products</code>.</td>
+<td>Pass <code>--product-name &lt;product URI&gt;</code> or <code>--all-products</code>.</td>
+</tr>
+<tr>
+<td>Access denied or no credentials for an <code>s3://</code> product</td>
+<td>The URI does not supply S3 credentials.</td>
+<td>Make credentials available to the default driver. Set the endpoint in the storage configuration if you use one.</td>
 </tr>
 <tr>
 <td>Span is not aligned</td>

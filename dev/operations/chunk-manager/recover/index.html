@@ -5048,6 +5048,20 @@ history.</p>
 </code></pre></div>
 <p>Check that the JSON report has <code>is_valid: true</code> and the command exits 0. If it
 exits 1, resolve the reported validation issues before using the product.</p>
+<p>If the group is a time-indexed group, check that <code>arrays_checked</code> lists its
+arrays. A report for such a group that checked no array is not valid. The
+command exits 1 and <code>info_notes</code> holds this note:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>no array of data was checked: no time dimension found; pass --time-dim to name it
+</code></pre></div>
+<p>If you see the note, pass the time dimension of the plugin:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>validate<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span>--product<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span>--group<span class="w"> </span>data<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span>--time-dim<span class="w"> </span><span class="nb">time</span>
+</code></pre></div>
+<p>Without <code>--time-dim</code>, the command finds the time dimension from the
+<code>firecube_timestamp_state</code> array. A DirectZarr cube has no such array, so the
+command then uses the marker of its time coordinate.</p>
 <h2 id="failure-recovery">Failure Recovery</h2>
 <table>
 <thead>

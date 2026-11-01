@@ -8063,6 +8063,12 @@ Always run with --dry-run first.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
+<td><code>--option</code></td>
+<td>TYPED_OPTION</td>
+<td>Plugin option in key=value form.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
 <td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
@@ -8153,6 +8159,12 @@ Always run with --dry-run first.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
+<td><code>--option</code></td>
+<td>TYPED_OPTION</td>
+<td>Plugin option in key=value form. Requires --plugin.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
 <td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
@@ -8187,6 +8199,24 @@ Always run with --dry-run first.</p>
 <td>float</td>
 <td>Resolution levels to build (repeatable, e.g. -r 1.0 -r 0.5).</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>-g</code>, <code>--group</code></td>
+<td>text</td>
+<td>Group that holds the dataset; omit, '/' or '' for the root. Levels go to <group>/multires/<res>deg.</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>--lat-name</code></td>
+<td>text</td>
+<td>Name of the 1-D latitude coordinate to coarsen.</td>
+<td><code>lat</code></td>
+</tr>
+<tr>
+<td><code>--lon-name</code></td>
+<td>text</td>
+<td>Name of the 1-D longitude coordinate to coarsen.</td>
+<td><code>lon</code></td>
 </tr>
 <tr>
 <td><code>--product-name</code></td>
@@ -8479,7 +8509,7 @@ structured JSON summary.</p>
 <tr>
 <td><code>--time-dim</code></td>
 <td>text</td>
-<td>time-dimension name used to classify arrays for the static-marker check; must match the cube's <code>BaseIngestor.time_dim_name</code> ClassVar. When omitted, the name is auto-detected from the stored <code>firecube_timestamp_state</code> array. Pass this flag explicitly when the plugin uses a non-default dimension name (e.g. <code>--time-dim time</code>).</td>
+<td>time-dimension name used to classify arrays for the static-marker check; must match the cube's <code>BaseIngestor.time_dim_name</code> ClassVar. When omitted, the name is auto-detected from the stored <code>firecube_timestamp_state</code> array or from a marked time coordinate. Pass this flag explicitly when the plugin uses a non-default dimension name (e.g. <code>--time-dim time</code>).</td>
 <td>None</td>
 </tr>
 <tr>

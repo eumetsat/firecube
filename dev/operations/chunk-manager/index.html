@@ -3516,10 +3516,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#local-storage-preflight" class="md-nav__link">
+  <a href="#storage-configuration-for-deletion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local Storage Preflight
+        Storage Configuration For Deletion
       
     </span>
   </a>
@@ -4704,10 +4704,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#local-storage-preflight" class="md-nav__link">
+  <a href="#storage-configuration-for-deletion" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local Storage Preflight
+        Storage Configuration For Deletion
       
     </span>
   </a>
@@ -4801,15 +4801,30 @@ product directly:</p>
 </code></pre></div>
 <p><code>firecube chunks</code> may also print storage-configuration log lines when logging
 is enabled. The command result is the table or JSON payload.</p>
-<h2 id="local-storage-preflight">Local Storage Preflight</h2>
-<p>Commands that delete storage data also need a storage type and driver. The full
-URI still supplies the product location:</p>
+<h2 id="storage-configuration-for-deletion">Storage Configuration For Deletion</h2>
+<p>If you pass the full product URI to <code>--product-name</code>, the URI names the product.
+Then <code>chunks delete</code> needs no storage type, no storage driver and no <code>[storage]</code>
+section. The command deletes the storage objects through a filesystem bound to
+that product. This holds for a dry run and for a real run.</p>
+<p>A <code>[storage]</code> target path in the configuration does not change where a run with
+a product URI deletes.</p>
+<p>The URI does not supply S3 access. If the URI starts with <code>s3://</code>, the command
+uses the default driver and the normal credential chain of that driver. Anonymous
+access is off. Make working credentials available before you run the command. If
+you use a custom endpoint, set it in the storage configuration.</p>
+<p>Two cases still need a storage configuration:</p>
+<ul>
+<li>A bare product name given to <code>--product-name</code>.</li>
+<li><code>--all-products</code>.</li>
+</ul>
+<p>For these, set the storage type and driver:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_STORAGE_TYPE</span><span class="o">=</span><span class="nb">local</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_STORAGE_DRIVER</span><span class="o">=</span>fsspec
 </code></pre></div>
-<p>Without this storage configuration, <code>chunks delete</code> fails before deleting or
-previewing matched storage records. Record-only deletion with <code>--manifest-only</code>
-does not require it.</p>
+<p>Without it, these runs fail before they delete or preview any record.
+Record-only deletion with <code>--manifest-only</code> does not need it.</p>
+<p><code>chunks delete</code> also needs a scope. A run with neither <code>--product-name</code> nor
+<code>--all-products</code> exits with code 2 and <code>MissingScope</code>. Pass one of the two flags.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="inspect/">Inspect ChunkManager State</a></strong> — list records, runs, claims, or snapshots</li>

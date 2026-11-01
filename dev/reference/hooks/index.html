@@ -5989,6 +5989,8 @@ becomes the group path inside the store, for Parquet it becomes the
 output partition (subdirectory). Called once per planned batch;
 <code>build_dataset</code> is then invoked once per group with the full batch
 item list, and the plugin routes items to the group it is building.</p>
+<p>A GenericZarr plugin returns <code>["/"]</code> to write its dataset at the store
+root instead of in a named group.</p>
 <p>Implementations MUST be deterministic and return a stable, sorted
 list so grouping stays consistent across runs.</p>
 

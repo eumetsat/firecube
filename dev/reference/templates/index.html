@@ -4718,6 +4718,51 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label=" ZarrGroupSpec">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrGroupSpec-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrGroupSpec.group" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;group
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrGroupSpec.attrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;attrs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -5970,6 +6015,51 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label=" ZarrGroupSpec">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrGroupSpec-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrGroupSpec.group" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;group
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#firecube.ingestor.api.ZarrGroupSpec.attrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;attrs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -6772,6 +6862,8 @@ becomes the group path inside the store, for Parquet it becomes the
 output partition (subdirectory). Called once per planned batch;
 <code>build_dataset</code> is then invoked once per group with the full batch
 item list, and the plugin routes items to the group it is building.</p>
+<p>A GenericZarr plugin returns <code>["/"]</code> to write its dataset at the store
+root instead of in a named group.</p>
 <p>Implementations MUST be deterministic and return a stable, sorted
 list so grouping stays consistent across runs.</p>
 
@@ -8062,7 +8154,60 @@ names are rejected at write time.</p>
 
 
 
+<h3 id="firecube.ingestor.api.ZarrGroupSpec-attributes">Attributes</h3>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.ZarrGroupSpec.group" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">group</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">group</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Group path inside the store.</p>
+<p><code>"/"</code> names the root group. A schema that declares it declares no other group.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.ingestor.api.ZarrGroupSpec.attrs" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">attrs</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">attrs</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Attributes merged into the group's <code>zarr.json</code> by <code>zarr preallocate</code> and by ingest.</p>
+<p>On the root group <code>"/"</code>, firecube refuses the four index-mirror names
+<code>firecube_resolved_index</code>, <code>firecube_resolved_index_identity_hash</code>,
+<code>firecube_slot_index_model</code> and <code>firecube_slot_index_model_identity_hash</code>.</p>
+
+    </div>
+
+</div>
 
 
 

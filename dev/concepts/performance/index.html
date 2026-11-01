@@ -4945,8 +4945,20 @@ validation budget is exceeded.</p>
 validated array either moves with the time axis or carries the
 <code>firecube_static_written</code> marker. A non-empty list after a parallel run means
 the static-owner worker did not finish its static writes: re-run the owner's
-slot range, then validate again. Arrays whose first dimension is <code>timestamp</code>,
-<code>time</code>, or <code>firecube_timestamp_state</code> never require the marker.</p>
+slot range, then validate again.</p>
+<p>The command finds the time dimension of each group in this order:</p>
+<ol>
+<li>The <code>--time-dim</code> option, if you pass it.</li>
+<li>The first dimension of the <code>firecube_timestamp_state</code> array.</li>
+<li>The first dimension of a rank-1 array that carries the marker of a
+   preallocated or coordinate-managed time coordinate.</li>
+</ol>
+<p>An array whose first dimension is the time dimension, or <code>firecube_timestamp_state</code>,
+never requires the marker. A DirectZarr cube has no <code>firecube_timestamp_state</code>
+array, so the command uses the marker of its time coordinate.</p>
+<p>A report that checked no array is not valid. The command then exits 1 and the
+report carries a note that names <code>--time-dim</code>. Pass the time dimension of the
+plugin to the command, for example <code>--time-dim time</code>.</p>
 <h2 id="if-memory-is-tight">If Memory Is Tight</h2>
 <p>Memory pressure usually comes from batch size, worker count, source decoding, or
 compression. Reduce the shape of in-flight work first:</p>
