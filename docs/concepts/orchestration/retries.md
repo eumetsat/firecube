@@ -32,7 +32,7 @@ started:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \
@@ -52,7 +52,7 @@ with the external orchestrator job:
 
 ```bash
 firecube ingest <plugin> \
-  --input-data /data/source \
+  --input-data file:///data/source \
   --target file:///data/products/MY_PRODUCT.zarr \
   --product-name MY_PRODUCT \
   --storage-type local \
