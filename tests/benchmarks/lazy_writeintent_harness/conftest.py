@@ -262,7 +262,7 @@ def build_ingest_command(
         "ingest",
         plugin,
         "--input-data",
-        str(input_data),
+        input_data.as_uri(),
         "--target",
         f"file://{target}",
         "--product-name",

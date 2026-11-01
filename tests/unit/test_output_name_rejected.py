@@ -52,7 +52,7 @@ def test_cli_exits_2_with_output_name_migration_text(tmp_path, monkeypatch, cmd)
     monkeypatch.setattr("firecube.cli.zarr._common.coerce_options_for_plugin", lambda _n, o: o)
     args = f"--config-file {tmp_path}/c.toml {cmd} direct_zarr_capable_test_plugin"
     args += f" --target {tmp_path.as_uri()}/q.zarr --product-name qa --write-mode direct"
-    result = CliRunner().invoke(cli, f"{args} --input-data /tmp".split())
+    result = CliRunner().invoke(cli, f"{args} --input-data file:///tmp".split())
     assert result.exit_code == 2
     assert result.output.endswith(
         "Error: Config key 'output_name' is no longer accepted. Use '--product-name' or "

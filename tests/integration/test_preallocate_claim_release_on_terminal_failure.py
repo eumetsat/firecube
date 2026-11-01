@@ -177,7 +177,7 @@ def _preallocate_args(target: Path, source: Path) -> list[str]:
         "--write-mode",
         "direct",
         "--input-data",
-        str(source),
+        source.as_uri(),
         "--option",
         "no_progress=true",
     ]
