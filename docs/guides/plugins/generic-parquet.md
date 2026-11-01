@@ -82,7 +82,7 @@ Then ingest a small, representative input supported by the product reader:
 
 ```bash
 firecube ingest my_plugin \
-  --input-data ./path/to/input \
+  --input-data "file://$PWD/path/to/input" \
   --target file:///tmp/my_product.parquet \
   --product-name my_product \
   --storage-type local \

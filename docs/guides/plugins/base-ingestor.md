@@ -117,7 +117,7 @@ shape:
 
 ```bash
 firecube ingest my_plugin \
-  --input-data ./path/to/input \
+  --input-data "file://$PWD/path/to/input" \
   --target file:///tmp/my_product.zarr \
   --product-name my_product \
   --storage-type local \

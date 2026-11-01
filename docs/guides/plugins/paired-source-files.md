@@ -7,7 +7,7 @@ not been approved for ingestion.
 
 ## Pair Measurements With Metadata
 
-This example uses a local directory passed as `--input-data ./delivery`:
+This example passes the local directory `delivery` as the URI `--input-data "file://$PWD/delivery"`:
 
 ```text
 delivery/
@@ -169,7 +169,7 @@ then run the plugin:
 
 ```bash
 firecube ingest my_plugin \
-  --input-data ./delivery \
+  --input-data "file://$PWD/delivery" \
   --target "file://$PWD/out.zarr" \
   --product-name my_product \
   --write-mode direct
