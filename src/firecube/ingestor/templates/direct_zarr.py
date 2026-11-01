@@ -720,7 +720,7 @@ class WriteIntent:
     returns one. It is resolved exactly once at dispatch time, in dispatch
     order. The callable must close over stable inputs (paths, configuration),
     not open file handles or per-batch scratch objects. Callable data is
-    supported for ``kind="region"`` and ``kind="static"`` only. Passing a
+    supported for ``kind="region"``, ``kind="static"`` and ``kind="1d"``. Passing a
     callable for other kinds raises ``TypeError`` at construction. Any
     callable exception propagates with the same error surface as an eager
     payload rejection.
@@ -746,7 +746,7 @@ class WriteIntent:
             raise ValueError(
                 f"WriteIntent.kind must be one of {sorted(valid_kinds)!r}; got {self.kind!r}"
             )
-        callable_kinds = {"region", "static"}
+        callable_kinds = {"region", "static", "1d"}
         if callable(self.data) and self.kind not in callable_kinds:
             supported_kinds = "', '".join(sorted(callable_kinds))
             raise TypeError(
@@ -765,8 +765,9 @@ class WriteIntent:
         one row. The array must be declared with ``time_indexed=True`` in
         `ZarrArraySpec`.
 
-        ``data`` must be an eager ``np.ndarray``; callable payloads are not
-        supported for ``kind="1d"`` and raise ``TypeError`` at construction.
+        ``data`` may be an eager ``np.ndarray`` or a zero-arg callable that
+        returns one; a callable is resolved once, at dispatch time, so a large
+        whole-slot payload is only read when it is written.
 
         Args:
             group: Zarr group name matching a `ZarrGroupSpec` in the schema.

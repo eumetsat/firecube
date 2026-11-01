@@ -179,8 +179,8 @@ this template.
 
 | Path | Factory | Use |
 |---|---|---|
-| Common path | `IndexedWrite.slot(...)` | 1-D writes keyed by timestamp; Firecube resolves the slot. |
-| Common path | `IndexedWrite.region(...)` | 2-D region writes keyed by timestamp. |
+| Common path | `IndexedWrite.slot(...)` | One whole slot keyed by timestamp; Firecube resolves the slot. |
+| Common path | `IndexedWrite.region(...)` | Part of one slot keyed by timestamp: `y_slice` selects the first axis after time, in arrays of rank 3 or more (for example one member of an ensemble cube). |
 | Common path | `WriteIntent.static(...)` | Arrays that do not share the indexed axis. |
 | Advanced path | `WriteIntent.slot(...)` / `WriteIntent.region(...)` | Writes with a self-resolved `index=`. |
 | Advanced path | `WriteIntent.coordinate(...)` | Explicit coordinate writes (auto-emitted otherwise). |

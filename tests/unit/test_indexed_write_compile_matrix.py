@@ -253,30 +253,31 @@ def test_compile_matrix_success(
 
 
 def _payload_slot() -> np.ndarray:
-    """Callable payload used to prove ``WriteIntent.slot`` rejects callables."""
+    """Callable payload used to prove ``.slot()`` accepts lazy payloads."""
     return np.zeros((4,))
+
+
+def test_slot_callable_compiles_to_lazy_1d_intent() -> None:
+    """A callable ``.slot()`` payload compiles to a ``kind="1d"`` intent unresolved.
+
+    Slot payloads may be whole N-D slot blocks, so they are lazy like region
+    payloads: the callable is carried through compilation and only resolved at
+    dispatch time.
+    """
+    iw = IndexedWrite.slot(
+        group="data",
+        array="tally",
+        coordinate="2024-01-01T00:00:00Z",
+        data=_payload_slot,
+    )
+    (intent,) = _compile_indexed_write(iw, _regular_index())
+    assert intent.kind == "1d"
+    assert intent.data is _payload_slot
 
 
 @pytest.mark.parametrize(
     "iw,make_index,expected_error,expected_cause,check_iw_repr",
     [
-        # Row 6: callable payloads are illegal for ``kind="1d"``. The compile
-        # step surfaces the ``WriteIntent.__post_init__`` ``TypeError``
-        # unwrapped — this is a target-type invariant, not a resolver failure,
-        # so it is intentionally not adapted to ``IndexedWriteCompilationError``.
-        pytest.param(
-            IndexedWrite.slot(
-                group="data",
-                array="tally",
-                coordinate="2024-01-01T00:00:00Z",
-                data=_payload_slot,
-            ),
-            _regular_index,
-            TypeError,
-            None,
-            False,
-            id="row6_slot_callable_rejected_by_writeintent",
-        ),
         # Row 7: coordinates missing from an ``IrregularTimeAxis`` raise
         # ``IndexedWriteCompilationError`` with the resolver's ``ValueError``
         # chained via ``__cause__`` and structured fields
@@ -323,11 +324,6 @@ def test_compile_matrix_error(
     check_iw_repr: bool,
 ) -> None:
     """Compile step raises the documented error and preserves the underlying cause.
-
-    Row 6 proves that a callable payload passed to ``.slot()`` is rejected by
-    ``WriteIntent.slot`` at compile time with a bare ``TypeError`` — the
-    compile step does not wrap ``WriteIntent`` construction errors, because
-    those are static invariants of the target type, not resolver failures.
 
     Rows 7 and 8 prove that resolver failures (unresolvable coordinate on a
     time axis, type-mismatched coordinate on an integer axis) are wrapped

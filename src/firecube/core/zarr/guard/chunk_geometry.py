@@ -38,7 +38,9 @@ def physical_chunk_keys_for_region(
         intent: Write intent with ``group`` and ``array`` attributes for error
             messages and chunk-key construction.
         shape: Full target array shape. Rank 3 is interpreted as
-            ``(time, y, x)``; rank 4 as ``(time, y, x, channel)``.
+            ``(time, y, x)``; rank 4 as ``(time, y, x, channel)``; rank 5 or
+            more as ``(time, y, ...)`` with every axis after ``y`` written in
+            full.
         chunks: Target array chunk shape with the same rank as ``shape``.
         selection: Region selection with ``ts_index``, ``y_start``,
             ``y_stop``, and optional ``channel_index`` attributes.
@@ -81,6 +83,15 @@ def physical_chunk_keys_for_region(
 
     if rank == 3:
         coords = itertools.product(time_chunks, y_chunks, x_chunks)
+        keys = {(group, intent.array, tuple(coord)) for coord in coords}
+        aligned = chunks[0] == 1 and axis_selection_is_chunk_aligned(
+            selection.y_start, selection.y_stop, shape[1], chunks[1]
+        )
+        return keys, aligned
+
+    if rank > 4:
+        later_axes = [chunk_axis_range(0, shape[axis], chunks[axis]) for axis in range(2, rank)]
+        coords = itertools.product(time_chunks, y_chunks, *later_axes)
         keys = {(group, intent.array, tuple(coord)) for coord in coords}
         aligned = chunks[0] == 1 and axis_selection_is_chunk_aligned(
             selection.y_start, selection.y_stop, shape[1], chunks[1]
