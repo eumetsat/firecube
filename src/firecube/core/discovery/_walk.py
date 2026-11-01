@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Input file discovery helpers for ingestion plugins.
+"""File-tree discovery: the backend of ``file://``, ``s3://`` and bare-path sources.
 
-Format-agnostic discovery utilities that walk a local path or remote URI
-and return candidate input file URIs (ZIP, HDF5, NetCDF, ...).
+Format-agnostic discovery that walks a local path or remote URI and returns
+candidate input file URIs (ZIP, HDF5, NetCDF, ...). It opens each source with
+``open_source_filesystem``.
 """
 
 from __future__ import annotations
@@ -25,10 +26,11 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
+from firecube.core.discovery._filters import split_input_filters
+from firecube.core.discovery._types import DiscoveryRequest, SourceItem
 from firecube.core.filesystem.ops import open_source_filesystem
 from firecube.core.formats.hdf5 import looks_like_hdf5
-from firecube.core.formats.input_filters import split_input_filters
-from firecube.core.uris import is_remote_target, parse_uri
+from firecube.core.uris import infer_target_protocol, is_remote_target, parse_uri
 
 # All file extensions recognised by the firecube ecosystem. See
 # DEFAULT_INCLUDE_SUFFIXES for the defaults used by ``discover_input_files``;
@@ -106,8 +108,7 @@ def _filter_discovered_paths(
         if include_by_suffix or include_by_sniff or include_by_glob:
             resolved.append(normalized)
 
-    dedup = dict.fromkeys(resolved)
-    return sorted(dedup, key=lambda path: Path(path).name)
+    return list(dict.fromkeys(resolved))
 
 
 def discover_input_files(
@@ -171,6 +172,49 @@ def discover_input_files(
         ValueError: If ``source`` cannot be opened or listed, or a filter
             is empty, a bare ``!``, or not a string.
     """
+    paths = _list_input_files(
+        source,
+        storage_config=storage_config,
+        include_suffixes=include_suffixes,
+        preferred_globs=preferred_globs,
+        recursive=recursive,
+        sniff_hdf5=sniff_hdf5,
+        exclude=exclude,
+    )
+    return sorted(paths, key=lambda path: Path(path).name)
+
+
+def walk_source(source: str, request: DiscoveryRequest) -> list[SourceItem]:
+    """Backend of file-tree sources: the default selection below ``source``.
+
+    The same selection as `discover_input_files` with its defaults, recursive, with
+    ``request.input_filters`` as ``preferred_globs``. Items are deduplicated and not
+    sorted; `discover` sorts once over every source.
+    """
+    scheme = infer_target_protocol(source)
+    paths = _list_input_files(
+        source,
+        storage_config=request.storage_config,
+        include_suffixes=DEFAULT_INCLUDE_SUFFIXES,
+        preferred_globs=request.input_filters,
+        recursive=True,
+        sniff_hdf5=True,
+        exclude=None,
+    )
+    return [SourceItem(href=path, scheme=scheme) for path in paths]
+
+
+def _list_input_files(
+    source: str | Path,
+    *,
+    storage_config: Any | None,
+    include_suffixes: Sequence[str],
+    preferred_globs: Iterable[str] | None,
+    recursive: bool,
+    sniff_hdf5: bool,
+    exclude: Iterable[str] | None,
+) -> list[str]:
+    """Open, list and filter one file-tree source; deduplicated, in listing order."""
     source_uri = str(source)
     is_remote = is_remote_target(source_uri)
 

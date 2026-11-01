@@ -14,7 +14,7 @@
 
 from pathlib import Path
 
-from firecube.core.formats.discovery import discover_input_files
+from firecube.core.discovery import discover_input_files
 
 
 def test_discovery_returns_hdf5_files(tmp_path: Path) -> None:

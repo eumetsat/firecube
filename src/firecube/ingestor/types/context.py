@@ -21,7 +21,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
-from firecube.core.errors import FirecubeError
+from firecube.core.errors import ConfigurationError, FirecubeError, Message, Param
 
 from .result_metrics import (  # pyright: ignore[reportMissingImports]
     OutputPaths,
@@ -66,9 +66,15 @@ class StorageContext:
 
 @dataclass(slots=True)
 class IngestContext:
-    """Caller-provided input context for one ingestion run."""
+    """Caller-provided input context for one ingestion run.
 
-    source: str
+    ``sources`` holds every input of the run in the order given. ``source`` is kept
+    for callers with one input: a lone ``source`` is mirrored into ``sources``, and
+    when ``sources`` is given, ``source`` becomes its single entry, or ``""`` when it
+    has none or several.
+    """
+
+    source: str = ""
     target: str | None = None
     in_memory: bool = True
     output_format: str | None = None
@@ -81,6 +87,15 @@ class IngestContext:
     # Core-injected telemetry sink (metrics + tracing). Plugins should only call
     # this object; they must not import Prometheus/OTel directly.
     telemetry: IngestionTelemetry | None = None
+
+    sources: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.sources:
+            self.sources = tuple(str(source) for source in self.sources)
+            self.source = self.sources[0] if len(self.sources) == 1 else ""
+        elif self.source:
+            self.sources = (str(self.source),)
 
     def option(self, key: str, default: Any = None) -> Any:
         """Convenience accessor for optional plugin parameters."""
@@ -136,6 +151,7 @@ class RuntimeIngestContext(IngestContext):
         options.setdefault("run_id", run_id)
         return cls(
             source=ctx.source,
+            sources=ctx.sources,
             target=ctx.target,
             in_memory=ctx.in_memory,
             output_format=ctx.output_format,
@@ -246,14 +262,42 @@ class PluginContext:
         self._options = MappingProxyType(dict(raw_options))
 
     @property
-    def source(self) -> str:
-        """Input data location for this run, as provided by the caller.
+    def sources(self) -> tuple[str, ...]:
+        """Every input data location of this run, in the order the caller gave them.
 
-        A local path or remote URI (e.g. the ``--input-data`` CLI option).
-        The default ``discover_source_files`` implementation scans it for
-        input files; plugins with custom discovery may interpret it freely.
+        Each entry is a local path, a ``file://`` or ``s3://`` URI, or a
+        ``stac://<host>/<api-root>/collections/<id>`` STAC API collection (the
+        ``--input-data`` CLI option, which may be repeated). Empty when the run
+        has no input. The default ``discover_source_files`` implementation
+        discovers items from all of them.
         """
-        return self._ctx.source
+        return self._ctx.sources
+
+    @property
+    def source(self) -> str:
+        """The single input data location of this run, as provided by the caller.
+
+        A local path or remote URI (e.g. the ``--input-data`` CLI option);
+        ``""`` when the run has none. Plugins with custom discovery may
+        interpret it freely. A run may have several inputs; read `sources`
+        to handle them.
+
+        Raises:
+            ConfigurationError: If the run has more than one input.
+        """
+        sources = self._ctx.sources
+        if len(sources) > 1:
+            raise ConfigurationError(
+                Message(
+                    "This run has {count} sources ({sources}); a hook that reads one "
+                    "source reads ctx.source. Read ctx.sources to handle several, or pass "
+                    "one {input_data}.",
+                    count=len(sources),
+                    sources=", ".join(sources),
+                    input_data=Param("input_data"),
+                )
+            )
+        return sources[0] if sources else ""
 
     @property
     def target(self) -> str | None:

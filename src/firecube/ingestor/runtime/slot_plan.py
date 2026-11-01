@@ -171,7 +171,7 @@ def plan_slots(
     target: str,
     storage_config: StorageConfig,
     coverage_storage_config: Callable[[], StorageConfig],
-    input_data: str | None = None,
+    input_data: str | tuple[str, ...] | None = None,
     slot_size: int | None = None,
     resume: bool = True,
     allow_above_ceiling: bool = False,
@@ -194,8 +194,9 @@ def plan_slots(
         storage_config: Storage settings the stored array layout is read with.
         coverage_storage_config: Builds the storage settings the coverage lookup reads
             with; called only when resuming.
-        input_data: Raw plugin input. A plugin with an AUTO axis needs it unless it
-            overrides `discover_source_files`.
+        input_data: Raw plugin input, one source or several; `None` when there is none.
+            A plugin with an AUTO axis needs it unless it overrides
+            `discover_source_files`.
         slot_size: The slot size of every group. It must be a multiple of each group's
             time unit. `None` gives each group its time unit.
         resume: Leave out the slots the control plane records as covered.

@@ -31,7 +31,7 @@ class IngestCommandConfig:
     """
 
     plugin: str
-    input_data: str | Path | None
+    input_data: tuple[str, ...] | str | Path | None
     target: str
     write_mode: str | None
     storage_type: str | None

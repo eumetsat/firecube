@@ -19,7 +19,7 @@ from __future__ import annotations
 import numpy as np
 import xarray as xr
 
-from firecube.core.formats import KNOWN_EXTENSIONS, discover_input_files
+from firecube.core.discovery import KNOWN_EXTENSIONS, discover_input_files
 
 
 class TestDiscoverTgmFiles:

@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Generic input format helpers (ZIP, HDF5, NetCDF, file discovery).
+"""Generic input format helpers (ZIP, HDF5, NetCDF).
 
 Public imports remain stable at ``firecube.core.formats``.
 """
 
-from firecube.core.formats.discovery import KNOWN_EXTENSIONS, discover_input_files
 from firecube.core.formats.hdf5 import materialize_hdf5_path, read_hdf5_array
 from firecube.core.formats.netcdf import (
     clean_netcdf_encoding,
@@ -32,9 +31,7 @@ from firecube.core.formats.zip import (
 )
 
 __all__ = [
-    "KNOWN_EXTENSIONS",
     "clean_netcdf_encoding",
-    "discover_input_files",
     "extract_all_from_zips",
     "extract_hdf5_from_zip",
     "materialize_hdf5_path",

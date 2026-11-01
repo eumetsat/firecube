@@ -87,7 +87,7 @@ def process_tensogram_batch(self: Any, batch: PipelineBatch, ctx: PluginContext)
         strategy = TensogramWriteStrategy(
             target=str(target_path),
             compression=compression,
-            source_uri=str(ctx.source),
+            source_uri=", ".join(ctx.sources),
             allow_nan=allow_nan,
             allow_inf=allow_inf,
             time_dim_name=self._resolve_time_dim_name(),

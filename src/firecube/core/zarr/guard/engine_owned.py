@@ -275,6 +275,7 @@ def collect_engine_owned_values(
     resolved_index: Any,
     dtypes: Mapping[str, Mapping[str, Any]],
     extents: Mapping[str, int],
+    items: Iterable[Any] | None = None,
 ) -> dict[str, dict[str, dict[int, Any]]]:
     """Inspect every source item and return the engine-owned values per slot.
 
@@ -286,6 +287,8 @@ def collect_engine_owned_values(
         dtypes: ``{group: {array name: dtype}}`` of the engine-owned arrays.
         extents: Slot count of each group in *dtypes*; items positioned
             outside it are not part of the cube and are skipped.
+        items: The items the command already discovered. ``None`` calls
+            ``discover_source_files``.
 
     Returns:
         ``{group: {array name: {slot: 0-d value}}}``.
@@ -299,7 +302,10 @@ def collect_engine_owned_values(
     collected: dict[str, dict[str, dict[int, Any]]] = {
         group: {name: {} for name in names} for group, names in dtypes.items()
     }
-    for item in ingestor.discover_source_files(plugin_ctx):
+    source_items: Iterable[Any] = (
+        ingestor.discover_source_files(plugin_ctx) if items is None else items
+    )
+    for item in source_items:
         if not ingestor.filter_item(item, plugin_ctx):
             continue
         try:

@@ -23,7 +23,7 @@ import pytest
 from moto.server import ThreadedMotoServer
 
 from firecube.core.config import StorageConfig
-from firecube.core.formats.discovery import discover_input_files
+from firecube.core.discovery import discover_input_files
 
 
 @pytest.fixture(scope="module")

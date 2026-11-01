@@ -25,15 +25,16 @@ import inspect
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar, cast, get_type_hints
 
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.metrics import collect_wal_metrics
 from firecube.core.controlplane.types import IndexEnsuredOutcome
+from firecube.core.discovery import DiscoveryRequest, SourceItem, discover
 from firecube.core.errors import Message, Param, PluginOption
 from firecube.core.filesystem import collect_filesystem_metrics
-from firecube.core.formats import discover_input_files
 from firecube.core.index_resolve import ExtentUnknownError
 from firecube.core.intake import CatalogGroupInfo
 from firecube.core.observability import create_ingestion_telemetry
@@ -42,6 +43,7 @@ from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
+from firecube.core.uris import infer_target_protocol
 from firecube.ingestor.config.engine import SYSTEM_KEYS, EngineConfig, config_keys
 from firecube.ingestor.contracts.interfaces import Ingestor, is_dataset_producer
 from firecube.ingestor.errors import ConfigurationError
@@ -167,6 +169,25 @@ def _binding_from_context(ctx: IngestContext, product: str) -> StorageBinding:
     return _minimal_binding(product, fmt)
 
 
+@dataclass(frozen=True)
+class _SourceSnapshot:
+    """What one command's discovery returned, held for every consumer of that command."""
+
+    context: object
+    """The run context the discovery ran for; another context discovers again."""
+
+    files: tuple[Any, ...]
+    """The items ``discover_source_files`` returned."""
+
+    items: tuple[SourceItem, ...]
+    """The items the default discovery resolved; empty when the plugin overrides it."""
+
+
+def _context_key(ctx: object) -> object:
+    """The run context behind a plugin context, which a new command replaces."""
+    return getattr(ctx, "_ctx", ctx)
+
+
 class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     """Orchestrating base class for all Firecube ingestors.
 
@@ -239,10 +260,17 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             authoritative: changing it against an existing store fails
             loudly with migration guidance rather than silently
             reinterpreting the store.
+        SOURCE_ITEMS: What the default ``discover_source_files`` hands to
+            ``filter_item``, ``inspect_item`` and the build hooks. ``False``
+            (the default): the ``href`` string of each item, a local path or
+            URI. ``True``: the `SourceItem` itself, which also carries the
+            STAC collection, item id, asset key, datetime, bbox, media type
+            and roles of a ``stac://`` source.
     """
 
     PRODUCT_NAME: ClassVar[str]
     time_dim_name: ClassVar[str] = "timestamp"
+    SOURCE_ITEMS: ClassVar[bool] = False
     # Whether the runner stops at the first failed batch. Templates whose
     # batches build on each other (append-style Zarr) set this to True so
     # nothing lands past a gap; independent-batch templates keep False.
@@ -259,6 +287,10 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     engine_config: EngineConfig
     template_config: TemplateConfig | None = None
     plugin_config: PluginConfig | None = None
+
+    # The current command's discovery (discovered_source_files). A class default,
+    # so an instance built without __init__ still discovers.
+    _source_snapshot: _SourceSnapshot | None = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Build-time validation for ingestor class contracts."""
@@ -360,6 +392,9 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         self._firecube_engine = None  # Lazy init for PipelineExecutor
         self._parallel_execution_state: _ParallelExecutionState | None = None
         self._discovered_source_files: tuple[Any, ...] | None = None
+        # What the default discovery resolved in its last call, whatever SOURCE_ITEMS
+        # hands on; discovered_source_files keeps it in the command's snapshot.
+        self._discovered_source_items: tuple[SourceItem, ...] = ()
         # True once the engine-owned resolved-index record has been ensured in
         # this pod process; fast-path in _ensure_index_record_at_startup.
         self._resolved_index_stamped: bool = False
@@ -378,18 +413,30 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
         """Discover the source items to ingest (Hook).
 
-        The default implementation requires ``--input-data`` (``ctx.source``)
-        and raises ``ConfigurationError`` without it. It searches recursively
-        below ``ctx.source`` — a local path or a remote URI reached through
-        the run's storage configuration — and collects ``.zip``, ``.h5``,
-        ``.nc``, ``.nc4``, ``.hdf``, and ``.he5`` files plus local files
-        with unselected or absent suffixes whose content looks like HDF5.
-        Positive ``input_filters`` entries add files to that set; entries
-        starting with ``!`` exclude matches, overriding suffix and content
-        selection regardless of list order. Pass ``--input-filters`` as one
-        JSON list. Filters match case-sensitively, including for single-file
-        sources. Custom discovery overrides must explicitly apply filters,
-        for example by forwarding them to ``discover_input_files``.
+        The default implementation requires ``--input-data`` (``ctx.sources``)
+        and raises ``ConfigurationError`` without it. It discovers every
+        source of the run, in order, deduplicates the items and sorts them
+        once:
+
+        - A local path or a remote URI reached through the run's storage
+          configuration is searched recursively for ``.zip``, ``.h5``,
+          ``.nc``, ``.nc4``, ``.hdf``, and ``.he5`` files plus local files
+          with unselected or absent suffixes whose content looks like HDF5.
+          Positive ``input_filters`` entries add files to that set; entries
+          starting with ``!`` exclude matches, overriding suffix and content
+          selection regardless of list order.
+        - A ``stac://<host>/<api-root>/collections/<id>`` source is searched
+          through the STAC API with the run's ``stac_search`` filter, and
+          every asset whose roles contain ``data`` is collected. The suffix
+          list does not apply; ``input_filters`` narrow the assets on the
+          basename of their href.
+
+        Pass ``--input-filters`` as one JSON list. Filters match
+        case-sensitively, including for single-file sources. Items are
+        returned as href strings, or as `SourceItem` objects when the class
+        declares ``SOURCE_ITEMS = True``. Custom discovery overrides must
+        explicitly apply filters, for example by forwarding them to
+        ``discover_input_files`` or `discover`.
 
         Override this hook when source layout rules cannot be expressed as
         patterns, or when sources are not file trees at all (catalogs,
@@ -398,14 +445,17 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         hooks; return path or URI strings unless the plugin's own hooks
         handle richer item objects end to end.
 
-        The engine calls this hook once per run and materialises the returned
-        iterable in full before the first batch is planned; the held items
-        are then reused for batching and never re-discovered. Returning an
+        The engine calls this hook at most once per command, through
+        `discovered_source_files`, and only when the command needs the items.
+        A fixed-grid preallocate without engine-owned arrays never calls it. It
+        materialises the returned iterable in full before the first batch is
+        planned; index binding, batching and preallocation then reuse the held
+        items and never re-discover them. Returning an
         iterator or generator is fine for large listings and avoids building
         a second container in the plugin, but it is consumed completely up
         front, so it cannot defer or stream discovery across batches.
         """
-        if not ctx.source:
+        if not ctx.sources:
             raise ConfigurationError(
                 Message(
                     "{input_data} is required when using default source discovery. "
@@ -417,16 +467,17 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     run_id=ctx.run_id,
                 )
             )
-        includes = None
-        if getattr(self, "engine_config", None) is not None:
-            includes = getattr(self.engine_config, "input_filters", None)
-
-        files = discover_input_files(
-            ctx.source,
-            storage_config=self._chunk_manager.storage_config,
-            preferred_globs=includes,
-            recursive=True,
+        engine_config: EngineConfig | None = getattr(self, "engine_config", None)
+        items = discover(
+            DiscoveryRequest(
+                sources=ctx.sources,
+                storage_config=self._chunk_manager.storage_config,
+                input_filters=engine_config.input_filters if engine_config else None,
+                stac_search=engine_config.stac_search if engine_config else None,
+            )
         )
+        self._discovered_source_items = tuple(items)
+        files: list[Any] = list(items) if self.SOURCE_ITEMS else [item.href for item in items]
 
         if not files:
             engine_cfg: EngineConfig | None = getattr(self, "engine_config", None)
@@ -446,11 +497,82 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                         run_id=ctx.run_id,
                     )
                 )
-            self._log.warning("No input files found in %s", ctx.source)
+            self._log.warning("No input files found in %s", ", ".join(ctx.sources))
             return iter(())
 
         self._log.info("Found %d files", len(files))
         return files
+
+    def discovered_source_files(self, ctx: PluginContext) -> tuple[Any, ...]:
+        """Return what ``discover_source_files`` returned for this command.
+
+        The first call for a context runs the hook; later calls for the same
+        context return the same items, so every consumer of one command reads
+        one discovery. A call for another context discovers again. Not a hook:
+        override ``discover_source_files`` instead.
+
+        Args:
+            ctx: The plugin context of the command.
+
+        Returns:
+            The discovered items, unfiltered.
+        """
+        key = _context_key(ctx)
+        snapshot = self._source_snapshot
+        if snapshot is None or snapshot.context is not key:
+            self._discovered_source_items = ()
+            files = tuple(self.discover_source_files(ctx))
+            snapshot = _SourceSnapshot(
+                context=key, files=files, items=self._discovered_source_items
+            )
+            self._source_snapshot = snapshot
+        return snapshot.files
+
+    def _forget_discovery(self) -> None:
+        """Drop the held discovery, so the next command discovers its own items."""
+        self._source_snapshot = None
+        self._discovered_source_items = ()
+
+    def stac_discovery_record(self, ctx: PluginContext) -> dict[str, Any] | None:
+        """Return what a run record keeps of STAC discovery, or ``None`` without a stac:// source.
+
+        The record holds the ``stac://`` sources, the search filter as given,
+        and the ``collection/item_id`` of every STAC item the default discovery
+        resolved for this command. A plugin that overrides
+        ``discover_source_files``, or a command that has not discovered, records
+        no item ids.
+
+        Args:
+            ctx: The plugin context of the command.
+
+        Returns:
+            The ``sources``, ``search`` and ``item_ids`` of the record, or ``None``.
+        """
+        stac_sources = [source for source in ctx.sources if infer_target_protocol(source) == "stac"]
+        if not stac_sources:
+            return None
+        engine_config: EngineConfig | None = getattr(self, "engine_config", None)
+        snapshot = self._source_snapshot
+        discovered = (
+            snapshot.items if snapshot is not None and snapshot.context is _context_key(ctx) else ()
+        )
+        item_ids = {
+            f"{item.collection}/{item.item_id}" for item in discovered if item.scheme == "stac"
+        }
+        return {
+            "sources": stac_sources,
+            "search": engine_config.stac_search if engine_config else None,
+            "item_ids": sorted(item_ids),
+        }
+
+    def _run_record_meta(self, ctx: PluginContext) -> dict[str, Any]:
+        """The meta of the run's started and failed records: slice meta, plugin, STAC provenance."""
+        meta = self.slice_meta(ctx)
+        meta.setdefault("plugin", self.name)
+        stac_record = self.stac_discovery_record(ctx)
+        if stac_record is not None:
+            meta["stac_discovery"] = stac_record
+        return meta
 
     def filter_item(self, item: Any, ctx: PluginContext) -> bool:
         """Decide whether one discovered item proceeds to batching (Hook).
@@ -662,9 +784,13 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
     def bind_index_at_startup(self, ctx: PluginContext) -> None:
         """Bind the plugin's index spec to a resolved index for `ctx`.
 
+        Call it first in a command. It drops the source items an earlier
+        command discovered, so `discovered_source_files` discovers again.
+
         Args:
             ctx: The plugin context of the run.
         """
+        self._forget_discovery()
         self._bind_index_at_startup(ctx)
 
     def _bind_index_at_startup(self, ctx: PluginContext) -> None:
@@ -802,6 +928,8 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             materializer=self._materialize,
         )
         runtime_plugin_ctx = PluginContext(runtime_ctx)
+        # The run reads only the sources it discovers itself.
+        self._forget_discovery()
 
         # 2. Configuration
         self.engine_config, self.template_config, self.plugin_config = self._configurator.configure(
@@ -962,9 +1090,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     validation_group=self.validation_group(runtime_plugin_ctx),
                 )
 
-                self._discovered_source_files = tuple(
-                    self.discover_source_files(runtime_plugin_ctx)
-                )
+                self._discovered_source_files = self.discovered_source_files(runtime_plugin_ctx)
                 output_ownership.enter_context(
                     fresh_output_run(
                         runtime_ctx,
@@ -975,8 +1101,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 )
 
                 # 5. Runtime control-plane lifecycle
-                slice_meta = self.slice_meta(runtime_plugin_ctx)
-                slice_meta.setdefault("plugin", self.name)
+                slice_meta = self._run_record_meta(runtime_plugin_ctx)
                 self._span_recorder.register_run_started(
                     run_id=run_id,
                     product=product,
@@ -1061,8 +1186,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             # both complete_output() and register_run() succeed.
             if run_started_recorded and not execution_result.registered:
                 with contextlib.suppress(Exception):
-                    slice_meta = self.slice_meta(runtime_plugin_ctx)
-                    slice_meta.setdefault("plugin", self.name)
+                    slice_meta = self._run_record_meta(runtime_plugin_ctx)
                     self._span_recorder.register_run_failure(
                         run_id=run_id,
                         product=product,
@@ -1076,6 +1200,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
         finally:
             self._discovered_source_files = None
+            self._forget_discovery()
             close_failed = False
             try:
                 self._close_run_state()

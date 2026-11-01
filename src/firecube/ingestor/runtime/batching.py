@@ -27,6 +27,7 @@ from collections.abc import Iterable, Iterator, Sequence
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
+from firecube.core.discovery import SourceItem
 from firecube.ingestor.contracts.interfaces import SourceFile
 from firecube.ingestor.types.context import PipelineBatch, PluginContext
 
@@ -116,14 +117,22 @@ class BatchPlanner:
 
             # Safety: Store item URIs in metadata for logging/manifests.
             # We assume items are str/Path/SourceFile, so str(item) or .uri is reasonable.
+            # A SourceItem logs its href and hashes its identity, so a STAC asset
+            # keeps its files_hash when the API changes the href.
             item_uris = []
+            item_keys = []
             for item in b_items:
-                if isinstance(item, SourceFile):
+                if isinstance(item, SourceItem):
+                    item_uris.append(item.href)
+                    item_keys.append(item.identity)
+                elif isinstance(item, SourceFile):
                     item_uris.append(item.uri)
+                    item_keys.append(item.uri)
                 else:
                     item_uris.append(str(item))
+                    item_keys.append(str(item))
             item_uris_hash = hashlib.sha256(
-                "\n".join(sorted(item_uris)).encode("utf-8")
+                "\n".join(sorted(item_keys)).encode("utf-8")
             ).hexdigest()
 
             # Limit metadata size for safety
@@ -142,7 +151,7 @@ class BatchPlanner:
 
             return PipelineBatch(
                 batch_id=batch_id,
-                data_path=Path(ctx.source),
+                data_path=Path(ctx.sources[0] if len(ctx.sources) == 1 else ""),
                 items=list(b_items),  # Copy to avoid mutation issues
                 metadata={
                     "item_uris": item_uris,

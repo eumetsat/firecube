@@ -142,7 +142,7 @@ def preallocate_product(
     storage_config: StorageConfig | None,
     run_id: str,
     write_mode: str,
-    input_data: str | None = None,
+    input_data: str | tuple[str, ...] | None = None,
     slot_start: int | None = None,
     slot_end: int | None = None,
     slot_group: str | None = None,
@@ -159,7 +159,8 @@ def preallocate_product(
     materialization claim it creates each bounded group's arrays, then fills its
     time coordinate and engine-owned arrays. It records the run as complete or
     failed, then releases the claim. A dry run only resolves and previews; it
-    writes nothing.
+    writes nothing. Every step reads one discovery of the source items. The run
+    records name the sources, search and items of a stac:// source.
 
     Args:
         ingestor: The plugin, a `PreallocateHost` constructed with `chunk_manager` and
@@ -172,7 +173,8 @@ def preallocate_product(
             `session`'s store; `None` lets the writer open the target URI itself.
         run_id: The run id recorded in the control plane.
         write_mode: The write mode recorded in telemetry.
-        input_data: Raw plugin input. Engine-owned arrays and observed coordinates need it.
+        input_data: Raw plugin input, one source or several; `None` when there is none.
+            Engine-owned arrays and observed coordinates need it.
         slot_start: First slot of the window. `None` starts at slot 0.
         slot_end: Slot after the last of the window. `None` ends at the group's extent.
         slot_group: The one group the window applies to. Other groups get their
@@ -363,6 +365,13 @@ def preallocate_product(
             global_expected=global_expected,
             input_data=input_data,
         )
+        # Every consumer reads the one discovery of this command. Take it before the
+        # claim, so the start record names the items an observed coordinate reads.
+        source_items = (
+            ingestor.discovered_source_files(plugin_ctx)
+            if input_data is not None and _has_observed_coordinate(resolved_index, global_expected)
+            else None
+        )
 
         from firecube.core.zarr.planning import (
             coord_chunk_sizes_by_group,
@@ -385,7 +394,7 @@ def preallocate_product(
                     windows_by_group=windows_by_group,
                     coord_chunk_sizes=coord_chunk_sizes,
                     slot_group=None,
-                    meta={"kind": "preallocate"},
+                    meta=_run_meta(ingestor, plugin_ctx),
                     whole_extent_groups=whole_extent_groups,
                 )
             except BaseException:
@@ -589,9 +598,12 @@ def preallocate_product(
                         slot_start=windows_by_group[group_name][0],
                         slot_end=windows_by_group[group_name][1],
                         has_input_data=input_data is not None,
-                        input_data=input_data,
+                        input_data=(
+                            ", ".join(input_data) if isinstance(input_data, tuple) else input_data
+                        ),
                         report=report,
                         target=regular_coord_targets[group_name],
+                        items=source_items,
                     )
 
                 _materialize_engine_owned_arrays(
@@ -637,7 +649,7 @@ def preallocate_product(
                         output_path=plugin_target,
                         output_format="zarr",
                         size=0,
-                        meta={"kind": "preallocate", "run_id": run_id},
+                        meta=_run_meta(ingestor, plugin_ctx, run_id=run_id),
                     )
                     _preallocate_run_created = True
                 except Exception as exc:
@@ -666,7 +678,7 @@ def preallocate_product(
                         output_path=plugin_target,
                         output_format="zarr",
                         size=terminal_size,
-                        meta={"kind": "preallocate", "run_id": run_id},
+                        meta=_run_meta(ingestor, plugin_ctx, run_id=run_id),
                         status=final_state,
                         error=(
                             None
@@ -745,6 +757,26 @@ def preallocate_product(
                 _preallocate_claim_handle = None
         if _terminal_exc is not None:
             raise _terminal_exc
+
+
+def _run_meta(ingestor: PreallocateHost, plugin_ctx: PluginContext, **extra: Any) -> dict[str, Any]:
+    """The meta of a preallocate run record, with the STAC provenance of a stac:// source."""
+    meta: dict[str, Any] = {"kind": "preallocate", **extra}
+    stac_record = ingestor.stac_discovery_record(plugin_ctx)
+    if stac_record is not None:
+        meta["stac_discovery"] = stac_record
+    return meta
+
+
+def _has_observed_coordinate(resolved_index: Any, groups: Iterable[str]) -> bool:
+    """Whether a group's regular coordinate stores observed times, which source items supply."""
+    from firecube.core.index_spec import RegularTimeAxis, effective_regular_time_policy
+
+    return any(
+        isinstance(axis := resolved_index.axis_for(group), RegularTimeAxis)
+        and effective_regular_time_policy(axis) == "observed"
+        for group in groups
+    )
 
 
 def _refuse_ownership_change(existing: Any, engine_owned: bool, array_path: str) -> None:
@@ -942,7 +974,7 @@ def _discover_engine_owned_values(
     resolved_index: Any,
     schema: Any,
     global_expected: dict[str, int],
-    input_data: str | None,
+    input_data: str | tuple[str, ...] | None,
 ) -> dict[str, dict[str, dict[int, Any]]]:
     """Validate the engine-owned declarations and collect their values from every item.
 
@@ -995,6 +1027,7 @@ def _discover_engine_owned_values(
         resolved_index=resolved_index,
         dtypes=dtypes,
         extents={group: global_expected[group] for group in dtypes},
+        items=ingestor.discovered_source_files(plugin_ctx),
     )
 
 
@@ -1157,6 +1190,7 @@ def _preview_dry_run(
             group_name=group_name,
             slot_start=start,
             slot_end=end,
+            items=ingestor.discovered_source_files(plugin_ctx),
         )
         slots = sorted(observed)
         first = observed[slots[0]] if slots else None

@@ -21,16 +21,19 @@ the user input.
 
 from __future__ import annotations
 
+import json
 import re
 import warnings
 from dataclasses import dataclass, fields
 from typing import Any, TypeVar, get_type_hints
 
-from firecube.core.errors import Message, Param
-from firecube.core.formats.input_filters import (
+from firecube.core.discovery import (
+    StacSearchError,
     reject_legacy_input_patterns,
     validate_input_filters,
+    validate_stac_search,
 )
+from firecube.core.errors import Message, Param
 from firecube.ingestor.errors import ConfigurationError
 
 T = TypeVar("T", bound="EngineConfig")
@@ -55,6 +58,18 @@ _SLOT_GROUP_SAFE = re.compile(r"^[A-Za-z0-9_.\-]+$")
 def config_keys(cls: type) -> set[str]:
     """Return the set of known field names for a dataclass."""
     return {f.name for f in fields(cls)}
+
+
+def _parse_stac_search(value: Any) -> dict[str, Any] | None:
+    """Accept a mapping, or a JSON object as text (a free-form override)."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise StacSearchError() from exc
+    return validate_stac_search(value)
 
 
 @dataclass
@@ -83,7 +98,14 @@ class EngineConfig:
             ``--input-filters`` or a list in plugin configuration. An explicit
             CLI list replaces configured filters; ``[]`` restores built-in
             selection. Custom discovery hooks must apply this field themselves.
-            See ``discover_input_files`` for matching and escaping rules.
+            See ``discover_input_files`` for matching and escaping rules. On a
+            ``stac://`` source, filters narrow the selected assets on the basename
+            of their href instead.
+        stac_search: Optional STAC item search filter applied to every
+            ``stac://`` source of the run: a mapping with any of the keys
+            ``datetime``, ``bbox``, ``intersects`` and ``ids``. The collection
+            always comes from the source URI. Supply one JSON object through
+            ``--stac-search`` or a table in plugin configuration.
         write_mode: Write strategy, either ``"staged"`` or ``"direct"``.
         resume_existing: Continue a compatible incomplete or overlapping run.
         force_reingest: Re-process existing spans intentionally. Overlapping
@@ -130,6 +152,7 @@ class EngineConfig:
 
     # Discovery (common for file-based ingestors/templates)
     input_filters: list[str] | None = None
+    stac_search: dict[str, Any] | None = None
 
     # Write Strategy
     write_mode: str = "staged"  # staged | direct
@@ -170,6 +193,8 @@ class EngineConfig:
 
     def __post_init__(self) -> None:
         self.input_filters = validate_input_filters(self.input_filters)
+        if self.stac_search is not None:
+            self.stac_search = validate_stac_search(self.stac_search)
         if self.pipeline_workers < 1:
             raise ValueError(f"pipeline_workers must be >= 1, got {self.pipeline_workers}")
         if self.pipeline_batch_size < 1:
@@ -241,6 +266,8 @@ class EngineConfig:
             target_type = type_hints.get(key)
             if key == "input_filters":
                 init_kwargs[key] = validate_input_filters(value)
+            elif key == "stac_search":
+                init_kwargs[key] = _parse_stac_search(value)
             else:
                 init_kwargs[key] = coerce_cli_value(value, target_type, key)
         return cls(**init_kwargs)

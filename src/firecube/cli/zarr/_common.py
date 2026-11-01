@@ -38,8 +38,10 @@ def _configure_ingestor_for_cli(
     options: Sequence[tuple[str, object]] = (),
     run_id: str,
     source: str = "",
+    sources: tuple[str, ...] = (),
     storage: Any = None,
     input_filters: list[str] | None = None,
+    stac_search: dict[str, Any] | None = None,
 ) -> PluginContext:
     """Build and configure a PluginContext for CLI zarr commands.
 
@@ -55,8 +57,10 @@ def _configure_ingestor_for_cli(
             options=dict(coerced_options),
             run_id=run_id,
             source=source,
+            sources=sources,
             storage=storage,
             input_filters=input_filters,
+            stac_search=stac_search,
         )
     except RemovedConfigKeyError as exc:
         raise click.UsageError(render(exc)) from exc

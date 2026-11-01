@@ -122,3 +122,49 @@ class TestTensogramWriteStrategy:
         strategy.close()
         assert call_count == 2
         assert metrics["messages_written"] == 2
+
+
+def test_tensogram_batch_with_two_sources_records_both(tmp_path, caplog):
+    """A batch over two sources completes and the archive records both, joined with ', '."""
+    import logging
+    from pathlib import Path
+
+    import numpy as np
+    import tensogram
+    import xarray as xr
+
+    from firecube.ingestor.templates.generic_tensogram import GenericTensogramIngestor
+    from firecube.ingestor.types.context import (
+        IngestContext,
+        PipelineBatch,
+        PluginContext,
+        RuntimeIngestContext,
+    )
+
+    class _TwoSourceIngestor(GenericTensogramIngestor):
+        PRODUCT_NAME = "two_source_tgm"
+
+        def build_dataset(self, group, items, ctx):
+            return xr.Dataset({"T": (["x"], np.array([1.0, 2.0], dtype="float32"))})
+
+    target = tmp_path / "out.tgm"
+    ctx = PluginContext(
+        RuntimeIngestContext.from_ingest_context(
+            IngestContext(
+                sources=("/data/a", "/data/b"), target=str(target), output_format="tensogram"
+            ),
+            run_id="run-1",
+            temp_root=None,
+            materializer=None,
+        )
+    )
+    batch = PipelineBatch(batch_id="b1", data_path=Path("."), items=["x.nc"], metadata={})
+
+    # The batch failure is asserted through result.error; keep its log line out of the report.
+    caplog.set_level(logging.CRITICAL, logger="firecube")
+    result = _TwoSourceIngestor(name="two_source_tgm")._process_batch(batch, ctx)
+
+    assert result.success, result.error
+    with tensogram.TensogramFile.open(str(target)) as archive:  # type: ignore[attr-defined]
+        meta = archive.file_decode_metadata(0)
+    assert meta.extra["firecube"]["source_uri"] == "/data/a, /data/b"

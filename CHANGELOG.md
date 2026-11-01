@@ -151,6 +151,50 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   from `get_batch_groups` for the same result. The plugin guides describe
   both. A schema that declares the root group beside a named group stays
   refused.
+- `--input-data stac://<host>/<api-root>/collections/<id>` reads the source
+  granules of one STAC API collection. `firecube ingest`, `firecube zarr
+  preallocate` and `firecube zarr slots` search the API at
+  `https://<host>/<api-root>` when they need the items. They read every result
+  page and hand the href
+  of each asset whose roles contain `data` to the plugin. The default suffix
+  list does not apply. `--input-filters` narrows the assets on the basename of
+  the href. Requires the new `stac` extra: `uv pip install
+  'firecube[stac]'`. Firecube imports the STAC client only when a search runs.
+  Static `catalog.json` catalogues are not supported.
+- The command refuses a `stac://` source in two cases of broken paging. In
+  the first, a `next` link repeats an earlier request. In the second, five
+  empty result pages in a row each carry a `next` link. The error says that
+  the results may be incomplete.
+- STAC assets with different collection, item id and asset key tuples never
+  share an identity. Firecube writes `%` as `%25` and `/` as `%2F` in each
+  part. A part with neither character stays as it is.
+- `--stac-search <json>` filters the item search of every `stac://` source
+  with the keys `datetime`, `bbox`, `intersects` and `ids`. Any other key,
+  `collections` included, exits with code 2, and so does `--stac-search`
+  without a `stac://` source. The run record keeps the `stac://` sources,
+  the filter as given and the resolved item ids.
+- A `stac_search` table in the plugin configuration filters the item search
+  in `firecube ingest`, `firecube zarr preallocate` and `firecube zarr slots`.
+  `--stac-search` replaces the whole table. The same key rules apply to the
+  table.
+- Each command discovers the source items at most once. Index binding,
+  batching and preallocation read that one discovery.
+- The run records of `firecube ingest` and `firecube zarr preallocate` keep
+  the `stac://` sources, the filter and the item ids under `stac_discovery`.
+  This includes the `run_failed` record of `firecube ingest`.
+- `--input-data` may be repeated, and its schemes may be mixed in one run.
+  `IngestContext.sources` and `PluginContext.sources` hold every source.
+  `PluginContext.source` raises `ConfigurationError` when there are several.
+- `ctx.materialize` reads the href of a `SourceItem`. It downloads an
+  `http://` or `https://` href into the run's workspace with one anonymous
+  `GET`. It raises `UnsupportedSourceSchemeError` for a scheme that Firecube
+  cannot open. For a `file://` href it returns the file itself.
+- A plugin class that declares `SOURCE_ITEMS = True` receives `SourceItem`
+  objects instead of href strings in `filter_item`, `inspect_item` and the
+  build hooks. A STAC item carries its collection, item id, asset key,
+  datetime, bbox, media type and roles.
+- `discover()`, `DiscoveryRequest` and `SourceItem` in `firecube.core.api`
+  discover the sources of a run from library code.
 
 ### Changed
 - The refusal for a legacy index record now names the library function that
@@ -345,8 +389,17 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   message now reads `--storage-type '<type>' is incompatible with URI scheme
   '<scheme>'`.
 
+### Removed
+
+- Firecube removes the module paths `firecube.core.formats.discovery` and
+  `firecube.core.formats.input_filters`. `discover_input_files`
+  and `KNOWN_EXTENSIONS` are no longer importable from `firecube.core.formats`.
+  Import `discover_input_files` from `firecube.core.api`.
+
 ### Fixed
 
+- `ctx.materialize` of a `file://` href returned a path below the working
+  directory that did not exist. It now returns the file.
 - `firecube archive create`, `archive restore`, `archive info`, `archive
   validate` and `archive list` refuse an `--archive` value without a URI
   scheme. They exit with code 2 and name the `file://` form to use. Before,

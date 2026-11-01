@@ -83,6 +83,27 @@ class RemovedConfigKeyError(ConfigurationError):
         return (type(self), (self.key,), self.__dict__)
 
 
+class UnsupportedSourceSchemeError(IngestorError, ValueError):
+    """A source href names a scheme that Firecube cannot open.
+
+    Args:
+        href: The href as given.
+        scheme: Its scheme.
+
+    Attributes:
+        href: The href as given.
+        scheme: Its scheme.
+    """
+
+    def __init__(self, href: str, scheme: str) -> None:
+        super().__init__(f"Firecube cannot open {scheme}:// sources: {href}")
+        self.href = href
+        self.scheme = scheme
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (type(self), (self.href, self.scheme), self.__dict__)
+
+
 class SchemaSizeMismatchError(IngestorError):
     """Raised when an existing Zarr array's shape is smaller than the global expected size.
 
@@ -297,5 +318,6 @@ __all__ = [
     "StagedMetadataError",
     "StorageError",
     "UnboundedAxisError",
+    "UnsupportedSourceSchemeError",
     "WriteIntentRangeError",
 ]

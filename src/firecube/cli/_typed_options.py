@@ -21,7 +21,7 @@ import click
 from firecube.cli._errors import UnknownOptionError, render
 from firecube.cli._shared_options import format_option as display_format_option
 from firecube.cli.plugins.registry import PluginConfigSchemas, resolve_plugin_configs
-from firecube.core.formats.input_filters import LEGACY_INPUT_PATTERNS_MESSAGE
+from firecube.core.discovery import LEGACY_INPUT_PATTERNS_MESSAGE
 from firecube.ingestor.config.coercion import coerce_cli_value
 from firecube.ingestor.config.engine import is_experimental_option_key
 from firecube.ingestor.errors import ConfigurationError
@@ -68,6 +68,7 @@ def output_path_option(
 # flag. Hard-reject at parse time.
 _TYPED_FLAG_OWNED_KEYS: dict[str, str] = {
     "input_filters": "--input-filters",
+    "stac_search": "--stac-search",
     "write_mode": "--write-mode",
     "slot_start": "--slot-start",
     "slot_end": "--slot-end",

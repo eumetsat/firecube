@@ -143,7 +143,7 @@ def test_exclusions_override_content_detection_without_sniffing(tmp_path, monkey
     def must_not_sniff(_):
         pytest.fail("excluded file was inspected")
 
-    monkeypatch.setattr("firecube.core.formats.discovery.looks_like_hdf5", must_not_sniff)
+    monkeypatch.setattr("firecube.core.discovery._walk.looks_like_hdf5", must_not_sniff)
     assert discover_input_files(tmp_path, preferred_globs=["!measurement"]) == []
 
 
@@ -168,14 +168,14 @@ def test_remote_paths_use_same_matching_without_sniffing(monkeypatch):
         return RemoteListing(), StorageUri.parse(source_uri)
 
     monkeypatch.setattr(
-        "firecube.core.formats.discovery.open_source_filesystem",
+        "firecube.core.discovery._walk.open_source_filesystem",
         open_source_filesystem,
     )
 
     def must_not_sniff(_):
         pytest.fail("remote source was inspected as a local file")
 
-    monkeypatch.setattr("firecube.core.formats.discovery.looks_like_hdf5", must_not_sniff)
+    monkeypatch.setattr("firecube.core.discovery._walk.looks_like_hdf5", must_not_sniff)
     assert discover_input_files(
         "s3://bucket/root",
         preferred_globs=["*.csv", "!draft_*.csv", "!*/incoming/*", "!s3://bucket/root/file.hdf"],

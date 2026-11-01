@@ -335,7 +335,7 @@ def test_preallocate_product_runs_on_a_host_that_only_has_the_protocol_members(
     import direct_zarr_capable_test_plugin as plugin_module
 
     class ForwardingHost:
-        """Forwards exactly the nine `PreallocateHost` members and nothing else."""
+        """Forwards exactly the eleven `PreallocateHost` members and nothing else."""
 
         time_dim_name: ClassVar[str] = plugin_module.DirectZarrCapableTestIngestor.time_dim_name
 
@@ -358,6 +358,12 @@ def test_preallocate_product_runs_on_a_host_that_only_has_the_protocol_members(
         def discover_source_files(self, ctx: PluginContext) -> Iterable[Any]:
             return self._plugin.discover_source_files(ctx)
 
+        def discovered_source_files(self, ctx: PluginContext) -> tuple[Any, ...]:
+            return self._plugin.discovered_source_files(ctx)
+
+        def stac_discovery_record(self, ctx: PluginContext) -> dict[str, Any] | None:
+            return self._plugin.stac_discovery_record(ctx)
+
         def filter_item(self, item: Any, ctx: PluginContext) -> bool:
             return self._plugin.filter_item(item, ctx)
 
@@ -365,13 +371,11 @@ def test_preallocate_product_runs_on_a_host_that_only_has_the_protocol_members(
             return self._plugin.inspect_item(item, ctx)
 
     as_host: Callable[[Any], PreallocateHost] = ForwardingHost
-    previews: list[PreallocateDryRunGroup] = []
+    target_path = tmp_path / "out.zarr"
 
-    _preallocate_as_a_python_caller(
-        tmp_path / "out.zarr", host=as_host, dry_run=True, on_dry_run_group=previews.append
-    )
+    _preallocate_as_a_python_caller(target_path, host=as_host, dry_run=False)
 
-    assert [p.group for p in previews] == ["data"]
+    assert (target_path / "data").exists()
 
 
 @pytest.mark.contract

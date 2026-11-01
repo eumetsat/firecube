@@ -22,7 +22,7 @@ from pathlib import Path
 import h5py
 import pytest
 
-from firecube.core.formats.discovery import discover_input_files
+from firecube.core.discovery import discover_input_files
 
 
 @pytest.fixture
