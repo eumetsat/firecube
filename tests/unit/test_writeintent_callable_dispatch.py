@@ -387,13 +387,14 @@ def test_callable_dispatch_covers_region_and_static_kinds() -> None:
 
 
 def test_callable_data_rejected_at_construction_for_unsupported_kind() -> None:
-    """Callable data raises ``TypeError`` at construction for unsupported kinds."""
+    """Callable data raises ``TypeError`` at construction for unsupported kinds.
+
+    ``kind="1d"`` (slot writes) accepts callables since N-D slot payloads can be
+    large; see ``test_callable_1d_payload_resolved_once_at_dispatch``.
+    """
 
     def payload() -> np.ndarray:
         return np.ones((4,), dtype=np.float64)
-
-    with pytest.raises(TypeError, match="kind='1d'"):
-        WriteIntent(group="g", array="a", ts_index=0, data=payload, kind="1d")
 
     with pytest.raises(TypeError, match="kind='timestamp'"):
         WriteIntent(
