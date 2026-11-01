@@ -60,14 +60,15 @@ After the implementation and tests pass, run:
 
 ```bash
 uv run firecube ingest {plugin_name} \
-  --input-data /path/to/your/input \
+  --input-data file:///path/to/your/input \
   --target file:///tmp/{plugin_name}_out{output_suffix} \
   --product-name {plugin_name} \
   --output-format {output_format} \
   --write-mode {write_mode_default}
 ```
 
-- `--input-data` takes a directory or a single file. Discovery picks up `.zip`,
+- `--input-data` takes a `file://` URI of a directory or of a single file, an
+  `s3://` prefix, or a `stac://` collection. Discovery picks up `.zip`,
   `.h5`, `.nc`, `.nc4`, `.hdf`, and `.he5` files, and HDF5 files without those
   extensions. For other formats, add a filter such as
   `--input-filters '["*.csv"]'`.
