@@ -26,9 +26,33 @@ import xarray as xr
 if TYPE_CHECKING:
     from firecube.core.storage.session import StorageSession
 
+from firecube.core.errors import ConfigurationError, Message, Param
 from firecube.core.storage.uri import StorageUri
 
 DEFAULT_MULTIRES_RESOLUTIONS: tuple[float, ...] = (1.0, 0.5)
+
+
+def _require_axis(ds: xr.Dataset, name: str, option: Param) -> None:
+    """Refuse a coordinate that is missing, not 1-D, or not on its own dimension."""
+    if name not in ds.coords:
+        raise ConfigurationError(
+            Message(
+                "Coordinate {name!r} is not in the dataset; name the coordinate with {option}.",
+                name=name,
+                option=option,
+            )
+        )
+    dims = ds[name].dims
+    if dims != (name,):
+        raise ConfigurationError(
+            Message(
+                "Coordinate {name!r} must be 1-D on its own dimension, but has dimensions "
+                "{dims}; name another coordinate with {option}.",
+                name=name,
+                dims=dims,
+                option=option,
+            )
+        )
 
 
 def build_multires_layers(
@@ -42,6 +66,8 @@ def build_multires_layers(
     group: str | None = None,
     strict: bool = False,
     ds_input: xr.Dataset | None = None,
+    lat_name: str = "lat",
+    lon_name: str = "lon",
 ) -> list[str]:
     """Build coarsened multi-resolution layers inside an existing Zarr store.
 
@@ -49,18 +75,26 @@ def build_multires_layers(
         zarr_store: Store path or mapping. When a group is provided, zarr_store
             is assumed to point at the *root* of the product and `group`
             selects the dataset.
-        group: Optional group path (e.g. "F048/FWI"). When omitted, the
-            function attempts to open the root dataset directly. Pass
-            ``group`` explicitly if the store uses a grouped layout.
+        group: Optional group path (e.g. "F048/FWI"). When omitted, empty or
+            "/", the function opens the root dataset and writes the levels to
+            ``multires/<res>deg``. Pass ``group`` explicitly if the store uses
+            a grouped layout.
+        lat_name: Name of the latitude coordinate to coarsen.
+        lon_name: Name of the longitude coordinate to coarsen.
         strict: When True, failures to open the base dataset are raised instead
             of being converted into an empty result. This is useful for
             CLI/API operations where a failure should abort the request.
         ds_input: Optional xarray Dataset to coarsen. When provided, the
             function coarsens only this data and appends it to multiresolution
             layers (instead of rebuilding everything from the store).
+
+    Raises:
+        ConfigurationError: A named coordinate is missing, not 1-D, or not on its
+            own dimension. Nothing is written.
     """
 
     groups_written: list[str] = []
+    group = (group or "").strip("/")
 
     # Normalize resolutions
     if resolutions is True:
@@ -110,16 +144,19 @@ def build_multires_layers(
             raise
         return groups_written
 
-    ds_base = ds_base.sortby(["lat", "lon"])
+    _require_axis(ds_base, lat_name, Param("lat_name"))
+    _require_axis(ds_base, lon_name, Param("lon_name"))
+
+    ds_base = ds_base.sortby([lat_name, lon_name])
 
     dlat = (
-        float(abs(ds_base.lat.diff("lat").mean().values))
-        if ds_base.sizes.get("lat", 0) > 1
+        float(abs(ds_base[lat_name].diff(lat_name).mean().values))
+        if ds_base.sizes.get(lat_name, 0) > 1
         else 1.0
     )
     dlon = (
-        float(abs(ds_base.lon.diff("lon").mean().values))
-        if ds_base.sizes.get("lon", 0) > 1
+        float(abs(ds_base[lon_name].diff(lon_name).mean().values))
+        if ds_base.sizes.get(lon_name, 0) > 1
         else 1.0
     )
 
@@ -159,8 +196,9 @@ def build_multires_layers(
             )
 
         ds_coarse = cast(
-            Any, ds_base.coarsen(lat=lat_factor, lon=lon_factor, boundary="trim")
-        ).mean(skipna=True)
+            Any,
+            ds_base.coarsen({lat_name: lat_factor, lon_name: lon_factor}, boundary="trim"),
+        ).mean()  # skipna defaults to True for float data; xarray 2026.9.0 rejects the keyword
 
         session.zarr.write_dataset(
             ds_coarse,

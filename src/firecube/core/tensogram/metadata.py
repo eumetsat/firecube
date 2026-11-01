@@ -261,8 +261,19 @@ def variable_to_base_entry(
         entry["zarr_chunks"] = list(zarr_meta["chunks"])
         if zarr_meta.get("compressor") is not None:
             entry["zarr_compressor"] = zarr_meta["compressor"]
-        entry["zarr_fill_value"] = zarr_meta["fill_value"]
+        entry["zarr_fill_value"] = _archived_fill_value(zarr_meta["fill_value"])
     return entry
+
+
+def _archived_fill_value(fill_value: Any) -> Any:
+    """Return the fill value as the archive stores it.
+
+    A ``datetime64`` fill value takes the conversion of the payload values, so a NaT fill
+    and a NaT hole in the payload encode to the same float64.
+    """
+    if isinstance(fill_value, np.datetime64):
+        return float(_datetime64_to_float64(np.asarray(fill_value)))
+    return fill_value
 
 
 def restore_attrs_from_meta(meta: dict[str, Any]) -> dict[str, Any]:

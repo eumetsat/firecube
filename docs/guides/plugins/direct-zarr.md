@@ -171,9 +171,10 @@ and emits the slot's time-coordinate verify-write for you. Append
 `WriteIntent.static(...)` items to the same list for arrays that never move
 with the time axis, such as latitude and longitude grids. Every element must
 target a declared group and array. To write more than one group, declare one
-`ZarrGroupSpec` per group and name the group on each write; Firecube derives
-the group set from the schema, so `get_batch_groups` is not overridden on
-this template.
+`ZarrGroupSpec` per group and name the group on each write. Firecube derives
+the group set from the schema, so do not override `get_batch_groups` on this
+template. To write at the store root instead, see
+[Write The Cube At The Store Root](#write-the-cube-at-the-store-root).
 
 ### Choose A Write Factory
 
@@ -203,6 +204,40 @@ auto-emits it only for slots it resolved from `IndexedWrite` elements. Both
 element types mix freely in one returned list. See
 [Plugin Templates](../../reference/templates.md#firecube.ingestor.api.DirectZarrIngestor.build_write_intents) for
 the full contract.
+
+### Write The Cube At The Store Root
+
+If the product needs its arrays at the root of the store, declare
+`ZarrGroupSpec(group="/")`. Declare no other group. Firecube refuses a schema
+that declares the root group beside a named group.
+
+Use `"/"` as the group key in `IndexSpec.groups`, and as the `group=` of every
+write. `"/"` and `""` both name the root group.
+
+```python
+def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
+    n_times = self.resolved_index(ctx).size("/")
+    return [
+        ZarrGroupSpec(
+            group="/",
+            coord_names=frozenset({"timestamp"}),
+            attrs={"title": "My product"},
+            arrays=[...],
+        )
+    ]
+```
+
+The root group can carry attributes. Firecube refuses these four names,
+because the root document also holds the index mirror:
+
+- `firecube_resolved_index`
+- `firecube_resolved_index_identity_hash`
+- `firecube_slot_index_model`
+- `firecube_slot_index_model_identity_hash`
+
+`firecube zarr preallocate` writes the attributes of each declared group, the
+root group included. If a cube has no attributes, run `firecube zarr
+preallocate` again to add them.
 
 ### Pick Chunks For Pod-Written Arrays
 

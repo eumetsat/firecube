@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable, Iterable
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -200,6 +201,10 @@ def preallocate_product(
     )
     from firecube.core.uris import storage_uri_from_target
     from firecube.ingestor.api import IndexedRegionStrategy
+    from firecube.ingestor.runtime.zarr.root_group import (
+        refuse_root_beside_named_groups,
+        refuse_root_group_attrs,
+    )
 
     identity = session.product
     plugin_target = identity.product_uri.to_str()
@@ -321,6 +326,12 @@ def preallocate_product(
             raise SchemaDriftError(str(exc) if exc.message is None else exc.message) from exc
         _preallocate_can_record_failure = True
         schema = ingestor.zarr_schema(plugin_ctx)
+        try:
+            refuse_root_beside_named_groups(schema)
+            refuse_root_group_attrs(schema)
+        except ConfigurationError:
+            _preallocate_can_record_failure = False  # a refusal records nothing: target untouched
+            raise
         all_specs = [array for group in schema for array in group.arrays]
         from firecube.ingestor.templates.config import (
             ZarrTemplateConfig,
@@ -454,12 +465,29 @@ def preallocate_product(
             )
             report(f"resolved index: {outcome}")
 
-        _ensure_ancestors(store_writer, _preallocate_claim_handle, global_expected)
+        # A group without a count gets no arrays; one with attrs still gets its document.
+        attr_only_groups = [
+            spec.group for spec in schema if spec.attrs and spec.group not in global_expected
+        ]
+        _ensure_ancestors(
+            store_writer, _preallocate_claim_handle, [*global_expected, *attr_only_groups]
+        )
         for group_spec in schema:
             group_name = group_spec.group
             expected_time_count = global_expected.get(group_name)
             if expected_time_count is None:
                 report(f"group {group_name}: skipped; not present in expected time counts")
+                if group_spec.attrs:
+                    with _group_setup_authority(
+                        chunk_manager,
+                        product=identity.product_name,
+                        run_id=run_id,
+                        writer=store_writer,
+                        group=group_name,
+                    ) as authority:
+                        RegionZarrWriter(
+                            plugin_target, store=authority.scope.backing, authority=authority
+                        ).set_group_attrs(group_name, group_spec.attrs, authority=authority)
                 continue
             if expected_time_count <= 0:
                 raise ConfigurationError(
@@ -467,21 +495,14 @@ def preallocate_product(
                     f"for group '{group_name}'. Expected positive integers only."
                 )
 
-            domain = WriteDomain(
-                product=identity.product_name,
-                category="zarr_schema_global",
-                name=f"{group_name}:setup",
-            )
-            owner = f"{run_id}:{group_name}:schema_global"
             # The group's metadata (arrays, coordinates, markers) changes only under the
             # setup claim's authority; it covers the group, not the root (made above).
-            with hold_authority(
-                store_writer.metadata_scope(group_name),
-                claim=chunk_manager.acquire_claim(
-                    product=identity.product_name, domain=domain, owner_id=owner
-                ),
-                claim_domain=domain.identifier,
-                owner_id=owner,
+            with _group_setup_authority(
+                chunk_manager,
+                product=identity.product_name,
+                run_id=run_id,
+                writer=store_writer,
+                group=group_name,
             ) as authority:
                 coord_names = coord_names_by_group.get(group_name, frozenset({"y", "x", "channel"}))
                 writer = RegionZarrWriter(
@@ -576,6 +597,9 @@ def preallocate_product(
                 _materialize_engine_owned_arrays(
                     root, authority, group_name, engine_owned_values, report
                 )
+                # Merged into the group document, so the root's index mirror stays;
+                # a re-run stamps a cube preallocated before group attributes were.
+                writer.set_group_attrs(group_name, group_spec.attrs, authority=authority)
 
         summary = {
             "status": "ok",
@@ -814,6 +838,25 @@ def _ensure_ancestors(writer: RegionZarrWriter, claim: Any | None, groups: Itera
         ensure_group(authority, scope.backing, "")
         for group in groups:  # ensure_group creates each missing level, root first
             ensure_group(authority, scope.backing, group.strip("/").rpartition("/")[0])
+
+
+def _group_setup_authority(
+    chunk_manager: ChunkManager,
+    *,
+    product: str,
+    run_id: str,
+    writer: RegionZarrWriter,
+    group: str,
+) -> AbstractContextManager[MetadataAuthority]:
+    """Acquire *group*'s setup claim and return the authority over that group it holds."""
+    domain = WriteDomain(product=product, category="zarr_schema_global", name=f"{group}:setup")
+    owner = f"{run_id}:{group}:schema_global"
+    return hold_authority(
+        writer.metadata_scope(group),
+        claim=chunk_manager.acquire_claim(product=product, domain=domain, owner_id=owner),
+        claim_domain=domain.identifier,
+        owner_id=owner,
+    )
 
 
 def _coord_spec(group_spec: Any, axis: Any) -> Any | None:

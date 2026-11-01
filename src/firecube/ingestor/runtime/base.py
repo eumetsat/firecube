@@ -494,6 +494,9 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         ``build_dataset`` is then invoked once per group with the full batch
         item list, and the plugin routes items to the group it is building.
 
+        A GenericZarr plugin returns ``["/"]`` to write its dataset at the store
+        root instead of in a named group.
+
         Implementations MUST be deterministic and return a stable, sorted
         list so grouping stays consistent across runs.
 
@@ -872,6 +875,14 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 contextlib.ExitStack() as output_ownership,
             ):
                 self._bind_index_at_startup(runtime_plugin_ctx)
+
+                # Schema refusals of the root group run after this context's index
+                # is bound and before anything touches the target.
+                from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+
+                schema_host: Any = self
+                if isinstance(schema_host, DirectZarrIngestor):
+                    schema_host._cached_zarr_schema(runtime_plugin_ctx)
 
                 binding = getattr(self, "_index_binding", None)
                 if binding is not None:

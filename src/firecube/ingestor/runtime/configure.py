@@ -198,8 +198,8 @@ def configure_ingestor(
         materializer=None,
     )
     configurator = TierConfigurator(
-        ingestor.template_config_class,
-        ingestor.plugin_config_class,
+        getattr(ingestor, "template_config_class", None),
+        getattr(ingestor, "plugin_config_class", None),
         plugin_name=ingestor.name,
     )
     ingestor.engine_config, ingestor.template_config, ingestor.plugin_config = (

@@ -28,6 +28,7 @@ import click
 
 from firecube.cli._errors import echo_rendered, render
 from firecube.cli._formatter import FirecubeGroup
+from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import (
@@ -44,6 +45,9 @@ from firecube.core.time.calendar import is_gregorian_like
 from firecube.ingestor.registry import loader as ingestor_loader
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from firecube.ingestor.api import PluginContext
     from firecube.ingestor.runtime.index_record import IndexVerification
 
 logger = logging.getLogger(__name__)
@@ -97,6 +101,19 @@ def _load_plugin(plugin: str, manager: ChunkManager) -> Any:
     if "chunk_manager" in sig.parameters:
         return ingestor_cls(chunk_manager=manager)
     return ingestor_cls()
+
+
+def _configurer(
+    target: str, options: tuple[tuple[str, object], ...]
+) -> Callable[[Any, str], PluginContext]:
+    """Return the callable that configures a loaded plugin with the `--option` values."""
+
+    def configure(ingestor: Any, run_id: str) -> PluginContext:
+        from firecube.cli.zarr._common import _configure_ingestor_for_cli
+
+        return _configure_ingestor_for_cli(ingestor, target=target, options=options, run_id=run_id)
+
+    return configure
 
 
 def _group_rows(index_payload: dict[str, Any]) -> list[tuple[str, str, str]]:
@@ -279,11 +296,22 @@ def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> No
 @click.option("--target", required=True, help="Product Zarr URI to inspect.")
 @click.option("--product-name", required=True, help="Logical product name.")
 @click.option("--plugin", required=False, help="Optional plugin name to compare against.")
-def verify_cmd(target: str, product_name: str, plugin: str | None) -> None:
+@click.option(
+    "--option",
+    "option",
+    multiple=True,
+    type=TypedOptionsParam(),
+    help="Plugin option in key=value form. Requires --plugin.",
+)
+def verify_cmd(
+    target: str, product_name: str, plugin: str | None, option: tuple[tuple[str, object], ...]
+) -> None:
     """Verify the current resolved-index record and mirrored root attr."""
 
     from firecube.ingestor.runtime.index_record import IndexRecordError, verify_index_record
 
+    if option and plugin is None:
+        raise click.UsageError("--option requires --plugin")
     manager = _manager(target, product_name)
     try:
         load_plugin = (
@@ -296,6 +324,7 @@ def verify_cmd(target: str, product_name: str, plugin: str | None) -> None:
                 target=target,
                 plugin_name=plugin,
                 load_plugin=load_plugin,
+                configure=_configurer(target, option),
             )
         except IndexRecordError as exc:
             # A plugin's own ClickException reaches the operator unchanged.
@@ -369,7 +398,16 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
 @click.option("--target", required=True, help="Product Zarr URI to rebuild the index for.")
 @click.option("--plugin", required=True, help="Plugin name used to resolve the index spec.")
 @click.option("--product-name", required=True, help="Logical product name.")
-def rebuild_cmd(target: str, plugin: str, product_name: str) -> None:
+@click.option(
+    "--option",
+    "option",
+    multiple=True,
+    type=TypedOptionsParam(),
+    help="Plugin option in key=value form.",
+)
+def rebuild_cmd(
+    target: str, plugin: str, product_name: str, option: tuple[tuple[str, object], ...]
+) -> None:
     """Rebuild the resolved-index record from a plugin declaration."""
 
     from firecube.ingestor.runtime.index_record import IndexRecordError, rebuild_index_record
@@ -387,6 +425,7 @@ def rebuild_cmd(target: str, plugin: str, product_name: str) -> None:
                 logger=logger,
                 report=echo_rendered,
                 warn=functools.partial(echo_rendered, err=True),
+                configure=_configurer(target, option),
             )
         except IndexRecordError as exc:
             raise click.ClickException(render(exc)) from exc

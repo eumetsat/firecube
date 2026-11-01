@@ -21,6 +21,9 @@ The produced .tgm file is openable with:
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -49,8 +52,24 @@ from .metadata import (
 )
 from .schema import make_controlplane_meta, make_data_meta
 
-_UNENCODABLE_DTYPE_KINDS = frozenset({"U", "S", "O"})
+_UNENCODABLE_DTYPE_KINDS = frozenset({"U", "S", "O", "T"})
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _created_archive(tensogram: Any, path: Path) -> Iterator[Any]:
+    """Create the archive file at ``path`` and yield its handle.
+
+    A refused creation raises with the path untouched. Any failure after creation closes the
+    handle, removes the file this call created, and re-raises.
+    """
+    handle = tensogram.TensogramFile.create(str(path))
+    try:
+        with handle as tensogram_file:
+            yield tensogram_file
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
 
 
 def _is_encodable_dtype(dtype) -> bool:
@@ -152,12 +171,15 @@ def zarr_to_tgm(
         groups_to_archive: list[str | None] = [group]
     else:
         zroot = session.zarr.open_group(source_uri, mode="r")
+        members = list(zroot.members())
         groups_to_archive = sorted(
-            (name for name, member in zroot.members() if isinstance(member, zarr.Group)),
+            (name for name, member in members if isinstance(member, zarr.Group)),
             key=str,
         )
-        if not groups_to_archive:
-            groups_to_archive = [None]
+        # A cube at the store root keeps its arrays beside its subgroups (for example multires/).
+        has_root_arrays = any(isinstance(member, zarr.Array) for _, member in members)
+        if has_root_arrays or not groups_to_archive:
+            groups_to_archive = [None, *groups_to_archive]
 
     target_path.parent.mkdir(parents=True, exist_ok=True)
     archived_groups: list[str] = []
@@ -166,7 +188,7 @@ def zarr_to_tgm(
     skipped_vars: set[str] = set()
     time_ranges: dict[str, dict[str, str]] = {}
 
-    with tensogram.TensogramFile.create(str(target_path)) as tensogram_file:  # pyright: ignore[reportAttributeAccessIssue]
+    with _created_archive(tensogram, target_path) as tensogram_file:
         for group_name in groups_to_archive:
             ds = _open_group_dataset(
                 session,

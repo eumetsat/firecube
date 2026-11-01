@@ -197,7 +197,9 @@ def delete_cmd(
         )
 
     product_name, product_uri = resolve_cli_product(product_name)
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
+    manager = resolve_manager(
+        ctx, workspace, product_uri, product_name=product_name, product_filesystem=True
+    )
     meta = parse_meta_filters(meta_filters) if meta_filters else None
 
     before_dt = parse_datetime(end_date)
@@ -285,9 +287,7 @@ def delete_cmd(
     combined_plan.products_affected = affected_products
     combined_plan.manifest_files = all_manifests
 
-    storage_cfg = None
-    if not manifest_only:
-        storage_cfg = storage_config_from_ctx(ctx)
+    storage_cfg = None if manifest_only or product_uri is not None else storage_config_from_ctx(ctx)
 
     if (
         not yes_i_really_mean_it

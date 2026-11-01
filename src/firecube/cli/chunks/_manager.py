@@ -30,6 +30,7 @@ from firecube.core.product.identity import ProductIdentity
 from firecube.core.runtime import identity_from_storage_config
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 
 log = logging.getLogger("firecube.cli")
@@ -41,8 +42,13 @@ def resolve_manager(
     product_uri: StorageUri | None = None,
     *,
     product_name: str | None = None,
+    product_filesystem: bool = False,
 ) -> ChunkManager:
-    """Resolve a ChunkManager for chunk operations using shared config + overrides."""
+    """Resolve a ChunkManager for chunk operations using shared config + overrides.
+
+    With ``product_filesystem``, a manager for a product URI deletes storage objects
+    through a filesystem bound to that product and ignores the [storage] base.
+    """
     ctx.ensure_object(dict)
     base_workspace = workspace if workspace is not None else ctx.obj.get("workspace")
     cfg = get_config(ctx)
@@ -61,7 +67,8 @@ def resolve_manager(
             ),
             driver=driver,
         )
-        manager = ChunkManager(binding=binding, workspace=base_workspace)
+        filesystem = StorageSession(binding).fs() if product_filesystem else None
+        manager = ChunkManager(binding=binding, workspace=base_workspace, filesystem=filesystem)
         ctx.call_on_close(manager.close)
         log.debug("Chunks using product URI target (product_uri=%s)", manager.base_uri)
         return manager

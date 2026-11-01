@@ -45,6 +45,14 @@ from firecube.ingestor.runtime.parallel_run_id import derive_pod_run_id
             ((0, 1), "X"),
             id="boundary",
         ),
+        pytest.param(
+            "base-run-id",
+            0,
+            48,
+            "/",
+            ((0, 48), "/"),
+            id="root_group",
+        ),
     ],
 )
 def test_parse_pod_run_id_slot_round_trip(

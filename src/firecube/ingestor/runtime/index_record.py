@@ -125,16 +125,31 @@ def _plugin_context(target: str, *, run_id: str) -> PluginContext:
 
 
 def _declared_index(
-    ingestor: Any, *, plugin_name: str, target: str, run_id: str, action: str
+    ingestor: Any,
+    *,
+    plugin_name: str,
+    target: str,
+    run_id: str,
+    action: str,
+    configure: Callable[[Any, str], PluginContext] | None = None,
 ) -> ResolvedIndex:
     """Resolve the plugin's declared index.
+
+    `configure` takes the plugin and the run id and returns the configured context
+    that `index_spec` receives; without it the context carries no options. An
+    exception from `configure` propagates unchanged.
 
     Raises:
         IndexRecordError: `index_spec` returns `None`, or it or the resolution raises;
             the original exception is the cause.
     """
+    context = (
+        configure(ingestor, run_id)
+        if configure is not None
+        else _plugin_context(target, run_id=run_id)
+    )
     try:
-        spec = ingestor.index_spec(_plugin_context(target, run_id=run_id))
+        spec = ingestor.index_spec(context)
     except Exception as exc:
         raise IndexRecordError(
             f"Plugin '{plugin_name}' failed to resolve index_spec: {exc}"
@@ -165,6 +180,7 @@ def rebuild_index_record(
     logger: logging.Logger = _log,
     report: Callable[[str], None] = lambda _message: None,
     warn: Callable[[str], None] = lambda _message: None,
+    configure: Callable[[Any, str], PluginContext] | None = None,
 ) -> IndexRebuildResult:
     """Persist the resolved-index record the plugin declares, and mirror it on the root attributes.
 
@@ -182,6 +198,7 @@ def rebuild_index_record(
         logger: Receives the index-ensured event log and run-record failures.
         report: Receives the outcome line before the run is recorded complete.
         warn: Receives the conflict message before the run is recorded failed.
+        configure: Takes the plugin and the run id, returns the configured context for `index_spec`.
 
     Returns:
         The outcome, the persisted identity hash and the run id.
@@ -199,7 +216,12 @@ def rebuild_index_record(
     completed = False
     try:
         resolved = _declared_index(
-            ingestor, plugin_name=plugin_name, target=target, run_id=run_id, action="rebuild"
+            ingestor,
+            plugin_name=plugin_name,
+            target=target,
+            run_id=run_id,
+            action="rebuild",
+            configure=configure,
         )
         legacy_model = resolved.as_legacy_slot_index_model()
         if legacy_model is not None:
@@ -307,6 +329,7 @@ def verify_index_record(
     target: str,
     plugin_name: str | None = None,
     load_plugin: Callable[[], Any] | None = None,
+    configure: Callable[[Any, str], PluginContext] | None = None,
 ) -> IndexVerification:
     """Compare the stored resolved-index record with its root attribute and, optionally, the plugin.
 
@@ -320,6 +343,7 @@ def verify_index_record(
         plugin_name: The plugin to compare against, or `None` to skip the comparison.
             It also names the plugin in the legacy-record message.
         load_plugin: Returns the plugin instance. Required when `plugin_name` is given.
+        configure: Takes the plugin and the run id, returns the configured context for `index_spec`.
 
     Returns:
         The verdict, with the hashes it compared.
@@ -353,7 +377,12 @@ def verify_index_record(
     if plugin_name is not None and load_plugin is not None:
         ingestor = load_plugin()
         declared_hash = _declared_index(
-            ingestor, plugin_name=plugin_name, target=target, run_id="verify", action="verify"
+            ingestor,
+            plugin_name=plugin_name,
+            target=target,
+            run_id="verify",
+            action="verify",
+            configure=configure,
         ).identity_hash
         if declared_hash != record.identity_hash:
             return IndexVerification(

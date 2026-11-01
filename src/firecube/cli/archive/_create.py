@@ -244,7 +244,7 @@ def create(
     tgm_result = created.tgm_summary
     if tgm_result is not None:
         if tgm_result.get("groups"):
-            click.echo(f"  Groups: {', '.join(tgm_result['groups'])}")
+            click.echo(f"  Groups: {', '.join(g or '(root)' for g in tgm_result['groups'])}")
         click.echo(f"  Variables: {', '.join(tgm_result['variables'])}")
         if tgm_result.get("time_range"):
             tr = tgm_result["time_range"]

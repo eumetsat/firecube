@@ -219,6 +219,68 @@ class TestCollateralGuard:
             f"destroyed by the shared-chunk removal; active={active_keys!r}"
         )
 
+    def test_repro_span_directzarr_collateral(self, tmp_path: Path) -> None:
+        manager = _build_store_and_manager(tmp_path)
+        output_path = str(manager.workspace / PRODUCT)
+        state_array = f"{GROUP}/firecube_timestamp_state"  # DirectZarr never creates it
+        for run_id, ranges, t_min, t_max in (
+            ("run-a", [[0, 1]], "2024-01-01T00:00:00", "2024-01-01T01:00:00"),
+            ("run-b", [[2, 3]], "2024-01-01T02:00:00", "2024-01-01T03:00:00"),
+        ):
+            manager.record_run_started(
+                product=PRODUCT,
+                run_id=run_id,
+                output_path=output_path,
+                output_format="zarr",
+                size=0,
+                meta={"plugin": "test"},
+            )
+            manager.record_span(
+                product=PRODUCT,
+                run_id=run_id,
+                batch_id=f"batch-{run_id}",
+                group=GROUP,
+                status="active",
+                coverage=SpanCoverage(
+                    group=GROUP,
+                    arrays=["counts"],
+                    time_index_ranges=ranges,
+                    aligned=False,
+                    state_array=state_array,
+                    time_min=t_min,
+                    time_max=t_max,
+                ),
+                meta={"plugin": "test", "group": GROUP, "time_min": t_min, "time_max": t_max},
+            )
+            manager.record_run_terminal(
+                product=PRODUCT,
+                run_id=run_id,
+                output_path=output_path,
+                output_format="zarr",
+                size=1,
+                meta={"plugin": "test"},
+                status="complete",
+            )
+        span_a = _find_span_by_run(manager, "run-a")
+        span_b = _find_span_by_run(manager, "run-b")
+
+        result = manager.delete_spans(
+            [span_a], dry_run=False, force=True, yes_i_really_mean_it=True
+        )
+
+        assert not result.get("errors"), f"errors={result.get('errors')!r}"
+        chunk_dir = tmp_path / PRODUCT / GROUP / "counts" / "c"
+        assert not (chunk_dir / "0" / "0").exists()
+        assert (chunk_dir / "1" / "0").exists(), "chunk of slots 4-7, covered by no span, must stay"
+        assert span_b.key in (result.get("collateral_spans") or [])
+        active_keys = {
+            s.key
+            for s in manager.repo.list_chunks(product=PRODUCT, chunk_type="span")
+            if s.is_active
+        }
+        assert span_a.key not in active_keys
+        assert span_b.key not in active_keys
+
     def test_dry_run_reports_collateral_as_warning(self, tmp_path: Path) -> None:
         manager = _build_store_and_manager(tmp_path)
         span_a, span_b = _seed_shared_chunk_spans(manager)

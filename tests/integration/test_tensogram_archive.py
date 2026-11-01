@@ -495,3 +495,66 @@ def test_archive_info_shows_groups(tmp_path):
     assert result.exit_code == 0, result.output
     assert "Alpha" in result.output
     assert "Beta" in result.output
+
+
+@pytest.mark.integration
+def test_repro_tgm_restore_keeps_compressor(tmp_path):
+    import zarr
+    from zarr.codecs import GzipCodec
+
+    src, rest = tmp_path / "src.zarr", tmp_path / "rest.zarr"
+    data = zarr.open_group(src, mode="w").create_group("Data")
+    data.create_array(
+        "v",
+        data=np.arange(40, dtype="float32").reshape(8, 5),
+        dimension_names=("t", "x"),
+        compressors=GzipCodec(level=3),
+    )
+    tgm = (tmp_path / "c.tgm").as_uri()
+    _archive_cli(tmp_path, "create", "--source", src.as_uri(), "--archive", tgm)
+    _archive_cli(tmp_path, "restore", "--archive", tgm, "--target", rest.as_uri())
+
+    source_codecs = cast(Any, zarr.open_group(src, mode="r", path="Data")["v"]).compressors
+    restored_codecs = cast(Any, zarr.open_group(rest, mode="r", path="Data")["v"]).compressors
+    assert [c.to_dict() for c in source_codecs] == [{"name": "gzip", "configuration": {"level": 3}}]
+    assert [c.to_dict() for c in restored_codecs] == [c.to_dict() for c in source_codecs]
+
+
+@pytest.mark.integration
+def test_repro_tgm_root_label(tmp_path):
+    src = tmp_path / "root.zarr"
+    _make_test_dataset().to_zarr(src)
+    tgm = (tmp_path / "root.tgm").as_uri()
+    runner = CliRunner()
+    env = _local_env(tmp_path)
+
+    created = runner.invoke(
+        cli,
+        ["archive", "create", "--source", src.as_uri(), "--archive", tgm, *_LOCAL_STORAGE_FLAGS],
+        env=env,
+    )
+    assert created.exit_code == 0, created.output
+    groups_line = next(ln for ln in created.output.splitlines() if ln.strip().startswith("Groups:"))
+    assert "(root)" in groups_line
+
+    listed = runner.invoke(cli, ["archive", "list", "--archive", tgm], env=env)
+    assert listed.exit_code == 0, listed.output
+    assert "(root)" in listed.output
+    assert "Group: message 0" not in listed.output
+
+
+@pytest.mark.integration
+def test_repro_tgm_explicit_root_restore_keeps_control_plane(tmp_path):
+    from firecube.core.tensogram.restore import tgm_to_zarr
+
+    src, tgm, rest = tmp_path / "src.zarr", tmp_path / "root.tgm", tmp_path / "rest.zarr"
+    _make_test_dataset().to_zarr(src)
+    zarr_to_tgm(str(src), str(tgm), group="/")
+    claim = rest / ".firecube" / "claims" / "held.json"
+    claim.parent.mkdir(parents=True)
+    claim.write_text("{}")
+
+    tgm_to_zarr(str(tgm), str(rest))
+
+    assert claim.exists()
+    assert (rest / "zarr.json").exists()

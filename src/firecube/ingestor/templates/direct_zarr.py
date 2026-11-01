@@ -90,6 +90,10 @@ from firecube.ingestor.runtime.zarr.direct_region_adapter import (
     DirectRegionAdapter,
     open_zarr_array,
 )
+from firecube.ingestor.runtime.zarr.root_group import (
+    refuse_root_beside_named_groups,
+    refuse_root_group_attrs,
+)
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import (
     RegionZarrWriter,
     ensure_group_ancestors,
@@ -690,9 +694,19 @@ class ZarrGroupSpec:
     """
 
     group: str
+    """Group path inside the store.
+
+    ``"/"`` names the root group. A schema that declares it declares no other group.
+    """
     arrays: list[ZarrArraySpec] = field(default_factory=list)
     coord_names: frozenset[str] = frozenset({"y", "x", "channel"})
     attrs: Mapping[str, Any] | None = None
+    """Attributes merged into the group's ``zarr.json`` by ``zarr preallocate`` and by ingest.
+
+    On the root group ``"/"``, firecube refuses the four index-mirror names
+    ``firecube_resolved_index``, ``firecube_resolved_index_identity_hash``,
+    ``firecube_slot_index_model`` and ``firecube_slot_index_model_identity_hash``.
+    """
 
     def __post_init__(self) -> None:
         if self.attrs is not None and not isinstance(self.attrs, Mapping):
@@ -1180,7 +1194,10 @@ class DirectZarrIngestor(BaseIngestor):
             self._zarr_schema_cache_by_ctx = cache = {}
         key = id(getattr(ctx, "_ctx", ctx))
         if key not in cache:
-            cache[key] = self.zarr_schema(ctx)
+            schema = self.zarr_schema(ctx)
+            refuse_root_beside_named_groups(schema)
+            refuse_root_group_attrs(schema)
+            cache[key] = schema
         return cache[key]
 
     def get_batch_groups(self, items: Sequence[Any], ctx: PluginContext) -> list[str]:

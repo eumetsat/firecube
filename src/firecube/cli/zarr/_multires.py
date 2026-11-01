@@ -32,6 +32,7 @@ from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
+from firecube.core.errors import ConfigurationError
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
@@ -53,6 +54,12 @@ Examples:
       --storage-type s3 --storage-driver fsspec -r 1.0 -r 0.5
 
 \b
+  Dataset in a group, with coordinates not named lat and lon:
+  firecube zarr multires --target file:///p.zarr --product-name p \\
+      --storage-type local --storage-driver fsspec -g data \\
+      --lat-name latitude --lon-name longitude
+
+\b
 See also: firecube zarr validate
 """,
 )
@@ -71,6 +78,27 @@ See also: firecube zarr validate
     type=float,
     help="Resolution levels to build (repeatable, e.g. -r 1.0 -r 0.5).",
 )
+@click.option(
+    "-g",
+    "--group",
+    "group",
+    default=None,
+    help="Group that holds the dataset; omit, '/' or '' for the root. Levels go to <group>/multires/<res>deg.",
+)
+@click.option(
+    "--lat-name",
+    "lat_name",
+    default="lat",
+    show_default=True,
+    help="Name of the 1-D latitude coordinate to coarsen.",
+)
+@click.option(
+    "--lon-name",
+    "lon_name",
+    default="lon",
+    show_default=True,
+    help="Name of the 1-D longitude coordinate to coarsen.",
+)
 @product_name_option(required=True)
 @storage_type_option(
     required=False, extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3)."
@@ -81,6 +109,9 @@ def multires(
     ctx: click.Context,
     target: str,
     resolutions: tuple[float, ...],
+    group: str | None,
+    lat_name: str,
+    lon_name: str,
     product_name: str,
     storage_type: str,
     storage_driver: str,
@@ -112,8 +143,10 @@ def multires(
     )
     config = MultiresConfig(
         product=identity.product_name,
-        group="",
+        group=(group or "").strip("/"),
         resolutions=list(resolutions) or list(DEFAULT_MULTIRES_RESOLUTIONS),
+        lat_name=lat_name,
+        lon_name=lon_name,
     )
     try:
         result = ZarrMultiresBuilder(
@@ -122,7 +155,7 @@ def multires(
             product_uri=identity.product_uri,
             session=session,
         ).build(config)
-    except (ImportError, ValueError) as exc:
+    except (ImportError, ValueError, ConfigurationError) as exc:
         raise click.ClickException(render(exc)) from exc
 
     click.echo(json.dumps(result, indent=2))

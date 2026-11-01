@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -31,6 +32,7 @@ def _seed_group(
     *,
     timestamps: np.ndarray,
     state_values: np.ndarray | None,
+    coord_attrs: dict[str, Any] | None = None,
 ) -> None:
     root = zarr.open_group(store=str(store_path), mode="w", zarr_format=3)
     group = root.require_group("G")
@@ -39,6 +41,7 @@ def _seed_group(
         data=timestamps,
         chunks=(max(1, len(timestamps)),),
         dimension_names=("timestamp",),
+        attributes=coord_attrs or {},
     )
     if state_values is not None:
         group.create_array(
@@ -55,10 +58,10 @@ def _seed_group(
     )
 
 
-def _validate(store_path: Path):
+def _validate(store_path: Path, time_dim_name: str | None = "timestamp"):
     session = make_local_session(str(store_path))
     return validate_group_with_fs(
-        session.fs(), session.product.product_uri, "G", time_dim_name="timestamp"
+        session.fs(), session.product.product_uri, "G", time_dim_name=time_dim_name
     )
 
 
@@ -110,3 +113,37 @@ def test_validate_state_length_check_when_array_present(tmp_path: Path) -> None:
     assert report.is_valid is False
     assert any("length 2 != time coordinate length 3" in issue for issue in report.validity_issues)
     assert report.info_notes == []
+
+
+@pytest.mark.parametrize("marker", ["firecube_preallocated", "firecube_coord_managed"])
+def test_repro_validate_directzarr_marker(tmp_path: Path, marker: str) -> None:
+    """A DirectZarr group (marked time coordinate, no state array) is checked without a flag."""
+    store_path = tmp_path / "directzarr.zarr"
+    _seed_group(
+        store_path,
+        timestamps=np.array([10, 20, 30], dtype=np.int64),
+        state_values=None,
+        coord_attrs={marker: True},
+    )
+
+    report = _validate(store_path, time_dim_name=None)
+
+    assert "G/data" in report.arrays_checked
+    assert report.is_valid is True
+
+
+def test_repro_validate_nothing_checked(tmp_path: Path) -> None:
+    """A group where no time dimension is found is not valid and says why."""
+    store_path = tmp_path / "no-time-dim.zarr"
+    _seed_group(
+        store_path,
+        timestamps=np.array([10, 20, 30], dtype=np.int64),
+        state_values=None,
+    )
+
+    report = _validate(store_path, time_dim_name=None)
+
+    assert report.arrays_checked == []
+    assert report.is_valid is False
+    said = [str(item).lower() for item in (*report.info_notes, *report.validity_issues)]
+    assert any("no time dimension" in text for text in said)
