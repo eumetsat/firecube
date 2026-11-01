@@ -87,6 +87,7 @@ from typing import Any
 import numpy as np
 import pytest
 import xarray as xr
+import zarr
 
 from firecube.ingestor.api import GenericZarrIngestor, PluginContext
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
@@ -96,6 +97,12 @@ pytestmark = pytest.mark.integration
 
 _GROUP = "G"
 _PRODUCT = "preflight_wiring.zarr"
+_PACKED_FILL = 16383
+_PACKED_ATTRS = {
+    "scale_factor": 0.04522159695625305,
+    "add_offset": -0.4749999940395355,
+    "_FillValue": _PACKED_FILL,
+}
 
 
 def _dataset(
@@ -148,7 +155,14 @@ class _PreflightWiringZarr(GenericZarrIngestor):
         lat_bnds_raw = ctx.option("x_lat_bnds", None)
         lat_bnds = np.asarray(lat_bnds_raw, dtype=np.float32) if lat_bnds_raw is not None else None
 
-        return _dataset(list(items), lat_bnds=lat_bnds, attrs=attrs)
+        ds = _dataset(list(items), lat_bnds=lat_bnds, attrs=attrs)
+        if ctx.option("x_packed", False):
+            # Raw packed integers with CF keys in attrs and an empty encoding, as a reader
+            # that opens netCDF with mask_and_scale off hands them over.
+            raw = np.array([_PACKED_FILL if d == 1 else 1000 + d for d in items], dtype=np.uint16)
+            ds["radiance"] = (("timestamp", "x"), raw.reshape(len(items), 1))
+            ds["radiance"].attrs.update(_PACKED_ATTRS)
+        return ds
 
 
 def _engine_run(
@@ -162,6 +176,7 @@ def _engine_run(
     pipeline_batch_size: int = 8,
     resume_existing: bool = False,
     force_reingest: bool = False,
+    packed: bool = False,
 ) -> None:
     """Drive one ingest through ``host.run(ctx)``.
 
@@ -176,6 +191,7 @@ def _engine_run(
         "x_attrs": attrs,
         "x_attrs_per_day": attrs_per_day,
         "x_lat_bnds": lat_bnds.tolist() if lat_bnds is not None else None,
+        "x_packed": packed,
         "pipeline_workers": 1,
         "pipeline_batch_size": pipeline_batch_size,
         "no_progress": True,
@@ -327,3 +343,37 @@ def test_two_batch_attrs_preservation_engine_driven(
         assert ds.attrs["history"] == "run1", (
             f"first-write-wins: history should be 'run1', got {ds.attrs.get('history')!r}"
         )
+
+
+@pytest.mark.parametrize(
+    ("write_mode", "slot", "want"),
+    [("direct", 0, 44.746596962213516), ("staged", 3, 44.882261753082275)],
+    ids=["direct", "staged"],
+)
+def test_engine_ingest_of_cf_packed_variable_stores_raw_values_and_first_batch_attrs(
+    tmp_path: Path, write_mode: str, slot: int, want: float
+) -> None:
+    """Raw packed integers with CF keys in attrs append across batches and resumed runs."""
+    runs = [[0, 1]] if write_mode == "direct" else [[0, 1], [2, 3]]
+    for i, days in enumerate(runs):
+        _engine_run(
+            tmp_path,
+            days=days,
+            write_mode=write_mode,
+            pipeline_batch_size=1,
+            resume_existing=i > 0,
+            packed=True,
+        )
+
+    n = sum(len(days) for days in runs)
+    raw = np.array([_PACKED_FILL if d == 1 else 1000 + d for d in range(n)], dtype=np.uint16)
+    target = str(tmp_path / _PRODUCT)
+    stored = zarr.open_array(target, path=f"{_GROUP}/radiance", mode="r")
+    assert stored.shape == (n, 1)
+    assert np.array_equal(stored[:, 0], raw), f"raw radiance {stored[:, 0]} != expected {raw}"
+
+    assert {k: stored.attrs.get(k) for k in _PACKED_ATTRS} == _PACKED_ATTRS
+    with xr.open_zarr(target, group=_GROUP, consolidated=False) as ds:
+        decoded = ds["radiance"].values[:, 0]
+        assert np.isnan(decoded[1]), "the _FillValue slot must decode to NaN"
+        assert decoded[slot] == pytest.approx(want, rel=1e-9)
