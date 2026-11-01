@@ -3158,6 +3158,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/ingest-from-a-stac-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ingest From A STAC API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/intake-catalog/" class="md-nav__link">
         
   
@@ -7318,7 +7346,7 @@ a plugin.</p>
 <tr>
 <td><code>-i</code>, <code>--input-data</code></td>
 <td>text</td>
-<td>Raw plugin input data: local path, file:///abs/path, or s3:// prefix. Interpreted by the plugin.</td>
+<td>Raw plugin input data: local path, file:///abs/path, s3:// prefix, or stac://host/api-root/collections/<id> (one STAC API collection). Repeat to read several sources in one run. Interpreted by the plugin.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -7326,6 +7354,12 @@ a plugin.</p>
 <td>text</td>
 <td>Input-file filters as one JSON list. Positive globs add to built-in formats; !globs exclude matches. Exclusions always win. Use [] to clear configured filters. Custom discovery hooks must apply filters themselves.</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--stac-search</code></td>
+<td>text</td>
+<td>STAC item search filter for every stac:// --input-data, as one JSON object with any of the keys datetime, bbox, intersects and ids. The collection comes from the stac:// URI. Replaces a stac_search table of the plugin configuration.</td>
+<td>None</td>
 </tr>
 <tr>
 <td><code>-t</code>, <code>--target</code></td>
@@ -8308,14 +8342,20 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <tr>
 <td><code>-i</code>, <code>--input-data</code></td>
 <td>text</td>
-<td>Raw plugin input data: local path, file:///abs/path, or s3:// prefix. Interpreted by the plugin.</td>
-<td>None</td>
+<td>Raw plugin input data: local path, file:///abs/path, s3:// prefix, or stac://host/api-root/collections/<id> (one STAC API collection). Repeat to read several sources in one run. Interpreted by the plugin.</td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--input-filters</code></td>
 <td>text</td>
 <td>Input-file filters as one JSON list. Positive globs add to built-in formats; !globs exclude matches. Exclusions always win. Use [] to clear configured filters. Custom discovery hooks must apply filters themselves.</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--stac-search</code></td>
+<td>text</td>
+<td>STAC item search filter for every stac:// --input-data, as one JSON object with any of the keys datetime, bbox, intersects and ids. The collection comes from the stac:// URI. Replaces a stac_search table of the plugin configuration.</td>
+<td>None</td>
 </tr>
 <tr>
 <td><code>--slot-start</code></td>
@@ -8410,14 +8450,20 @@ Above 1,000,000 ranges it refuses the plan; pass --yes-i-really-mean-it to emit 
 <tr>
 <td><code>--input-data</code></td>
 <td>text</td>
-<td>Source input URI or path for AUTO discovery (optional).</td>
-<td>None</td>
+<td>Source path, s3:// prefix or stac:// collection for AUTO discovery (optional, repeatable).</td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--input-filters</code></td>
 <td>text</td>
 <td>Input-file filters as one JSON list. Positive globs add to built-in formats; !globs exclude matches. Exclusions always win. Use [] to clear configured filters. Custom discovery hooks must apply filters themselves.</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--stac-search</code></td>
+<td>text</td>
+<td>STAC item search filter for every stac:// --input-data, as one JSON object with any of the keys datetime, bbox, intersects and ids. The collection comes from the stac:// URI. Replaces a stac_search table of the plugin configuration.</td>
+<td>None</td>
 </tr>
 <tr>
 <td><code>--slot-size</code></td>

@@ -3158,6 +3158,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/ingest-from-a-stac-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ingest From A STAC API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/intake-catalog/" class="md-nav__link">
         
   
@@ -5700,6 +5728,22 @@ reinterpreting the store.</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.BaseIngestor.SOURCE_ITEMS">SOURCE_ITEMS</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>What the default <code>discover_source_files</code> hands to
+<code>filter_item</code>, <code>inspect_item</code> and the build hooks. <code>False</code>
+(the default): the <code>href</code> string of each item, a local path or
+URI. <code>True</code>: the <code>SourceItem</code> itself, which also carries the
+STAC collection, item id, asset key, datetime, bbox, media type
+and roles of a <code>stac://</code> source.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -5759,27 +5803,42 @@ reinterpreting the store.</p>
     <div class="doc doc-contents first">
 
         <p>Discover the source items to ingest (Hook).</p>
-<p>The default implementation requires <code>--input-data</code> (<code>ctx.source</code>)
-and raises <code>ConfigurationError</code> without it. It searches recursively
-below <code>ctx.source</code> — a local path or a remote URI reached through
-the run's storage configuration — and collects <code>.zip</code>, <code>.h5</code>,
-<code>.nc</code>, <code>.nc4</code>, <code>.hdf</code>, and <code>.he5</code> files plus local files
-with unselected or absent suffixes whose content looks like HDF5.
-Positive <code>input_filters</code> entries add files to that set; entries
-starting with <code>!</code> exclude matches, overriding suffix and content
-selection regardless of list order. Pass <code>--input-filters</code> as one
-JSON list. Filters match case-sensitively, including for single-file
-sources. Custom discovery overrides must explicitly apply filters,
-for example by forwarding them to <code>discover_input_files</code>.</p>
+<p>The default implementation requires <code>--input-data</code> (<code>ctx.sources</code>)
+and raises <code>ConfigurationError</code> without it. It discovers every
+source of the run, in order, deduplicates the items and sorts them
+once:</p>
+<ul>
+<li>A local path or a remote URI reached through the run's storage
+  configuration is searched recursively for <code>.zip</code>, <code>.h5</code>,
+  <code>.nc</code>, <code>.nc4</code>, <code>.hdf</code>, and <code>.he5</code> files plus local files
+  with unselected or absent suffixes whose content looks like HDF5.
+  Positive <code>input_filters</code> entries add files to that set; entries
+  starting with <code>!</code> exclude matches, overriding suffix and content
+  selection regardless of list order.</li>
+<li>A <code>stac://&lt;host&gt;/&lt;api-root&gt;/collections/&lt;id&gt;</code> source is searched
+  through the STAC API with the run's <code>stac_search</code> filter, and
+  every asset whose roles contain <code>data</code> is collected. The suffix
+  list does not apply; <code>input_filters</code> narrow the assets on the
+  basename of their href.</li>
+</ul>
+<p>Pass <code>--input-filters</code> as one JSON list. Filters match
+case-sensitively, including for single-file sources. Items are
+returned as href strings, or as <code>SourceItem</code> objects when the class
+declares <code>SOURCE_ITEMS = True</code>. Custom discovery overrides must
+explicitly apply filters, for example by forwarding them to
+<code>discover_input_files</code> or <code>discover</code>.</p>
 <p>Override this hook when source layout rules cannot be expressed as
 patterns, or when sources are not file trees at all (catalogs,
 APIs); overriding removes the <code>--input-data</code> requirement. Returned
 items flow through <code>filter_item</code> and batching into the build
 hooks; return path or URI strings unless the plugin's own hooks
 handle richer item objects end to end.</p>
-<p>The engine calls this hook once per run and materialises the returned
-iterable in full before the first batch is planned; the held items
-are then reused for batching and never re-discovered. Returning an
+<p>The engine calls this hook at most once per command, through
+<code>discovered_source_files</code>, and only when the command needs the items.
+A fixed-grid preallocate without engine-owned arrays never calls it. It
+materialises the returned iterable in full before the first batch is
+planned; index binding, batching and preallocation then reuse the held
+items and never re-discover them. Returning an
 iterator or generator is fine for large listings and avoids building
 a second container in the plugin, but it is consumed completely up
 front, so it cannot defer or stream discovery across batches.</p>

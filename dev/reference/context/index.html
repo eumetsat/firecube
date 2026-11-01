@@ -3158,6 +3158,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/ingest-from-a-stac-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ingest From A STAC API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/intake-catalog/" class="md-nav__link">
         
   
@@ -6322,10 +6350,34 @@ outside the documented surface raises <code>AttributeError</code>.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Input data location for this run, as provided by the caller.</p>
-<p>A local path or remote URI (e.g. the <code>--input-data</code> CLI option).
-The default <code>discover_source_files</code> implementation scans it for
-input files; plugins with custom discovery may interpret it freely.</p>
+        <p>The single input data location of this run, as provided by the caller.</p>
+<p>A local path or remote URI (e.g. the <code>--input-data</code> CLI option);
+<code>""</code> when the run has none. Plugins with custom discovery may
+interpret it freely. A run may have several inputs; read <code>sources</code>
+to handle them.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            firecube.ingestor.api.ConfigurationError (firecube.core.errors.ConfigurationError)" href="../exceptions/#firecube.ingestor.api.ConfigurationError">ConfigurationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the run has more than one input.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
     </div>
 

@@ -3158,6 +3158,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/ingest-from-a-stac-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ingest From A STAC API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/intake-catalog/" class="md-nav__link">
         
   
@@ -4557,6 +4585,73 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#firecube.core.api.discover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;discover
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.core.api.DiscoveryRequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DiscoveryRequest
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.core.api.SourceItem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SourceItem
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" SourceItem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.core.api.SourceItem-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.core.api.SourceItem.identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#firecube.core.api.discover_input_files" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5319,6 +5414,73 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#firecube.core.api.discover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;discover
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.core.api.DiscoveryRequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DiscoveryRequest
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firecube.core.api.SourceItem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SourceItem
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" SourceItem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.core.api.SourceItem-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#firecube.core.api.SourceItem.identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#firecube.core.api.discover_input_files" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5810,8 +5972,8 @@
 
 <h1 id="core-utilities">Core Utilities</h1>
 <p>This reference covers the helper functions exported from <code>firecube.core.api</code>
-for use inside plugin hooks: URI and filesystem handling, dataset
-preparation, and time conversion.</p>
+for use inside plugin hooks: URI and filesystem handling, source discovery,
+dataset preparation, and time conversion.</p>
 <p><code>RESERVED_ARRAY_ATTRS</code>, <code>assert_attrs_safe()</code>, and
 <code>FIRECUBE_STATIC_WRITTEN_ATTR</code> describe the array attribute keys Firecube
 owns for Zarr writes. The sealing marker constants stamped by <code>firecube zarr
@@ -5859,6 +6021,28 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <tr>
 <td><a class="autorefs autorefs-internal" title="            firecube.core.api.delete_path" href="#firecube.core.api.delete_path"><code>delete_path</code></a></td>
 <td>Delete a path (file or directory) from storage.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.core.api.discover" href="#firecube.core.api.discover"><code>discover</code></a></td>
+<td>Discover the source items of every source of a run.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.core.api.DiscoveryRequest
+
+
+  
+      dataclass
+  " href="#firecube.core.api.DiscoveryRequest"><code>DiscoveryRequest</code></a></td>
+<td>What <code>discover</code> resolves: the sources of one run and how to narrow them.</td>
+</tr>
+<tr>
+<td><a class="autorefs autorefs-internal" title="            firecube.core.api.SourceItem
+
+
+  
+      dataclass
+  " href="#firecube.core.api.SourceItem"><code>SourceItem</code></a></td>
+<td>One discovered source granule.</td>
 </tr>
 <tr>
 <td><a class="autorefs autorefs-internal" title="            firecube.core.api.discover_input_files" href="#firecube.core.api.discover_input_files"><code>discover_input_files</code></a></td>
@@ -6353,6 +6537,527 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="firecube.core.api.discover" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.discover</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">discover</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+
+        <p>Discover the source items of every source of a run.</p>
+<p>Sources are read in the order given, each by the backend of its scheme:</p>
+<ul>
+<li>A local path, <code>file://</code> URI or <code>s3://</code> prefix is walked as a file tree with
+  the default selection of <code>discover_input_files</code>; <code>input_filters</code> add matches
+  and <code>!</code> entries exclude.</li>
+<li>A <code>stac://&lt;host&gt;/&lt;api-root&gt;/collections/&lt;id&gt;</code> source is searched at
+  <code>https://&lt;host&gt;/&lt;api-root&gt;</code> with <code>collections=[&lt;id&gt;]</code> and <code>stac_search</code>.
+  Every result page is read, and each asset whose roles contain <code>data</code> becomes an
+  item. The default suffix list does not apply; <code>input_filters</code> narrow on the
+  basename of the href.</li>
+</ul>
+<p><code>stac_search</code> is validated before any source is opened. Items are deduplicated on
+<code>SourceItem.identity</code> (the first occurrence wins), then sorted once by href basename
+and identity, so the result does not depend on the order of the sources or of the
+API's pages.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>request</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            firecube.core.api.DiscoveryRequest
+
+
+  
+      dataclass
+   (firecube.core.discovery._types.DiscoveryRequest)" href="#firecube.core.api.DiscoveryRequest">DiscoveryRequest</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The sources and how to narrow them.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="            firecube.core.api.SourceItem
+
+
+  
+      dataclass
+   (firecube.core.discovery._types.SourceItem)" href="#firecube.core.api.SourceItem">SourceItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The items, deduplicated and sorted. Empty when nothing matches.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="firecube.core.discovery.errors.StacSearchError">StacSearchError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>stac_search</code> is not a mapping of the allowed keys.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="firecube.core.discovery.errors.UnknownSourceSchemeError">UnknownSourceSchemeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a source names a scheme no backend reads.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ImportError">ImportError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a source is <code>stac://</code> and the <code>stac</code> extra is not installed.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="firecube.core.discovery.errors.StacApiError">StacApiError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a STAC API cannot be opened or searched, a <code>next</code> link repeats an
+earlier request, or five empty pages in a row carry a <code>next</code> link.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a file-tree source cannot be opened or listed, or a filter is
+invalid.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <p>The data assets of one collection in June 2025, plus a local directory:</p>
+<div class="highlight"><pre><span></span><code>items = discover(
+    DiscoveryRequest(
+        sources=(
+            &quot;stac://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a&quot;,
+            &quot;/data/raw&quot;,
+        ),
+        stac_search={&quot;datetime&quot;: &quot;2025-06-01T00:00:00Z/2025-06-30T23:59:59Z&quot;},
+    )
+)
+hrefs = [item.href for item in items]
+</code></pre></div>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="firecube.core.api.DiscoveryRequest" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.DiscoveryRequest</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>What <code>discover</code> resolves: the sources of one run and how to narrow them.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.DiscoveryRequest.sources">sources</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Source locations in the order given: local paths, <code>file://</code> or
+<code>s3://</code> URIs walked as file trees, and <code>stac://&lt;host&gt;/&lt;api-root&gt;/
+collections/&lt;id&gt;</code> URIs searched as one STAC API collection each.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.DiscoveryRequest.storage_config">storage_config</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Storage settings used to reach a remote file-tree source.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.DiscoveryRequest.input_filters">input_filters</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Sequence" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Filename filters. On a file tree they add to the default suffix
+selection and <code>!</code> entries exclude, as in <code>discover_input_files</code>. On a STAC
+source they narrow the selected assets on the basename of the href: with a
+positive entry only matching assets are kept, and <code>!</code> entries exclude.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.DiscoveryRequest.stac_search">stac_search</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Mapping" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping">Mapping</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Item search filter applied to every STAC source: any of the keys
+<code>datetime</code>, <code>bbox</code>, <code>intersects</code> and <code>ids</code>, as the STAC API item
+search defines them. <code>collections</code> always comes from the source URI.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.DiscoveryRequest.operation">operation</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Name of the operation, used in the message when the <code>stac</code> extra
+is missing.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="firecube.core.api.SourceItem" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.SourceItem</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>One discovered source granule.</p>
+<p>A file-tree source (a local path, <code>file://</code> or <code>s3://</code>) yields items that carry
+<code>href</code> and <code>scheme</code> only. A <code>stac://</code> source yields one item per selected asset
+of each matching STAC item, with the STAC fields filled in.</p>
+<p>Plugins receive <code>href</code> strings in <code>filter_item</code> and <code>inspect_item</code>, unless the
+ingestor class declares <code>SOURCE_ITEMS = True</code>; then they receive these items.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.href">href</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Where the granule is read from: a local path, an <code>s3://</code> URI, or the
+absolute asset href a STAC API publishes (often <code>https://</code>).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.scheme">scheme</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The scheme of the source that produced the item: <code>"file"</code>, <code>"s3"</code>
+or <code>"stac"</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.collection">collection</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>STAC collection id, or <code>None</code> for a file-tree item.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.item_id">item_id</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>STAC item id, or <code>None</code> for a file-tree item.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.asset_key">asset_key</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Key of the asset within its STAC item, or <code>None</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.datetime">datetime</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The item's <code>datetime</code> property as published (an ISO 8601 string),
+or <code>None</code> when the item has none or the item is from a file tree.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.bbox">bbox</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a>, ...] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The item's bounding box, or <code>None</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.media_type">media_type</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The asset's media type, or <code>None</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.core.api.SourceItem.roles">roles</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The asset's roles, for example <code>("data",)</code>; empty for a file-tree item.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <p>A STAC asset as a plugin declaring <code>SOURCE_ITEMS = True</code> receives it:</p>
+<div class="highlight"><pre><span></span><code>SourceItem(
+    href=&quot;https://example.com/S2A_T32TQM_20250601.nc&quot;,
+    scheme=&quot;stac&quot;,
+    collection=&quot;sentinel-2-l2a&quot;,
+    item_id=&quot;S2A_T32TQM_20250601&quot;,
+    asset_key=&quot;data&quot;,
+    datetime=&quot;2025-06-01T10:20:31Z&quot;,
+    bbox=(11.5, 48.0, 11.7, 48.2),
+    media_type=&quot;application/netcdf&quot;,
+    roles=(&quot;data&quot;,),
+)
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+<h3 id="firecube.core.api.SourceItem-attributes">Attributes</h3>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="firecube.core.api.SourceItem.identity" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">identity</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">identity</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The key discovery deduplicates on.</p>
+<p><code>collection/item_id/asset_key</code> for a STAC item, so the same asset keeps its
+identity when an API changes its hrefs; <code>href</code> for every other item.</p>
+<p>Each STAC part has <code>%</code> written as <code>%25</code> and <code>/</code> as <code>%2F</code>, so distinct
+assets never share an identity. A part without either character is unchanged.</p>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="firecube.core.api.discover_input_files" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.discover_input_files</span>
 
@@ -6362,7 +7067,7 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">source</span><span class="p">,</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="o">*</span><span class="p">,</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">storage_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">include_suffixes</span><span class="o">=</span><span class="n"><span title="firecube.core.formats.discovery.DEFAULT_INCLUDE_SUFFIXES">DEFAULT_INCLUDE_SUFFIXES</span></span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">include_suffixes</span><span class="o">=</span><span class="n"><span title="firecube.core.discovery._walk.DEFAULT_INCLUDE_SUFFIXES">DEFAULT_INCLUDE_SUFFIXES</span></span><span class="p">,</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">preferred_globs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">sniff_hdf5</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -6455,7 +7160,7 @@ traversal or supply readers for newly selected file types.</p>
               </div>
             </td>
             <td>
-                  <code><span title="firecube.core.formats.discovery.DEFAULT_INCLUDE_SUFFIXES">DEFAULT_INCLUDE_SUFFIXES</span></code>
+                  <code><span title="firecube.core.discovery._walk.DEFAULT_INCLUDE_SUFFIXES">DEFAULT_INCLUDE_SUFFIXES</span></code>
             </td>
           </tr>
           <tr class="doc-section-item">

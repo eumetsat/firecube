@@ -3158,6 +3158,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/ingest-from-a-stac-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ingest From A STAC API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/intake-catalog/" class="md-nav__link">
         
   
@@ -5441,7 +5469,24 @@ recognition remains case-insensitive. Supply one JSON list through
 <code>--input-filters</code> or a list in plugin configuration. An explicit
 CLI list replaces configured filters; <code>[]</code> restores built-in
 selection. Custom discovery hooks must apply this field themselves.
-See <code>discover_input_files</code> for matching and escaping rules.</p>
+See <code>discover_input_files</code> for matching and escaping rules. On a
+<code>stac://</code> source, filters narrow the selected assets on the basename
+of their href instead.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.EngineConfig.stac_search">stac_search</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional STAC item search filter applied to every
+<code>stac://</code> source of the run: a mapping with any of the keys
+<code>datetime</code>, <code>bbox</code>, <code>intersects</code> and <code>ids</code>. The collection
+always comes from the source URI. Supply one JSON object through
+<code>--stac-search</code> or a table in plugin configuration.</p>
               </div>
             </td>
           </tr>
