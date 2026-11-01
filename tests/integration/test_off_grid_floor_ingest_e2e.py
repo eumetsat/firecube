@@ -206,7 +206,7 @@ def _preallocate_args(target: Path, source: Path) -> list[str]:
         "--write-mode",
         "direct",
         "--input-data",
-        str(source),
+        source.as_uri(),
         "--option",
         "no_progress=true",
     ]
@@ -217,7 +217,7 @@ def _ingest_args(target: Path, source: Path) -> list[str]:
         "ingest",
         _STUB_PLUGIN_NAME,
         "--input-data",
-        str(source),
+        source.as_uri(),
         "--target",
         f"file://{target}",
         "--product-name",

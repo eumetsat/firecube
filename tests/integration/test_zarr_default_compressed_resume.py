@@ -72,7 +72,7 @@ def _ingest_args(tmp_path: Path, target: Path, *extra: str) -> list[str]:
         "ingest",
         _PLUGIN,
         "--input-data",
-        str(source),
+        source.as_uri(),
         "--target",
         f"file://{target}",
         "--product-name",

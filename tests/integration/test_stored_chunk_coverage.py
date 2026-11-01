@@ -59,7 +59,7 @@ def _ingest(source: Path, target: Path, *, chunk_len: int) -> None:
             "ingest",
             "precip_daily",
             "--input-data",
-            str(source),
+            source.as_uri(),
             "--target",
             target.as_uri(),
             "--product-name",
