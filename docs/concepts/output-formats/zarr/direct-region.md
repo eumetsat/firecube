@@ -32,7 +32,7 @@ matching its purpose:
 
 | Factory | Purpose |
 |---|---|
-| `WriteIntent.region(...)` | Write a spatial slice at one indexed position in a rank-3 or rank-4 array. |
+| `WriteIntent.region(...)` | Write a slice along the first axis after the indexed axis at one indexed position, in an array of rank 3 or more; a rank-4 array may select one channel instead. |
 | `WriteIntent.slot(...)` | Write one complete indexed slot of an array. |
 | `WriteIntent.coordinate(...)` | Write one indexed coordinate value. |
 | `WriteIntent.static(...)` | Write a non-indexed array once and verify it on replay. |

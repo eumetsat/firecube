@@ -9,6 +9,15 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- `DirectZarrIngestor` region writes (`IndexedWrite.region`,
+  `WriteIntent.region`) accept arrays of any rank of 3 or more. `y_slice`
+  selects the first axis after time and later axes are written in full, so a
+  forecast or ensemble cube such as `(time, realization, forecast_period,
+  level, y, x)` can be written one member at a time instead of one whole slot.
+  `channel_index` stays a rank-4 selection and is refused on higher ranks.
+- `IndexedWrite.slot` and `WriteIntent.slot` accept a zero-argument callable
+  payload, resolved once at dispatch like region and static payloads, so a
+  whole-slot payload is read only when it is written.
 - `ZarrArraySpec(engine_owned=True)` and `ItemInfo(values={...})` declare
   rank-1 per-slot arrays in `DirectZarrIngestor` plugins. `firecube zarr
   preallocate` inspects every source item, on any time axis, and requires
@@ -124,6 +133,24 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   parse as a Gregorian date. An example is 30 February on a `360_day`
   calendar. The error names each span, and `delete` deletes nothing. Spans
   with ordinary bounds filter as before.
+- `firecube zarr multires` accepts `-g`/`--group`, `--lat-name` and
+  `--lon-name`.
+  - `--group` names the group that holds the dataset. Without it, or with `/`
+    or an empty value, the command uses the root group. The levels go to
+    `<group>/multires/<res>deg`.
+  - `--lat-name` and `--lon-name` name the coordinates to coarsen. They
+    default to `lat` and `lon`.
+  - The command refuses a named coordinate that is missing, not 1-D, or not
+    on its own dimension. It writes nothing then.
+- `--option` on `firecube zarr index verify` and `firecube zarr index
+  rebuild` passes plugin options to the plugin that resolves the index. Use it
+  for a plugin whose `index_spec` reads its options. `verify` accepts
+  `--option` only with `--plugin` and exits with code 2 otherwise.
+- A `DirectZarrIngestor` plugin declares `ZarrGroupSpec(group="/")` to write
+  its cube at the store root. A `GenericZarrIngestor` plugin returns `["/"]`
+  from `get_batch_groups` for the same result. The plugin guides describe
+  both. A schema that declares the root group beside a named group stays
+  refused.
 - `--input-data stac://<host>/<api-root>/collections/<id>` reads the source
   granules of one STAC API collection. `firecube ingest`, `firecube zarr
   preallocate` and `firecube zarr slots` search the API at
@@ -664,6 +691,71 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - `firecube zarr validate` no longer reports the unwritten slots of an encoded
   calendar coordinate as duplicates. It still reports a repeated value on every
   other coordinate.
+- A `DirectZarrIngestor` plugin can declare attributes on the root group
+  `"/"`. Before, firecube refused every root-group attribute. Now the
+  root-specific refusal covers only the four names of the index mirror:
+  `firecube_resolved_index`, `firecube_resolved_index_identity_hash`,
+  `firecube_slot_index_model` and `firecube_slot_index_model_identity_hash`.
+  The root document keeps the mirror beside the plugin attributes. When
+  `zarr preallocate` stamps the attributes, it still rejects the reserved
+  array-attribute names, for example `firecube_run_id` and `_FillValue`.
+- `firecube zarr preallocate` writes the attributes of every declared group.
+  Before, it left the attributes of a group empty. If a cube was preallocated
+  without them, run `firecube zarr preallocate` again to add them.
+- `firecube zarr validate` finds the time dimension of a `DirectZarrIngestor`
+  cube. It reads the marker of the preallocated time coordinate. Before, it
+  found no time dimension, skipped every array and reported the cube as valid.
+  Now a report that checked no array is not valid. The command exits with code
+  1 and a note names `--time-dim`. If the cube has no marked time coordinate,
+  pass `--time-dim`.
+- `firecube chunks delete-span` works on spans of a `DirectZarrIngestor`
+  cube. Before, it could not find the arrays of such a span.
+  - It reads the bare array names that the span records, under the group of
+    the span.
+  - It keeps the engine-managed time coordinate. It deletes no chunk of it.
+  - It no longer fails because DirectZarr records a state array that does not
+    exist. It takes the removed slots from the chunk grids of the arrays.
+  - The dry run counts only the chunk keys that exist in the store.
+- `firecube chunks delete` deletes the chunk objects of a chunk record through
+  the storage driver of the product. It deletes the one object that the record
+  names. This covers chunk-record objects only. The deletion of span payloads
+  and of control-plane files is unchanged.
+  - Glob characters in a product name or key, such as `[` or `*`, no longer
+    reach the objects of another product.
+  - A chunk record whose key is absolute, holds `.` or `..`, or points
+    outside the product is refused. The command deletes nothing for it and
+    reports an error.
+  - With the obstore driver, the command now removes the object.
+- `firecube chunks delete -n <product URI>` needs no storage configuration.
+  The command deletes from the product that the URI names. Before, it deleted
+  from the `target_path` of the configuration.
+- `firecube archive create` writes a `.tgm` archive of a cube that has a
+  `datetime64` time coordinate with a NaT fill value, or a string coordinate.
+  Before, the command failed. Firecube archives the NaT fill value as it
+  archives a NaT in the data. It skips a string coordinate, as it skips other
+  text coordinates.
+- `firecube archive create` leaves no partial `.tgm` file after a failure.
+  Before, a failed run left the half-written archive in place.
+- `firecube archive validate` reports a `.tgm` archive with no messages as
+  not valid.
+- `firecube archive create` and `firecube archive list` print `(root)` for a
+  group whose recorded name is empty. Before, `create` printed an empty name
+  and `list` printed `message <n>`. A group recorded as `/` prints as `/`.
+- `firecube archive restore` restores the compressors of a `.tgm` archive on
+  the locked xarray version. Before, it dropped them without a message, and
+  on xarray 2026.9.0 it failed. If firecube cannot rebuild a compressor, it
+  logs a warning that names the array and the codec.
+- `firecube archive restore` of a `.tgm` archive whose group is `"/"` keeps
+  `.firecube/` in a local target. Before, it removed the control plane. A
+  remote target is unchanged: the restore still replaces the whole store.
+- `firecube archive restore` of a `.tgm` archive refuses a local target that
+  holds any content other than `.firecube/`, unless you pass `--overwrite`.
+  Before, it accepted a target without a root `zarr.json` and left the old
+  content beside the restored arrays. A remote target is unchanged: the
+  restore does not check it and can replace existing data.
+- `firecube zarr multires` no longer fails on xarray 2026.9.0. Before, it
+  raised `TypeError` about an unexpected `skipna` argument. The results on
+  float data are unchanged.
 
 ## [0.1.7] - 2026-09-19
 

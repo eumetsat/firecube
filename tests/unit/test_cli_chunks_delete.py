@@ -216,6 +216,157 @@ def test_delete_all_products_dry_run_no_confirmation_needed(monkeypatch):
     assert "yes-i-really-mean-it" not in r.output.lower()
 
 
+_CHUNK_PRODUCT = "prod.zarr"
+_CHUNK_KEY = "G/FWI/c/0/0/0"
+
+
+def _seed_chunk_product(root: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[str, Path]:
+    """Record one completed run holding one chunk record whose object exists on disk.
+
+    Returns the product URI and the object path. No config file is written and no
+    storage setting is left in the environment.
+    """
+    from firecube.core.controlplane import ChunkManager
+    from tests.helpers.storage import make_test_binding
+
+    for name in (
+        "FIRECUBE_STORAGE_TYPE",
+        "FIRECUBE_STORAGE_DRIVER",
+        "FIRECUBE_TARGET_PATH",
+        "FIRECUBE_CONFIG",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    product_uri = f"file://{root / _CHUNK_PRODUCT}"
+    obj = root / _CHUNK_PRODUCT / _CHUNK_KEY
+    obj.parent.mkdir(parents=True)
+    obj.write_bytes(b"payload")
+    manager = ChunkManager(
+        binding=make_test_binding(root, product=_CHUNK_PRODUCT), workspace=root / "ws"
+    )
+    try:
+        run = {
+            "product": _CHUNK_PRODUCT,
+            "run_id": "run-001",
+            "output_path": product_uri,
+            "output_format": "zarr",
+            "meta": {"plugin": "test"},
+        }
+        manager.record_run_started(**run, size=0)
+        _seed_legacy_chunk_record(manager, "run-001")
+        manager.record_run_terminal(**run, size=7, status="complete")
+    finally:
+        manager.close()
+    return product_uri, obj
+
+
+def _seed_legacy_chunk_record(manager, run_id: str) -> None:
+    """Append one chunk-type record to the open run ``run_id``.
+
+    Chunk-type records have no producer in the ChunkManager facade: they exist only in
+    legacy manifests, and ``record_span`` writes span records only. This helper is a
+    legacy-fixture setup and the only place this file reaches into the WAL writer.
+    """
+    from firecube.core.controlplane.types import EVENT_RECORD_UPSERT, SCHEMA_VERSION
+
+    manager.repo._writer(_CHUNK_PRODUCT, run_id, resume_existing=True).append(
+        EVENT_RECORD_UPSERT,
+        {
+            "type": "chunk",
+            "key": _CHUNK_KEY,
+            "size": 7,
+            "timestamp": 1.0,
+            "schema_version": SCHEMA_VERSION,
+        },
+        meta={},
+        flush=True,
+    )
+
+
+def _stored_chunk_keys(root: Path) -> set[str]:
+    """Chunk record keys a fresh ChunkManager reads for the product."""
+    from firecube.core.controlplane import ChunkManager
+    from tests.helpers.storage import make_test_binding
+
+    manager = ChunkManager(
+        binding=make_test_binding(root, product=_CHUNK_PRODUCT), workspace=root / "ws"
+    )
+    try:
+        return {c.key for c in manager.list_chunks(product=_CHUNK_PRODUCT, chunk_type="chunk")}
+    finally:
+        manager.close()
+
+
+def _delete_args(product_uri: str, root: Path, *flags: str) -> list[str]:
+    return [
+        "chunks",
+        "--workspace",
+        str(root / "ws"),
+        "delete",
+        "-n",
+        product_uri,
+        "--pattern",
+        "G/*",
+        *flags,
+    ]
+
+
+@pytest.mark.contract
+def test_repro_chunks_delete_dry_run_without_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    product_uri, obj = _seed_chunk_product(tmp_path, monkeypatch)
+
+    result = CliRunner().invoke(cli, _delete_args(product_uri, tmp_path, "--dry-run"))
+
+    assert result.exit_code == 0, result.output
+    assert "DRY RUN - Would delete:" in result.output
+    assert "Chunks: 1" in result.output
+    assert obj.exists()
+    assert _stored_chunk_keys(tmp_path) == {_CHUNK_KEY}
+
+
+@pytest.mark.contract
+def test_repro_chunks_delete_without_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    product_uri, obj = _seed_chunk_product(tmp_path, monkeypatch)
+
+    result = CliRunner().invoke(cli, _delete_args(product_uri, tmp_path, "--yes-i-really-mean-it"))
+
+    assert result.exit_code == 0, result.output
+    assert not obj.exists()
+    assert "Deleted 1 chunks" in result.output
+    assert "Storage errors" not in result.output
+    assert _stored_chunk_keys(tmp_path) == set()
+
+
+@pytest.mark.contract
+def test_repro_chunks_delete_config_base_ignored(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    product_uri, obj = _seed_chunk_product(tmp_path, monkeypatch)
+    other = tmp_path / "other"
+    decoy = other / _CHUNK_PRODUCT / _CHUNK_KEY
+    decoy.parent.mkdir(parents=True)
+    decoy.write_bytes(b"decoy")
+    config = tmp_path / "cfg.toml"
+    config.write_text(f'[storage]\ntype = "local"\ntarget_path = "{other}"\n', encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--config-file",
+            str(config),
+            *_delete_args(product_uri, tmp_path, "--yes-i-really-mean-it"),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert not obj.exists(), result.output
+    assert decoy.read_bytes() == b"decoy"
+    assert _stored_chunk_keys(tmp_path) == set()
+
+
 @pytest.mark.parametrize(
     ("window", "refused", "remaining"),
     [

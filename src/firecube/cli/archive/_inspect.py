@@ -230,7 +230,7 @@ def list_cmd(ctx: click.Context, archive: str) -> None:
                 click.echo(f"  Product: {message.product}")
                 continue
 
-            click.echo(f"\nGroup: {message.group_name}")
+            click.echo(f"\nGroup: {message.group_name or '(root)'}")
             if message.has_firecube_metadata:
                 click.echo(f"  Source:  {message.source_uri}")
                 click.echo(f"  Codec:   {message.compression}")

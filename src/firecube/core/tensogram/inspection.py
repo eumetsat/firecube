@@ -72,7 +72,7 @@ class TgmMessage:
         index: Position of the message within the archive.
         is_controlplane: True for the control-plane message.
         product: Product name of a control-plane message, else empty.
-        group_name: Group name, or ``message <index>`` when the group is empty.
+        group_name: Group name, empty for the root, or ``message <index>`` when unrecorded.
         has_firecube_metadata: True when the message carries Firecube metadata.
         source_uri: Source URI recorded at archive time.
         compression: Group codec recorded at archive time.
@@ -275,7 +275,7 @@ def open_tgm_listing(path: str, *, operation: str) -> Iterator[TgmListing]:
                     index=i,
                     is_controlplane=role == ROLE_CONTROLPLANE,
                     product=fc.get("product", ""),
-                    group_name=fc.get("group") or f"message {i}",
+                    group_name=fc.get("group", f"message {i}"),
                     has_firecube_metadata=bool(fc),
                     source_uri=fc.get("source_uri", ""),
                     compression=fc.get("compression", ""),
@@ -312,6 +312,8 @@ def validate_tgm(path: str, *, quick: bool = False, operation: str) -> TgmValida
     messages = report.get("messages", [])
 
     issues: list[tuple[str, Any]] = [("file", i) for i in file_issues]
+    if not messages:
+        issues.append(("file", {"byte_offset": 0, "description": "Archive contains no messages."}))
     issues.extend(
         (f"msg {i}", issue)
         for i, msg_report in enumerate(messages)

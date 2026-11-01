@@ -192,8 +192,32 @@ A second run into the same store is refused. Add
 `--option resume_existing=true` to skip timestamps already written and append
 new ones.
 
+To write the dataset at the store root, see
+[Write At The Store Root](#write-at-the-store-root).
+
 If built-in discovery does not include the product's source names, pass
 `--input-filters` or customize discovery before verifying ingestion.
+
+## Write At The Store Root
+
+`GenericZarrIngestor` writes into the group `default`, because the inherited
+`get_batch_groups` returns `["default"]`. To write at the store root, override
+`get_batch_groups` and return `["/"]`:
+
+```python
+    def get_batch_groups(self, items: list[Any], ctx: PluginContext) -> list[str]:
+        return ["/"]
+```
+
+Firecube then calls `build_dataset` with `group="/"`. Return the whole dataset
+from that call.
+
+The verification step then opens the root, not the `default` group. Leave out
+the `group=` argument:
+
+```python
+print(xr.open_zarr("/tmp/my_plugin_out.zarr", consolidated=False))
+```
 
 ## Common Mistakes
 

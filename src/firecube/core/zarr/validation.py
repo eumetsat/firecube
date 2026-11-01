@@ -47,6 +47,7 @@ from firecube.core.filesystem.protocol import StorageFilesystem
 from firecube.core.filesystem.store_factory import create_zarr_store
 from firecube.core.storage.uri import StorageUri
 from firecube.core.time.calendar import is_gregorian_like
+from firecube.core.zarr._coord_lifecycle import CoordLifecycleState, resolve_coord_lifecycle
 from firecube.core.zarr._reserved_attrs import FIRECUBE_STATIC_WRITTEN_ATTR
 
 if TYPE_CHECKING:
@@ -974,6 +975,18 @@ def _candidate_time_dim(
     log.info("No explicit time dimension name provided; auto-detecting from stored Zarr metadata")
     if state is not None and len(state.shape) == 1 and state.dim_names:
         return state.dim_names[0]
+    return _marked_time_coord_dim(parent_arrays)
+
+
+def _marked_time_coord_dim(parent_arrays: list[_ArrayInfo]) -> str | None:
+    """Return the first dimension of a rank-1 array that carries a time-coordinate marker."""
+    marked = (CoordLifecycleState.PREALLOCATED, CoordLifecycleState.COORD_MANAGED)
+    for info in parent_arrays:
+        if info.array is None or len(info.shape) != 1 or not info.dim_names:
+            continue
+        attrs = dict(getattr(info.array, "attrs", {}) or {})
+        if resolve_coord_lifecycle(attrs) in marked:
+            return info.dim_names[0]
     return None
 
 
@@ -1194,14 +1207,16 @@ def _collect_static_marker_failures(
     target_paths: list[str],
     *,
     state_var_name: str,
-) -> list[dict[str, str]]:
-    """Return static-array marker failures for validated arrays, read-only.
+) -> tuple[list[dict[str, str]], int]:
+    """Return static-array marker failures and the count of arrays evaluated, read-only.
 
     An array counts as static (and therefore must carry the
     ``firecube_static_written`` marker) when its first dimension is neither
-    the effective time-dimension name nor the state-array name.
+    the effective time-dimension name nor the state-array name. Each such
+    array is evaluated, whether or not it passes.
     """
     failures: list[dict[str, str]] = []
+    evaluated = 0
     for array_path in target_paths:
         meta = all_metadata.get(array_path)
         if meta is None:
@@ -1217,11 +1232,12 @@ def _collect_static_marker_failures(
         skip_names = {state_var_name, effective_time_dim}
         if first_dimension in skip_names:
             continue
+        evaluated += 1
         attrs = meta.get("attributes") or {}
         if attrs.get(FIRECUBE_STATIC_WRITTEN_ATTR):
             continue
         failures.append({"array": array_path, "reason": "missing_or_false_static_marker"})
-    return failures
+    return failures, evaluated
 
 
 def validate_group_with_fs(
@@ -1245,7 +1261,9 @@ def validate_group_with_fs(
         time_dim_name: Explicit time-dimension name to treat as
             time-indexed when classifying arrays for the static-marker check.
             Defaults to ``None``; when ``None`` the time dimension is
-            auto-detected per parent group.
+            auto-detected per parent group from the state array or from a
+            rank-1 array marked preallocated or coordinate-managed. A report
+            that checks no array is not valid and carries a note.
         state_var_name: Leaf name of the state array whose first dimension is
             also treated as time-indexed. Defaults to the reserved
             ``firecube_timestamp_state`` name.
@@ -1398,12 +1416,22 @@ def validate_group_with_fs(
                     time_dim=Param("time_dim"),
                 )
             )
-    static_marker_failures = _collect_static_marker_failures(
+    static_marker_failures, static_arrays_evaluated = _collect_static_marker_failures(
         all_metadata,
         candidate_time_dims_by_parent,
         static_target_paths,
         state_var_name=state_var_name,
     )
+    something_checked = bool(arrays_checked) or static_arrays_evaluated > 0
+    if not something_checked:
+        info_notes.append(
+            Message(
+                "no array of {group} was checked: no time dimension found; "
+                "pass {time_dim} to name it",
+                group=normalized_group or "/",
+                time_dim=Param("time_dim"),
+            )
+        )
 
     return ZarrValidationReport(
         product=product,
@@ -1420,7 +1448,7 @@ def validate_group_with_fs(
         info_notes=info_notes,
         validity_issues=validity_issues,
         static_marker_failures=static_marker_failures,
-        is_valid=not (validity_issues or static_marker_failures),
+        is_valid=something_checked and not (validity_issues or static_marker_failures),
     )
 
 

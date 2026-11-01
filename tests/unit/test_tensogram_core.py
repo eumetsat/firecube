@@ -295,6 +295,42 @@ class TestZarrToTgm:
 
         assert (excinfo.value.coordinate, excinfo.value.calendar) == ("time", "360_day")
 
+    @pytest.mark.integration
+    def test_repro_tgm_nat_fill(self, tmp_path):
+        import tensogram
+
+        from firecube.core.tensogram.converter import zarr_to_tgm
+
+        src, tgt = str(tmp_path / "nat.zarr"), str(tmp_path / "nat.tgm")
+        group = zarr.open_group(src, mode="w", zarr_format=3)
+        time = group.create_array(
+            "time", shape=(3,), dtype="datetime64[s]", dimension_names=["time"]
+        )
+        time[:] = np.array(["2024-01-01", "NaT", "2024-01-03"], dtype="datetime64[s]")
+        group.create_array("X", data=np.ones(3, "float32"), dimension_names=["time"])
+
+        zarr_to_tgm(src, tgt)
+
+        with tensogram.TensogramFile.open(tgt) as f:  # pyright: ignore[reportAttributeAccessIssue]
+            entries = f.file_decode_metadata(0).base
+            payloads = f.decode_message(0).objects
+        index = [e["name"] for e in entries].index("time")
+        assert entries[index]["zarr_fill_value"] == payloads[index][1][1]
+
+    @pytest.mark.integration
+    def test_repro_tgm_no_partial_file(self, tmp_path):
+        import xarray as xr
+
+        from firecube.core.tensogram.converter import zarr_to_tgm
+
+        src, tgt = str(tmp_path / "notime.zarr"), tmp_path / "notime.tgm"
+        xr.Dataset({"X": (["y", "x"], np.ones((3, 4)))}).to_zarr(src)
+
+        with pytest.raises(ValueError, match="time dimension"):
+            zarr_to_tgm(src, str(tgt), start_date="2024-01-01")
+
+        assert not tgt.exists()
+
 
 class TestTgmToZarr:
     """tgm_to_zarr restores Tensogram archives to Zarr stores."""
@@ -435,6 +471,21 @@ class TestTgmInspection:
         (tmp_path / "cut.tgm").write_bytes((tmp_path / "a.tgm").read_bytes()[:200])
         cut = validate_tgm(str(tmp_path / "cut.tgm"), operation="firecube archive validate")
         assert cut.issues
+
+    @pytest.mark.integration
+    def test_repro_tgm_validate_no_messages(self, tmp_path):
+        import tensogram
+
+        from firecube.core.tensogram.inspection import validate_tgm
+
+        path = str(tmp_path / "empty.tgm")
+        with tensogram.TensogramFile.create(path):  # pyright: ignore[reportAttributeAccessIssue]
+            pass
+
+        result = validate_tgm(path, operation="firecube archive validate")
+
+        assert result.message_count == 0
+        assert result.issues
 
     @pytest.mark.unit
     @pytest.mark.parametrize("name", ["tgm_info", "open_tgm_listing", "validate_tgm"])

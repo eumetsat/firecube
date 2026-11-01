@@ -10,16 +10,26 @@ PRODUCT_NAME="MY_PRODUCT"
 
 ## Preflight
 
-The full URI locates the product. Deleting storage objects also requires the
-storage type and driver. For a local product:
+The full URI locates the product and the storage objects to delete. If you pass
+it to `--product-name`, `chunks delete` needs no storage type and no storage
+driver. It needs no `[storage]` section either. This holds for a dry run and a
+real run.
+
+The URI does not supply S3 access. For an `s3://` product, make working
+credentials available through the normal credential chain of the default driver.
+Anonymous access is off. If you use a custom endpoint, set it in the storage
+configuration.
+
+A bare product name and `--all-products` still need the storage type and driver.
+For a local product:
 
 ```bash
 export FIRECUBE_STORAGE_TYPE=local
 export FIRECUBE_STORAGE_DRIVER=fsspec
 ```
 
-`--manifest-only` does not require this storage configuration because it keeps
-the product data.
+`--manifest-only` does not need this storage configuration because it keeps the
+product data.
 
 Confirm no writer is using the product, then inspect the tracked records:
 
@@ -279,7 +289,9 @@ firecube chunks snapshots rebuild --product-name "$PRODUCT_URI"
 
 | Symptom | Meaning | Recovery |
 |---|---|---|
-| `Storage configuration not available` | Storage deletion needs a storage type and driver even when the product URI is explicit. | Set `FIRECUBE_STORAGE_TYPE` and `FIRECUBE_STORAGE_DRIVER`; also configure credentials for S3. |
+| `Chunk operations require a full product URI or a [storage] configuration` | The run has a bare product name or `--all-products`, and no storage configuration. | Pass the full product URI to `--product-name`. Or set `FIRECUBE_STORAGE_TYPE` and `FIRECUBE_STORAGE_DRIVER`. |
+| `MissingScope` (exit code 2) | The run has neither `--product-name` nor `--all-products`. | Pass `--product-name <product URI>` or `--all-products`. |
+| Access denied or no credentials for an `s3://` product | The URI does not supply S3 credentials. | Make credentials available to the default driver. Set the endpoint in the storage configuration if you use one. |
 | Span is not aligned | It does not map cleanly to Zarr time chunks. | Use `--force` only if expanded deletion is acceptable. |
 | `does not contain expected time dimension` | The cube uses a custom time dimension that older span records do not capture. | Re-run with `--time-dim <name>` matching the cube layout. |
 | `explicit time dimension ... contradicts` | `--time-dim` disagrees with the span record or cube metadata. | Drop `--time-dim`, or fix the span records if they are wrong. |

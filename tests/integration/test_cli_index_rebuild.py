@@ -51,6 +51,8 @@ class _RebuildPlugin:
     time_dim_name: ClassVar[str] = "time"
     name = "index_rebuild_plugin"
     size: ClassVar[int] = 3
+    template_config_class: ClassVar[None] = None
+    plugin_config_class: ClassVar[None] = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
@@ -456,6 +458,8 @@ def test_rebuild_none_spec_clear_error(tmp_path: Path, monkeypatch: pytest.Monke
         PRODUCT_NAME: ClassVar[str] = "index_rebuild_product"
         time_dim_name: ClassVar[str] = "time"
         name = "index-rebuild-none"
+        template_config_class: ClassVar[None] = None
+        plugin_config_class: ClassVar[None] = None
 
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
@@ -600,6 +604,38 @@ def test_rebuild_library_attrs_drift_raises_the_manifest_error_unchanged(tmp_pat
 
     assert type(refused.value) is ResolvedIndexAttrsConflictError
     assert not isinstance(refused.value, IndexRecordError)
+
+
+def test_repro_index_option_rebuild(tmp_path: Path) -> None:
+    cube = tmp_path / "cube"
+    cube.mkdir()
+    spec = IndexSpec(
+        name="regular_axis_calendar_v1",
+        groups={
+            "data": RegularTimeAxis(
+                coordinate="time",
+                epoch="2049-01-01T00:00:00Z",
+                cadence_s=86400,
+                slot_count=5,
+                calendar="360_day",
+            )
+        },
+    )
+    expected = resolve_index_spec(spec, time_dim_name="time").as_resolved_index_record(run_id="x")
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            *_rebuild_args(
+                cube, plugin="regular_axis_calendar", product_name="regular_axis_calendar"
+            ),
+            "--option",
+            "slot_count=5",
+        ],
+    )
+
+    assert result.exit_code == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert _current_record(cube).identity_hash == expected.identity_hash
 
 
 @pytest.mark.parametrize("state", ["without-record", "drift"])

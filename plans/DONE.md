@@ -27,6 +27,41 @@
 - The gate rows of `test_cli_parses_uris_only_in_uri_policy` are unchanged: the scheme of an `--input-data` value is split only in `_uri_policy.py`, and `ingest` keeps one `is_remote_target` and one `local_path_from_target` call.
 - These tests pin it: `tests/cli/test_uri_policy_stac.py` (admission, the same refusals for `file://` and `s3://`, each `stac://` refusal, `parse_and_validate_uri` refusing `stac://` for `--target`, `--source`, `--archive` and an argument, and `StorageUri.parse` refusing `stac`), and `tests/integration/test_ingest_stac_options.py` (the three commands).
 
+## 2026-10-26 — Root-cube smoke fixes (fix/root-group-cube)
+
+**Decision.** A plugin that declares the root group `/` itself gets a working cube and working maintenance commands. A DirectZarr plugin declares `ZarrGroupSpec(group="/")`. A GenericZarr plugin returns `["/"]` from `get_batch_groups`. Core has no switch for it. The branch holds signed commits on base `9f02535`, one per writing node, and nothing is pushed. The plan is `.ultron/plans/2026-10-26-root-cube-smoke-fixes.md`, and the ledger of its decisions and deviations is beside it.
+
+**Commits.** Each fix has its test commit, which landed red first.
+
+- `f9223c4` `fix(zarr): allow root-group attributes and stamp group attributes in preallocate`. A root group can declare attributes. Its own refusal covers only the four names of the index mirror. The shared guard of `set_group_attrs` still rejects the reserved array-attribute names, for example `firecube_run_id` and `_FillValue`, with a `ValueError` when preallocate stamps them. `zarr preallocate` writes the attributes of every declared group, and a re-run fixes an older cube. Tests: `9dd011f`, `852f489`.
+- `44c56ba` `feat(zarr): add group and coordinate-name options to zarr multires`. `zarr multires` builds levels for a named group and for coordinates not named `lat` and `lon`. It refuses a missing, 2-D or foreign coordinate before it writes. Tests: `aee2e6b`.
+- `f2e8d1c` `fix(controlplane): resolve span array paths and contain chunk deletion in delete-span`. `chunks delete-span` works on DirectZarr spans, keeps a managed time coordinate, and deletes only keys inside the product. Scrub deletes through the filesystem driver without the `str` error. Tests: `56e373c`, `c0ad609`.
+- `df0c538` `fix(chunks): delete a product URI's chunk objects without storage config`. `chunks delete -n <URI>` needs no `[storage]` config and deletes the literal object. Tests: `957105d`, `c5d644f`.
+- `c48a620` `fix(zarr): detect the DirectZarr time dimension in zarr validate`. `zarr validate` finds the time dimension from a marked time coordinate. A report that checked no array is not valid. Tests: `e66aaeb`.
+- `c2b75b6` `fix(tensogram): archive a NaT fill, skip string coordinates, leave no partial file`. `archive create` converts a native `datetime64` cube. A failed conversion leaves no file. Tests: `53f0fdc`.
+- `c574606` `fix(archive): refuse an empty tgm archive and label the root group`. `archive validate` fails on an archive with no messages. A root group prints as `(root)`. Tests: `53f0fdc`, `26af2c5`.
+- `a90e2a7` `fix(tensogram): restore compressors on current xarray and keep a root's control plane`. The restore keeps the compressors on xarray 2026.7 and 2026.9. A local restore of an explicit `/` group keeps `.firecube/`. A remote restore still writes the first root group in mode `"w"`. Tests: `26af2c5`.
+- `9ce1724` `feat(cli): accept --option on zarr index verify and rebuild`. Both commands configure the plugin with `--option KEY=VALUE`. `configure_ingestor` accepts a plugin that declares no config class. Tests: `7000160`, `46ff2ef`.
+- `157f7ef`, `71d6427`, `bb9df86` and `bbc75c7` hold the plugin guides, the `zarr validate` pages, the operator pages and the changelog entries.
+- Test commits not named above: `694aa33` pins the root group `/` for first write, a failed first batch and run ids.
+
+**Evidence.** Paths are under `.ultron/evidence/2026-10-26/smoke-fixes/`, which Git excludes.
+
+- `a1/REPORT.md` is the FCI acceptance report. 13 rows are `pass`. F8 is `fail`, as the report reads. The command exits 1 with the expected `Error:` line, but stderr also holds one INFO log line ahead of it. The cube is unchanged.
+- `a2/REPORT.md` is the AOD acceptance report. 9 rows are `pass`. G5, G8 and G12 are `fail` on exit codes. `a2/base-compare.txt` shows the same exit codes on base `14e7f94`. The causes are an empty span from a repeat append and CF findings in the plugin data. Neither is a regression.
+- `a2/REPORT.md`, row G10, holds the accepted CF time-encoding loss of the `.tgm` restore.
+- The Vision reviews of every node are in `.ultron/reviews/2026-10-26-root-cube-smoke-fixes/`.
+- The follow-ups the plan did not fix are in `plans/TODO.md`, "Root-cube smoke follow-ups (2026-10-26)".
+
+**Test budget (measured).** `ultron tdd budget <plan> --base 9f02535` printed `tests +1203 lines against budget 900: OVER BUDGET by 303` on 2026-10-26, after commit `224292c`. An earlier run read +1199. The gate is missed by 303. The orchestrator escalated the miss to the maintainer, who rules on it. The pins that Vision demanded in review account for much of the overshoot. No test was deleted to reach the number.
+
+**Exception to `plans/DESIGN.md:9`.** The control-plane rule requires every caller, tests included, to use the `ChunkManager` facade. The facade has no producer of chunk-type records, because they exist only in legacy manifests. Two test setups therefore call `manager.repo._writer(...)` to write such records.
+
+- `tests/unit/test_cli_chunks_delete.py`, in the helper `_seed_legacy_chunk_record`.
+- `tests/unit/test_driver_parity_deletion.py`, inline in `test_filesystem_deletion_refuses_chunk_key_outside_product`.
+
+The exception covers these two setups only. A new test does not inherit it.
+
 ## 2026-10-24 — One URI rule for every CLI option (17-cli-archive-create-restore-accept-bare-local-paths)
 
 **Decision.** One function, `parse_and_validate_uri(value, *, param_hint)` in `src/firecube/cli/_uri_policy.py`, admits every CLI option and argument that takes a product or artifact URI. It returns core's `StorageUri`, and command code reads the scheme and the path only from that value. One signed commit replaces 300f48e on the branch. Nothing is pushed.

@@ -29,6 +29,10 @@ def _invoke_multires(args: list[str]):
     return CliRunner().invoke(cli, ["zarr", "multires", *args])
 
 
+def _store_bytes(root: Path) -> dict[str, bytes]:
+    return {str(p.relative_to(root)): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+
 def test_coherence_mismatch_rejected() -> None:
     result = _invoke_multires(
         [
@@ -70,6 +74,119 @@ def test_multires_snapshot_never_created_and_refreshed_when_present(
         assert {"multires/45.0deg", "multires/45.0deg/FWI"} <= set(snapshot["metadata"])
     else:
         assert snapshot is None
+
+
+@pytest.mark.contract
+def test_repro_multires_named_group(tmp_path: Path) -> None:
+    store = tmp_path / "x.zarr"
+    axis = [0.0, 1.0, 2.0, 3.0]
+    ds = xr.Dataset(
+        {"FWI": (["lat", "lon"], np.ones((4, 4), dtype="f4"))},
+        coords={"lat": axis, "lon": axis},
+    )
+    ds.to_zarr(store, group="g", zarr_format=3, consolidated=False)
+
+    flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "2"]
+    result = _invoke_multires(
+        ["--target", store.as_uri(), "--product-name", "pn", "-g", "g", *flags]
+    )
+
+    assert result.exit_code == 0, result.output
+    level = store / "g" / "multires" / "2.0deg"
+    assert json.loads((level / "FWI" / "zarr.json").read_text())["shape"] == [2, 2]
+    assert not (store / "multires").exists()
+
+
+@pytest.mark.contract
+def test_repro_multires_coordinate_names(tmp_path: Path) -> None:
+    store = tmp_path / "x.zarr"
+    axis = [0.0, 1.0, 2.0, 3.0]
+    ds = xr.Dataset(
+        {"FWI": (["latitude", "longitude"], np.ones((4, 4), dtype="f4"))},
+        coords={"latitude": axis, "longitude": axis},
+    )
+    ds.to_zarr(store, zarr_format=3, consolidated=False)
+
+    flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "2"]
+    result = _invoke_multires(
+        [
+            "--target",
+            store.as_uri(),
+            "--product-name",
+            "pn",
+            "--lat-name",
+            "latitude",
+            "--lon-name",
+            "longitude",
+            *flags,
+        ]
+    )
+
+    assert result.exit_code == 0, result.output
+    level = store / "multires" / "2.0deg"
+    assert json.loads((level / "FWI" / "zarr.json").read_text())["shape"] == [2, 2]
+
+
+@pytest.mark.contract
+def test_repro_multires_missing_coordinate(tmp_path: Path) -> None:
+    store = tmp_path / "x.zarr"
+    ds = xr.Dataset(
+        {"FWI": (["latitude", "longitude"], np.ones((2, 2), dtype="f4"))},
+        coords={"latitude": [0.0, 1.0], "longitude": [0.0, 1.0]},
+    )
+    ds.to_zarr(store, zarr_format=3, consolidated=False)
+
+    before = _store_bytes(store)
+
+    flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "45"]
+    result = _invoke_multires(["--target", store.as_uri(), "--product-name", "pn", *flags])
+
+    assert result.exit_code == 1, result.output
+    assert isinstance(result.exception, SystemExit), repr(result.exception)
+    assert "Traceback" not in result.output
+    lines = [line for line in result.output.splitlines() if line.strip()]
+    assert len(lines) == 1, result.output
+    assert "lat" in lines[0]
+    assert _store_bytes(store) == before
+
+
+@pytest.mark.contract
+def test_repro_multires_2d_coordinates(tmp_path: Path) -> None:
+    store = tmp_path / "x.zarr"
+    lat2d = np.array([[0.0, 0.0], [1.0, 1.0]])
+    lon2d = np.array([[0.0, 1.0], [0.0, 1.0]])
+    ds = xr.Dataset(
+        {"FWI": (["y", "x"], np.ones((2, 2), dtype="f4"))},
+        coords={"latitude": (["y", "x"], lat2d), "longitude": (["y", "x"], lon2d)},
+    )
+    ds.to_zarr(store, group="g", zarr_format=3, consolidated=False)
+    before = _store_bytes(store)
+
+    flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "45"]
+    result = _invoke_multires(
+        [
+            "--target",
+            store.as_uri(),
+            "--product-name",
+            "pn",
+            "-g",
+            "g",
+            "--lat-name",
+            "latitude",
+            "--lon-name",
+            "longitude",
+            *flags,
+        ]
+    )
+
+    assert result.exit_code == 1, result.output
+    assert isinstance(result.exception, SystemExit), repr(result.exception)
+    assert "Traceback" not in result.output
+    lines = [line for line in result.output.splitlines() if line.strip()]
+    assert len(lines) == 1, result.output
+    assert "latitude" in lines[0] or "longitude" in lines[0]
+    assert "dimension" in lines[0].lower()
+    assert _store_bytes(store) == before
 
 
 def test_case_insensitive_flags_accepted(tmp_path: Path) -> None:

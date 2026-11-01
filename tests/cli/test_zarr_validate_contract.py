@@ -32,7 +32,9 @@ def _invoke_validate(args: list[str]):
 def test_file_uri_no_storage_flags(tmp_local_zarr: Path) -> None:
     result = _invoke_validate(["-p", tmp_local_zarr.as_uri(), "-g", "g1"])
 
-    assert result.exit_code == 0
+    # The fixture group has no time dimension, so nothing is checked and the report is not valid.
+    assert result.exit_code == 1
+    assert '"is_valid": false' in result.output
     assert "Missing option" not in result.output
     assert "Traceback" not in result.output
 

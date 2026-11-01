@@ -90,6 +90,10 @@ from firecube.ingestor.runtime.zarr.direct_region_adapter import (
     DirectRegionAdapter,
     open_zarr_array,
 )
+from firecube.ingestor.runtime.zarr.root_group import (
+    refuse_root_beside_named_groups,
+    refuse_root_group_attrs,
+)
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import (
     RegionZarrWriter,
     ensure_group_ancestors,
@@ -690,9 +694,19 @@ class ZarrGroupSpec:
     """
 
     group: str
+    """Group path inside the store.
+
+    ``"/"`` names the root group. A schema that declares it declares no other group.
+    """
     arrays: list[ZarrArraySpec] = field(default_factory=list)
     coord_names: frozenset[str] = frozenset({"y", "x", "channel"})
     attrs: Mapping[str, Any] | None = None
+    """Attributes merged into the group's ``zarr.json`` by ``zarr preallocate`` and by ingest.
+
+    On the root group ``"/"``, firecube refuses the four index-mirror names
+    ``firecube_resolved_index``, ``firecube_resolved_index_identity_hash``,
+    ``firecube_slot_index_model`` and ``firecube_slot_index_model_identity_hash``.
+    """
 
     def __post_init__(self) -> None:
         if self.attrs is not None and not isinstance(self.attrs, Mapping):
@@ -720,7 +734,7 @@ class WriteIntent:
     returns one. It is resolved exactly once at dispatch time, in dispatch
     order. The callable must close over stable inputs (paths, configuration),
     not open file handles or per-batch scratch objects. Callable data is
-    supported for ``kind="region"`` and ``kind="static"`` only. Passing a
+    supported for ``kind="region"``, ``kind="static"`` and ``kind="1d"``. Passing a
     callable for other kinds raises ``TypeError`` at construction. Any
     callable exception propagates with the same error surface as an eager
     payload rejection.
@@ -746,7 +760,7 @@ class WriteIntent:
             raise ValueError(
                 f"WriteIntent.kind must be one of {sorted(valid_kinds)!r}; got {self.kind!r}"
             )
-        callable_kinds = {"region", "static"}
+        callable_kinds = {"region", "static", "1d"}
         if callable(self.data) and self.kind not in callable_kinds:
             supported_kinds = "', '".join(sorted(callable_kinds))
             raise TypeError(
@@ -765,8 +779,9 @@ class WriteIntent:
         one row. The array must be declared with ``time_indexed=True`` in
         `ZarrArraySpec`.
 
-        ``data`` must be an eager ``np.ndarray``; callable payloads are not
-        supported for ``kind="1d"`` and raise ``TypeError`` at construction.
+        ``data`` may be an eager ``np.ndarray`` or a zero-arg callable that
+        returns one; a callable is resolved once, at dispatch time, so a large
+        whole-slot payload is only read when it is written.
 
         Args:
             group: Zarr group name matching a `ZarrGroupSpec` in the schema.
@@ -1179,7 +1194,10 @@ class DirectZarrIngestor(BaseIngestor):
             self._zarr_schema_cache_by_ctx = cache = {}
         key = id(getattr(ctx, "_ctx", ctx))
         if key not in cache:
-            cache[key] = self.zarr_schema(ctx)
+            schema = self.zarr_schema(ctx)
+            refuse_root_beside_named_groups(schema)
+            refuse_root_group_attrs(schema)
+            cache[key] = schema
         return cache[key]
 
     def get_batch_groups(self, items: Sequence[Any], ctx: PluginContext) -> list[str]:

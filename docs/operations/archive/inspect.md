@@ -68,6 +68,20 @@ Group: data
   Product: product.zarr
 ```
 
+## Root Group Label
+
+If the archive holds the root group of the source product, the commands label
+that group `(root)`. `archive info` and `archive list` print `Group: (root)`.
+`archive info` prints `(root)` in the `Groups:` line. `archive create` prints it
+in its own `Groups:` line.
+
+```text
+Groups:         (root)
+
+Group: (root)
+  Source:    file:///data/products/MY_PRODUCT.zarr
+```
+
 ## Validate Integrity
 
 ```bash
@@ -90,6 +104,13 @@ Expected output:
 
 ```text
 VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
+```
+
+A `.tgm` archive with no messages is invalid. The command exits with code 1:
+
+```text
+INVALID: /data/archives/EMPTY.tgm (1 issue(s))
+  [file] offset=0: Archive contains no messages.
 ```
 
 ## Zip Archives
@@ -125,6 +146,8 @@ skips the CRC check.
 |---|---|---|
 | `Path ... does not exist` | The archive path is wrong or create failed. | Check `ARCHIVE_PATH` and rerun `archive create`. |
 | `requires the tensogram extras` | `.tgm` support is not installed. | Install `firecube[tensogram]` in the active environment. |
+| `INVALID: ...` with `Archive contains no messages.` | The `.tgm` archive holds no messages. `archive validate` exits with code 1. | Recreate the archive from the source product. |
+| `Error: Archive contains no messages.` | `archive info` reads a `.tgm` archive with no messages and exits with code 1. | Recreate the archive from the source product. |
 | Validation fails | The archive is incomplete or corrupt. | Recreate the archive from the source product. |
 
 ## Next Steps

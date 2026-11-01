@@ -305,15 +305,19 @@ class RegionZarrWriterProtocol(Protocol):
         *,
         channel_index: int | None = None,
     ) -> None:
-        """Write one spatial region into one timestamp slot.
+        """Write one region into one timestamp slot: ``arr[ts_index, y_slice, ...]``.
+
+        *y_slice* selects along the first axis after time; later axes are
+        written in full. Arrays of rank >= 3 are supported; a rank-4 array may
+        instead select one channel with *channel_index*.
 
         Args:
             group: Data group path.
             array_name: Target array name inside *group*.
             ts_index: Timestamp slot index to write into.
-            y_slice: Spatial y-range covered by *data*.
+            y_slice: Range along the first axis after time covered by *data*.
             data: Region payload; its shape must match the addressed window.
-            channel_index: Channel index for 4-D arrays; ``None`` for 3-D.
+            channel_index: Channel index for rank-4 arrays only; ``None`` otherwise.
 
         Raises:
             ValueError: If the target array rank is unsupported or *data*
@@ -1032,7 +1036,12 @@ class RegionZarrWriter:
         *,
         channel_index: int | None = None,
     ) -> None:
-        """Write one spatial region for one timestamp.
+        """Write one region for one timestamp: ``arr[ts_index, y_slice, ...]``.
+
+        *y_slice* selects along the first axis after time and every later
+        axis is written in full, so arrays of any rank >= 3 are supported
+        (e.g. ``(time, member, period, level, y, x)`` one member at a time).
+        Rank-4 arrays keep the optional single-channel form.
 
         Rank, spatial axes and layout come from this writer's cached handle.
         The write goes through the array read again under its unit locks,
@@ -1044,18 +1053,24 @@ class RegionZarrWriter:
             group: Data group path.
             array_name: Target array name inside *group*.
             ts_index: Timestamp slot index.
-            y_slice: Spatial y-range to write.
+            y_slice: Range along the first axis after time.
             data: Input data with matching shape.
-            channel_index: Optional channel index for 4-D arrays.
+            channel_index: Optional channel index, rank-4 arrays only.
 
         Raises:
-            ValueError: If target array rank is unsupported.
+            ValueError: If the target array has rank < 3, or *channel_index*
+                is given for an array of rank > 4.
             IndexError: The slot lies outside the array's time axis.
         """
         array_path = f"{group}/{array_name}"
         arr = self._cached_array(array_path)
-        if arr.ndim not in (3, 4):
+        if arr.ndim < 3:
             raise ValueError(f"Unsupported array rank for write_region: {arr.ndim}")
+        if channel_index is not None and arr.ndim > 4:
+            raise ValueError(
+                f"channel_index is only supported for rank-4 arrays; "
+                f"{array_path} has rank {arr.ndim}"
+            )
         y_len = int(arr.shape[1])
         # Any other row selector: lock every row (never fewer than written).
         start, stop, step = y_slice.indices(y_len) if isinstance(y_slice, slice) else (0, y_len, 1)
@@ -1074,10 +1089,14 @@ class RegionZarrWriter:
             else:
                 channel = _axis_index(channel_index, int(arr.shape[3]))
                 bounds.append((channel, channel + 1))
+        elif arr.ndim > 4:
+            bounds.extend((0, int(n)) for n in arr.shape[3:])
         # Write the normalised indices the locks were taken for.
         selection: tuple[Any, ...] = (slot, y_slice, slice(None))
         if arr.ndim == 4:
             selection += (slice(None) if channel_index is None else bounds[3][0],)
+        elif arr.ndim > 4:
+            selection += (Ellipsis,)
         self._write_payload(
             arr,
             array_path,
