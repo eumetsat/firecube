@@ -167,7 +167,7 @@ Examples:
 )
 @input_data_option(
     short=False,
-    help="Source path, s3:// prefix or stac:// collection for AUTO discovery (optional, repeatable).",
+    help="Source URI for AUTO discovery: file://, s3:// or stac:// (optional, repeatable).",
 )
 @input_filters_option
 @stac_search_option

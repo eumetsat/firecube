@@ -142,26 +142,30 @@ def parse_and_validate_source_uri(
 def admit_input_sources(values: Sequence[str], *, param_hint: str) -> tuple[tuple[str, ...], bool]:
     """Admit the ``--input-data`` values of one command and report whether any is STAC.
 
-    A ``stac://`` value goes through `parse_and_validate_source_uri`. Every other value
-    passes unchanged: a local path or an ``s3://`` prefix stays exempt from the strict
-    URI rule and is interpreted by the plugin.
+    An empty value counts as the flag left out and is dropped. Every other value goes
+    through `parse_and_validate_source_uri`, so a bare path, another scheme or an uppercase
+    scheme is refused. The admitted values come back as given, repeats included.
 
     Args:
         values: The raw option values, in the order given.
         param_hint: The flag named in a refusal.
 
     Returns:
-        The values in their order, and ``True`` when at least one names a STAC collection.
+        The non-empty values in their order, and ``True`` when at least one names a STAC
+        collection.
 
     Raises:
-        click.BadParameter: The first ``stac://`` value that fails a rule.
+        click.BadParameter: The first value that fails a rule.
     """
+    admitted: list[str] = []
     has_stac = False
     for value in values:
-        if _scheme(value) == STAC_SCHEME:
-            parse_and_validate_source_uri(value, param_hint=param_hint)
-            has_stac = True
-    return tuple(values), has_stac
+        if not value:
+            continue
+        parse_and_validate_source_uri(value, param_hint=param_hint)
+        has_stac = has_stac or _scheme(value) == STAC_SCHEME
+        admitted.append(value)
+    return tuple(admitted), has_stac
 
 
 def resolve_storage_type(uri: StorageUri) -> str | None:
