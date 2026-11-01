@@ -262,7 +262,7 @@ def test_rebuild_fresh_cube_lifecycle(
                 "--product-name",
                 "index_rebuild_product",
                 "--input-data",
-                str(input_dir),
+                input_dir.as_uri(),
                 "--storage-type",
                 "local",
                 "--storage-driver",

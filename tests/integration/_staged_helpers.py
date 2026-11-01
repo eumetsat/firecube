@@ -104,7 +104,7 @@ def run_staged_ingest(
         "ingest",
         plugin,
         "--input-data",
-        str(source),
+        source.as_uri(),
         "--target",
         target_uri,
         "--product-name",

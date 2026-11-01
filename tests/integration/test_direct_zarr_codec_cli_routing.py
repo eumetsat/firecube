@@ -51,7 +51,7 @@ def _ingest_args(tmp_path: Path, extra: list[str] | None = None) -> list[str]:
         "ingest",
         "direct_zarr_capable_test_plugin",
         "--input-data",
-        str(tmp_path),
+        tmp_path.as_uri(),
         "--target",
         (tmp_path / "out.zarr").as_uri(),
         "--product-name",
