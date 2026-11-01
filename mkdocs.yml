@@ -1,5 +1,5 @@
 site_name: Firecube
-site_description: Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.
+site_description: A plugin-driven batch ingestion engine for building and maintaining operational analysis-ready data cubes.
 not_in_nav: |
   concepts/plugins/index.md
   quickstart/catalogs.md

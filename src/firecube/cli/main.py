@@ -526,7 +526,7 @@ OPTION_GROUPS.update(
 )
 @click.pass_context
 def cli(ctx: click.Context, config_file: Path | None) -> None:
-    """Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes
+    """A plugin-driven batch ingestion engine for building and maintaining operational analysis-ready data cubes
 
     Firecube handles the operational work of building and maintaining cubes,
     so you can focus on the data. Writes Zarr and Parquet stores with

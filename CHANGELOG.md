@@ -416,6 +416,22 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Fixed
 
+- A `GenericZarrIngestor` data variable whose raw integer values carry CF
+  packing attributes (`scale_factor`, `add_offset`, `_FillValue`,
+  `missing_value`, `_Unsigned`) now appends. Force-reingest and resume
+  overwrite it too. Firecube writes the raw values unchanged and keeps the
+  stored packing. Before, every batch after the first failed with xarray's
+  "Key 'add_offset' already exists in attrs".
+  - A batch whose packing or dtype differs from the stored array raises
+    `SchemaDriftError` before any write.
+  - A packing that float64 arithmetic cannot reproduce exactly raises
+    `ConfigurationError` on append. Declare such a variable with another packing
+    or as decoded values. The refused packings are:
+    - an integer wider than 32 bits, and a packed float
+    - a `scale_factor` or `add_offset` so large that the arithmetic overflows
+    - an `add_offset` too large for the `scale_factor`
+    - a `_FillValue` that differs from `missing_value`, and a `missing_value`
+      with several values (#114).
 - `ctx.materialize` of a `file://` href returned a path below the working
   directory that did not exist. It now returns the file.
 - `firecube archive create`, `archive restore`, `archive info`, `archive

@@ -1,8 +1,25 @@
 # Done
 
+## 2026-11-01 — CF-packed GenericZarr appends (issue #114)
+
+**Decision.** A GenericZarr append and a region write send a CF-packed data variable through `decode_cf_packed_payload` in `src/firecube/ingestor/runtime/zarr/schema.py`. The variable keeps its raw integers and its CF keys in `attrs`. The function compares the keys and the dtype with the stored array and decodes the values with the stored packing, in float64 when the packing has a scale or an offset. xarray then re-encodes them to the same raw integers. A difference is refused before any write.
+
+- Why. xarray re-encodes appended and region values with the stored encoding. Raw integers with CF keys in their attrs therefore failed with `Key 'add_offset' already exists in attrs`.
+- Why not take the keys out of the attrs. A numpy batch then raises. A dask batch stores wrong values: a raw 1006 was stored as 35064.
+- Why not decode in float32. The decode with the incoming attrs runs in float32 for a 32-bit integer and corrupts it: 16777217 was stored as 16777216.
+- Why float64 with the stored values. It is exact under the bounds below. A sweep over every 8-bit and 16-bit value found no difference.
+- Why bounds. An offset of 1e20 on a scale of 1 collapses the raw values. A scale of 1e308 overflows the decode. No float decode is exact for 64-bit integers.
+- The rule. A time-indexed data variable whose attrs carry a CF key (`scale_factor`, `add_offset`, `_FillValue`, `missing_value`, `_Unsigned`) must match the stored keys, values and dtype. A difference raises `SchemaDriftError`, force-reingest included. A variable without a CF key reaches xarray unchanged.
+- The bounds. Float64 must reproduce the raw values exactly. `ConfigurationError` refuses an integer wider than 32 bits and a packed float. It refuses a zero or non-finite `scale_factor` and a non-finite `add_offset`. It refuses a dtype that is neither integer nor floating. It refuses a `_FillValue` that differs from `missing_value`, and a CF value that is not a scalar. For an integer of b bits it refuses 2^b·|scale_factor| + |add_offset| > 2^1000 and 4·2^b + |add_offset/scale_factor| > 2^50.
+- The code. The append path (the view of `_append_write_view`) and the region path (`ds_region`) in `write.py` make one call each, against the store being written. In a staged run that store is the workspace, not the final target. Neither call passes `encoding=`, because xarray refuses it for an existing variable. The create path is unchanged.
+- The cost. A 16 MiB append took about 0.18 s with the decode against about 0.03 s without it (measured).
+- The tests. `tests/integration/test_append_static_var_drift_raises.py` covers appends and refusals, and `tests/unit/test_append_region_overwrite.py` covers region writes. Both run over numpy and dask data. `tests/integration/test_e2e_zarr_ingest_preflight_wiring.py` runs direct and staged ingests in batches of one.
+- The acceptance. A METimage L1B ingest of 10 granules in batches of two matched the single-batch store and the source file.
+- What stays open. `plans/TODO.md` keeps eight residuals. Five concern behaviour. They are attribute drift of other keys and NaN cells stored as the fill. They are also a create path that writes a refused packing, raw integers without CF attrs, and coordinates with CF keys. Three concern small defects in the refusals.
+
 ## 2026-11-01 — Strict --input-data: file://, s3:// and stac:// URIs only (issue #118)
 
-**Decision.** The `--input-data` of `ingest`, `zarr preallocate` and `zarr slots` admits `file://`, `s3://` and `stac://` URIs only, through `parse_and_validate_source_uri`. A bare or relative path, another scheme and an uppercase scheme exit 2 with a `click.BadParameter` that names `--input-data`. An empty value counts as the flag left out, in all three commands. The flag may be repeated and the schemes may be mixed. This supersedes the "stay exempt" sentences of the 2026-10-26 entry and the 2026-10-27 entry. Older entries stay as written.
+**Decision.** The `--input-data` of `ingest`, `zarr preallocate` and `zarr slots` admits `file://`, `s3://` and `stac://` URIs only, through `parse_and_validate_source_uri`. A bare or relative path, another scheme and an uppercase scheme exit 2 with a `click.BadParameter` that names `--input-data`. An empty value counts as the flag left out, in all three commands. The flag may be repeated and the schemes may be mixed. This supersedes the "stay exempt" sentences of the 2026-10-26 entry. Older entries stay as written.
 
 - Why. One flag had two rules. `admit_input_sources` checked only `stac://` values. `ingest` then branched on `is_remote_target` and turned a local value into a path. `zarr preallocate` and `zarr slots` passed every value on as given, an empty one included. The two calls in `ingest` were two `PERMANENT` rows of the CLI boundary gate.
 - The plugin contract. The plugin receives each admitted URI as given, in all three commands. A plugin that needs a local path calls `local_path_from_target` from `firecube.core.api`, or `ctx.materialize`. A library caller may still pass a local path in `ctx.sources`. The docstrings of `IngestContext`, `PluginContext` and `BaseIngestor.discover_source_files` say so.
@@ -14,7 +31,7 @@
 
 ## 2026-10-27 — STAC source fixes and the source-read seam (97-source-files-from-stac-apis)
 
-**Decision.** A command discovers a STAC source at most once, and only when it needs the items. It reads the pages until one has no `next` link, or until one of two refusals. Every run record of `ingest` and `zarr preallocate` for a `stac://` source carries the `stac_discovery` key. A command that never discovers records no item ids. The assets keep distinct identities. `WorkspaceManager.materialize` reads the href of a source by the scheme of that href. It downloads an `http://` or `https://` href. This replaces the decision of earlier the same day to refuse `https://` hrefs. Strict `--input-data` admission was split out of this change onto main (Neo, 2026-10-27). This entry leaves that policy as it was.
+**Decision.** A command discovers a STAC source at most once, and only when it needs the items. It reads the pages until one has no `next` link, or until one of two refusals. Every run record of `ingest` and `zarr preallocate` for a `stac://` source carries the `stac_discovery` key. A command that never discovers records no item ids. The assets keep distinct identities. `WorkspaceManager.materialize` reads the href of a source by the scheme of that href. It downloads an `http://` or `https://` href. Strict `--input-data` admission was split out of this change onto main. This entry leaves that policy as it was.
 
 - Paging. `_follow_next_links` in `src/firecube/core/discovery/_stac.py` skips an empty page and ends only at a page without a `next` link. It raises `StacApiError` for a `next` link that repeats an earlier request. It raises it also for 5 empty pages in a row. The error says the results may be incomplete. No other paging failure has its own refusal.
 - Identity. `SourceItem.identity` writes `%` as `%25` and `/` as `%2F` in each part of `collection/item_id/asset_key`. Two assets whose parts differ no longer join to the same text. Discovery still merges an asset that two sources reach with the same collection, item id and asset key, and the first wins.
@@ -41,7 +58,7 @@
 
 ## 2026-10-26 — Root-cube smoke fixes (fix/root-group-cube)
 
-**Decision.** A plugin that declares the root group `/` itself gets a working cube and working maintenance commands. A DirectZarr plugin declares `ZarrGroupSpec(group="/")`. A GenericZarr plugin returns `["/"]` from `get_batch_groups`. Core has no switch for it. The branch holds signed commits on base `9f02535`, one per writing node, and nothing is pushed. The plan is `.ultron/plans/2026-10-26-root-cube-smoke-fixes.md`, and the ledger of its decisions and deviations is beside it.
+**Decision.** A plugin that declares the root group `/` itself gets a working cube and working maintenance commands. A DirectZarr plugin declares `ZarrGroupSpec(group="/")`. A GenericZarr plugin returns `["/"]` from `get_batch_groups`. Core has no switch for it. The branch holds signed commits on base `9f02535`, and nothing is pushed.
 
 **Commits.** Each fix has its test commit, which landed red first.
 
@@ -57,15 +74,14 @@
 - `157f7ef`, `71d6427`, `bb9df86` and `bbc75c7` hold the plugin guides, the `zarr validate` pages, the operator pages and the changelog entries.
 - Test commits not named above: `694aa33` pins the root group `/` for first write, a failed first batch and run ids.
 
-**Evidence.** Paths are under `.ultron/evidence/2026-10-26/smoke-fixes/`, which Git excludes.
+**Evidence.** The evidence is not in the repository.
 
-- `a1/REPORT.md` is the FCI acceptance report. 13 rows are `pass`. F8 is `fail`, as the report reads. The command exits 1 with the expected `Error:` line, but stderr also holds one INFO log line ahead of it. The cube is unchanged.
-- `a2/REPORT.md` is the AOD acceptance report. 9 rows are `pass`. G5, G8 and G12 are `fail` on exit codes. `a2/base-compare.txt` shows the same exit codes on base `14e7f94`. The causes are an empty span from a repeat append and CF findings in the plugin data. Neither is a regression.
-- `a2/REPORT.md`, row G10, holds the accepted CF time-encoding loss of the `.tgm` restore.
-- The Vision reviews of every node are in `.ultron/reviews/2026-10-26-root-cube-smoke-fixes/`.
+- The FCI acceptance run has 13 rows `pass`. Row F8 is `fail`. The command exits 1 with the expected `Error:` line, but stderr also holds one INFO log line ahead of it. The cube is unchanged.
+- The AOD acceptance run has 9 rows `pass`. Rows G5, G8 and G12 are `fail` on exit codes. Base `14e7f94` gives the same exit codes. The causes are an empty span from a repeat append and CF findings in the plugin data. Neither is a regression.
+- Row G10 of the AOD run holds the accepted CF time-encoding loss of the `.tgm` restore.
 - The follow-ups the plan did not fix are in `plans/TODO.md`, "Root-cube smoke follow-ups (2026-10-26)".
 
-**Test budget (measured).** `ultron tdd budget <plan> --base 9f02535` printed `tests +1203 lines against budget 900: OVER BUDGET by 303` on 2026-10-26, after commit `224292c`. An earlier run read +1199. The gate is missed by 303. The orchestrator escalated the miss to the maintainer, who rules on it. The pins that Vision demanded in review account for much of the overshoot. No test was deleted to reach the number.
+**Test budget (measured).** The tests grew by +1203 lines against a budget of 900 on 2026-10-26, after commit `224292c`, base `9f02535`. An earlier measurement read +1199. The budget is missed by 303. The maintainer rules on the miss. The pins that review demanded account for much of the overshoot. No test was deleted to reach the number.
 
 **Exception to `plans/DESIGN.md:9`.** The control-plane rule requires every caller, tests included, to use the `ChunkManager` facade. The facade has no producer of chunk-type records, because they exist only in legacy manifests. Two test setups therefore call `manager.repo._writer(...)` to write such records.
 

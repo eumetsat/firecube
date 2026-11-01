@@ -12,7 +12,7 @@ title: Firecube
 </p>
 
 <p align="center">
-  <strong>Plugin-driven batch ingestion engine for turning data into operational analysis-ready datacubes.</strong>
+  <strong>A plugin-driven batch ingestion engine for building and maintaining operational analysis-ready data cubes.</strong>
 </p>
 
 <p align="center">
