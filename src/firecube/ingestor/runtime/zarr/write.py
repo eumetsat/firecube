@@ -458,7 +458,8 @@ def write_dataset_to_zarr(
 
     The caller is responsible for schema validation against the existing Zarr
     group (see :mod:`firecube.ingestor.runtime.zarr.schema`); this function
-    does not repeat that check.
+    does not repeat that check. Appends and region writes decode CF-packed
+    variables with the stored packing first, and refuse a packing drift.
     """
 
     if zarr_format != 3:
@@ -469,7 +470,10 @@ def write_dataset_to_zarr(
     if region is not None:
         from firecube.core.zarr.time_decode import decode_time_array
         from firecube.ingestor.errors import AppendOverwriteRefused
-        from firecube.ingestor.runtime.zarr.schema import validate_time_array_schema
+        from firecube.ingestor.runtime.zarr.schema import (
+            decode_cf_packed_payload,
+            validate_time_array_schema,
+        )
 
         group_name = str(group)
         root = zarr.open_group(
@@ -515,6 +519,9 @@ def write_dataset_to_zarr(
                 for name, variable in ds.variables.items()
                 if name in {time_dim, state_var_name} or time_dim not in variable.dims
             ]
+        )
+        ds_region = decode_cf_packed_payload(
+            ds_region, zarr_store, group_name, time_dim=time_dim, state_var_name=state_var_name
         )
 
         with warnings.catch_warnings():
@@ -620,7 +627,15 @@ def write_dataset_to_zarr(
                 zarr_format=zarr_format,
                 logger=logger,
             )
-        ds_to_write = _append_write_view(ds, time_dim=time_dim)
+        from firecube.ingestor.runtime.zarr.schema import decode_cf_packed_payload
+
+        ds_to_write = decode_cf_packed_payload(
+            _append_write_view(ds, time_dim=time_dim),
+            zarr_store,
+            group,
+            time_dim=time_dim,
+            state_var_name=state_var_name,
+        )
 
     encoding: dict[str, dict[str, object]] | None = None
     if mode != "a":
