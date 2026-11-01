@@ -99,7 +99,7 @@ def test_assert_no_fsspec_bypass_restores_all_bindings_after_lazy_import() -> No
         with assert_no_fsspec_bypass():
             pass
 
-        from firecube.core.filesystem.ops import _open_fsspec_url as real_fn  # pyright: ignore[reportAttributeAccessIssue]  # noqa: I001
+        from firecube.core.filesystem.ops import _open_fsspec_url as real_fn  # pyright: ignore[reportAttributeAccessIssue]
 
         for target in _OPEN_FSSPEC_URL_PATCH_TARGETS:
             module_path, attr = target.rsplit(".", 1)
