@@ -19,7 +19,7 @@ Covers:
 * Override-discovery plugin (direct_zarr_capable_test_plugin) missing --input-data → succeeds
 * --show-options without --input-data → always succeeds (informational path)
 * Empty --input-data "" for default discovery → same clean ConfigurationError
-* Literal --input-data None → preserved as user-provided path (not omitted-case)
+* Literal --input-data None → refused by URI admission with exit 2 (not the omitted case)
 """
 
 from __future__ import annotations
@@ -208,9 +208,8 @@ def test_default_discovery_empty_input_data_fails_clean(tmp_path: Path) -> None:
 def test_literal_none_string_preserved_as_user_provided_input(tmp_path: Path) -> None:
     """T7 (SHOULD): --input-data None (literal string) preserved, not collapsed to omitted.
 
-    When a user passes --input-data None, it's the literal path "None" (which doesn't
-    exist), NOT the omitted case. The CLI's local-path-not-found check fires before
-    discover_source_files, so we see a ClickException, not ConfigurationError.
+    When a user passes --input-data None, it is the literal string "None", which is not a
+    source URI, NOT the omitted case. Admission refuses it with exit 2 before discovery.
     """
     target = tmp_path / "out.zarr"
 
@@ -236,12 +235,41 @@ def test_literal_none_string_preserved_as_user_provided_input(tmp_path: Path) ->
         ],
     )
 
-    assert result.exit_code != 0
-    # The error should come from the local-path-not-found check (ClickException),
-    # NOT from the ConfigurationError guard
-    assert "Input data not found: None" in result.output, (
-        f"Expected 'Input data not found: None' in output; got {result.output!r}"
-    )
+    assert result.exit_code == 2, result.output
+    assert "Invalid value for '--input-data'" in result.output
     assert "discover_source_files" not in result.output, (
         "Should NOT reach the discovery guard for user-provided --input-data None"
     )
+
+
+def test_missing_file_uri_input_data_exits_1_before_discovery(tmp_path: Path) -> None:
+    """A file:// --input-data naming a path that does not exist is refused before discovery."""
+    target = tmp_path / "out.zarr"
+    missing = (tmp_path / "no-such-dir").as_uri()
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "ingest",
+            "cli_test_plugin",
+            "--input-data",
+            missing,
+            "--target",
+            target.as_uri(),
+            "--output-format",
+            "zarr",
+            "--storage-type",
+            "local",
+            "--storage-driver",
+            "fsspec",
+            "--write-mode",
+            "direct",
+            "--product-name",
+            "cli_test_product",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert f"Input data not found: {missing}" in result.output
+    assert "discover_source_files" not in result.output
+    assert not target.exists()

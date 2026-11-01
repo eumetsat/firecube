@@ -307,15 +307,40 @@ def test_stac_search_that_is_not_a_json_object_exits_2(tmp_path, apis):
     assert _no_requests(*apis)
 
 
-def test_a_bad_stac_uri_exits_2_naming_input_data(tmp_path, apis):
+@pytest.mark.parametrize("command", ["ingest", "zarr preallocate", "zarr slots"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "stac://stac-a.test/api/search",
+        "/data/raw",
+        "relative/dir",
+        "https://plugin/own",
+        "gs://b/x",
+        "S3://b/x",
+    ],
+)
+def test_a_value_that_is_not_a_source_uri_exits_2_naming_input_data(
+    tmp_path, apis, monkeypatch, command, value
+):
+    for module in ("firecube.core.discovery._walk", "firecube.ingestor.runtime.workspace"):
+
+        def refuse_open(uri, storage_config):
+            _REMOTE_SOURCE_OPENS.append(uri)
+            raise RuntimeError(f"opened {uri}")
+
+        monkeypatch.setattr(f"{module}.open_source_filesystem", refuse_open)
+    plugin = "cli_test_plugin" if command == "ingest" else "stac_auto_axis"
+
     result = CliRunner().invoke(
-        cli, _ingest(tmp_path, "--input-data", "stac://stac-a.test/api/search")
+        cli, _ingest(tmp_path, "--input-data", value, command=command, plugin=plugin)
     )
 
     assert result.exit_code == 2, result.output
     assert "Invalid value for '--input-data'" in result.output
-    assert "/collections/<id>" in result.output
+    if value.startswith("stac://"):
+        assert "/collections/<id>" in result.output
     assert _no_requests(*apis)
+    assert not (tmp_path / "out.zarr").exists()
 
 
 @pytest.mark.parametrize("plugin", ["cli_test_plugin", "stac_auto_axis"])
@@ -414,6 +439,42 @@ def test_preallocate_discovers_once_and_records_stac_provenance(
             np.testing.assert_array_equal(times[:3], observed)
 
 
+@pytest.mark.parametrize(
+    ("command", "plugin"),
+    [
+        ("ingest", "cli_test_plugin"),
+        ("zarr preallocate", "stac_auto_axis"),
+        ("zarr slots", "stac_auto_axis"),
+    ],
+)
+def test_each_source_reaches_the_plugin_as_given(tmp_path, apis, monkeypatch, command, plugin):
+    local = tmp_path / "raw"
+    local.mkdir()
+    seen: list[tuple[str, ...]] = []
+    items = [] if command == "ingest" else ["/x/a.nc"]
+    plugin_class = loader.AVAILABLE_INGESTORS[plugin]
+
+    def discover(self, ctx):
+        seen.append(tuple(ctx.sources))
+        return items
+
+    def inspect(self, item, ctx):
+        return ItemInfo(coordinate=dt.datetime(2025, 6, 1, tzinfo=dt.UTC))
+
+    monkeypatch.setattr(plugin_class, "discover_source_files", discover)
+    if command != "ingest":
+        monkeypatch.setattr(plugin_class, "inspect_item", inspect)
+    given = (local.as_uri(), "s3://bucket/x", SRC_A, "s3://bucket/x")
+    args = [arg for value in (*given[:3], "", given[3]) for arg in ("--input-data", value)]
+
+    result = CliRunner().invoke(cli, _ingest(tmp_path, *args, command=command, plugin=plugin))
+
+    assert result.exit_code == 0, result.output
+    assert seen
+    assert set(seen) == {given}
+    assert _no_requests(*apis)
+
+
 def test_file_and_stac_sources_mix_in_one_run(tmp_path, apis, monkeypatch):
     local = tmp_path / "raw"
     local.mkdir()
@@ -429,7 +490,7 @@ def test_file_and_stac_sources_mix_in_one_run(tmp_path, apis, monkeypatch):
     monkeypatch.setattr(cli_test_plugin.CliTestIngestor, "filter_item", record)
 
     result = CliRunner().invoke(
-        cli, _ingest(tmp_path, "--input-data", str(local), "--input-data", SRC_B)
+        cli, _ingest(tmp_path, "--input-data", local.as_uri(), "--input-data", SRC_B)
     )
 
     assert result.exit_code == 0, result.output
@@ -442,7 +503,7 @@ def test_a_run_over_local_sources_records_no_stac_discovery(tmp_path, apis):
     local.mkdir()
     (local / "local-1.nc").write_bytes(b"")
 
-    result = CliRunner().invoke(cli, _ingest(tmp_path, "--input-data", str(local)))
+    result = CliRunner().invoke(cli, _ingest(tmp_path, "--input-data", local.as_uri()))
 
     assert result.exit_code == 0, result.output
     assert "stac_discovery" not in _event_metas(tmp_path / "out.zarr", "run_started")[0]
