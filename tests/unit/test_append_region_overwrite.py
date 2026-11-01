@@ -24,7 +24,8 @@ import zarr
 
 from firecube.core.config import StorageConfig
 from firecube.core.filesystem.store_factory import create_zarr_store
-from firecube.ingestor.errors import AppendOverwriteRefused
+from firecube.ingestor.api import ConfigurationError
+from firecube.ingestor.errors import AppendOverwriteRefused, SchemaDriftError
 from firecube.ingestor.runtime.zarr.write import write_dataset_to_zarr
 
 pytestmark = pytest.mark.unit
@@ -211,3 +212,60 @@ def test_state_array_excluded_from_xarray_write(tmp_path: Path) -> None:
     np.testing.assert_array_equal(state[:5], _state(5, 2))
     np.testing.assert_array_equal(state[5:10], _state(5, 1))
     np.testing.assert_array_equal(state[10:], _state(20, 2))
+
+
+_PACK = {"scale_factor": 0.5, "add_offset": -1.0, "_FillValue": 8191}
+_ILL = {"scale_factor": 1.0, "add_offset": 1e20, "_FillValue": 8191}
+_OVER = {"scale_factor": 1e308, "add_offset": 0.0, "_FillValue": 8191}
+_SCALED = {**_PACK, "scale_factor": 0.25}
+_REGION = slice(10, 20)
+_INITIAL = (np.arange(30) + 100).astype(np.uint16)
+_REPLACEMENT = np.array([8191, 65534, 5, 6, 7, 8, 9, 10, 11, 12], dtype=np.uint16)
+
+
+def _stores(tmp_path: Path, a1: dict, a2: dict, backing: str) -> tuple[Path, xr.Dataset]:
+    store_path, times = tmp_path / "region-packed.zarr", _times()
+    first = _dataset(_INITIAL, times=times, state_value=2)
+    second = _dataset(_REPLACEMENT, times=times[_REGION])
+    first["value"].attrs.update(a1)
+    second["value"].attrs.update(a2)
+    first, second = (first.chunk(), second.chunk()) if backing == "dask" else (first, second)
+    _write_initial(store_path, first)
+    return store_path, second
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("backing", ["numpy", "dask"])
+def test_packed_region_overwrite_keeps_raw_values_and_state(tmp_path: Path, backing: str) -> None:
+    store_path, second = _stores(tmp_path, _PACK, _PACK, backing)
+    _region_write(store_path, second, _REGION)
+    expected = np.concatenate([_INITIAL[:10], _REPLACEMENT, _INITIAL[20:]])
+    stored = zarr.open_array(str(store_path), path="G/value", mode="r")
+    assert stored.dtype == np.uint16
+    np.testing.assert_array_equal(np.asarray(stored[:]), expected)
+    state = zarr.open_array(str(store_path), path="G/firecube_timestamp_state", mode="r")
+    np.testing.assert_array_equal(np.asarray(state[:])[_REGION], _state(10, 1))
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("backing", ["numpy", "dask"])
+@pytest.mark.parametrize(
+    ("a1", "a2", "exc", "key"),
+    [
+        pytest.param(_PACK, _SCALED, SchemaDriftError, "scale_factor", id="scale_drift"),
+        pytest.param(_ILL, _ILL, ConfigurationError, None, id="ill_conditioned"),
+        pytest.param(_OVER, _OVER, ConfigurationError, None, id="overflow"),
+    ],
+)
+def test_region_overwrite_with_bad_cf_packing_is_refused_and_store_stays_byte_identical(
+    tmp_path: Path, a1: dict, a2: dict, exc: type, key: str | None, backing: str
+) -> None:
+    store_path, second = _stores(tmp_path, a1, a2, backing)
+    before = {p: p.read_bytes() for p in store_path.rglob("*") if p.is_file()}
+
+    with pytest.raises(exc) as info:
+        _region_write(store_path, second, _REGION)
+
+    assert "value" in str(info.value)
+    assert key is None or key in str(info.value)
+    assert {p: p.read_bytes() for p in store_path.rglob("*") if p.is_file()} == before
