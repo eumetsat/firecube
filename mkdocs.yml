@@ -201,6 +201,8 @@ nav:
     - "Firecube 101: NetCDF To Zarr": showcase/netcdf-to-zarr.ipynb
     - Sentinel-3 SLSTR FRP: showcase/sentinel3-fire-detections.ipynb
     - "Slot-Based Parallelism: MTG FCI L1C": showcase/mtg-fci-l1c-benchmarks.ipynb
+  - Plugin Registry:
+    - Overview: plugin-registry/index.md
   - Contributing:
     - Overview: contributing/index.md
     - Firecube Contributors: contributing/firecube-contributors.md
