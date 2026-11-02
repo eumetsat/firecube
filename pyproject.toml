@@ -1,6 +1,6 @@
 [project]
 name = "firecube"
-version = "0.1.7"
+version = "0.1.8"
 description = "A plugin-driven batch ingestion engine for building and maintaining operational analysis-ready data cubes."
 readme = "README.md"
 requires-python = ">=3.12"

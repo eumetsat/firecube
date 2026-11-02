@@ -7,6 +7,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-02
+
 ### Added
 
 - `DirectZarrIngestor` region writes (`IndexedWrite.region`,
@@ -201,7 +203,7 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Changed
 
-- **Breaking.** `--input-data` of `firecube ingest`, `firecube zarr preallocate`
+- `--input-data` of `firecube ingest`, `firecube zarr preallocate`
   and `firecube zarr slots` takes `file://`, `s3://` and `stac://` URIs only.
   - A bare or relative path, another scheme or an uppercase scheme exits with
     code 2. The message suggests the `file://` URI for a path.
@@ -304,6 +306,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - Slot-window workers now check the chunk or shard layout stored in the
   target. They refuse a window that covers a stored unit only in part. This
   includes stores that an earlier version created with an undeclared array.
+  Align each slot window to the stored chunk or shard of every worker-written
+  array.
 - A slot-window worker now refuses a write to an engine-owned array at a slot
   outside its window. The refusal comes before the worker dispatches the data
   writes of the batch, in direct and staged mode.
@@ -350,10 +354,11 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - `firecube archive create` no longer prints the codec on the size line of
   its summary. The line now reads `Size: <n> MB`.
 - `firecube chunks delete-span` now exits 1 when it reports errors. Before, it
-  printed them and exited 0.
+  printed them and exited 0. Check scripts that read its exit code.
 - `firecube chunks delete-span` now refuses a CF-encoded time array whose
   dtype cannot represent NaT, unless the array declares a `_FillValue`. This
-  covers every integer dtype other than `int64`.
+  covers every integer dtype other than `int64`. Declare a `_FillValue` on
+  the array before you run the command.
 - The dimension check of an existing cube now lists only the top level of each
   group. It runs before every batch of an ingest into an existing cube. Before,
   it listed every object under the group. Its cost no longer grows with the
@@ -406,13 +411,17 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - `firecube ingest` words its storage-type refusal like the other commands. The
   message now reads `--storage-type '<type>' is incompatible with URI scheme
   '<scheme>'`.
+- The package description in the metadata of the distribution now reads "A
+  plugin-driven batch ingestion engine for building and maintaining
+  operational analysis-ready data cubes." You do not need to act.
 
 ### Removed
 
 - Firecube removes the module paths `firecube.core.formats.discovery` and
   `firecube.core.formats.input_filters`. `discover_input_files`
   and `KNOWN_EXTENSIONS` are no longer importable from `firecube.core.formats`.
-  Import `discover_input_files` from `firecube.core.api`.
+  Import `discover_input_files` from `firecube.core.api`. Import
+  `KNOWN_EXTENSIONS` from `firecube.core.discovery`.
 
 ### Fixed
 
@@ -742,6 +751,11 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   Now a report that checked no array is not valid. The command exits with code
   1 and a note names `--time-dim`. If the cube has no marked time coordinate,
   pass `--time-dim`.
+- `firecube zarr validate` counts a static array that it evaluated as a
+  checked array. A report that evaluated a static array no longer carries the
+  note that no array was checked. That note no longer makes the report not
+  valid either. A static array without the `firecube_static_written` marker
+  still makes the report not valid.
 - `firecube chunks delete-span` works on spans of a `DirectZarrIngestor`
   cube. Before, it could not find the arrays of such a span.
   - It reads the bare array names that the span records, under the group of
@@ -790,6 +804,29 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - `firecube zarr multires` no longer fails on xarray 2026.9.0. Before, it
   raised `TypeError` about an unexpected `skipna` argument. The results on
   float data are unchanged.
+- `GenericTensogramIngestor` writes every source of a run to the `source_uri`
+  field of the archive metadata. For several `--input-data` values, it joins
+  them with a comma and a space. Before, it read `PluginContext.source`, which
+  raises `ConfigurationError` when a run has several sources.
+- The first write of a `GenericZarrIngestor` run to the store root keeps the
+  other keys of the store, `.firecube/` included. Before, the write used the
+  Zarr mode `w`. That mode deletes everything under the group path, and under
+  the root group that path is the whole store.
+- If the first batch of a `GenericZarrIngestor` run at the store root fails,
+  the repair deletes only the arrays of the root group. Before, it deleted the
+  root group, and that deletes the whole store, `.firecube/` included.
+- A root group that holds no arrays counts as new when `GenericZarrIngestor`
+  checks the time array of an existing store. The check reads the root group
+  live and not through the consolidated snapshot. The root document exists
+  before any array does, and the repair of a failed first batch keeps it.
+- `firecube archive create --archive-format tensogram` archives the arrays of
+  the root group beside the subgroups of the store. An example is a cube at the
+  root with a `multires/` group. Before, a store with subgroups archived the
+  subgroups only, and the root arrays were missing from the archive.
+- A pod run id that carries a group name now yields the decoded group name.
+  Firecube recovers the group from the run id when the run record holds no
+  `slot_group`. Before, the recovered name stayed percent-encoded, for example
+  `a%2Fb` for the group `a/b`.
 
 ## [0.1.7] - 2026-09-19
 
@@ -1624,7 +1661,8 @@ the migration procedure including `firecube zarr index rebuild`.
 - `uv build`: built `firecube-0.1.1.tar.gz` and `firecube-0.1.1-py3-none-any.whl`.
 - `uv run --with twine twine check dist/*`: passed.
 
-[Unreleased]: https://github.com/eumetsat/firecube/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/eumetsat/firecube/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/eumetsat/firecube/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/eumetsat/firecube/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/eumetsat/firecube/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/eumetsat/firecube/compare/v0.1.4.post1...v0.1.5
