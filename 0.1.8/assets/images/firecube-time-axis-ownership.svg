@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" role="img" aria-labelledby="title desc">
+  <title id="title">Time coordinate ownership</title>
+  <desc id="desc">Preallocate is the single writer of the time coordinate array; ingest workers write data arrays and only verify coordinate values. A strip shows what the coordinate array stores in each axis regime.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <marker id="arrowv" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#6b7280"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5a6673}
+      .code{font-family:Consolas,Menlo,monospace;font-size:12px;fill:#3b4652}
+      .engine{fill:#dcfce7;stroke:#2f9d65;stroke-width:2}
+      .worker{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .coord{fill:#ffedd5;stroke:#ff7043;stroke-width:2}
+      .store{fill:#fbfbfd;stroke:#6b7280;stroke-width:2}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .verify{stroke:#6b7280;stroke-width:2;fill:none;stroke-dasharray:6 4;marker-end:url(#arrowv)}
+    </style>
+  </defs>
+
+  <rect x="42" y="52" width="200" height="52" rx="8" class="engine"/>
+  <text x="142" y="74" text-anchor="middle" class="small">firecube zarr preallocate</text>
+  <text x="142" y="92" text-anchor="middle" class="hint">the one coordinate writer</text>
+
+  <path class="line" d="M242 78 H330"/>
+  <text x="286" y="68" text-anchor="middle" class="hint">materializes</text>
+
+  <rect x="330" y="52" width="380" height="52" rx="8" class="coord"/>
+  <text x="520" y="74" text-anchor="middle" class="small">time coordinate array</text>
+  <text x="520" y="92" text-anchor="middle" class="hint">dense chunks, many slots per chunk file</text>
+
+  <rect x="42" y="170" width="150" height="46" rx="8" class="worker"/>
+  <rect x="42" y="236" width="150" height="46" rx="8" class="worker"/>
+  <text x="117" y="198" text-anchor="middle" class="small">ingest worker 0</text>
+  <text x="117" y="264" text-anchor="middle" class="small">ingest worker 1</text>
+
+  <rect x="330" y="176" width="380" height="100" rx="10" class="store"/>
+  <text x="520" y="200" text-anchor="middle" class="small">data arrays</text>
+  <text x="520" y="220" text-anchor="middle" class="hint">each worker writes its own disjoint slot range</text>
+  <path class="line" d="M192 193 H322"/>
+  <path class="line" d="M192 259 L322 240"/>
+
+  <path class="verify" d="M117 170 C117 130 250 112 322 96"/>
+  <text x="230" y="148" class="hint">verify only: a mismatched timestamp refuses, never overwrites</text>
+
+  <text x="42" y="330" class="label">What the coordinate array stores per regime</text>
+
+  <g transform="translate(42 350)">
+    <text x="0" y="14" class="code">TimeAxis.grid</text>
+    <rect x="0" y="22" width="66" height="34" class="coord"/>
+    <rect x="66" y="22" width="66" height="34" class="coord"/>
+    <rect x="132" y="22" width="66" height="34" class="coord"/>
+    <text x="33" y="43" text-anchor="middle" class="hint">00:00</text>
+    <text x="99" y="43" text-anchor="middle" class="hint">00:10</text>
+    <text x="165" y="43" text-anchor="middle" class="hint">00:20</text>
+    <text x="0" y="76" class="hint">nominal grid, sealed</text>
+  </g>
+
+  <g transform="translate(282 350)">
+    <text x="0" y="14" class="code">TimeAxis.observed</text>
+    <rect x="0" y="22" width="66" height="34" class="coord"/>
+    <rect x="66" y="22" width="66" height="34" class="coord"/>
+    <rect x="132" y="22" width="66" height="34" fill="#ffffff" stroke="#b9c0ca" stroke-width="2"/>
+    <text x="33" y="43" text-anchor="middle" class="hint">00:00:02</text>
+    <text x="99" y="43" text-anchor="middle" class="hint">00:10:07</text>
+    <text x="165" y="43" text-anchor="middle" class="hint">NaT</text>
+    <text x="0" y="76" class="hint">real times, fills per window</text>
+  </g>
+
+  <g transform="translate(522 350)">
+    <text x="0" y="14" class="code">TimeAxis.explicit</text>
+    <rect x="0" y="22" width="66" height="34" class="coord"/>
+    <rect x="66" y="22" width="66" height="34" class="coord"/>
+    <rect x="132" y="22" width="66" height="34" class="coord"/>
+    <text x="33" y="43" text-anchor="middle" class="hint">t0</text>
+    <text x="99" y="43" text-anchor="middle" class="hint">t1</text>
+    <text x="165" y="43" text-anchor="middle" class="hint">t2</text>
+    <text x="0" y="76" class="hint">declared list, sealed</text>
+  </g>
+
+  <g transform="translate(762 350)">
+    <text x="0" y="14" class="code">TimeAxis.discovered</text>
+    <rect x="0" y="22" width="66" height="34" class="coord"/>
+    <rect x="66" y="22" width="66" height="34" class="coord"/>
+    <rect x="132" y="22" width="66" height="34" class="coord"/>
+    <text x="33" y="43" text-anchor="middle" class="hint">t0</text>
+    <text x="99" y="43" text-anchor="middle" class="hint">t1</text>
+    <text x="165" y="43" text-anchor="middle" class="hint">t2</text>
+    <text x="0" y="76" class="hint">sorted from inspect_item</text>
+  </g>
+</svg>

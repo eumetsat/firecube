@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" role="img" aria-labelledby="title desc">
+  <title id="title">DirectZarrIngestor parallel golden path</title>
+  <desc id="desc">Declare the time axis, preallocate the store, plan slot ranges, then fan out ingest workers that write disjoint ranges of one Zarr product.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5a6673}
+      .code{font-family:Consolas,Menlo,monospace;font-size:12px;fill:#3b4652}
+      .plugin{fill:#dbeafe;stroke:#4f8bd6;stroke-width:2}
+      .engine{fill:#dcfce7;stroke:#2f9d65;stroke-width:2}
+      .plan{fill:#ffedd5;stroke:#ff7043;stroke-width:2}
+      .worker{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .store{fill:#fbfbfd;stroke:#6b7280;stroke-width:2}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="30" y="60" width="180" height="70" rx="8" class="plugin"/>
+  <text x="120" y="88" text-anchor="middle" class="small">your plugin</text>
+  <text x="120" y="108" text-anchor="middle" class="code">TimeAxis + 4 hooks</text>
+
+  <path class="line" d="M210 95 H248"/>
+
+  <rect x="248" y="60" width="180" height="70" rx="8" class="engine"/>
+  <text x="338" y="88" text-anchor="middle" class="code">zarr preallocate</text>
+  <text x="338" y="108" text-anchor="middle" class="hint">coordinate materialized</text>
+
+  <path class="line" d="M428 95 H466"/>
+
+  <rect x="466" y="60" width="180" height="70" rx="8" class="plan"/>
+  <text x="556" y="88" text-anchor="middle" class="code">zarr slots</text>
+  <text x="556" y="108" text-anchor="middle" class="hint">disjoint chunk-aligned ranges</text>
+
+  <path class="line" d="M646 80 C690 60 700 60 716 66"/>
+  <path class="line" d="M646 95 H716"/>
+  <path class="line" d="M646 110 C690 150 700 160 716 166"/>
+
+  <rect x="716" y="42" width="180" height="40" rx="8" class="worker"/>
+  <rect x="716" y="94" width="180" height="40" rx="8" class="worker"/>
+  <rect x="716" y="146" width="180" height="40" rx="8" class="worker"/>
+  <text x="806" y="67" text-anchor="middle" class="code">ingest [0, 144)</text>
+  <text x="806" y="119" text-anchor="middle" class="code">ingest [144, 288)</text>
+  <text x="806" y="171" text-anchor="middle" class="code">ingest [288, 432)</text>
+
+  <path class="line" d="M806 186 V216"/>
+
+  <rect x="656" y="216" width="300" height="66" rx="10" class="store"/>
+  <text x="806" y="243" text-anchor="middle" class="label">one Zarr product</text>
+  <text x="806" y="266" text-anchor="middle" class="hint">no worker shares a chunk; conflicts refuse loudly</text>
+</svg>

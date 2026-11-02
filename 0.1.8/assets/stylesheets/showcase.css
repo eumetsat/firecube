@@ -1,0 +1,76 @@
+/*
+ * Copyright 2025-2026 EUMETSAT
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* Showcase landing page and notebook layouts. */
+.showcase-intro {max-width: 42rem; margin-bottom: 1.8rem;}
+.md-typeset .showcase-intro h1 {margin-bottom: .5rem; font-weight: 700; letter-spacing: -.03em; color: var(--md-default-fg-color);}
+.showcase-intro p {font-size: 1rem; color: var(--md-default-fg-color--light);}
+.showcase-intro-links p {font-size: .75rem;}
+.md-main:has(.jupyter-wrapper) .md-main__inner {max-width: none;}
+.md-main:has(.jupyter-wrapper) .md-sidebar--secondary {order: -1;}
+.md-main:has(.jupyter-wrapper) .md-sidebar--secondary .md-nav__link {color: var(--md-default-fg-color);}
+.md-main:has(.jupyter-wrapper) .md-sidebar--secondary .md-nav__link:is(:hover, .md-nav__link--active) {color: var(--md-accent-fg-color);}
+@media (min-width: 76.25em) {
+  .md-main:has(.jupyter-wrapper) .md-sidebar--primary {display: none;}
+}
+/* Callouts follow the workshop notebooks' standard Jupyter alert classes. */
+.jupyter-wrapper .jp-RenderedHTMLCommon h1 {font-size: 2em; font-weight: 600;}
+.jupyter-wrapper .jp-RenderedHTMLCommon h2 {font-size: 1.5em; font-weight: 600;}
+.jupyter-wrapper .jp-RenderedHTMLCommon h3 {font-weight: 600;}
+.jupyter-wrapper .alert {padding: 1rem 1.2rem; margin: 1rem 0; border: 1px solid; border-radius: 4px;}
+.jupyter-wrapper .alert > :first-child {margin-top: 0;}
+.jupyter-wrapper .alert > :last-child {margin-bottom: 0;}
+.jupyter-wrapper .alert-warning {background: #fcf8e3; border-color: #faebcc; color: #685021;}
+.jupyter-wrapper .alert-success {background: #dff0d8; border-color: #d6e9c6; color: #315e32;}
+.jupyter-wrapper .alert-info {background: #d9edf7; border-color: #bce8f1; color: #24536b;}
+.jupyter-wrapper .alert a {color: inherit; text-decoration: underline;}
+.jupyter-wrapper .alert code {color: inherit; background: rgb(255 255 255 / 45%);}
+[data-md-color-scheme="slate"] .jupyter-wrapper .alert-warning {background: #3a3221; border-color: #746035; color: #f0dda9;}
+[data-md-color-scheme="slate"] .jupyter-wrapper .alert-success {background: #20382b; border-color: #41684d; color: #c5e2c4;}
+[data-md-color-scheme="slate"] .jupyter-wrapper .alert-info {background: #203442; border-color: #3a6078; color: #c4dfed;}
+[data-md-color-scheme="slate"] .jupyter-wrapper .alert code {background: rgb(0 0 0 / 20%);}
+.showcase-features {display: grid; grid-template-columns: repeat(auto-fill, minmax(0, 18rem)); align-items: stretch; gap: 1.5rem; margin: 1rem 0 2.5rem;}
+.showcase-feature {display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--md-default-fg-color--lightest); border-radius: .65rem; background: var(--md-code-bg-color);}
+.showcase-feature-copy {display: flex; flex-direction: column; flex: 1; padding: .8rem 1rem; min-width: 0;}
+.showcase-feature-copy .showcase-actions {margin-top: auto;}
+.showcase-label {font-size: .6rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--md-default-fg-color--light);}
+.md-typeset .showcase-feature h2 {margin: .4rem 0; font-size: 1.1rem; line-height: 1.2; font-weight: 700; letter-spacing: -.02em;}
+.showcase-feature-copy p {font-size: .72rem; margin: .4rem 0;}
+.md-typeset .showcase-feature .md-button {font-size: .65rem; border-radius: .25rem; padding: .5em .8em;}
+.showcase-actions p {display: flex; align-items: center; flex-wrap: wrap; gap: .4rem;}
+.notebook-download svg {width: 1em; height: 1em; vertical-align: -.1em; margin-right: .4em; fill: currentColor;}
+.md-typeset .notebook-download {font-size: .75rem; border-radius: .25rem;}
+.showcase-feature-image {order: -1; position: relative; min-width: 0; display: grid; grid-template-rows: minmax(0, 1fr) 2.6rem; height: 16rem; flex-shrink: 0; background: var(--md-default-bg-color);}
+.showcase-feature-image p {margin: 0; line-height: 0;}
+.showcase-feature-image img {display: block; width: 100%; height: 100%; object-fit: contain;}
+.showcase-caption {display: block; padding: .5rem .8rem; font-size: .6rem; color: var(--md-default-fg-color--light);}
+.showcase-cards {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0 2rem;}
+.showcase-card {border: 1px solid var(--md-default-fg-color--lightest); border-radius: .5rem; overflow: hidden;}
+.showcase-card > p {margin: 0; background: #f5f7fa; line-height: 0;}
+.showcase-card img {width: 100%; height: 9rem; object-fit: contain; padding: .5rem;}
+.showcase-card-copy {padding: 1rem;}
+.md-typeset .showcase-card h3 {font-size: 1rem; margin: .5rem 0; font-weight: 700;}
+.showcase-card-copy p {font-size: .72rem;}
+.showcase-next {border-top: 1px solid var(--md-default-fg-color--lightest); padding-top: .7rem; font-size: .75rem;}
+.showcase-feature a:focus-visible, .showcase-cards a:focus-visible {outline: 3px solid var(--md-accent-fg-color); outline-offset: 3px;}
+@media (max-width: 76.25em) {
+  .showcase-cards {grid-template-columns: repeat(2, minmax(0, 1fr));}
+}
+@media (max-width: 44em) {
+  .showcase-features, .showcase-cards {grid-template-columns: 1fr;}
+  .showcase-feature-copy {padding: .8rem 1rem;}
+  .showcase-feature-image {order: -1;}
+  .showcase-card img {height: auto; max-height: 12rem;}
+}

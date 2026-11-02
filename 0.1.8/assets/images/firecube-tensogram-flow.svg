@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 380" role="img" aria-labelledby="title desc">
+  <title id="title">Tensogram archive flow</title>
+  <desc id="desc">Firecube packages selected Zarr arrays into Tensogram data messages and writes ChunkManager records as the final message before restore.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5d6b78}
+      .zarr{fill:#eef8f2;stroke:#2f9d65;stroke-width:2}
+      .tgm{fill:#fff8df;stroke:#d6a400;stroke-width:2}
+      .restore{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .data{fill:#ffffff;stroke:#d6a400;stroke-width:1.6}
+      .chunk{fill:#fff1e8;stroke:#ff7043;stroke-width:1.6}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect x="32" y="86" width="230" height="190" rx="12" class="zarr"/>
+  <text x="147" y="124" text-anchor="middle" class="label">Zarr product</text>
+  <rect x="62" y="150" width="170" height="44" rx="7" fill="#ffffff" stroke="#2f9d65"/>
+  <text x="147" y="178" text-anchor="middle" class="small">groups and arrays</text>
+  <rect x="62" y="216" width="170" height="44" rx="7" fill="#ffffff" stroke="#2f9d65"/>
+  <text x="147" y="244" text-anchor="middle" class="small">ChunkManager records</text>
+
+  <path class="line" d="M262 181 H356"/>
+  <text x="309" y="158" text-anchor="middle" class="small">archive create</text>
+  <text x="309" y="203" text-anchor="middle" class="hint">select scope</text>
+
+  <rect x="356" y="54" width="288" height="270" rx="12" class="tgm"/>
+  <text x="500" y="94" text-anchor="middle" class="label">.tgm file</text>
+  <rect x="402" y="122" width="196" height="56" rx="8" class="data"/>
+  <text x="500" y="145" text-anchor="middle" class="small">data message(s)</text>
+  <text x="500" y="164" text-anchor="middle" class="hint">arrays, coordinates, metadata</text>
+  <rect x="402" y="202" width="196" height="56" rx="8" class="chunk"/>
+  <text x="500" y="225" text-anchor="middle" class="small">final message</text>
+  <text x="500" y="244" text-anchor="middle" class="hint">ChunkManager records</text>
+  <text x="500" y="292" text-anchor="middle" class="hint">single file for transfer, download, or archive</text>
+
+  <path class="line" d="M644 181 H738"/>
+  <text x="691" y="158" text-anchor="middle" class="small">archive restore</text>
+
+  <rect x="738" y="86" width="230" height="190" rx="12" class="restore"/>
+  <text x="853" y="124" text-anchor="middle" class="label">Restored Zarr</text>
+  <rect x="768" y="150" width="170" height="44" rx="7" fill="#ffffff" stroke="#4f8bd6"/>
+  <text x="853" y="178" text-anchor="middle" class="small">groups and arrays</text>
+  <rect x="768" y="216" width="170" height="44" rx="7" fill="#ffffff" stroke="#4f8bd6"/>
+  <text x="853" y="244" text-anchor="middle" class="small">ChunkManager records</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" role="img" aria-labelledby="title desc">
+  <title id="title">Firecube product storage and ChunkManager flow</title>
+  <desc id="desc">Source data flows through firecube ingest into one product root containing a readable data store and ChunkManager records. The data store is read by readers and catalogs. ChunkManager records are read by firecube chunks.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#546a7b"/>
+    </marker>
+    <style>
+      .label { font: 600 17px Arial, sans-serif; fill: #1f2d36; }
+      .small { font: 14px Arial, sans-serif; fill: #415361; }
+      .title { font: 700 18px Arial, sans-serif; fill: #1f2d36; }
+      .box { fill: #f7fbff; stroke: #4c9aff; stroke-width: 2; rx: 6; }
+      .store { fill: #fff8ee; stroke: #ff9f43; stroke-width: 2; rx: 6; }
+      .state { fill: #f2fbf5; stroke: #39b36e; stroke-width: 2; rx: 6; }
+      .root { fill: #ffffff; stroke: #c7d4df; stroke-width: 2; rx: 10; }
+      .sink { fill: #f8f9fb; stroke: #aab7c2; stroke-width: 2; rx: 6; }
+      .arrow { stroke: #546a7b; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="45" y="45" width="205" height="76" class="box"/>
+  <text x="147.5" y="78" text-anchor="middle" class="label">Source data</text>
+  <text x="147.5" y="101" text-anchor="middle" class="small">files or remote URI</text>
+
+  <rect x="320" y="45" width="205" height="76" class="box"/>
+  <text x="422.5" y="78" text-anchor="middle" class="label">firecube ingest</text>
+  <text x="422.5" y="101" text-anchor="middle" class="small">plugin + engine</text>
+
+  <path d="M 250 83 L 312 83" class="arrow"/>
+
+  <rect x="130" y="170" width="740" height="225" class="root"/>
+  <text x="500" y="205" text-anchor="middle" class="title">Product root</text>
+  <text x="500" y="229" text-anchor="middle" class="small">the full file:// or s3:// product URI</text>
+
+  <path d="M 422.5 121 L 422.5 152 L 500 152 L 500 165" class="arrow"/>
+
+  <rect x="185" y="260" width="285" height="95" class="store"/>
+  <text x="327.5" y="292" text-anchor="middle" class="label">Readable data store</text>
+  <text x="327.5" y="316" text-anchor="middle" class="small">Zarr groups and arrays</text>
+  <text x="327.5" y="339" text-anchor="middle" class="small">Parquet files or .tgm</text>
+
+  <rect x="530" y="260" width="285" height="95" class="state"/>
+  <text x="672.5" y="292" text-anchor="middle" class="label">ChunkManager</text>
+  <text x="672.5" y="316" text-anchor="middle" class="small">runs, spans, claims</text>
+  <text x="672.5" y="339" text-anchor="middle" class="small">snapshots and cleanup state</text>
+
+  <rect x="185" y="435" width="285" height="56" class="sink"/>
+  <text x="327.5" y="457" text-anchor="middle" class="label">Readers and catalogs</text>
+  <text x="327.5" y="478" text-anchor="middle" class="small">open the product data</text>
+
+  <rect x="530" y="435" width="285" height="56" class="sink"/>
+  <text x="672.5" y="457" text-anchor="middle" class="label">firecube chunks</text>
+  <text x="672.5" y="478" text-anchor="middle" class="small">inspects and operates state</text>
+
+  <path d="M 327.5 355 L 327.5 428" class="arrow"/>
+  <path d="M 672.5 355 L 672.5 428" class="arrow"/>
+</svg>

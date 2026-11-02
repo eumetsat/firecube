@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 350" role="img" aria-labelledby="title desc">
+  <title id="title">Two DirectZarrIngestor workers own separate Zarr chunks</title>
+  <desc id="desc">Worker zero owns rows zero through three and worker one owns rows four through seven in an eight-row preallocated array. Each range contains two complete Zarr chunks.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5a6673}
+      .workerA{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2}
+      .workerB{fill:#f2fbf5;stroke:#2f9d65;stroke-width:2}
+      .chunkA{fill:#dbeafe;stroke:#4f8bd6;stroke-width:2}
+      .chunkB{fill:#dcfce7;stroke:#2f9d65;stroke-width:2}
+      .store{fill:#fbfbfd;stroke:#6b7280;stroke-width:2}
+      .lineA{stroke:#4f8bd6;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .lineB{stroke:#2f9d65;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <text x="150" y="42" text-anchor="middle" class="label">Assigned workers</text>
+  <rect x="48" y="82" width="204" height="76" rx="8" class="workerA"/>
+  <rect x="48" y="210" width="204" height="76" rx="8" class="workerB"/>
+  <text x="150" y="112" text-anchor="middle" class="label">worker 0</text>
+  <text x="150" y="140" text-anchor="middle" class="small">slot range [0, 4)</text>
+  <text x="150" y="240" text-anchor="middle" class="label">worker 1</text>
+  <text x="150" y="268" text-anchor="middle" class="small">slot range [4, 8)</text>
+
+  <rect x="400" y="65" width="512" height="236" rx="10" class="store"/>
+  <text x="656" y="105" text-anchor="middle" class="label">Preallocated array: 8 rows by 16 cells</text>
+  <g transform="translate(448 140)">
+    <rect x="0" y="0" width="104" height="82" class="chunkA"/>
+    <rect x="104" y="0" width="104" height="82" class="chunkA"/>
+    <rect x="208" y="0" width="104" height="82" class="chunkB"/>
+    <rect x="312" y="0" width="104" height="82" class="chunkB"/>
+    <text x="52" y="34" text-anchor="middle" class="small">rows 0-1</text>
+    <text x="52" y="58" text-anchor="middle" class="hint">one chunk</text>
+    <text x="156" y="34" text-anchor="middle" class="small">rows 2-3</text>
+    <text x="156" y="58" text-anchor="middle" class="hint">one chunk</text>
+    <text x="260" y="34" text-anchor="middle" class="small">rows 4-5</text>
+    <text x="260" y="58" text-anchor="middle" class="hint">one chunk</text>
+    <text x="364" y="34" text-anchor="middle" class="small">rows 6-7</text>
+    <text x="364" y="58" text-anchor="middle" class="hint">one chunk</text>
+  </g>
+  <path class="lineA" d="M252 120 H322 Q350 120 350 158 V168 H438"/>
+  <path class="lineB" d="M252 248 H322 Q350 248 350 214 V204 H646"/>
+</svg>

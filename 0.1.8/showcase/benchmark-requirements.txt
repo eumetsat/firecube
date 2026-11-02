@@ -1,0 +1,9 @@
+# Public software for reproducing the workload and tuning, not the archived development builds.
+firecube==0.1.6
+firecube-mtg-fci-l1c @ git+https://github.com/eumetsat/firecube-mtg-fci-l1c.git@2cc3856bfe677057a424437873759c09e0770424
+zarr==3.3.0
+numpy==2.5.2
+h5netcdf==1.8.1
+eumdac==3.1.1
+pandas==3.0.5
+matplotlib==3.11.2
