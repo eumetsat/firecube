@@ -427,6 +427,17 @@ class ManifestRepository:
     def list_stale_runs(self, *, product: str) -> list[RunInfo]:
         return [run for run in self.list_runs(product=product, non_terminal=True) if run.stale]
 
+    def scan_runs(self, *, product: str) -> tuple[list[RunInfo], list[tuple[str, str]]]:
+        """Read every run of the product from fresh listings, bypassing the run-entry cache.
+
+        A failed runs/ listing raises. Returns the readable runs and `(run_id, error)` for
+        each run that cannot be read. See `WalReader.scan_run_entries`.
+        """
+        self._ensure_bound()
+        assert self._wal_reader is not None
+        entries, unreadable = self._wal_reader.scan_run_entries(product)
+        return [self._run_info_from_entry(product, entry) for entry in entries], unreadable
+
     def abandon_run(
         self, *, product: str, run_id: str, reason: str, meta: dict[str, Any] | None = None
     ) -> dict[str, Any]:
@@ -519,6 +530,16 @@ class ManifestRepository:
             self._ensure_bound()
         assert self.claims is not None
         return self.claims.list_product_claims(product=product)
+
+    def read_claim_by_domain(self, *, product: str, domain: str) -> ClaimInfo | None:
+        """Read one claim by its domain id with one GET, or return None when it is absent.
+
+        Raises ControlPlaneCorruptionError on a claim file that cannot be read or parsed.
+        """
+        if self.claims is None:
+            self._ensure_bound()
+        assert self.claims is not None
+        return self.claims.read_claim_by_domain(product=product, domain=domain)
 
     def resolve_claim_owner(self, *, product: str, owner_id: str) -> ClaimOwner:
         """Return the recorded runs among the candidate run ids of a claim owner id.

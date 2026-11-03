@@ -268,6 +268,15 @@ class WriteDomain:
         return f"{digest}.json"
 
 
+EXCLUSIVE_MAINTENANCE_NAME: Final = "exclusive"
+"""Name of the maintenance claim domain that excludes every other recorded writer."""
+
+
+def exclusive_maintenance_domain(product: str) -> WriteDomain:
+    """Return the product's exclusive maintenance domain, `<product>:maintenance:exclusive`."""
+    return WriteDomain(product=product, category="maintenance", name=EXCLUSIVE_MAINTENANCE_NAME)
+
+
 @dataclass(slots=True)
 class ChunkEvent:
     """Authoritative immutable event stored in the product WAL."""

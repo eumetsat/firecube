@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,6 +15,8 @@ from index_spec_integer_test_plugin import IntegerAxisIngestor, MixedAxisIngesto
 
 from firecube.ingestor.registry import loader
 from firecube.ingestor.runtime.producer import capture_producer
+
+pytestmark = pytest.mark.unit
 
 FIXTURES = "firecube-test-plugins"
 SHA = "a" * 40
@@ -36,10 +40,15 @@ def _install(tmp_path, monkeypatch, direct_url: object = None) -> type:
     if direct_url is not None:
         (info / "direct_url.json").write_text(json.dumps(direct_url))
     monkeypatch.syspath_prepend(str(tmp_path))
+    for module in (name, f"{name}._impl"):  # the import below adds them; undo removes them
+        monkeypatch.setitem(sys.modules, module, None)
+        del sys.modules[module]
     return __import__(name)._impl.P  # the class, whose module is `<name>._impl`
 
 
 def _repo(path: Path) -> Path:
+    if shutil.which("git") is None:
+        pytest.skip("git is not available on PATH")
     path.mkdir()
     (path / "f.txt").write_text("one\n")
     git = ["git", "-C", str(path), "-c", "user.name=t", "-c", "user.email=t@t"]
@@ -154,7 +163,10 @@ def test_editable_source_reports_git_state_and_leaves_the_git_index_untouched(
     source = _capture(cls)["source"]
 
     assert (source["kind"], source["dirty"]) == ("editable", dirty)
-    assert len(source["commit"]) == 40
+    head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+    ).stdout.strip()
+    assert source["commit"] == head
     assert (repo / ".git" / "index").read_bytes() == index
 
 
@@ -186,10 +198,12 @@ def test_config_digest_ignores_key_order_and_changes_with_a_value():
 
 
 def test_config_digest_leaves_out_repr_false_fields_and_x_keys_and_names_them():
-    base = _capture(object, plugin=_Cfg(), extra={"k": 1})["config"]
-
-    changed = _capture(object, plugin=_Cfg(token="other"), extra={"k": 1, "x_probe": 9})["config"]
+    base_record = _capture(object, plugin=_Cfg(), extra={"k": 1})
+    changed_record = _capture(object, plugin=_Cfg(token="other"), extra={"k": 1, "x_probe": 9})
+    base, changed = base_record["config"], changed_record["config"]
 
     assert changed["digest"] == base["digest"]
     assert changed["excluded"] == ["extra.x_probe", "plugin.token"]
-    assert "secret" not in json.dumps(changed)  # the value never reaches the record
+    # The configured value never reaches any part of its whole record.
+    assert "s3cret" not in json.dumps(base_record)
+    assert "other" not in json.dumps(changed_record)

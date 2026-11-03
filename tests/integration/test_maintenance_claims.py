@@ -16,11 +16,13 @@
 
 from __future__ import annotations
 
+import json
 import time
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, ClassVar
 from unittest.mock import Mock
 
 import numpy as np
@@ -33,15 +35,33 @@ from firecube.cli._errors import render
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkInfo, ChunkManager
 from firecube.core.controlplane.claims import FilesystemClaimService
-from firecube.core.controlplane.types import DeletionPlan, WriteDomain
-from firecube.core.errors import ManifestError
+from firecube.core.controlplane.repo import ManifestRepository
+from firecube.core.controlplane.types import (
+    EVENT_MAINTENANCE_COMPLETED,
+    EVENT_MAINTENANCE_STARTED,
+    EVENT_RECORD_UPSERT,
+    SCHEMA_VERSION,
+    DeletionPlan,
+    SpanCoverage,
+    WriteDomain,
+    exclusive_maintenance_domain,
+)
+from firecube.core.errors import (
+    ExclusiveMaintenanceRefusedError,
+    ManifestError,
+    ProductUnderMaintenanceError,
+)
+from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
+from firecube.core.index_spec import IndexSpec, IntegerAxis, RegularTimeAxis
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 from firecube.core.tensogram import restore as tgm_restore
 from firecube.core.tensogram.converter import zarr_to_tgm
 from firecube.core.zarr import zip_archive
 from firecube.core.zarr.scrub import run_scrub
+from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.runtime.archive import ArchiveClaimError, create_archive, restore_archive
+from firecube.ingestor.runtime.index_record import rebuild_index_record
 from tests.helpers.cli_hints import run_hint
 from tests.helpers.storage import make_test_binding, make_test_session
 
@@ -56,11 +76,11 @@ def _claim_domain(product: str, group: str = "F024") -> WriteDomain:
     return WriteDomain(product=product, category="zarr_append", name=group)
 
 
-def _claiming_manager(tmp_path: Path, product: str = "product.zarr") -> ChunkManager:
+def _claiming_manager(tmp_path: Path, product: str = "product.zarr", fs=False) -> ChunkManager:
     workspace = tmp_path / "workspace"
     workspace.mkdir(exist_ok=True)
     binding = make_test_binding(tmp_path, product=product)
-    return ChunkManager(binding=binding, workspace=workspace)
+    return ChunkManager(binding=binding, workspace=workspace, filesystem=FsspecFilesystem(binding) if fs else None)  # fmt: skip
 
 
 def _sample_chunk(product: str) -> ChunkInfo:
@@ -529,3 +549,505 @@ def test_create_archive_of_a_plain_store_takes_no_claim_and_writes_nothing_to_it
     )
     assert result.run_id is None and out.exists() and not (source / ".firecube").exists()
     assert {p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()} == tree
+
+
+# --- exclusive maintenance claim: acquirer and the checks of recorded writers ---
+
+GATED = "gate.zarr"
+MAINT = "maint-run"
+
+
+def _exclusive() -> str:
+    return exclusive_maintenance_domain(GATED).identifier
+
+
+def _run_events(tmp_path: Path, prefix: str = "") -> dict[str, list[str]]:
+    """Map each run directory of the product to its `run_*` event types, in order."""
+    runs = tmp_path / GATED / ".firecube" / "runs"
+    return {
+        d.name: [
+            json.loads(line)["event_type"]
+            for f in sorted(d.glob("events-*.jsonl"))
+            for line in f.read_text().splitlines()
+            if line
+        ]
+        for d in sorted(runs.glob(f"{prefix}*"))
+    }
+
+
+def _start(manager: ChunkManager, run_id: str) -> None:
+    manager.record_run_started(
+        product=GATED, run_id=run_id, output_path="", output_format="zarr", size=0, meta={}
+    )
+
+
+def _wrap(monkeypatch, cls, name, *, before=None, after=None) -> None:
+    """Run `before(self, *a, **k)` and `after(self, *a, **k)` around a method of `cls`."""
+    real = getattr(cls, name)
+
+    def wrapper(self, *a, **k):
+        if before:
+            before(self, *a, **k)
+        result = real(self, *a, **k)
+        if after:
+            after(self, *a, **k)
+        return result
+
+    monkeypatch.setattr(cls, name, wrapper)
+
+
+@pytest.fixture
+def pair(tmp_path):
+    """Two control-plane managers over one product, as two processes would hold."""
+    managers = _claiming_manager(tmp_path, GATED), _claiming_manager(tmp_path, GATED)
+    yield managers
+    for manager in managers:
+        manager.close()
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("cached_listing", [False, True], ids=["fresh", "after-cached-listing"])
+def test_exclusive_acquire_refuses_a_started_run_and_leaves_no_claim(
+    pair, tmp_path, cached_listing
+):
+    acquirer, writer = pair
+    with acquirer.repo.run_entries_cache_scope():
+        if cached_listing:
+            assert acquirer.list_runs(product=GATED) == []
+        _start(writer, "live-writer")
+        if cached_listing:
+            assert acquirer.list_runs(product=GATED) == []  # the warmed listing is stale
+        with pytest.raises(ExclusiveMaintenanceRefusedError) as refused:
+            acquirer.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
+    assert refused.value.runs == ("live-writer",)
+    assert list((tmp_path / GATED / ".firecube" / "claims").glob("*")) == []
+
+
+@pytest.mark.contract
+def test_unreadable_exclusive_claim_refuses_a_writer_start_and_fails_its_run(
+    pair, tmp_path, monkeypatch
+):
+    holder, writer = pair
+    claim = holder.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
+    real_open = FsspecFilesystem.open
+
+    def failing_open(self, uri, mode="rb"):
+        if mode == "r" and "/.firecube/claims/" in uri.to_str():
+            raise PermissionError("injected claim read failure")
+        return real_open(self, uri, mode)
+
+    try:
+        with monkeypatch.context() as patched:
+            patched.setattr(FsspecFilesystem, "open", failing_open)
+            with pytest.raises(ProductUnderMaintenanceError) as refused:
+                _start(writer, "writer")
+        assert (refused.value.owner_id, refused.value.stale) == (None, None)
+        assert [c.domain for c in writer.list_claims(product=GATED)] == [_exclusive()]
+    finally:
+        claim.release()
+    assert _run_events(tmp_path, "writer") == {"writer": ["run_started", "run_failed"]}
+    assert writer.list_runs(product=GATED, non_terminal=True) == []
+
+
+@pytest.mark.contract
+def test_exclusive_acquire_fails_closed_on_a_run_listing_error(pair, tmp_path, monkeypatch):
+    acquirer, writer = pair
+    _start(writer, "live-writer")
+    real_ls = FsspecFilesystem.ls
+
+    def failing_ls(self, uri, *a, **k):
+        if uri.to_str().rstrip("/").endswith("/runs"):
+            raise OSError("injected listing failure")
+        return real_ls(self, uri, *a, **k)
+
+    monkeypatch.setattr(FsspecFilesystem, "ls", failing_ls)
+    with pytest.raises((ExclusiveMaintenanceRefusedError, OSError)):
+        acquirer.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
+    assert list((tmp_path / GATED / ".firecube" / "claims").glob("*")) == []
+
+
+@pytest.mark.contract
+def test_exclusive_acquire_refuses_a_run_started_between_acquire_and_verify(
+    pair, tmp_path, monkeypatch
+):
+    acquirer, writer = pair
+    late: list[str] = []
+
+    def writer_start_lands(_self, *_a, domain, **_k):
+        if domain.identifier == _exclusive() and not late:
+            late.append("late-writer")
+            writer.repo.record_run_started(
+                product=GATED, run_id="late-writer", output_path="", output_format="zarr",
+                size=0, meta={},
+            )  # fmt: skip
+
+    _wrap(monkeypatch, ChunkManager, "acquire_claim", after=writer_start_lands)
+    with pytest.raises(ExclusiveMaintenanceRefusedError) as refused:
+        acquirer.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
+    assert refused.value.runs == ("late-writer",)
+    assert list((tmp_path / GATED / ".firecube" / "claims").glob("*")) == []
+
+
+@pytest.mark.contract
+def test_the_holders_own_run_start_passes_the_gate(pair):
+    acquirer, _ = pair
+    claim = acquirer.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
+    try:
+        _start(acquirer, MAINT)
+        assert [(r.run_id, r.status) for r in acquirer.list_runs(product=GATED)] == [
+            (MAINT, "started")
+        ]
+    finally:
+        claim.release()
+
+
+def _cli_args(command: str, tmp_path: Path) -> list[str]:
+    root = tmp_path / GATED
+    config = tmp_path / "config.toml"
+    config.write_text("", encoding="utf-8")
+    (tmp_path / "input").mkdir(exist_ok=True)
+    common = ["--target", root.as_uri(), "--product-name", GATED, "--storage-type", "local"]
+    common += ["--storage-driver", "fsspec", "--write-mode", "direct"]
+    if command == "ingest":
+        return ["--config-file", str(config), "ingest", "cli_test_plugin", *common, "--input-data",
+                (tmp_path / "input").as_uri(), "--option", "allow_empty_source=true"]  # fmt: skip
+    return ["zarr", "preallocate", "direct_zarr_capable_test_plugin", *common]
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("command", ["ingest", "preallocate"])
+def test_cli_writer_under_exclusive_maintenance_exits_1_with_one_failed_run(
+    pair, tmp_path, monkeypatch, command
+):
+    from cli_test_plugin import CliTestIngestor
+    from direct_zarr_capable_test_plugin import DirectZarrCapableTestIngestor
+
+    plugins = {
+        "cli_test_plugin": CliTestIngestor,
+        "direct_zarr_capable_test_plugin": DirectZarrCapableTestIngestor,
+    }
+    monkeypatch.setattr(ingestor_loader, "AVAILABLE_INGESTORS", plugins)
+    monkeypatch.setattr(ingestor_loader, "_LOADED", True)
+    claim = pair[0].acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
+    try:
+        result = CliRunner().invoke(cli, _cli_args(command, tmp_path), env=_local_env(tmp_path))
+    finally:
+        claim.release()
+    assert result.exit_code == 1, result.output
+    assert f"under exclusive maintenance by {MAINT}" in result.output
+    assert list(_run_events(tmp_path).values()) == [["run_started", "run_failed"]]
+    assert pair[1].list_runs(product=GATED, non_terminal=True) == []
+
+
+@pytest.mark.contract
+def test_restore_refused_at_its_run_start_records_one_start_and_one_failure(
+    pair, tmp_path, monkeypatch
+):
+    source, archive = tmp_path / "src.zarr", tmp_path / "a.zip"
+    zarr.open_group(str(source), mode="w").create_array("a", data=np.arange(6.0))
+    with zipfile.ZipFile(archive, "w") as zf:
+        for p in filter(Path.is_file, source.rglob("*")):
+            zf.write(p, p.relative_to(source).as_posix())
+    held: list[Any] = []
+
+    def exclusive_claim_appears(_self, *_a, run_id="", **_k):
+        if run_id.startswith("archive-restore-") and not held:
+            held.append(
+                pair[1].acquire_claim(
+                    product=GATED, domain=exclusive_maintenance_domain(GATED), owner_id=MAINT
+                )
+            )
+
+    _wrap(monkeypatch, ManifestRepository, "record_run_started", before=exclusive_claim_appears)
+    try:
+        with pytest.raises((ProductUnderMaintenanceError, ArchiveClaimError)):
+            restore_archive(
+                session=make_test_session(tmp_path, product=GATED),
+                archive=archive.as_uri(),
+                archive_path=str(archive),
+                archive_format="zip",
+                target=(tmp_path / GATED).as_uri(),
+            )
+        assert list(_run_events(tmp_path, "archive-restore-").values()) == [
+            ["run_started", "run_failed"]
+        ]
+        assert [c.domain for c in pair[1].list_claims(product=GATED)] == [_exclusive()]
+    finally:
+        if held:
+            held[0].release()
+
+
+@pytest.mark.contract
+def test_refused_index_rebuild_leaves_no_run_record_and_releases_the_index_claim(pair, tmp_path):
+    class Plugin:
+        time_dim_name = "time"
+
+        def index_spec(self, ctx):
+            return IndexSpec(name="gate_spec", groups={"data": IntegerAxis(slot_count=3)})
+
+    claim = pair[1].acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
+    try:
+        with pytest.raises(ProductUnderMaintenanceError):
+            rebuild_index_record(
+                ingestor=Plugin(), plugin_name="gate-plugin", chunk_manager=pair[0],
+                target=(tmp_path / GATED).as_uri(), product_name=GATED,
+            )  # fmt: skip
+        assert [c.domain for c in pair[1].list_claims(product=GATED)] == [_exclusive()]
+    finally:
+        claim.release()
+    assert pair[0].list_runs(product=GATED) == []
+    assert not (tmp_path / GATED / ".firecube" / "index" / "current.json").exists()
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("operation", ["create", "delete"])
+def test_archive_create_and_delete_refuse_when_the_claim_appears_after_their_list(
+    tmp_path, monkeypatch, operation
+):
+    holder, manager = _claiming_manager(tmp_path, "s.zarr"), _claiming_manager(tmp_path, "s.zarr")
+    (tmp_path / "s.zarr" / ".firecube").mkdir(parents=True)
+    (tmp_path / "s.zarr" / ".firecube" / "schema.json").write_text("{}")
+    held: list[Any] = []
+
+    def appears(_self, *_a, **_k):
+        if not held:
+            held.append(None)
+            held[0] = holder.acquire_claim(
+                product="s.zarr", domain=exclusive_maintenance_domain("s.zarr"), owner_id=MAINT
+            )
+
+    _wrap(monkeypatch, ManifestRepository, "list_claims", after=appears)
+    out = tmp_path / "out.zip"
+    try:
+        if operation == "create":
+            with pytest.raises(ArchiveClaimError):
+                create_archive(
+                    session=make_test_session(tmp_path, product="s.zarr"), archive=out.as_uri(),
+                    archive_path=str(out), archive_format="zip",
+                )  # fmt: skip
+        else:
+            plan = DeletionPlan([_sample_chunk("s.zarr")], 1, {"s.zarr"}, set())
+            with pytest.raises(ManifestError):
+                manager.execute_deletion(plan, delete_storage=True, delete_manifest=False)
+        assert held and [c.domain for c in holder.list_claims(product="s.zarr")] == [
+            exclusive_maintenance_domain("s.zarr").identifier
+        ]
+        assert not out.exists()
+    finally:
+        if held:
+            held[0].release()
+        holder.close()
+        manager.close()
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("start", ["run_started", "run_started_with_replacement"])
+def test_stale_exclusive_claim_still_refuses_writers_and_names_clear_claim(pair, tmp_path, start):
+    holder, writer = pair
+    _start(holder, MAINT)
+    if start == "run_started_with_replacement":
+        _start(writer, "writer")
+    claim = holder.acquire_claim(
+        product=GATED, domain=exclusive_maintenance_domain(GATED), owner_id=MAINT
+    )
+    try:
+        (claim_file,) = (tmp_path / GATED / ".firecube" / "claims").glob("*")
+        payload = json.loads(claim_file.read_text())
+        claim_file.write_text(json.dumps({**payload, "last_heartbeat_at": 1.0}))
+        with pytest.raises(ProductUnderMaintenanceError) as refused:
+            if start == "run_started":
+                _start(writer, "writer")
+            else:
+                writer.record_run_started_with_replacement(
+                    product=GATED, run_id="writer", replaces=[]
+                )
+        assert (refused.value.owner_id, refused.value.stale) == (MAINT, True)
+        text = render(refused.value)
+        assert "firecube chunks claims clear" in text and "firecube chunks runs abandon" in text
+        assert {r.run_id: r.status for r in writer.list_runs(product=GATED)}["writer"] == "failed"
+    finally:
+        claim.release()
+
+
+def _preallocate_integer(monkeypatch, tmp_path: Path, name: str) -> list[str]:
+    """Register the integer-axis fixture and a mixed bounded/unbounded subclass; return the args."""
+    from index_spec_integer_test_plugin import IntegerAxisIngestor
+
+    class MixedUnbounded(IntegerAxisIngestor):
+        PRODUCT_NAME: ClassVar[str] = "mixed_unbounded_test"
+
+        def index_spec(self, ctx):
+            unbounded = RegularTimeAxis(
+                coordinate="timestamp", epoch="2024-01-01T00:00:00Z", cadence_s=600, mode="exact"
+            )
+            return IndexSpec(
+                name="mixed_unbounded",
+                groups={"data": IntegerAxis(slot_count=144), "unbounded": unbounded},
+            )
+
+    plugins = {"index_spec_integer_test": IntegerAxisIngestor, "mixed_unbounded": MixedUnbounded}
+    monkeypatch.setattr(ingestor_loader, "AVAILABLE_INGESTORS", plugins)
+    monkeypatch.setattr(ingestor_loader, "_LOADED", True)
+    args = _cli_args("preallocate", tmp_path)
+    args[2] = name
+    return args
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("name", ["index_spec_integer_test", "mixed_unbounded"])
+def test_preallocate_without_coordinate_arrays_is_refused_before_writing_under_maintenance(
+    pair, tmp_path, monkeypatch, name
+):
+    args = _preallocate_integer(monkeypatch, tmp_path, name)
+    claim = pair[0].acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
+    try:
+        result = CliRunner().invoke(cli, args, env=_local_env(tmp_path))
+    finally:
+        claim.release()
+    assert result.exit_code == 1, result.output
+    assert f"under exclusive maintenance by {MAINT}" in result.output
+    assert not (tmp_path / GATED / "data" / "values" / "zarr.json").exists()
+    assert list(_run_events(tmp_path).values()) == [["run_started", "run_failed"]]
+
+
+@pytest.mark.contract
+def test_exclusive_acquire_is_refused_while_a_coordinate_free_preallocate_runs(
+    pair, tmp_path, monkeypatch
+):
+    args = _preallocate_integer(monkeypatch, tmp_path, "index_spec_integer_test")
+    attempts: list[object] = []
+
+    def acquirer_arrives(_self, *_a, run_id="", **_k):
+        if run_id.startswith("preallocate") and not attempts:
+            try:
+                attempts.append(pair[1].acquire_exclusive_maintenance(product=GATED, run_id=MAINT))
+            except ExclusiveMaintenanceRefusedError as refused:
+                attempts.append(refused)
+
+    _wrap(monkeypatch, ManifestRepository, "record_run_started", after=acquirer_arrives)
+    result = CliRunner().invoke(cli, args, env=_local_env(tmp_path))
+    assert result.exit_code == 0, result.output
+    assert [type(a) for a in attempts] == [ExclusiveMaintenanceRefusedError]
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("index_claim_held", [True, False], ids=["loser-branch", "no-index-claim"])
+def test_cli_index_rebuild_under_exclusive_maintenance_exits_1_and_leaves_the_root_alone(
+    pair, tmp_path, monkeypatch, index_claim_held
+):
+    from index_spec_integer_test_plugin import IntegerAxisIngestor
+
+    monkeypatch.setattr(
+        ingestor_loader, "AVAILABLE_INGESTORS", {"index_spec_integer_test": IntegerAxisIngestor}
+    )
+    monkeypatch.setattr(ingestor_loader, "_LOADED", True)
+    root = tmp_path / GATED
+    args = ["zarr", "index", "rebuild", "--target", root.as_uri(), "--product-name", GATED]
+    args += ["--plugin", "index_spec_integer_test"]
+    if index_claim_held:  # the record exists and the root lacks its mirror, so a rewrite shows
+        assert CliRunner().invoke(cli, args, env=_local_env(tmp_path)).exit_code == 0
+        document = json.loads((root / "zarr.json").read_text())
+        document["attributes"] = {}
+        (root / "zarr.json").write_text(json.dumps(document))
+    before = (root / "zarr.json").read_bytes() if index_claim_held else None
+    claims = [pair[1].acquire_exclusive_maintenance(product=GATED, run_id=MAINT)]
+    if index_claim_held:
+        domain = WriteDomain(product=GATED, category="resolved_index", name="current")
+        claims.append(pair[1].acquire_claim(product=GATED, domain=domain, owner_id=MAINT))
+    try:
+        result = CliRunner().invoke(cli, args, env=_local_env(tmp_path))
+    finally:
+        for claim in reversed(claims):
+            claim.release()
+    assert result.exit_code == 1, result.output
+    assert isinstance(result.exception, SystemExit), "expected a rendered refusal, not a traceback"
+    assert f"under exclusive maintenance by {MAINT}" in result.output
+    after = (root / "zarr.json").read_bytes() if (root / "zarr.json").exists() else None
+    assert after == before
+
+
+def _holder_product(tmp_path: Path, op: str):
+    root, out = tmp_path / "s.zarr", tmp_path / "out.zip"
+    zarr.open_group(str(root), mode="w").create_group("F024").create_array("FWI", data=np.arange(8.0).reshape(2, 2, 2), chunks=(1, 2, 2), dimension_names=("timestamp", "lat", "lon"))  # fmt: skip
+    (root / ".firecube").mkdir(exist_ok=True)
+    (root / ".firecube" / "schema.json").write_text("{}")
+    chunk = root / "F024/FWI/c/0/0/0"
+    manager, cover = _claiming_manager(tmp_path, "s.zarr", fs=True), SpanCoverage("F024", ["F024/FWI"], [[0, 0]], True)  # fmt: skip
+    manager.record_span(product="s.zarr", run_id="ing", batch_id="b", group="F024", status="active", coverage=cover, meta={})  # fmt: skip
+    manager.repo._writer("s.zarr", "ing", resume_existing=True).append(EVENT_RECORD_UPSERT, {"type": "chunk", "key": "F024/FWI/c/0/0/0", "size": 1, "timestamp": 1.0, "schema_version": SCHEMA_VERSION}, meta={}, flush=True)  # fmt: skip  # legacy chunk record: the facade has no producer
+    manager.record_run_terminal(product="s.zarr", run_id="ing", output_path="", output_format="zarr", size=0, meta={}, status="complete")  # fmt: skip
+    records = lambda: [c.key for c in manager.list_chunks(product="s.zarr", chunk_type="chunk")]  # noqa: E731
+    spans = lambda: manager.list_chunks(product="s.zarr", chunk_type="span")  # noqa: E731
+    calls = {
+        "create": lambda **kw: create_archive(session=make_test_session(tmp_path, product="s.zarr"), archive=out.as_uri(), archive_path=str(out), archive_format="zip", **kw),
+        "delete_chunks": lambda **kw: manager.execute_deletion(DeletionPlan([_sample_chunk("s.zarr")], 1, {"s.zarr"}, set()), **kw),
+        "delete_spans": lambda **kw: manager.delete_spans(spans(), **kw),
+    }  # fmt: skip
+    archived = lambda: out.exists() and zipfile.ZipFile(out).read("F024/FWI/c/0/0/0") == chunk.read_bytes()  # fmt: skip  # noqa: E731
+    done = {"create": archived, "delete_chunks": lambda: not chunk.exists() and records() == [], "delete_spans": lambda: spans() == [] and not chunk.exists()}  # fmt: skip
+    return calls[op], done[op], lambda: chunk.exists() and records() == ["F024/FWI/c/0/0/0"]
+
+
+@pytest.mark.parametrize("op", ["create", "delete_chunks", "delete_spans"])
+@pytest.mark.parametrize("case", ["holder", "other-holder-id", "no-claim", "writer-beside", "writer-owned-by-holder", "lost-after-acquire", "interrupt-after-acquire"])  # fmt: skip
+def test_holder_run_id_admits_only_the_owner_of_a_lone_exclusive_claim(tmp_path, monkeypatch, op, case):  # fmt: skip
+    call, done, intact = _holder_product(tmp_path, op)
+    holder, claims = _claiming_manager(tmp_path, "s.zarr"), []
+    if case != "no-claim":
+        claims.append(holder.acquire_exclusive_maintenance(product="s.zarr", run_id=MAINT))
+    if case in ("writer-beside", "writer-owned-by-holder"):
+        claims.append(holder.acquire_claim(product="s.zarr", domain=_claim_domain("s.zarr"), owner_id="w" if case == "writer-beside" else MAINT))  # fmt: skip
+    listed = lambda: sorted((c.domain, c.owner_id) for c in holder.list_claims(product="s.zarr"))  # noqa: E731
+    root = tmp_path / "s.zarr"
+    tree = lambda: {p: p.read_bytes() for p in root.rglob("*") if p.is_file() and "claims" not in p.parts}  # fmt: skip  # noqa: E731
+    expected, before = listed(), tree()
+    real, released, raised, interrupt = ManifestRepository.acquire_claim, [], None, KeyboardInterrupt("maintenance claim read")  # fmt: skip
+    if case.endswith("-after-acquire"):  # once the operation holds its own claim, the exclusive one goes or its read is interrupted  # fmt: skip
+        real_release, expected = type(claims[0]).release, [] if case.startswith("lost") else expected  # fmt: skip
+        monkeypatch.setattr(type(claims[0]), "release", lambda s: (released.append(s.info.domain), real_release(s))[1])  # fmt: skip
+
+        def acquire(self, **kw):
+            handle = real(self, **kw)
+            if kw["domain"].name != "exclusive":
+                if case.startswith("lost"):
+                    claims[0].release()
+                else:
+                    monkeypatch.setattr(ManifestRepository, "read_claim_by_domain", Mock(side_effect=interrupt))  # fmt: skip
+            return handle
+
+        monkeypatch.setattr(ManifestRepository, "acquire_claim", acquire)
+    try:
+        if case == "holder":
+            call(holder_run_id=MAINT)
+        else:
+            with pytest.raises((ArchiveClaimError, ManifestError, KeyboardInterrupt), match=r"(?i)maintenance|holder|claim") as raised:  # fmt: skip
+                call(holder_run_id="other" if case == "other-holder-id" else MAINT)
+        held = listed()
+    finally:
+        for claim in claims:
+            claim.release()
+    lines = [json.loads(n) for f in sorted((root / ".firecube" / "runs").glob("*/events-*.jsonl")) for n in f.read_text().splitlines() if n]  # fmt: skip
+    named = [e["event_type"] for e in lines if e.get("record", {}).get("meta", {}).get("holder_run_id") == MAINT]  # fmt: skip
+    ok, recorded = case == "holder", [EVENT_MAINTENANCE_STARTED, EVENT_MAINTENANCE_COMPLETED]
+    assert (done(), held, named) == (ok, expected, recorded if ok else [])
+    assert ok or (tree() == before and intact()), "a refused call changed the product"
+    assert case != "interrupt-after-acquire" or (raised is not None and raised.value is interrupt and len([d for d in released if d != claims[0].info.domain]) == 1)  # fmt: skip
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("owner", [None, "someone-else"], ids=["no-claim", "foreign-claim"])
+def test_holder_run_id_on_a_plain_store_is_refused_and_writes_nothing(tmp_path, owner):
+    root, out = tmp_path / "plain.zarr", tmp_path / "out.zip"
+    zarr.open_group(str(root), mode="w").create_array("a", data=np.arange(3.0))
+    tree = lambda: {p: p.read_bytes() for p in root.rglob("*") if p.is_file() and "claims" not in p.parts}  # fmt: skip  # noqa: E731
+    create = lambda **kw: create_archive(session=make_test_session(tmp_path, product="plain.zarr"), archive=out.as_uri(), archive_path=str(out), archive_format="zip", **kw)  # fmt: skip  # noqa: E731
+    manager, before = _claiming_manager(tmp_path, "plain.zarr"), tree()
+    claim = manager.acquire_exclusive_maintenance(product="plain.zarr", run_id=owner) if owner else None  # fmt: skip
+    try:
+        with pytest.raises(ArchiveClaimError):
+            create(holder_run_id=MAINT)
+        assert not out.exists() and tree() == before
+    finally:
+        claim and claim.release()  # type: ignore[unused-expression]
+        manager.close()
+    assert create().run_id is None and out.exists()

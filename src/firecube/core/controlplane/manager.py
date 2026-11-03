@@ -58,15 +58,18 @@ from firecube.core.controlplane.types import (
     SpanCoverage,
     WriteDomain,
     canonical_index_bytes,
+    exclusive_maintenance_domain,
 )
 from firecube.core.errors import (
     ClaimConflictError,
     ConfigurationError,
+    ExclusiveMaintenanceRefusedError,
     LegacyIndexRecordError,
     ManifestError,
     Message,
     Operation,
     Placeholder,
+    ProductUnderMaintenanceError,
     ResolvedIndexAttrsConflictError,
     ResolvedIndexClaimTimeoutError,
     ResolvedIndexConflictError,
@@ -328,7 +331,12 @@ class ChunkManager:
         slot_range: tuple[int, int] | None = None,
         slot_group: str | None = None,
     ) -> None:
-        """Record the start of a new ingestion run."""
+        """Record the start of a new run, then check the product's exclusive maintenance claim.
+
+        Raises:
+            ProductUnderMaintenanceError: Another owner holds that claim, or it cannot be
+                read. The run is recorded failed with the refusal text before the raise.
+        """
         self.repo.record_run_started(
             product=product,
             run_id=run_id,
@@ -339,6 +347,122 @@ class ChunkManager:
             slot_range=slot_range,
             slot_group=slot_group,
         )
+        try:
+            self.check_exclusive_maintenance(product=product, owner_id=run_id)
+        except ProductUnderMaintenanceError as exc:
+            self._record_refused_start(
+                product=product,
+                run_id=run_id,
+                output_path=output_path,
+                output_format=output_format,
+                size=size,
+                meta=meta,
+                slot_range=slot_range,
+                slot_group=slot_group,
+                error=str(exc),
+            )
+            raise
+
+    def _record_refused_start(
+        self,
+        *,
+        product: str,
+        run_id: str,
+        output_path: str,
+        output_format: str,
+        size: int,
+        meta: dict[str, Any],
+        error: str,
+        slot_range: tuple[int, int] | None = None,
+        slot_group: str | None = None,
+    ) -> None:
+        """Record a run that the exclusive maintenance claim refused as failed; log a failure."""
+        try:
+            self.repo.record_run_terminal(
+                product=product,
+                run_id=run_id,
+                output_path=output_path,
+                output_format=output_format,
+                size=size,
+                meta=meta,
+                status="failed",
+                error=error,
+                slot_range=slot_range,
+                slot_group=slot_group,
+            )
+        except Exception:
+            # Log, never raise: the refusal is the error the caller must see.
+            self.log.exception("Failed to record refused run %s of %s as failed", run_id, product)
+
+    def check_exclusive_maintenance(self, *, product: str, owner_id: str) -> None:
+        """Refuse a writer while another owner holds the product's exclusive maintenance claim.
+
+        Reads the one claim file by name. An absent claim, or one that `owner_id` owns, passes.
+
+        Raises:
+            ProductUnderMaintenanceError: Another owner holds the claim, or it cannot be read.
+        """
+        check_exclusive_maintenance(repo=self.repo, product=product, owner_id=owner_id)
+
+    def acquire_exclusive_maintenance(self, *, product: str, run_id: str) -> ClaimHandle:
+        """Acquire the product's exclusive maintenance claim for `run_id`, then verify it is alone.
+
+        Under the claim it lists the product's claims and reads every run from fresh
+        listings. Any other claim, or any other run that is not terminal or cannot be read,
+        refuses. A listing or read error propagates after the claim is released. The caller
+        releases the returned handle; abandoning `run_id`, when it is a recorded run,
+        releases it too.
+
+        Raises:
+            ClaimConflictError: Another owner holds the exclusive claim.
+            ExclusiveMaintenanceRefusedError: Other claims or runs exist; the claim is released.
+        """
+        domain = exclusive_maintenance_domain(product)
+        handle = self.acquire_claim(product=product, domain=domain, owner_id=run_id)
+        try:
+            claims = [
+                claim
+                for claim in self.repo.list_product_claims(product=product)
+                if claim.domain != domain.identifier
+            ]
+            runs, unreadable = self.repo.scan_runs(product=product)
+            blocking_runs = [run for run in runs if not run.is_terminal and run.run_id != run_id]
+            unread = [(other, error) for other, error in unreadable if other != run_id]
+            if claims or blocking_runs or unread:
+                details: list[str] = []
+                if claims:
+                    details.append(
+                        "active write claim(s) exist: "
+                        + ", ".join(f"{claim.domain} (owner={claim.owner_id})" for claim in claims)
+                    )
+                if blocking_runs or unread:
+                    details.append(
+                        "non-terminal or unreadable run(s) exist: "
+                        + ", ".join(
+                            [f"{run.run_id} (status={run.status})" for run in blocking_runs]
+                            + [f"{other} (unreadable: {error})" for other, error in unread]
+                        )
+                    )
+                raise ExclusiveMaintenanceRefusedError(
+                    maintenance_refusal_message(
+                        repo=self.repo,
+                        product=product,
+                        operation="exclusive maintenance",
+                        detail="; ".join(details),
+                        claims=claims,
+                    ),
+                    product=product,
+                    claims=[claim.domain for claim in claims],
+                    runs=[run.run_id for run in blocking_runs] + [other for other, _ in unread],
+                )
+        except BaseException:
+            try:
+                handle.release()
+            except Exception:
+                # Log, never raise: the refusal or listing error is what the caller must see.
+                self.log.exception("Failed to release claim %s", domain.identifier)
+            raise
+        return handle
 
     def record_run_terminal(
         self,
@@ -375,12 +499,34 @@ class ChunkManager:
         run_id: str,
         replaces: list[str],
     ) -> None:
-        """Record informational replacement intent for a run."""
+        """Record informational replacement intent for a run, then check exclusive maintenance.
+
+        Raises:
+            ProductUnderMaintenanceError: Another owner holds the product's exclusive
+                maintenance claim, or it cannot be read. The run is recorded failed first.
+        """
         self.repo.record_run_started_with_replacement(
             product=product,
             run_id=run_id,
             replaces=replaces,
         )
+        try:
+            self.check_exclusive_maintenance(product=product, owner_id=run_id)
+        except ProductUnderMaintenanceError as exc:
+            # The run started earlier; its terminal record names what abandon would name.
+            entry: dict[str, Any] = {}
+            with contextlib.suppress(Exception):
+                entry = self.repo._get_run_entry(product=product, run_id=run_id)
+            self._record_refused_start(
+                product=product,
+                run_id=run_id,
+                output_path=str(entry.get("output_path") or entry.get("run_uri") or ""),
+                output_format=str(entry.get("output_format") or "control"),
+                size=int(entry.get("size", 0) or 0),
+                meta={"operation": "replacement"},
+                error=str(exc),
+            )
+            raise
 
     def record_replacement_committed(
         self,
@@ -705,8 +851,10 @@ class ChunkManager:
         on that group conflicts, whatever its window, and the recorded run
         range covers ``[0, slot count)``.
 
-        If this method raises, no run is registered and no terminalization is
-        needed. If it returns normally, the caller must release the returned
+        If this method raises, the claim is released and no terminalization is
+        needed: a peer refusal registers no run, and an exclusive maintenance
+        refusal (`ProductUnderMaintenanceError`) has already recorded the run
+        failed. If it returns normally, the caller must release the returned
         handle after materialization and record a terminal run state on every
         exit path.
         """
@@ -1062,14 +1210,21 @@ class ChunkManager:
         delete_manifest: bool = True,
         storage_config: StorageConfig | None = None,
         dry_run: bool = False,
+        *,
+        holder_run_id: str | None = None,
     ) -> dict[str, Any]:
-        """Execute a deletion plan, optionally removing storage and manifest entries."""
+        """Execute a deletion plan, optionally removing storage and manifest entries.
+
+        Pass `holder_run_id` to delete as the owner of each product's exclusive maintenance
+        claim. See :meth:`DeletionEngine.execute_deletion`.
+        """
         return self.deletion_engine.execute_deletion(
             plan,
             delete_storage,
             delete_manifest,
             storage_config,
             dry_run,
+            holder_run_id=holder_run_id,
         )
 
     def delete_spans(
@@ -1082,12 +1237,14 @@ class ChunkManager:
         update_manifest: bool = True,
         update_state: bool = True,
         time_dim_name: str | None = None,
+        holder_run_id: str | None = None,
     ) -> dict[str, Any]:
         """Delete specific span records with optional dry-run and manifest updates.
 
         ``yes_i_really_mean_it`` acknowledges the collateral-span guard that
         blocks force-deletion when other active spans share the same physical
-        chunk keys. See :meth:`DeletionEngine.delete_spans`.
+        chunk keys. Pass ``holder_run_id`` to delete as the owner of the product's
+        exclusive maintenance claim. See :meth:`DeletionEngine.delete_spans`.
         """
         return self.deletion_engine.delete_spans(
             spans,
@@ -1097,6 +1254,7 @@ class ChunkManager:
             update_manifest=update_manifest,
             update_state=update_state,
             time_dim_name=time_dim_name,
+            holder_run_id=holder_run_id,
         )
 
     def rebuild_compact(self, product: str) -> dict[str, Any]:
@@ -1326,6 +1484,11 @@ class ChunkManager:
         This is the engine's resolved-index API. It uses a dedicated
         ``resolved_index:current`` write claim and implements the fresh-store
         and matched-existing precedence needed for startup negotiation.
+
+        Raises:
+            ProductUnderMaintenanceError: Another owner than ``record.recorded_by_run_id``
+                holds the product's exclusive maintenance claim, or it cannot be read.
+                The ``resolved_index:current`` claim is released first; no record is written.
         """
 
         if run_id is not None and run_id != record.recorded_by_run_id:
@@ -1348,8 +1511,17 @@ class ChunkManager:
                     ),
                     self._holding(domain, record.recorded_by_run_id),
                 ):
+                    # Leaving the block on a refusal releases resolved_index:current.
+                    self.check_exclusive_maintenance(
+                        product=product, owner_id=record.recorded_by_run_id
+                    )
                     return self._apply_resolved_index_precedence(product, record)
             except ClaimConflictError:
+                # A loser reads and writes nothing before this check, as the
+                # winner checks right after it acquires.
+                self.check_exclusive_maintenance(
+                    product=product, owner_id=record.recorded_by_run_id
+                )
                 # Unified 5-row convergence policy (see also
                 # ``ensure_slot_index_model``). The two loser-branch policies
                 # must stay identical so operators do not see one primitive
@@ -2133,6 +2305,154 @@ def maintenance_refusal_message(
             )
         )
     return Message.join("", lines)
+
+
+def check_exclusive_maintenance(*, repo: ManifestRepository, product: str, owner_id: str) -> None:
+    """Refuse `owner_id` while another owner holds the product's exclusive maintenance claim.
+
+    Reads the one claim file by name. An absent claim, or one that `owner_id` owns, passes.
+
+    Raises:
+        ProductUnderMaintenanceError: Another owner holds the claim, or it cannot be read.
+    """
+    domain = exclusive_maintenance_domain(product)
+    try:
+        claim = repo.read_claim_by_domain(product=product, domain=domain.identifier)
+    except Exception as exc:
+        raise ProductUnderMaintenanceError(
+            Message(
+                "The exclusive maintenance claim {claim_domain} of product {product} could "
+                "not be read, so {writer} is refused: {error}",
+                claim_domain=domain.identifier,
+                product=product,
+                writer=owner_id,
+                error=str(exc),
+            ),
+            product=product,
+            owner_id=None,
+            stale=None,
+        ) from exc
+    if claim is None or claim.owner_id == owner_id:
+        return
+    raise ProductUnderMaintenanceError(
+        under_maintenance_message(repo=repo, product=product, writer=owner_id, claim=claim),
+        product=product,
+        owner_id=claim.owner_id,
+        stale=claim.stale,
+    )
+
+
+def is_exclusive_maintenance_holder(
+    claim: ClaimInfo | None, *, product: str, holder_run_id: str | None
+) -> bool:
+    """Return whether `claim` is the product's exclusive maintenance claim and `holder_run_id` owns it.
+
+    A `holder_run_id` of `None` owns nothing, so the result is then `False`.
+    """
+    return (
+        holder_run_id is not None
+        and claim is not None
+        and claim.domain == exclusive_maintenance_domain(product).identifier
+        and claim.owner_id == holder_run_id
+    )
+
+
+def holder_absent_message(*, product: str, operation: str, holder_run_id: str) -> Message:
+    """Return the message that refuses a holder's operation when no exclusive claim is present."""
+    return Message(
+        "Cannot run {operation} for product {product} as holder {holder_run_id}: the product "
+        "has no exclusive maintenance claim {claim_domain}.",
+        operation=operation,
+        product=product,
+        holder_run_id=holder_run_id,
+        claim_domain=exclusive_maintenance_domain(product).identifier,
+    )
+
+
+def exclusive_maintenance_holder_refusal(
+    *, repo: ManifestRepository, product: str, operation: str, holder_run_id: str
+) -> Message | None:
+    """Return why `holder_run_id` does not hold the product's exclusive maintenance claim.
+
+    Reads the one claim file by name. An absent claim, another owner's claim and an
+    unreadable claim each refuse. Return `None` when `holder_run_id` owns the claim.
+    """
+    domain = exclusive_maintenance_domain(product)
+    try:
+        claim = repo.read_claim_by_domain(product=product, domain=domain.identifier)
+    except Exception as exc:
+        return Message(
+            "The exclusive maintenance claim {claim_domain} of product {product} could "
+            "not be read, so {writer} is refused: {error}",
+            claim_domain=domain.identifier,
+            product=product,
+            writer=holder_run_id,
+            error=str(exc),
+        )
+    if is_exclusive_maintenance_holder(claim, product=product, holder_run_id=holder_run_id):
+        return None
+    if claim is None:
+        return holder_absent_message(
+            product=product, operation=operation, holder_run_id=holder_run_id
+        )
+    return under_maintenance_message(repo=repo, product=product, writer=holder_run_id, claim=claim)
+
+
+def under_maintenance_message(
+    *, repo: ManifestRepository, product: str, writer: str, claim: ClaimInfo
+) -> Message:
+    """Return the message that refuses `writer` under another owner's exclusive maintenance claim.
+
+    Name the claim's owner. For a stale claim, add the clear operation and, when the
+    owner resolves to exactly one recorded run, the abandon operation. An unresolved
+    product root drops both operations; an owner read error drops the abandon.
+    """
+    facts: dict[str, object] = {
+        "product": product,
+        "writer": writer,
+        "claim_owner": claim.owner_id,
+        "claim_domain": claim.domain,
+    }
+    refusal = Message(
+        "Product {product} is under exclusive maintenance by {claim_owner} "
+        "(claim {claim_domain}), so {writer} is refused.",
+        **facts,
+    )
+    if not claim.stale:
+        return Message(
+            "{refusal} Retry when that maintenance has finished.", refusal=refusal, **facts
+        )
+    stale = Message(
+        "{refusal} The claim is stale: no heartbeat for {age}.",
+        refusal=refusal,
+        age=_format_duration(max(time.time() - claim.last_heartbeat_at, 0.0)),
+        **facts,
+    )
+    try:
+        product_uri = repo.get_product_root_uri(product)
+    except Exception:
+        return stale
+    abandon: str = ""
+    try:
+        run = repo.resolve_claim_owner(product=product, owner_id=claim.owner_id).run
+    except Exception:
+        run = None
+    if run is not None:
+        abandon = Message(
+            "\nor abandon run {run_id} (status: {status}), which releases the claims it "
+            "alone owns:\n  {abandon}",
+            run_id=run.run_id,
+            status=run.status,
+            abandon=_abandon_operation(product_uri, run.run_id),
+        )
+    return Message(
+        "{stale}\nIf no process of {claim_owner} is running, clear the claim:\n  {clear}{abandon}",
+        stale=stale,
+        clear=_clear_operation(product_uri, claim.domain, force=False),
+        abandon=abandon,
+        product_uri=product_uri,
+        **facts,
+    )
 
 
 def check_legacy_index_record(

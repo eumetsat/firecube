@@ -568,6 +568,70 @@ class ClaimConflictError(FirecubeError):
     """A write-domain claim is already owned by another active writer."""
 
 
+def _restore_with_fields(cls: type[Exception], message: object, fields: dict[str, Any]) -> Any:
+    """Rebuild a pickled or copied error from its message and keyword fields."""
+    return cls(message, **fields)
+
+
+class ExclusiveMaintenanceRefusedError(FirecubeError):
+    """Exclusive maintenance of a product is refused because other writers are present.
+
+    The refusing call releases the exclusive claim it acquired before it raises.
+
+    Attributes:
+        product: The logical product name.
+        claims: The domain id of each other claim of the product.
+        runs: The id of each other non-terminal or unreadable run of the product.
+    """
+
+    def __init__(
+        self,
+        message: object,
+        *,
+        product: str,
+        claims: Iterable[str] = (),
+        runs: Iterable[str] = (),
+    ) -> None:
+        self.product = product
+        self.claims = tuple(claims)
+        self.runs = tuple(runs)
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        fields = {"product": self.product, "claims": self.claims, "runs": self.runs}
+        return (_restore_with_fields, (type(self), self.args[0], fields), self.__dict__)
+
+
+class ProductUnderMaintenanceError(FirecubeError):
+    """Another owner holds the product's exclusive maintenance claim, so the write is refused.
+
+    A refused run start is recorded failed before this error is raised. A claim that
+    cannot be read refuses too; `owner_id` and `stale` are then `None`.
+
+    Attributes:
+        product: The logical product name.
+        owner_id: The owner of the exclusive maintenance claim, or `None` when unread.
+        stale: Whether that claim missed its heartbeat, or `None` when unread.
+    """
+
+    def __init__(
+        self,
+        message: object,
+        *,
+        product: str,
+        owner_id: str | None,
+        stale: bool | None,
+    ) -> None:
+        self.product = product
+        self.owner_id = owner_id
+        self.stale = stale
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        fields = {"product": self.product, "owner_id": self.owner_id, "stale": self.stale}
+        return (_restore_with_fields, (type(self), self.args[0], fields), self.__dict__)
+
+
 class SlotIndexModelError(FirecubeError):
     """Base class for slot-index-model failures (negotiation, persistence, claims)."""
 

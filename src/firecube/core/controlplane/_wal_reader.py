@@ -277,6 +277,82 @@ class WalReader:
                 run_entries.append(payload)
         return run_entries
 
+    def scan_run_entries(self, product: str) -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
+        """Read every run entry from fresh listings, for an admission that must fail closed.
+
+        Lists runs/ and each run directory with the driver's listing cache bypassed. A failed
+        runs/ listing raises; an absent runs/ lists as no runs. A run directory that cannot
+        be listed or whose run.json cannot be parsed is returned as `(run_id, error)`.
+        A run.json beside event segments that cannot be parsed gives an orphaned entry,
+        as `read_run_entry` does.
+
+        Returns:
+            The readable run entries, and the runs that could not be read.
+        """
+        control_path, control_uri = self._resolver(product)
+        runs_dir = control_path.join(RUNS_DIRNAME)
+        try:
+            listed = self._fs.ls(runs_dir, detail=False, refresh=True)
+        except FileNotFoundError:
+            return [], []
+        entries: list[dict[str, Any]] = []
+        unreadable: list[tuple[str, str]] = []
+        for item in listed:
+            run_dir = self._entry_to_uri(item, runs_dir)
+            run_id = self._run_id_from_dir(run_dir, runs_dir)
+            run_uri = control_uri.join(RUNS_DIRNAME, run_id).to_str()
+            try:
+                names = [
+                    self._entry_to_uri(child, run_dir)
+                    for child in self._fs.ls(run_dir, detail=False, refresh=True)
+                ]
+            except Exception as exc:
+                unreadable.append((run_id, f"run directory not listed: {exc}"))
+                continue
+            segment_paths = sorted(
+                (path for path in names if path.path.endswith(".jsonl")), key=lambda p: p.to_str()
+            )
+            meta_uri = run_dir.join("run.json")
+            if not any(path.path.rstrip("/").rsplit("/", 1)[-1] == "run.json" for path in names):
+                if segment_paths:
+                    entries.append(
+                        self.build_orphan_run_entry(
+                            product=product,
+                            run_id=run_id,
+                            run_dir=run_dir,
+                            run_uri=run_uri,
+                            segment_paths=segment_paths,
+                            error="missing_run_meta",
+                        )
+                    )
+                continue
+            try:
+                with self._fs.open(meta_uri, "r") as handle:
+                    payload = json.loads(str(handle.read()))
+                if not isinstance(payload, dict):
+                    raise ValueError("run.json is not a JSON object")
+            except Exception as exc:
+                if not segment_paths:
+                    unreadable.append((run_id, f"run.json not read: {exc}"))
+                    continue
+                entries.append(
+                    self.build_orphan_run_entry(
+                        product=product,
+                        run_id=run_id,
+                        run_dir=run_dir,
+                        run_uri=run_uri,
+                        segment_paths=segment_paths,
+                        error="unreadable_run_meta",
+                    )
+                )
+                continue
+            payload["run_dir"] = run_dir.to_str()
+            payload["run_uri"] = str(payload.get("run_uri") or run_uri)
+            payload["product"] = product
+            payload["run_id"] = run_id
+            entries.append(payload)
+        return entries, unreadable
+
     def read_run_segment(
         self,
         *,

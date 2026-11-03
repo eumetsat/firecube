@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import Any, Literal
 
 import pytest
 import zarr
@@ -47,12 +48,12 @@ CONTROL = (
 NOISE = (".firecube/runs/r1/run.json", ".firecube/claims/c1.json", ".firecube/wal/1.jsonl")
 
 
-def _build(tmp_path: Path, fmt: int) -> tuple[Path, FsspecFilesystem, StorageUri]:
+def _build(tmp_path: Path, fmt: Literal[2, 3]) -> tuple[Path, FsspecFilesystem, StorageUri]:
     """Root group, subgroup, arrays ``a`` and ``sub/b``, consolidated root, plus .firecube files."""
     root = tmp_path / f"v{fmt}.zarr"
     group = zarr.open_group(str(root), mode="w", zarr_format=fmt)
     group.attrs["title"] = "cube"
-    names = {"dimension_names": ("x",)} if fmt == 3 else {}
+    names: dict[str, Any] = {"dimension_names": ("x",)} if fmt == 3 else {}
     group.create_array("a", shape=(4,), chunks=(2,), dtype="f4", **names)[:] = 1.0
     group.create_group("sub").create_array("b", shape=(4,), chunks=(2,), dtype="i4", **names)
     zarr.consolidate_metadata(str(root))
@@ -86,7 +87,7 @@ V2 = {".zgroup", ".zattrs", ".zmetadata", "a/.zarray", "sub/.zgroup", "sub/b/.za
     ids=["v3", "v3-group-images", "v2"],
 )
 def test_enumeration_returns_node_and_control_documents_with_exact_bytes(
-    tmp_path: Path, subtests, fmt: int, nodes: set[str], images: tuple[str, ...]
+    tmp_path: Path, subtests, fmt: Literal[2, 3], nodes: set[str], images: tuple[str, ...]
 ) -> None:
     root, fs, uri = _build(tmp_path, fmt)
     for image in (*images, "a/.zmetadata") if images else ():  # "a/" is an array: not captured
@@ -174,8 +175,7 @@ def test_v3_patch_keeps_every_other_key_and_value() -> None:
     patched = json.loads(new)
     assert path == "sub/zarr.json"
     assert list(patched) == list(original)
-    assert patched["unknown_ext"] == original["unknown_ext"]
-    assert patched["attributes"] == {"keep": [1, 2], "added": None}
+    assert patched == {**original, "attributes": {"keep": [1, 2], "added": None}}
 
 
 def test_v2_patch_rewrites_only_zattrs_and_creates_missing_one(tmp_path: Path) -> None:
@@ -192,5 +192,34 @@ def test_v2_patch_rewrites_only_zattrs_and_creates_missing_one(tmp_path: Path) -
     created_path, created = patch_attributes(documents["sub/b/.zarray"], set={"s": 1})
 
     assert (path, json.loads(new)) == ("a/.zattrs", {"_ARRAY_DIMENSIONS": ["x"], "s": 1})
-    assert json.loads(documents["a/.zarray"].raw)["x_unknown"] == 1
     assert (created_path, json.loads(created)) == ("sub/b/.zattrs", {"s": 1})
+
+
+@pytest.mark.parametrize("fmt", [2, 3], ids=["v2", "v3"])
+def test_array_added_after_consolidation_is_enumerated(tmp_path: Path, fmt: Literal[2, 3]) -> None:
+    root, fs, uri = _build(tmp_path, fmt)  # consolidated: its image does not list "late"
+    names: dict[str, Any] = {"dimension_names": ("x",)} if fmt == 3 else {}
+    zarr.open_group(str(root), mode="r+", use_consolidated=False).create_array(
+        "late", shape=(2,), dtype="f4", **names
+    )
+
+    paths = {d.path for d in enumerate_metadata_documents(fs, uri)}
+
+    assert ("late/zarr.json" if fmt == 3 else "late/.zarray") in paths
+
+
+@pytest.mark.parametrize(
+    ("path", "content"),
+    [("sub/zarr.json", "{not json"), ("a/zarr.json", '{"zarr_format": 3, "node_type": "weird"}')],
+    ids=["malformed", "unknown_node_type"],
+)
+def test_malformed_or_unknown_v3_node_is_captured_as_unparsed(
+    tmp_path: Path, path: str, content: str
+) -> None:
+    root, fs, uri = _build(tmp_path, 3)
+    (root / path).write_text(content, encoding="utf-8")
+
+    documents = {d.path: d for d in enumerate_metadata_documents(fs, uri)}
+
+    assert documents[path].kind == MetadataDocumentKind.V3_UNPARSED
+    assert documents[path].raw == (root / path).read_bytes()

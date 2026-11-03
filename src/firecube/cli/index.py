@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import click
 
-from firecube.cli._errors import echo_rendered, render
+from firecube.cli._errors import echo_rendered, render, wrap_user_facing_errors
 from firecube.cli._formatter import FirecubeGroup
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import parse_and_validate_uri
@@ -405,6 +405,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
     type=TypedOptionsParam(),
     help="Plugin option in key=value form.",
 )
+@wrap_user_facing_errors
 def rebuild_cmd(
     target: str, plugin: str, product_name: str, option: tuple[tuple[str, object], ...]
 ) -> None:
