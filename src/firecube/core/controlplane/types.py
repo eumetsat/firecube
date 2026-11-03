@@ -35,7 +35,7 @@ from firecube.core.slot_index import SlotAxis, SlotIndexModel
 SCHEMA_VERSION = "v2"
 CONTROL_DIRNAME = ".firecube"
 LATEST_POINTER = "LATEST.json"
-SNAPSHOT_DIRNAME = "snapshots"
+COMPACT_DIRNAME = "compact"
 RUNS_DIRNAME = "runs"
 CLAIMS_DIRNAME = "claims"
 SCHEMA_FILENAME = "schema.json"

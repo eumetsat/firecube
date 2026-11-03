@@ -19,34 +19,41 @@ from pathlib import Path
 
 import click
 
+from firecube.cli._errors import render
 from firecube.cli._shared_options import dry_run_flag
+from firecube.core.errors import ManifestError
 
 from ._manager import resolve_cli_product, resolve_manager
 
 
-@click.group("snapshots")
-def snapshots_group() -> None:
-    """manage control-plane snapshots
+@click.group("compact")
+def compact_group() -> None:
+    """manage the chunk compact cache
 
-    rebuild derived chunk snapshots."""
+    rebuild and inspect the derived compact cache of chunk records."""
 
 
-@snapshots_group.command(
+@click.group("snapshots", hidden=True)
+def snapshots_alias_group() -> None:
+    """hidden alias of chunks compact, kept for one release"""
+
+
+@compact_group.command(
     "rebuild",
     epilog="""\b
 Examples:
-  # preview a snapshot rebuild
-  firecube chunks snapshots rebuild --product-name file:///data/products/MY_PRODUCT.zarr --dry-run
+  # preview a compact cache rebuild
+  firecube chunks compact rebuild --product-name file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
-  # rebuild snapshot for a product
-  firecube chunks snapshots rebuild --product-name file:///data/products/MY_PRODUCT.zarr
+  # rebuild the compact cache for a product
+  firecube chunks compact rebuild --product-name file:///data/products/MY_PRODUCT.zarr
 
 \b
   # rebuild and output result as JSON
-  firecube chunks snapshots rebuild --product-name file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks compact rebuild --product-name file:///data/products/MY_PRODUCT.zarr -f json
 
-See also: firecube chunks snapshots status, firecube chunks list
+See also: firecube chunks compact status, firecube chunks list
 """,
 )
 @click.option(
@@ -54,7 +61,7 @@ See also: firecube chunks snapshots status, firecube chunks list
     "--product-name",
     "product_name",
     required=True,
-    help="full product URI to rebuild into a fresh chunk snapshot",
+    help="full product URI to rebuild into a fresh compact cache",
 )
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
 @click.option(
@@ -74,19 +81,19 @@ def rebuild_cmd(
     output_format: str,
     dry_run: bool,
 ) -> None:
-    """rebuild the chunk snapshot
+    """rebuild the compact cache
 
-    rebuild the derived chunk snapshot for a product from the chunk event log.
-    snapshots are cached read models; use after the snapshot is missing,
+    rebuild the derived compact cache for a product from the chunk event log.
+    the compact cache is a cached read model; use after it is missing,
     corrupt, or very stale to restore fast query performance for chunks list"""
     product_name, product_uri = resolve_cli_product(product_name)
 
     if dry_run:
-        click.echo(f"[dry-run] Would rebuild snapshot for product '{product_name}'")
+        click.echo(f"[dry-run] Would rebuild compact cache for product '{product_name}'")
         return
 
     manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    result = manager.rebuild_snapshot(product_name)
+    result = manager.rebuild_compact(product_name)
 
     if output_format == "json":
         click.echo(json.dumps(result, indent=2))
@@ -94,28 +101,29 @@ def rebuild_cmd(
 
     if result.get("locked"):
         click.echo(
-            f"Snapshot rebuild skipped for {product_name}: another rebuild is already in progress."
+            f"Compact cache rebuild skipped for {product_name}: "
+            "another rebuild is already in progress."
         )
         return
 
     click.echo(
-        f"Rebuilt snapshot for {product_name}: generation={result.get('generation')} "
+        f"Rebuilt compact cache for {product_name}: generation={result.get('generation')} "
         f"records={result.get('records', 0)}"
     )
 
 
-@snapshots_group.command(
+@compact_group.command(
     "status",
     epilog="""\b
 Examples:
-  # check snapshot status for a product
-  firecube chunks snapshots status --product-name file:///data/products/MY_PRODUCT.zarr
+  # check compact cache status for a product
+  firecube chunks compact status --product-name file:///data/products/MY_PRODUCT.zarr
 
 \b
   # output as JSON
-  firecube chunks snapshots status --product-name file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks compact status --product-name file:///data/products/MY_PRODUCT.zarr -f json
 
-See also: firecube chunks snapshots rebuild, firecube chunks list
+See also: firecube chunks compact rebuild, firecube chunks list
 """,
 )
 @click.option(
@@ -123,7 +131,7 @@ See also: firecube chunks snapshots rebuild, firecube chunks list
     "--product-name",
     "product_name",
     required=True,
-    help="full product URI to check snapshot status for",
+    help="full product URI to check compact cache status for",
 )
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
 @click.option(
@@ -141,21 +149,24 @@ def status_cmd(
     workspace: Path | None,
     output_format: str,
 ) -> None:
-    """show snapshot age and status
+    """show compact cache age and status
 
-    show snapshot age and status for a product's .firecube/ control plane.
-    reports whether the snapshot exists, how many events it covers, and when
-    it was last rebuilt. use to decide whether a rebuild is needed"""
+    show compact cache age and status for a product's .firecube/ control plane.
+    reports whether the compact cache exists, how many records it holds, and
+    when it was last rebuilt. use to decide whether a rebuild is needed"""
     product_name, product_uri = resolve_cli_product(product_name)
     manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    result = manager.snapshot_status(product_name)
+    try:
+        result = manager.compact_status(product_name)
+    except ManifestError as exc:
+        raise click.ClickException(render(exc)) from exc
 
     if output_format == "json":
         click.echo(json.dumps(result, indent=2))
         return
 
     if not result.get("exists"):
-        click.echo(f"No snapshot found for {product_name}")
+        click.echo(f"No compact cache found for {product_name}")
         return
 
     click.echo(f"Product:    {product_name}")
@@ -163,3 +174,7 @@ def status_cmd(
     click.echo(f"Cutoff:     {result.get('completed_before', 'unknown')}")
     click.echo(f"Generation: {result.get('generation', 'unknown')}")
     click.echo(f"Records:    {result.get('records', 'unknown')}")
+
+
+snapshots_alias_group.add_command(rebuild_cmd)
+snapshots_alias_group.add_command(status_cmd)

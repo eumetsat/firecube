@@ -481,7 +481,7 @@ OPTION_GROUPS.update(
                 "options": ["--workspace"],
             },
         ],
-        "firecube chunks snapshots rebuild": [
+        "firecube chunks compact rebuild": [
             {
                 "name": "Required",
                 "options": ["--product-name"],
@@ -499,7 +499,7 @@ OPTION_GROUPS.update(
                 "options": ["--workspace"],
             },
         ],
-        "firecube chunks snapshots status": [
+        "firecube chunks compact status": [
             {
                 "name": "Required",
                 "options": ["--product-name"],

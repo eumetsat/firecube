@@ -23,10 +23,10 @@ import click
 from firecube.core import observability
 
 from ._claims import claims_group
+from ._compact import compact_group, snapshots_alias_group
 from ._delete import delete_cmd, delete_span_cmd
 from ._list import list_cmd
 from ._runs import runs_group
-from ._snapshots import snapshots_group
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
@@ -54,7 +54,7 @@ def chunks(
 
     \b
     firecube tracks chunk state in a product-local control plane
-    (event log, snapshots, claims). use chunks list to inspect, chunks delete
+    (event log, compact cache, claims). use chunks list to inspect, chunks delete
     to remove storage and records, and chunks runs to review ingestion run
     history"""
     observability.init_observability("firecube-chunks")
@@ -69,6 +69,7 @@ chunks.add_command(delete_cmd)
 chunks.add_command(delete_span_cmd)
 chunks.add_command(claims_group)
 chunks.add_command(runs_group)
-chunks.add_command(snapshots_group)
+chunks.add_command(compact_group)
+chunks.add_command(snapshots_alias_group)
 
 __all__ = ["chunks"]

@@ -428,7 +428,7 @@ def test_success_replaces_prior_spans(temp_workspace):
     )
     manager.close()
     manager = ChunkManager(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
-    manager.rebuild_snapshot(product)
+    manager.rebuild_compact(product)
 
     current = _current_state(manager, product=product)
     assert current[prior_key]["status"] == "replaced"
@@ -657,7 +657,7 @@ def test_full_state_machine(temp_workspace):
     )
     manager.close()
     manager = ChunkManager(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
-    manager.rebuild_snapshot(product)
+    manager.rebuild_compact(product)
 
     final_current = _current_state(manager, product=product)
     assert final_current[prior_key]["status"] == "replaced"
@@ -724,7 +724,7 @@ def test_replacement_independent_of_run_id_ordering(temp_workspace):
 
     manager.close()
     manager = ChunkManager(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
-    manager.rebuild_snapshot(product)
+    manager.rebuild_compact(product)
 
     current = _current_state(manager, product=product)
     assert current[prior_key]["status"] == "replaced"

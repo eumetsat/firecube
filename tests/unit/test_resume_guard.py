@@ -162,7 +162,7 @@ def _reopened_guard_after(
     _record_span_run(manager, run_id=run_id, batch_id=batch_id, failed=failed)
     manager.close()
     manager = _fresh_manager(tmp_path)
-    manager.rebuild_snapshot(_PRODUCT)
+    manager.rebuild_compact(_PRODUCT)
     return _make_guard(manager)
 
 

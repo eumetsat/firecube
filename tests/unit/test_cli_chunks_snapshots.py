@@ -14,22 +14,27 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from firecube.core.storage.uri import StorageUri
 
 
 class _FakeSnapshotsManager:
     def __init__(self) -> None:
         self.rebuilt: list[str] = []
 
-    def rebuild_snapshot(self, product: str):
+    def rebuild_compact(self, product: str):
         self.rebuilt.append(product)
         return {"generation": 1, "records": 0}
 
 
 def test_rebuild_help_advertises_dry_run_only():
-    r = CliRunner().invoke(cli, ["chunks", "snapshots", "rebuild", "--help"])
+    r = CliRunner().invoke(cli, ["chunks", "compact", "rebuild", "--help"])
 
     assert r.exit_code == 0
     assert "--dry-run" in r.output
@@ -39,7 +44,7 @@ def test_rebuild_help_advertises_dry_run_only():
 def test_rebuild_dry_run_does_not_invoke_manager(monkeypatch):
     manager = _FakeSnapshotsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._snapshots.resolve_manager",
+        "firecube.cli.chunks._compact.resolve_manager",
         lambda *args, **kwargs: manager,
     )
 
@@ -47,7 +52,7 @@ def test_rebuild_dry_run_does_not_invoke_manager(monkeypatch):
         cli,
         [
             "chunks",
-            "snapshots",
+            "compact",
             "rebuild",
             "--product-name",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
@@ -63,7 +68,7 @@ def test_rebuild_dry_run_does_not_invoke_manager(monkeypatch):
 def test_rebuild_without_dry_run_does_not_require_confirmation(monkeypatch):
     manager = _FakeSnapshotsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._snapshots.resolve_manager",
+        "firecube.cli.chunks._compact.resolve_manager",
         lambda *args, **kwargs: manager,
     )
 
@@ -71,7 +76,7 @@ def test_rebuild_without_dry_run_does_not_require_confirmation(monkeypatch):
         cli,
         [
             "chunks",
-            "snapshots",
+            "compact",
             "rebuild",
             "--product-name",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
@@ -81,3 +86,30 @@ def test_rebuild_without_dry_run_does_not_require_confirmation(monkeypatch):
     assert r.exit_code == 0, r.output
     assert "yes-i-really-mean-it" not in r.output.lower()
     assert manager.rebuilt == ["TEST_PRODUCT.zarr"]
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("group", ["compact", "snapshots"])
+def test_compact_and_alias_rebuild_and_status_use_compact_dir(group, tmp_path):
+    uri = StorageUri.from_local_path(tmp_path / "P.zarr").to_str()
+    base = ["chunks", group]
+    opts = ["--product-name", uri, "--workspace", str(tmp_path / "ws"), "-f", "json"]
+
+    rebuilt = CliRunner().invoke(cli, [*base, "rebuild", *opts])
+    status = CliRunner().invoke(cli, [*base, "status", *opts])
+
+    assert rebuilt.exit_code == 0 and status.exit_code == 0, (rebuilt.output, status.output)
+    rebuilt_json, status_json = json.loads(rebuilt.output), json.loads(status.output)
+    compact = tmp_path / "P.zarr" / ".firecube" / "compact"
+    assert Path(rebuilt_json["snapshot_path"].removeprefix("file://")).parent == compact
+    assert (compact / f"compact-{rebuilt_json['generation']}.jsonl").is_file()
+    assert (compact / "LATEST.json").is_file()
+    assert status_json["exists"] is True
+    assert status_json["generation"] == rebuilt_json["generation"]
+
+
+@pytest.mark.contract
+def test_snapshots_alias_is_hidden_from_chunks_help():
+    listed = CliRunner().invoke(cli, ["chunks", "--help"]).output
+
+    assert "compact" in listed and "snapshots" not in listed

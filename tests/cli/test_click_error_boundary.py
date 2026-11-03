@@ -88,7 +88,7 @@ U, R = "file:///a b", err.Placeholder('"<reason>"')
 SAMPLES = {
     "abandon_run": ({"product_name": "p", "reason": R}, f"--product-name p --reason {R}"),
     "clear_claim": ({"product_name": "p", "yes_i_really_mean_it": 1}, "--product-name p"),
-    "rebuild_snapshot": ({"product_name": "p"}, "--product-name p"),
+    "rebuild_compact": ({"product_name": "p"}, "--product-name p"),
     "delete_span": ({"product_name": "p", "force": 1, "dry_run": 0}, "--product-name p --force"),
     "preallocate": (
         {"target": U, "product_name": "n", "write_mode": "staged", "dry_run": 0},
@@ -146,7 +146,7 @@ def test_every_part_kind_the_library_renders_has_a_case_here() -> None:
 @pytest.mark.contract
 @pytest.mark.parametrize("args", [(), ("more",)])
 def test_error_exposes_message_parts_and_the_wrap_prints_the_cli_rendering(args) -> None:
-    first, op = (Op("rebuild_snapshot", product_name=n) for n in "qp")
+    first, op = (Op("rebuild_compact", product_name=n) for n in "qp")
     inner = M("{slot_window} {o} {first}", slot_window=(1, 5), o=P("time_dim"), first=first)
     message = M("{group} {i} {run_id} {op}", group="g", i=inner, run_id="r", op=op)
     error = err.ConfigurationError(message, *args)
@@ -159,5 +159,5 @@ def test_error_exposes_message_parts_and_the_wrap_prints_the_cli_rendering(args)
 
     with _CTX, pytest.raises(click.ClickException) as caught:
         wrap_user_facing_errors(boom)()
-    cmd = "firecube chunks snapshots rebuild --product-name"
+    cmd = "firecube chunks compact rebuild --product-name"
     assert caught.value.message == f"g (1, 5) --time-dim {cmd} q r {cmd} p"

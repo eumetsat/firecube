@@ -22,7 +22,7 @@ from tests.helpers.storage import make_test_binding
 
 
 def test_control_plane_schema_version(tmp_path):
-    """Verify that `.firecube/` WAL and snapshots carry schema_version='v2'."""
+    """Verify that `.firecube/` WAL and the compact cache carry schema_version='v2'."""
     workspace = tmp_path / "workspace"
     output_root = tmp_path / "repo"
     output_root.mkdir()
@@ -59,7 +59,7 @@ def test_control_plane_schema_version(tmp_path):
         meta={"env": "test"},
         status="complete",
     )
-    cm.rebuild_snapshot("test-product")
+    cm.rebuild_compact("test-product")
     cm.close()
 
     control_root = output_root / "test-product" / ".firecube"
@@ -79,13 +79,13 @@ def test_control_plane_schema_version(tmp_path):
         assert "event_type" in event
         assert event["record"]["schema_version"] == "v2"
 
-    latest = json.loads((control_root / "LATEST.json").read_text(encoding="utf-8"))
+    latest = json.loads((control_root / "compact" / "LATEST.json").read_text(encoding="utf-8"))
     assert latest["schema_version"] == "v2"
 
-    snapshot_path = control_root / "snapshots" / f"snapshot-{latest['generation']}.jsonl"
+    compact_path = control_root / "compact" / f"compact-{latest['generation']}.jsonl"
     snapshot_lines = [
         json.loads(line)
-        for line in snapshot_path.read_text(encoding="utf-8").splitlines()
+        for line in compact_path.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
     assert snapshot_lines

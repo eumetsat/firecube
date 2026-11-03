@@ -389,13 +389,13 @@ def _span_keyset_with_dupes(spans: list[Any]) -> list[tuple[str, str]]:
     ]
 
 
-def _rebuild_snapshot(tmp_path: Path) -> dict[str, Any]:
+def _rebuild_compact(tmp_path: Path) -> dict[str, Any]:
     rebuilder = ChunkManager(
         binding=make_test_binding(tmp_path, product=_PRODUCT),
         workspace=tmp_path / "workspace-rebuild",
     )
     try:
-        return rebuilder.rebuild_snapshot(_PRODUCT)
+        return rebuilder.rebuild_compact(_PRODUCT)
     finally:
         rebuilder.close()
 
@@ -404,11 +404,11 @@ def _assert_snapshot_rebuild_matches_live(
     tmp_path: Path,
     live_spans: list[Any],
 ) -> None:
-    """rebuild_snapshot, then re-read; the snapshot must mirror the live WAL projection."""
-    rebuild_result = _rebuild_snapshot(tmp_path)
+    """rebuild_compact, then re-read; the snapshot must mirror the live WAL projection."""
+    rebuild_result = _rebuild_compact(tmp_path)
     expected_records = _WRITER_THREAD_COUNT * (1 + _SPANS_PER_WRITER)
     assert rebuild_result.get("records") == expected_records, (
-        f"rebuild_snapshot reported {rebuild_result.get('records')!r} records; "
+        f"rebuild_compact reported {rebuild_result.get('records')!r} records; "
         f"expected {expected_records} "
         f"({_WRITER_THREAD_COUNT} run records + {_WRITER_THREAD_COUNT * _SPANS_PER_WRITER} span records)"
     )

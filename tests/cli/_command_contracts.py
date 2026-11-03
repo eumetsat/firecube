@@ -375,6 +375,22 @@ CLI_COMMAND_CONTRACTS: Mapping[tuple[str, ...], ContractEntry] = {
         smart_default_eligible=False,
         expected_failures=[],
     ),
+    ("chunks", "compact", "rebuild"): ContractEntry(
+        path=("chunks", "compact", "rebuild"),
+        tier="control-plane",
+        uri_roles={},
+        required_storage_flags=[],
+        smart_default_eligible=False,
+        expected_failures=[],
+    ),
+    ("chunks", "compact", "status"): ContractEntry(
+        path=("chunks", "compact", "status"),
+        tier="control-plane",
+        uri_roles={},
+        required_storage_flags=[],
+        smart_default_eligible=False,
+        expected_failures=[],
+    ),
     ("chunks", "snapshots", "rebuild"): ContractEntry(
         path=("chunks", "snapshots", "rebuild"),
         tier="control-plane",

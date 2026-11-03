@@ -95,15 +95,15 @@ def test_recorded_spans_are_projected_by_list_chunks(temp_workspace: Path) -> No
     assert chunks[0].timestamps_written == 3
 
 
-def test_snapshot_rebuild_writes_latest_pointer_readable_by_repo(temp_workspace: Path) -> None:
+def test_compact_rebuild_writes_latest_pointer_readable_by_repo(temp_workspace: Path) -> None:
     repo = _repo(temp_workspace)
     _record_completed_run(repo, product="product", run_id="run-001", span=True)
 
-    rebuild = repo.rebuild_snapshot("product")
+    rebuild = repo.rebuild_compact("product")
     latest = repo._read_latest_pointer("product")
 
     assert rebuild["records"] == 2
     assert latest is not None
     assert latest["generation"] == rebuild["generation"]
     assert latest["product"] == "product"
-    assert repo._read_snapshot_records(latest)
+    assert repo._read_compact_records(latest)

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -222,10 +223,10 @@ def test_missing_snapshot_falls_back_to_wal(temp_workspace):
     key = _record_completed_span(
         repo, product=product, run_id="run-001", group="F024", batch_id="b001"
     )
-    repo.rebuild_snapshot(product)
+    repo.rebuild_compact(product)
 
     control_root = temp_workspace / product / ".firecube"
-    latest = json.loads((control_root / "LATEST.json").read_text(encoding="utf-8"))
+    latest = json.loads((control_root / "compact" / "LATEST.json").read_text(encoding="utf-8"))
     Path(latest["snapshot_path"]).unlink()
 
     active = repo.list_chunks(product=product)
@@ -240,10 +241,10 @@ def test_invalid_snapshot_line_falls_back_to_wal(temp_workspace):
     key = _record_completed_span(
         repo, product=product, run_id="run-001", group="F024", batch_id="b001"
     )
-    repo.rebuild_snapshot(product)
+    repo.rebuild_compact(product)
 
     control_root = temp_workspace / product / ".firecube"
-    latest = json.loads((control_root / "LATEST.json").read_text(encoding="utf-8"))
+    latest = json.loads((control_root / "compact" / "LATEST.json").read_text(encoding="utf-8"))
     snapshot_path = Path(latest["snapshot_path"])
     snapshot_path.write_text("{not-json}\n", encoding="utf-8")
 
@@ -263,10 +264,10 @@ def test_missing_snapshot_falls_back_to_wal_with_parallel_replay(temp_workspace)
     key2 = _record_completed_span(
         repo, product=product, run_id="run-002", group="F048", batch_id="b002"
     )
-    repo.rebuild_snapshot(product)
+    repo.rebuild_compact(product)
 
     control_root = temp_workspace / product / ".firecube"
-    latest = json.loads((control_root / "LATEST.json").read_text(encoding="utf-8"))
+    latest = json.loads((control_root / "compact" / "LATEST.json").read_text(encoding="utf-8"))
     Path(latest["snapshot_path"]).unlink()
 
     active = repo.list_chunks(product=product)
@@ -291,7 +292,7 @@ def test_missing_run_json_is_surfaced_as_orphan_and_blocks_rebuild(temp_workspac
     assert runs[0].error == "missing_run_meta"
 
     with pytest.raises(ManifestError, match="orphaned"):
-        repo.rebuild_snapshot(product)
+        repo.rebuild_compact(product)
 
 
 def test_unreadable_run_json_is_surfaced_as_orphan(temp_workspace):
@@ -314,10 +315,10 @@ def test_non_terminal_runs_block_rebuild_until_abandoned(temp_workspace):
     _record_nonterminal_span(repo, product=product, run_id="run-001", group="F024", batch_id="b001")
 
     with pytest.raises(ManifestError, match="non-terminal runs"):
-        repo.rebuild_snapshot(product)
+        repo.rebuild_compact(product)
 
     repo.abandon_run(product=product, run_id="run-001", reason="stale")
-    result = repo.rebuild_snapshot(product)
+    result = repo.rebuild_compact(product)
 
     assert result["records"] == 0
 
@@ -328,10 +329,10 @@ def test_no_auto_compaction_during_wal_writes(temp_workspace):
     _record_completed_span(repo, product=product, run_id="run-001", group="F024", batch_id="b001")
 
     control_root = temp_workspace / product / ".firecube"
-    assert not (control_root / "LATEST.json").exists()
+    assert not (control_root / "compact" / "LATEST.json").exists()
 
-    repo.rebuild_snapshot(product)
-    assert (control_root / "LATEST.json").exists()
+    repo.rebuild_compact(product)
+    assert (control_root / "compact" / "LATEST.json").exists()
 
 
 def test_parallel_replay_propagates_corrupt_run_error(temp_workspace):
@@ -437,10 +438,10 @@ def test_snapshot_cutoff_tie_does_not_miss_run(temp_workspace):
     repo = ManifestRepository(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
 
     _record_completed_span(repo, product=product, run_id="run-001", group="F024", batch_id="b001")
-    repo.rebuild_snapshot(product)
+    repo.rebuild_compact(product)
 
     control_root = temp_workspace / product / ".firecube"
-    latest = json.loads((control_root / "LATEST.json").read_text(encoding="utf-8"))
+    latest = json.loads((control_root / "compact" / "LATEST.json").read_text(encoding="utf-8"))
     cutoff = latest["completed_before"]
 
     _record_completed_span(repo, product=product, run_id="run-002", group="F048", batch_id="b002")
@@ -472,3 +473,64 @@ def test_custom_stale_threshold_persisted_to_run_json(temp_workspace):
     assert run_meta["run_stale_threshold_s"] == custom_threshold, (
         f"Expected {custom_threshold}, got {run_meta['run_stale_threshold_s']}"
     )
+
+
+@pytest.mark.contract
+def test_v018_cache_layout_is_ignored_and_wal_replayed(temp_workspace):
+    product = "product"
+    repo = ManifestRepository(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
+    key = _record_completed_span(
+        repo, product=product, run_id="run-001", group="F024", batch_id="b001"
+    )
+    repo.rebuild_compact(product)
+    control_root = temp_workspace / product / ".firecube"
+    latest = json.loads((control_root / "compact" / "LATEST.json").read_text(encoding="utf-8"))
+    (control_root / "snapshots").mkdir()
+    old_cache = control_root / "snapshots" / f"snapshot-{latest['generation']}.jsonl"
+    old_meta = old_cache.with_suffix(".meta.json")
+    ghost = {"key": "span_ghost", "type": "span", "size": 0, "timestamp": 1.0, "status": "active"}
+    old_cache.write_text(
+        Path(latest["snapshot_path"]).read_text(encoding="utf-8") + json.dumps(ghost) + "\n",
+        encoding="utf-8",
+    )
+    old_meta.write_text(Path(latest["snapshot_meta_path"]).read_text(encoding="utf-8"))
+    latest.update(snapshot_path=str(old_cache), snapshot_meta_path=str(old_meta))
+    (control_root / "LATEST.json").write_text(json.dumps(latest), encoding="utf-8")
+    shutil.rmtree(control_root / "compact")
+
+    assert [c.key for c in repo.list_chunks(product=product)] == [key]
+
+
+@pytest.mark.contract
+def test_rebuild_compact_writes_files_under_compact_dir_and_reads_them(temp_workspace):
+    product = "product"
+    repo = ManifestRepository(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
+    key = _record_completed_span(
+        repo, product=product, run_id="run-001", group="F024", batch_id="b001"
+    )
+
+    generation = repo.rebuild_compact(product)["generation"]
+
+    compact = temp_workspace / product / ".firecube" / "compact"
+    assert {p.name for p in compact.iterdir() if p.name != "compact.lock"} == {
+        f"compact-{generation}.jsonl",
+        f"compact-{generation}.meta.json",
+        "LATEST.json",
+    }
+    cache = compact / f"compact-{generation}.jsonl"
+    span = next(json.loads(x) for x in cache.read_text().splitlines() if '"span"' in x)
+    cache.write_text(cache.read_text() + json.dumps({**span, "key": "span_cache_only"}) + "\n")
+
+    assert sorted(c.key for c in repo.list_chunks(product=product)) == sorted(
+        [key, "span_cache_only"]
+    )
+
+
+@pytest.mark.contract
+def test_new_control_root_creates_no_cache_directory(temp_workspace):
+    repo = ManifestRepository(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
+    _record_completed_span(repo, product="product", run_id="run-001", group="F", batch_id="b")
+
+    control_root = temp_workspace / "product" / ".firecube"
+    assert not (control_root / "snapshots").exists()
+    assert not (control_root / "compact").exists()

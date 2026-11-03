@@ -24,7 +24,7 @@ expose ``--target``:
 
 - ``chunks list``
 - ``chunks delete``
-- ``chunks snapshots status``
+- ``chunks compact status``
 - ``chunks claims list``
 
 Each test configures storage via a ``[storage]`` section in a temporary
@@ -212,8 +212,8 @@ def test_chunks_delete_dry_run_fallback(monkeypatch: pytest.MonkeyPatch, tmp_pat
     )
 
 
-def test_chunks_snapshots_status_fallback(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """``chunks snapshots status`` reports against the storage-config target."""
+def test_chunks_compact_status_fallback(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """``chunks compact status`` reports against the storage-config target."""
     product = "my_product"
     workspace = tmp_path / "ws"
     workspace.mkdir()
@@ -228,7 +228,7 @@ def test_chunks_snapshots_status_fallback(monkeypatch: pytest.MonkeyPatch, tmp_p
             "chunks",
             "--workspace",
             str(workspace),
-            "snapshots",
+            "compact",
             "status",
             "--product-name",
             product,

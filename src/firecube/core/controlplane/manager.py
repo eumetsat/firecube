@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from firecube.core.config import StorageConfig
+from firecube.core.controlplane._compact import _stored_path_to_uri
 from firecube.core.controlplane._paths import run_dir_for
 from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.deletion import DeletionEngine
@@ -307,7 +308,7 @@ class ChunkManager:
         return self.repo.get_control_root_uri(product)
 
     def get_latest_pointer(self, product: str) -> str:
-        """Return the resolved LATEST.json pointer URI."""
+        """Return the resolved compact/LATEST.json pointer URI."""
         return self.repo.get_latest_pointer_uri(product)
 
     def close(self) -> None:
@@ -1098,11 +1099,12 @@ class ChunkManager:
             time_dim_name=time_dim_name,
         )
 
-    def rebuild_snapshot(self, product: str) -> dict[str, Any]:
-        """Compact completed-run WAL events into a snapshot for faster reads."""
-        return self.repo.rebuild_snapshot(product)
+    def rebuild_compact(self, product: str) -> dict[str, Any]:
+        """Compact completed-run WAL events into the compact cache for faster reads."""
+        return self.repo.rebuild_compact(product)
 
-    def snapshot_status(self, product: str) -> dict[str, Any]:
+    def compact_status(self, product: str) -> dict[str, Any]:
+        """Report the age, generation and record count of the product's compact cache."""
         self.repo._ensure_bound()
         latest = self.repo._read_latest_pointer(product)
         if latest is None:
@@ -1114,16 +1116,20 @@ class ChunkManager:
         if cutoff > 0:
             completed_before_iso = datetime.fromtimestamp(cutoff, tz=UTC).isoformat()
 
-        snapshot_meta_path = str(latest.get("snapshot_meta_path") or "")
+        compact_meta_path = str(latest.get("snapshot_meta_path") or "")
         records = 0
         repo_fs = self.repo._fs
-        if snapshot_meta_path and repo_fs is not None:
+        if compact_meta_path and repo_fs is not None:
             try:
-                with repo_fs.open(snapshot_meta_path, "r") as fh:
+                meta_uri = _stored_path_to_uri(compact_meta_path)
+                with repo_fs.open(meta_uri, "r") as fh:
                     meta = json.load(fh)
                 records = int(meta.get("records", meta.get("record_count", 0)))
-            except Exception:
-                records = 0
+            except (OSError, ValueError, TypeError, AttributeError, OverflowError) as exc:
+                raise ManifestError(
+                    f"The compact cache metadata file {compact_meta_path} is missing or "
+                    f"unreadable: {exc}"
+                ) from exc
 
         return {
             "exists": True,

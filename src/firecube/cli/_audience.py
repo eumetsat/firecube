@@ -48,6 +48,8 @@ OPERATOR_FACING_PATHS: frozenset[tuple[str, ...]] = frozenset(
         ("chunks", "claims", "clear"),
         ("chunks", "runs", "list"),
         ("chunks", "runs", "abandon"),
+        ("chunks", "compact", "rebuild"),
+        ("chunks", "compact", "status"),
         ("chunks", "snapshots", "rebuild"),
         ("chunks", "snapshots", "status"),
         ("archive", "create"),
@@ -79,6 +81,7 @@ TIER_2_PATHS: frozenset[tuple[str, ...]] = frozenset(
 
 TIER_3_PATHS: frozenset[tuple[str, ...]] = frozenset(
     {
+        ("chunks", "compact", "rebuild"),
         ("chunks", "snapshots", "rebuild"),
         ("zarr", "preallocate"),
     }

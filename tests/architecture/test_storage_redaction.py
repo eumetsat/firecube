@@ -18,7 +18,7 @@ These tests assert that sentinel credentials placed in ``StorageBinding`` never
 appear in serialized artifacts emitted by:
   1. ``PipelineExecutor.complete_output`` (the ``IngestManifest`` dict)
   2. WAL events under ``.firecube/runs/<run_id>/events-*.jsonl``
-  3. Snapshot files under ``.firecube/snapshots/`` (after ``rebuild_snapshot``)
+  3. Compact cache files under ``.firecube/compact/`` (after ``rebuild_compact``)
   4. Telemetry ``emit()`` calls captured during a ``complete_output`` cycle
 
 After flat-uri T17/T19, credentials live on ``StorageBinding.driver.credentials``
@@ -200,7 +200,7 @@ def test_credentials_do_not_leak_into_snapshot(tmp_path: Path) -> None:
     """T4b/3: Snapshot files projected from WAL must not persist credentials.
 
     Builds a complete run lifecycle then explicitly compacts the WAL via
-    ``rebuild_snapshot``. Scans every byte under ``.firecube/snapshots/``
+    ``rebuild_compact``. Scans every byte under ``.firecube/compact/``
     plus the ``LATEST.json`` pointer for sentinel strings.
     """
     product = "snapshot_redaction_product.zarr"
@@ -227,18 +227,18 @@ def test_credentials_do_not_leak_into_snapshot(tmp_path: Path) -> None:
             meta={"plugin": "test"},
             status="complete",
         )
-        rebuild = manager.rebuild_snapshot(product)
+        rebuild = manager.rebuild_compact(product)
     finally:
         manager.close()
 
-    assert rebuild["records"] >= 1, "rebuild_snapshot should compact at least the run record"
+    assert rebuild["records"] >= 1, "rebuild_compact should compact at least the run record"
 
     control_root = tmp_path / product / ".firecube"
-    snapshots_root = control_root / "snapshots"
-    assert snapshots_root.exists(), f"expected snapshots dir at {snapshots_root}"
+    compact_root = control_root / "compact"
+    assert compact_root.exists(), f"expected compact dir at {compact_root}"
 
     scanned_any = False
-    for path in snapshots_root.rglob("*"):
+    for path in compact_root.rglob("*"):
         if not path.is_file():
             continue
         scanned_any = True
@@ -249,10 +249,10 @@ def test_credentials_do_not_leak_into_snapshot(tmp_path: Path) -> None:
         assert SENTINEL_SECRET_KEY.encode() not in content, (
             f"snapshot file leaked secret_key: {path}"
         )
-    assert scanned_any, f"expected at least one snapshot file under {snapshots_root}"
+    assert scanned_any, f"expected at least one compact file under {compact_root}"
 
-    latest_pointer = control_root / "LATEST.json"
-    assert latest_pointer.exists(), "rebuild_snapshot should write LATEST.json pointer"
+    latest_pointer = control_root / "compact" / "LATEST.json"
+    assert latest_pointer.exists(), "rebuild_compact should write LATEST.json pointer"
     pointer_text = latest_pointer.read_text(encoding="utf-8")
     assert SENTINEL_ACCESS_KEY not in pointer_text, "LATEST.json leaked access_key"
     assert SENTINEL_SECRET_KEY not in pointer_text, "LATEST.json leaked secret_key"

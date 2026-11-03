@@ -33,7 +33,7 @@ OPERATION_FUNCTIONS: Mapping[str, str] = MappingProxyType(
     {
         "abandon_run": "firecube.core.controlplane.manager.ChunkManager.abandon_run",
         "clear_claim": "firecube.core.controlplane.manager.ChunkManager.clear_claim",
-        "rebuild_snapshot": "firecube.core.controlplane.manager.ChunkManager.rebuild_snapshot",
+        "rebuild_compact": "firecube.core.controlplane.manager.ChunkManager.rebuild_compact",
         "delete_span": "firecube.core.controlplane.manager.ChunkManager.delete_spans",
         "preallocate": "firecube.ingestor.runtime.preallocate.preallocate_product",
         "rebuild_index": "firecube.ingestor.runtime.index_record.rebuild_index_record",
@@ -561,7 +561,7 @@ class ResolvedIndexAttrsConflictError(ManifestError):
 
 
 class ControlPlaneCorruptionError(ManifestError):
-    """The `.firecube/` WAL or snapshot contents are internally inconsistent."""
+    """The `.firecube/` WAL or compact-cache contents are internally inconsistent."""
 
 
 class ClaimConflictError(FirecubeError):
