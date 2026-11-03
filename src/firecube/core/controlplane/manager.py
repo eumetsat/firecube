@@ -27,7 +27,7 @@ import time
 from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane._compact import _stored_path_to_uri
@@ -78,6 +78,7 @@ from firecube.core.errors import (
     SlotIndexUnmanagedStoreError,
 )
 from firecube.core.filesystem import StorageFilesystem
+from firecube.core.filesystem.protocol import StorageFilesystemFull
 from firecube.core.slot_index import (
     SLOT_INDEX_MODEL_ATTR,
     SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
@@ -93,6 +94,17 @@ from firecube.core.zarr.guard.metadata_authority import (
     hold_authority,
     set_attributes,
 )
+
+if TYPE_CHECKING:
+    # Methods import the snapshot module: it imports core.zarr.metadata_documents, which imports
+    # this package, so a module-level import would be circular.
+    from firecube.core.controlplane.metadata_snapshots import (
+        Snapshot,
+        SnapshotConsistency,
+        SnapshotDiff,
+        SnapshotRecord,
+    )
+    from firecube.core.storage.uri import StorageUri
 
 log = logging.getLogger(__name__)
 
@@ -2236,6 +2248,116 @@ class ChunkManager:
             attr_name=SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
             label="slot-index",
         )
+
+    def _metadata_store(self, product: str) -> tuple[StorageFilesystemFull, StorageUri]:
+        """Return the driver and the root of the product, where `.firecube/metadata/` lives."""
+        fs, product_root = self.repo._get_fs(self.repo.get_product_root_uri(product))
+        return cast(StorageFilesystemFull, fs), product_root
+
+    def take_snapshot(
+        self,
+        product: str,
+        *,
+        run_id: str | None,
+        trigger: str,
+        consistency: SnapshotConsistency,
+    ) -> SnapshotRecord:
+        """Capture every metadata document of the product and publish the record as the latest.
+
+        An `observation` takes `run_id=None`. A `coherent` snapshot reads the exclusive
+        maintenance claim before and after the capture; `run_id` must own it.
+
+        Raises:
+            ValueError: `run_id` does not fit `consistency`, or `trigger` is empty.
+            ManifestError: A coherent snapshot's claim is absent, unreadable or owned by
+                another run. Nothing is written.
+            ControlPlaneCorruptionError: `refs/latest.json` does not parse. Nothing is written.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        def verify_holder() -> None:
+            refusal = exclusive_maintenance_holder_refusal(
+                repo=self.repo,
+                product=product,
+                operation="coherent metadata snapshot",
+                holder_run_id=str(run_id),
+            )
+            if refusal is not None:
+                raise ManifestError(refusal)
+
+        fs, product_root = self._metadata_store(product)
+        return metadata_snapshots.take_snapshot(
+            fs,
+            product_root,
+            run_id=run_id,
+            trigger=trigger,
+            consistency=consistency,
+            verify_holder=verify_holder,
+        )
+
+    def list_snapshots(self, product: str) -> list[SnapshotRecord]:
+        """Return every metadata snapshot record of the product, oldest first."""
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        return metadata_snapshots.list_records(fs, metadata_snapshots.metadata_root(product_root))
+
+    def read_snapshot(self, product: str, snapshot_id: str) -> Snapshot:
+        """Return a snapshot record and its manifest; `latest` names the newest.
+
+        Raises:
+            ManifestError: The id is malformed or names no snapshot.
+            ControlPlaneCorruptionError: A stored file does not match its id or does not parse.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        root = metadata_snapshots.metadata_root(product_root)
+        return metadata_snapshots.read_snapshot(fs, root, snapshot_id)
+
+    def diff_snapshots(self, product: str, before: str, after: str) -> SnapshotDiff:
+        """Diff two snapshots of the product by path and, for changed nodes, by parsed facets.
+
+        Each id is a record id or `latest`.
+
+        Raises:
+            ManifestError: An id is malformed or names no snapshot.
+            ControlPlaneCorruptionError: A stored file does not match its id or does not parse.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        root = metadata_snapshots.metadata_root(product_root)
+        return metadata_snapshots.diff_snapshots(
+            metadata_snapshots.read_snapshot(fs, root, before),
+            metadata_snapshots.read_snapshot(fs, root, after),
+            lambda blob_id: metadata_snapshots.read_blob(fs, root, blob_id),
+        )
+
+    def write_metadata_blob(self, product: str, data: bytes) -> str:
+        """Store `data` under `.firecube/metadata/blobs/` unless it exists; return its sha256 hex.
+
+        An existing blob is never rewritten.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        return metadata_snapshots.write_blob(
+            fs, metadata_snapshots.metadata_root(product_root), data
+        )
+
+    def read_metadata_blob(self, product: str, blob_id: str) -> bytes:
+        """Return the bytes of the blob whose sha256 hex is `blob_id`.
+
+        Raises:
+            ManifestError: `blob_id` is not 64 lowercase hex digits.
+            ControlPlaneCorruptionError: The blob is missing or its bytes do not match the id.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        root = metadata_snapshots.metadata_root(product_root)
+        return metadata_snapshots.read_blob(fs, root, blob_id)
 
 
 def _abandon_operation(product_uri: str, run_id: str) -> Operation:

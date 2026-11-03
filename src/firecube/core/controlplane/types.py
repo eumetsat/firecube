@@ -38,6 +38,7 @@ LATEST_POINTER = "LATEST.json"
 COMPACT_DIRNAME = "compact"
 RUNS_DIRNAME = "runs"
 CLAIMS_DIRNAME = "claims"
+METADATA_DIRNAME = "metadata"
 SCHEMA_FILENAME = "schema.json"
 DEFAULT_RUN_STALE_THRESHOLD_S = 3600
 EVENT_RUN_STARTED_WITH_REPLACEMENT = "run_started_with_replacement"
@@ -104,6 +105,10 @@ def canonical_index_bytes(index: dict[str, Any]) -> bytes:
     return json.dumps(index, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
         "utf-8"
     )
+
+
+canonical_json_bytes = canonical_index_bytes
+"""Return the canonical UTF-8 JSON encoding of any JSON object: sorted keys, no whitespace."""
 
 
 SourceRefKind = Literal["path", "uri", "identifier"]
