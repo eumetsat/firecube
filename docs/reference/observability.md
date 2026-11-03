@@ -120,7 +120,7 @@ storage information is available.
 | Field | Meaning |
 |---|---|
 | `control_root` | Product-local `.firecube/` directory URI used by ChunkManager |
-| `latest_pointer` | Product-local `LATEST.json` pointer URI |
+| `latest_pointer` | Product-local `.firecube/compact/LATEST.json` pointer URI |
 | `path` | Final output path |
 | `bytes` | Bytes written |
 | `files` | Files written |

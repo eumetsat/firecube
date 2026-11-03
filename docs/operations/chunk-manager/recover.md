@@ -3,26 +3,25 @@
 Use this page when ingestion failed, a pod was killed, or a writer left a
 blocking claim behind.
 
-## Set The Product
+## Set The Product Name
 
-Set the full product URI and the logical product name used during ingestion:
+Set the logical product name used during ingestion:
 
 ```bash
-PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
 PRODUCT_NAME="MY_PRODUCT"
 ```
+
+## Inspect Runs
 
 Pass the full URI through `--product-name` for every ChunkManager command on
 this page. This binds the command directly to the product without a storage
 configuration.
 
-## Inspect Runs
-
 Start by listing runs:
 
 ```bash
 firecube chunks runs list \
-  --product-name "$PRODUCT_URI"
+  --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 A stuck run usually appears as `started`:
@@ -34,6 +33,7 @@ docs-started-run                     started    active   1     1
 ```
 
 Confirm the original process is no longer active before abandoning the run.
+Abandon a run only after its process has stopped. An abandoned run whose process still writes is not excluded by the maintenance claim.
 
 If the run is already `failed`, go to
 [Recover From A Failed Batch](#recover-from-a-failed-batch).
@@ -44,7 +44,7 @@ Preview the operation:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-started-run \
   --reason "process is no longer active" \
   --dry-run
@@ -60,7 +60,7 @@ Abandon the run in a non-interactive shell:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-started-run \
   --reason "process is no longer active" \
   --yes-i-really-mean-it
@@ -96,7 +96,7 @@ Verify:
 
 ```bash
 firecube chunks runs list \
-  --product-name "$PRODUCT_URI"
+  --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
@@ -131,7 +131,7 @@ Released claim MY_PRODUCT:zarr_region:F002
 List claims before clearing anything:
 
 ```bash
-firecube chunks claims list --product-name "$PRODUCT_URI"
+firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output when a claim exists:
@@ -155,7 +155,7 @@ Clear a stale claim in non-interactive context:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --domain MY_PRODUCT:zarr_region:F001 \
   --yes-i-really-mean-it
 ```
@@ -165,7 +165,7 @@ cleared even though it does not look stale:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --domain MY_PRODUCT:zarr_region:F001 \
   --force \
   --yes-i-really-mean-it
@@ -180,7 +180,7 @@ Cleared claim for MY_PRODUCT:zarr_region:F001
 Verify:
 
 ```bash
-firecube chunks claims list --product-name "$PRODUCT_URI"
+firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
@@ -198,7 +198,7 @@ already succeeded:
 ```bash
 firecube ingest <plugin> \
   --input-data file:///data/source \
-  --target "$PRODUCT_URI" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
@@ -230,7 +230,7 @@ After the retry, verify the new run:
 
 ```bash
 firecube chunks runs list \
-  --product-name "$PRODUCT_URI"
+  --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 The new run should show `complete`. The earlier run remains `failed` in the
@@ -240,7 +240,7 @@ Validate each affected Zarr group, replacing `data` with its group path:
 
 ```bash
 firecube zarr validate \
-  --product "$PRODUCT_URI" \
+  --product "file:///data/products/MY_PRODUCT.zarr" \
   --group data
 ```
 
@@ -259,7 +259,7 @@ If you see the note, pass the time dimension of the plugin:
 
 ```bash
 firecube zarr validate \
-  --product "$PRODUCT_URI" \
+  --product "file:///data/products/MY_PRODUCT.zarr" \
   --group data \
   --time-dim time
 ```
@@ -277,6 +277,7 @@ command then uses the marker of its time coordinate.
 | `Left claim` line after an abandon | More than one run can own the claim, or another writer replaced it. | Inspect the current owner with `chunks claims list`. Verify that writer is stopped, then use `chunks claims clear`. |
 | Claim remains after crash | No abandon covers the claim. | Verify no writer is active, then use `chunks claims clear`. |
 | Claim does not look stale | The heartbeat timestamp is still recent. | Use `--force` only if the writer is gone. |
+| `ProductUnderMaintenanceError`: `Product MY_PRODUCT.zarr is under exclusive maintenance by <owner> (claim MY_PRODUCT.zarr:maintenance:exclusive), so <run> is refused. Retry when that maintenance has finished.` | A maintenance run holds the exclusive claim of the product. At run start, Firecube refuses the new run and records it as failed. An index rebuild is refused before any run exists. | Wait for the maintenance run to finish. Then start the run again. If the message says the claim is stale, verify that the owner process is gone. Abandon a run only after its process has stopped. Then follow [Abandon A Stuck Run](#abandon-a-stuck-run) with the owner as `--run-id`. Or follow [Clear A Blocking Claim](#clear-a-blocking-claim) with `--domain MY_PRODUCT.zarr:maintenance:exclusive`. |
 | Run ends with `status=failed` and "later batch(es) were not attempted" | Append ingestion stopped before processing all inputs. | Fix the reported error, then [recover the failed batch](#recover-from-a-failed-batch). |
 | Rerun refused: "spans from a failed run exist" | The retry needs an explicit choice about keeping earlier work. | Follow [Recover From A Failed Batch](#recover-from-a-failed-batch) for the original write mode. |
 | Append refuses an insertion | An incoming timestamp is absent from the target but earlier than its latest timestamp. | Rebuild a new target from all required inputs in chronological order. Resume, force-reingest, and span deletion cannot enable insertion into the existing time coordinate. |

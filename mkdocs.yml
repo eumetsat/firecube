@@ -190,7 +190,7 @@ nav:
       - Recover Runs And Claims: operations/chunk-manager/recover.md
       - Post-Crash Recovery: operations/chunk-manager/post-crash-recovery.md
       - Delete And Reingest: operations/chunk-manager/delete.md
-      - Snapshots: operations/chunk-manager/snapshots.md
+      - Compact Cache: operations/chunk-manager/compact.md
     - Archive:
       - Overview: operations/archive/index.md
       - Create: operations/archive/create.md

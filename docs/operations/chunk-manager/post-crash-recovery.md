@@ -17,7 +17,6 @@ runs and clearing claims one at a time.
     leaves.
 
 ```bash
-PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
 PRODUCT_NAME="MY_PRODUCT"
 ```
 
@@ -38,7 +37,7 @@ List runs that are still in a non-terminal state (`started`):
 
 ```bash
 firecube chunks runs list \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --status started
 ```
 
@@ -54,7 +53,7 @@ run-20260710-def456                  started    stale    1     1
 List all active write claims for the product:
 
 ```bash
-firecube chunks claims list --product-name "$PRODUCT_URI"
+firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output when claims are blocking:
@@ -77,7 +76,7 @@ it would release:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --all-stale \
   --reason "cluster-crash" \
   --dry-run
@@ -114,7 +113,7 @@ Run a dry-run to see which claims `--all-stale` would clear:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --all-stale \
   --dry-run
 ```
@@ -146,7 +145,7 @@ remaining stale claims.
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --all-stale \
   --reason "cluster-crash" \
   --yes-i-really-mean-it
@@ -171,7 +170,7 @@ Clear the remaining stale claims:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --all-stale \
   --yes-i-really-mean-it
 ```
@@ -189,9 +188,9 @@ Verify the product is clean:
 
 ```bash
 firecube chunks runs list \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --status started
-firecube chunks claims list --product-name "$PRODUCT_URI"
+firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
@@ -201,31 +200,31 @@ No runs found for MY_PRODUCT.zarr.
 No claims found.
 ```
 
-## Step 5: Rebuild the Snapshot
+## Step 5: Rebuild the Compact Cache
 
-After a bulk sweep, rebuild the chunk snapshot to restore fast query
+After a bulk sweep, rebuild the compact cache to restore fast query
 performance:
 
 ```bash
-firecube chunks snapshots rebuild --product-name "$PRODUCT_URI"
+firecube chunks compact rebuild --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
 
 ```text
-Rebuilt snapshot for MY_PRODUCT.zarr: generation=<n> records=<n>
+Rebuilt compact cache for MY_PRODUCT.zarr: generation=<n> records=<n>
 ```
 
 Preview first if you want to confirm what the rebuild will touch:
 
 ```bash
-firecube chunks snapshots rebuild --product-name "$PRODUCT_URI" --dry-run
+firecube chunks compact rebuild --product-name "file:///data/products/MY_PRODUCT.zarr" --dry-run
 ```
 
 Expected output:
 
 ```text
-[dry-run] Would rebuild snapshot for product 'MY_PRODUCT.zarr'
+[dry-run] Would rebuild compact cache for product 'MY_PRODUCT.zarr'
 ```
 
 ## Claims the Sweep Leaves
@@ -257,7 +256,7 @@ Release every claim of one run, fresh or stale:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --run-id <run id> \
   --reason "<text>" \
   --yes-i-really-mean-it
@@ -267,7 +266,7 @@ Release one claim:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --domain <domain> \
   --force \
   --yes-i-really-mean-it
@@ -292,7 +291,7 @@ firecube chunks claims clear \
 | Dry-run shows fewer runs than `runs list --status started` | Some runs are not yet stale. | Wait, or use `--run-id` per run. |
 | `claims list` still shows entries after the sweep | A new writer started between steps. | Stop the writer and repeat the sweep. |
 | `runs abandon --all-stale` exits 1 with "could not be listed" | Firecube could not list the claims, so it abandoned no run. | Fix the listing error and run the sweep again. |
-| Snapshot rebuild fails | The event log is corrupt or missing. | See [Snapshots](snapshots.md). |
+| Compact cache rebuild fails | The event log is corrupt or missing. | See [Compact Cache](compact.md). |
 
 ## Resume Ingestion
 
@@ -301,7 +300,7 @@ Once the product is clean, rerun ingestion with resume enabled:
 ```bash
 firecube ingest <plugin> \
   --input-data file:///data/source \
-  --target "$PRODUCT_URI" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
@@ -314,4 +313,4 @@ firecube ingest <plugin> \
 
 - **[Recover Runs And Claims](recover.md)** — single-run and single-claim recovery
 - **[Inspect ChunkManager State](inspect.md)** — confirm state before and after recovery
-- **[Snapshots](snapshots.md)** — rebuild snapshots
+- **[Compact Cache](compact.md)** — rebuild the compact cache

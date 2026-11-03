@@ -22,11 +22,11 @@ the readable data store and ChunkManager state.
 Zarr arrays, Parquet files, or a Tensogram `.tgm` file.
 
 **ChunkManager** — Firecube's product lifecycle surface. It records runs, spans,
-write claims, snapshots, and cleanup state so products can be inspected,
+write claims, the compact cache, and cleanup state so products can be inspected,
 resumed, recovered, and cleaned up.
 
 **ChunkManager record** — A logical Firecube record about run, span, claim, or
-snapshot state. It is not a physical Zarr array chunk.
+compact cache state. It is not a physical Zarr array chunk.
 
 **Zarr chunk** — A physical storage chunk inside a Zarr array. Zarr chunks are
 controlled by output-format tuning options and affect read/write performance.
@@ -36,8 +36,8 @@ the same product area.
 
 **Span** — A record of what one run wrote, usually with group or time coverage.
 
-**Snapshot** — A derived ChunkManager view used by inspection and cleanup
-commands.
+**Compact cache** — A derived ChunkManager view used by inspection and cleanup
+commands. It lives in `.firecube/compact/`.
 
 **Storage driver** — The I/O implementation selected for a run, such as
 `fsspec` or `obstore`.

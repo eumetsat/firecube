@@ -6,7 +6,7 @@ be used for fast inspection and cleanup.
 
 Use this page for the concept. Use
 [ChunkManager Operations](../operations/chunk-manager/index.md) when you need to
-inspect, recover, delete, rebuild snapshots, or migrate a product.
+inspect, recover, delete, rebuild the compact cache, or migrate a product.
 
 !!! note
     In `firecube chunks`, "chunk" means a ChunkManager record about Firecube
@@ -25,8 +25,8 @@ inspect, recover, delete, rebuild snapshots, or migrate a product.
   coverage information.
 - **Claims** coordinate write domains so conflicting work does not write the
   same product area at the same time.
-- **Snapshots** are derived read models used by inspection and cleanup commands.
-  They can be rebuilt from the authoritative run history.
+- **The compact cache** is a derived read model used by inspection and cleanup
+  commands. Firecube can rebuild it from the authoritative run history.
 
 ## Why It Matters
 
@@ -48,19 +48,19 @@ firecube chunks list \
 Then use the operation page that matches what you found:
 
 - **[Inspect](../operations/chunk-manager/inspect.md)** for detailed lists of
-  records, runs, claims, and snapshots.
+  records, runs, claims, and the compact cache.
 - **[Recover Runs And Claims](../operations/chunk-manager/recover.md)** when a
   run is stuck or a claim is stale.
 - **[Delete And Reingest](../operations/chunk-manager/delete.md)** when records
   or storage data need cleanup.
-- **[Snapshots](../operations/chunk-manager/snapshots.md)**
-  when snapshots are missing, stale, or need rebuilding.
+- **[Compact Cache](../operations/chunk-manager/compact.md)**
+  when the compact cache is missing, stale, or needs rebuilding.
 
 Do not edit ChunkManager records by hand.
 
 ## Next Steps
 
-- **[ChunkManager Operations](../operations/chunk-manager/index.md)** — inspect, recover, delete, rebuild snapshots, or migrate a product
+- **[ChunkManager Operations](../operations/chunk-manager/index.md)** — inspect, recover, delete, rebuild the compact cache, or migrate a product
 - **[Product Storage](storage.md)** — understand targets, drivers, and write modes
 - **[Storage & ChunkManager](chunkmanager.md)** — return to the product storage model
-- **[Glossary](glossary.md)** — check related terms such as run, span, claim, and snapshot
+- **[Glossary](glossary.md)** — check related terms such as run, span, claim, and compact cache

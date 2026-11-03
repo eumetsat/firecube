@@ -7,6 +7,68 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Run records name the producer of the run in `meta.producer`. The record holds
+  the plugin name, distribution and version, the Firecube version and a digest
+  of the run configuration. The `source.kind` field is `vcs`, `editable`,
+  `wheel` or `unknown`. A `null` value means the value is unknown.
+  - `firecube ingest` writes it to the `run_started` and `run_failed` records.
+  - `firecube zarr preallocate` writes it to the `run_started`,
+    `run_completed` and `run_failed` records.
+  - The `run_completed` record of an ingest and the span records do not carry it.
+- A product can hold an exclusive maintenance claim, with the domain
+  `<product>:maintenance:exclusive`. The call
+  `ChunkManager.acquire_exclusive_maintenance` takes it. It refuses while
+  another claim or another run that is not terminal exists on the product.
+- A recorded writer now refuses to run while another owner holds the exclusive
+  maintenance claim.
+  - `firecube ingest` and `firecube zarr preallocate` (also without a
+    coordinate) raise `ProductUnderMaintenanceError`.
+  - `firecube zarr index rebuild` prints the rendered refusal and exits 1.
+  - `firecube archive restore` and `firecube archive create` raise
+    `ArchiveClaimError`. `firecube chunks delete` raises `ManifestError`.
+  - Firecube records one `run_failed` for a refused ingest, preallocate or
+    archive restore.
+  - A refused archive create, delete or index rebuild leaves no run record.
+  - `firecube archive create` and `firecube chunks delete` check the claim
+    again after they acquire their own claim.
+  - If the claim is stale, clear it with `firecube chunks claims clear`, or
+    abandon its run with `firecube chunks runs abandon`.
+  - A `firecube zarr preallocate` without a coordinate records the start of
+    its run before its first write. It checks the exclusive claim at that
+    point.
+
+### Changed
+
+- `firecube chunks snapshots` is now `firecube chunks compact`. The commands
+  are `firecube chunks compact rebuild` and `firecube chunks compact status`.
+  The old name stays as a hidden alias for one release. Use the new name in
+  scripts.
+- The cache of chunk records now lives in `.firecube/compact/`. The pointer
+  file is `.firecube/compact/LATEST.json`. The manifest value `latest_pointer`
+  and `describe_control_plane()["latest_pointer"]` name that file.
+- After the upgrade, a read replays the whole WAL until you run
+  `firecube chunks compact rebuild`.
+- Firecube ignores the old `.firecube/snapshots/` directory and
+  `.firecube/LATEST.json`. Delete these files if you no longer need them.
+- The metric names and the keys of the JSON output do not change.
+
+### Fixed
+
+- `firecube chunks compact status` now reports the number of records in the
+  cache. Before, it always reported 0. The hidden alias
+  `firecube chunks snapshots status` had the same fault in 0.1.8.
+- If the pointer names a metadata file that is missing or damaged,
+  `firecube chunks compact status` now exits 1 and names the file. Run
+  `firecube chunks compact rebuild` to write the cache again.
+- A deletion that spans several products left the claims of the earlier
+  products in place when the claim of a later product conflicted. It now
+  releases every claim it acquired before it refuses.
+- The heartbeat of a deletion claim could write the claim file again after the
+  cleanup deleted it. The cleanup now releases the claim and stops the
+  heartbeat.
+
 ## [0.1.8] - 2026-11-02
 
 ### Added

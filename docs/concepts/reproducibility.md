@@ -16,7 +16,7 @@ completion order.
 Verify it between any two stores of the same product:
 
 ```bash
-firecube zarr compare "$PRODUCT_URI" "$RERUN_URI" \
+firecube zarr compare "file:///data/products/MY_PRODUCT.zarr" "$RERUN_URI" \
   --storage-type local \
   --storage-driver fsspec
 echo "compare exit: $?"

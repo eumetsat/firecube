@@ -97,4 +97,4 @@ when you want later inspection, resume, recovery, or cleanup to work.
 - **[Run Ingestion](../quickstart/ingestion.md)**: run one local ingestion.
 - **[Configure S3 Access](../operations/s3-access.md)**: set credentials and run against S3.
 - **[Storage Drivers](../reference/storage-drivers.md)**: inspect driver values and capabilities.
-- **[ChunkManager Operations](../operations/chunk-manager/index.md)**: inspect, recover, delete, rebuild snapshots, or migrate a product.
+- **[ChunkManager Operations](../operations/chunk-manager/index.md)**: inspect, recover, delete, rebuild the compact cache, or migrate a product.

@@ -3,23 +3,15 @@
 Use inspection commands before recovery or cleanup. They do not change product
 state.
 
-## Set The Product
-
-Set the full product URI:
-
-```bash
-PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
-```
+## List Records
 
 Pass the full URI through `--product-name` for every command on this page. This
 binds the command directly to the product without a storage configuration.
 
-## List Records
-
 List the records Firecube tracks for a product:
 
 ```bash
-firecube chunks list --product-name "$PRODUCT_URI"
+firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
@@ -37,7 +29,7 @@ Summary: 3 chunks, 0.0 MB total
 Include span coverage:
 
 ```bash
-firecube chunks list --product-name "$PRODUCT_URI" --include-span
+firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr" --include-span
 ```
 
 Expected output adds a `Span` column:
@@ -53,7 +45,7 @@ Use JSON for scripts:
 
 ```bash
 firecube chunks list \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --type span \
   --format json
 ```
@@ -84,7 +76,7 @@ Use `--time-range` when span records include `time_min` and `time_max` metadata:
 
 ```bash
 firecube chunks list \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --type span \
   --time-range 2024-03-15T00:00:00:2024-03-15T23:59:59
 ```
@@ -96,7 +88,7 @@ intersects the query window.
 
 ```bash
 firecube chunks runs list \
-  --product-name "$PRODUCT_URI"
+  --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
@@ -111,7 +103,7 @@ Filter by status:
 
 ```bash
 firecube chunks runs list \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --status complete \
   --format json
 ```
@@ -135,7 +127,7 @@ Expected output resembles:
 ## List Claims
 
 ```bash
-firecube chunks claims list --product-name "$PRODUCT_URI"
+firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 If no writer currently owns a write domain, expected output is:
@@ -152,16 +144,16 @@ Product       State   Owner                 Domain
 MY_PRODUCT.zarr  active  run-123:F024       MY_PRODUCT:zarr_region:F024
 ```
 
-## Check Snapshot Status
+## Check The Compact Cache Status
 
 ```bash
-firecube chunks snapshots status --product-name "$PRODUCT_URI"
+firecube chunks compact status --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
-If no snapshot exists:
+If no compact cache exists:
 
 ```text
-No snapshot found for MY_PRODUCT.zarr
+No compact cache found for MY_PRODUCT.zarr
 ```
 
 After a rebuild, expected output resembles:
@@ -177,8 +169,8 @@ Records:    <count>
 Use JSON for automation:
 
 ```bash
-firecube chunks snapshots status \
-  --product-name "$PRODUCT_URI" \
+firecube chunks compact status \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --format json
 ```
 
@@ -186,4 +178,4 @@ firecube chunks snapshots status \
 
 - **[Recover Runs And Claims](recover.md)** — recover when a run or claim blocks ingestion
 - **[Delete And Reingest](delete.md)** — remove data identified by inspection output
-- **[Snapshots](snapshots.md)** — fix missing or stale snapshot status
+- **[Compact Cache](compact.md)** — fix a missing or stale compact cache

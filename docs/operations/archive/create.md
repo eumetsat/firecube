@@ -4,7 +4,6 @@ Use `firecube archive create` to convert an existing Zarr product into a
 portable `.tgm` or `.zip` archive.
 
 ```bash
-PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
 ARCHIVE_URI="file:///data/archives/MY_PRODUCT.tgm"
 ```
 
@@ -12,7 +11,7 @@ ARCHIVE_URI="file:///data/archives/MY_PRODUCT.tgm"
 
 ```bash
 firecube archive create \
-  --source "$PRODUCT_URI" \
+  --source "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --archive-format tensogram \
   --compression zstd
@@ -33,7 +32,7 @@ Use `--archive-format zip` to pack the Zarr product into a single `.zip` file:
 
 ```bash
 firecube archive create \
-  --source "$PRODUCT_URI" \
+  --source "file:///data/products/MY_PRODUCT.zarr" \
   --archive "file:///data/archives/MY_PRODUCT.zarr.zip" \
   --archive-format zip
 ```
@@ -55,7 +54,7 @@ them:
 
 ```bash
 firecube archive create \
-  --source "$PRODUCT_URI" \
+  --source "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --group data \
   --compression zstd
@@ -65,7 +64,7 @@ firecube archive create \
 
 ```bash
 firecube archive create \
-  --source "$PRODUCT_URI" \
+  --source "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --group F024 \
   --start-date 2024-01-01 \
@@ -79,7 +78,7 @@ Preview the command when replacing an existing file:
 
 ```bash
 firecube archive create \
-  --source "$PRODUCT_URI" \
+  --source "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --overwrite \
   --dry-run
@@ -89,7 +88,7 @@ Overwrite in a non-interactive shell:
 
 ```bash
 firecube archive create \
-  --source "$PRODUCT_URI" \
+  --source "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --overwrite \
   --yes-i-really-mean-it
@@ -111,7 +110,7 @@ Each create is recorded as an `archive-create-…` run in the source product,
 with status `complete` or `failed`:
 
 ```bash
-firecube chunks runs list --product-name "$PRODUCT_URI"
+firecube chunks runs list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 If Firecube cannot write the record, the run can stay `started`. See
@@ -140,14 +139,14 @@ source.
   2. List the runs that have the status `started`:
 
      ```bash
-     firecube chunks runs list --product-name "$PRODUCT_URI" --status started
+     firecube chunks runs list --product-name "file:///data/products/MY_PRODUCT.zarr" --status started
      ```
 
   3. Abandon the earlier `archive-create-…` run:
 
      ```bash
      firecube chunks runs abandon \
-       --product-name "$PRODUCT_URI" \
+       --product-name "file:///data/products/MY_PRODUCT.zarr" \
        --run-id <run-id> \
        --reason "archive create record failed" \
        --yes-i-really-mean-it

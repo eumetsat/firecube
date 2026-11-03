@@ -11,7 +11,7 @@ Two format versions apply, and every JSON document carries its own
 
 | Surface | Version |
 |---|---|
-| Control-plane envelope: `schema.json`, run records, WAL events, snapshots, `LATEST.json` | `v2` |
+| Control-plane envelope: `schema.json`, run records, WAL events, compact cache, `LATEST.json` | `v2` |
 | Index records: `index/current.json`, `slot_index/current.json` | `v1` |
 
 ## Layout
@@ -22,29 +22,40 @@ The control plane lives inside the product root, in a directory named
 ```text
 .firecube/
     schema.json                  Control-plane format descriptor, written once
-    LATEST.json                  Pointer to the newest snapshot generation
     runs/<run_id>/run.json       Run record, one directory per run
     runs/<run_id>/events-NNNNN.jsonl   WAL segments for that run, NNNNN from 00000
     claims/<digest>.json         Write claims, one file per claimed write domain
-    snapshots/snapshot-<generation>.jsonl        Projected chunk records
-    snapshots/snapshot-<generation>.meta.json    Snapshot metadata
+    compact/compact-<generation>.jsonl       Projected chunk records
+    compact/compact-<generation>.meta.json   Compact cache metadata
+    compact/compact.lock         Lock file of a local rebuild
+    compact/LATEST.json          Pointer to the newest compact cache generation
     index/current.json           Resolved-index record
     slot_index/current.json      Slot-index model record
 ```
 
 Only the directories a product has used exist. A serial ingest without a
-declared index has no `index/` directory; a product never snapshotted has no
-`snapshots/` directory or `LATEST.json`.
+declared index has no `index/` directory. A product with no compact cache
+rebuild has no `compact/` directory.
+
+Earlier releases wrote `snapshots/snapshot-<generation>.jsonl`,
+`snapshots/snapshot-<generation>.meta.json` and a `LATEST.json` at the root of
+`.firecube/`. Firecube writes none of them now. Firecube ignores them on read.
+A reader MUST NOT use them. An operator MAY delete them.
 
 ## Atomicity
 
-Every control-plane JSON document is published atomically: a reader that can
-see a file MUST be able to parse it as complete JSON. Writers publish through
+Writers publish every control-plane JSON document atomically, except the compact
+pointer. A reader that can see a file MUST be able to parse it as complete
+JSON. Writers publish through
 a temporary object followed by an atomic rename (local filesystems) or a
 conditional put (object stores). Creation-only writes (`schema.json`, claim
 files, `index/current.json`, `slot_index/current.json`) fail instead of
 overwriting when the file already exists; `run.json` is replaced atomically in
 place because peer processes read it while the run is live.
+
+The compact pointer `compact/LATEST.json` is the exception. A rebuild writes it
+in place with a plain write. A reader can see an incomplete pointer during that
+write.
 
 ## `schema.json`
 
@@ -82,6 +93,73 @@ liveness and resume record, heartbeat-refreshed while the run is active.
 A run whose `updated_at` is older than `run_stale_threshold_s` MAY be treated
 as abandoned by recovery tooling. See
 [Recover a Product](../operations/chunk-manager/recover.md).
+
+### Producer record: `meta.producer`
+
+A run records which software produced it. The record is the object
+`meta.producer` in the `meta` of the WAL events listed below. It is not a key
+of `run.json`. Firecube captures it once, when the run starts.
+
+| Run kind | Events that carry `meta.producer` |
+|---|---|
+| Ingest | `run_started` and `run_failed` |
+| Preallocate | `run_started`, `run_completed` and `run_failed` |
+
+An ingest `run_completed` event does not carry it. No span event carries it.
+No other run kind records it. A reader MUST treat an absent `meta.producer` as
+unknown.
+
+| Key | Type | Meaning |
+|---|---|---|
+| `schema_version` | integer | `1` |
+| `captured_at` | string | ISO 8601 UTC timestamp of the capture |
+| `plugin` | object | The plugin that ran, see below |
+| `source` | object | Where the plugin code came from, see below |
+| `firecube` | object | `version`: the Firecube version string |
+| `config` | object | The digest of the run configuration, see below |
+
+The `plugin` object has these keys:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `name` | string | Registered plugin name |
+| `distribution` | string or null | Name of the installed distribution that provides the plugin |
+| `version` | string or null | Version of that distribution |
+| `entry_point` | string or null | Value of the `firecube.plugins` entry point that loads the plugin |
+
+The `source` object has these keys:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `kind` | string | `vcs`, `editable`, `wheel` or `unknown` |
+| `commit` | string or null | Commit identifier |
+| `requested_ref` | string or null | Branch, tag or revision that the installer requested |
+| `dirty` | boolean or null | Whether the working tree has uncommitted changes |
+| `evidence` | array of strings | The facts that Firecube read to decide the other keys |
+
+The four values of `source.kind` mean:
+
+- `vcs`: the distribution was installed from a version-control URL. `commit` is the installed commit. `dirty` is `false` when `commit` is set, else `null`.
+- `editable`: the distribution is an editable install. `commit` and `dirty` come from Git in the source directory. Each is `null` if Git cannot answer.
+- `wheel`: the distribution was installed from an archive or a built directory, or it has no `direct_url.json`. `commit` and `dirty` are `null`.
+- `unknown`: Firecube found no distribution for the plugin. It is also the kind when the `direct_url.json` is unreadable, is not JSON, is not an object, or has no recognised source metadata. `commit` and `dirty` are `null`.
+
+The `config` object has these keys:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `algorithm` | string | `"sha256"` |
+| `digest` | string | Hash of the canonical JSON of the engine, template and plugin configuration |
+| `canonicalization` | string | `"firecube-config-json-v1"` |
+| `excluded` | array of strings | Dotted paths of the values left out of the digest |
+
+The digest leaves out each configuration field that has `repr=False`, each
+free-form `x_*` key, and each value with no JSON form. Storage credentials are
+not in the digest input.
+
+A `null` value means unknown. It never means false or absent. A `dirty` of
+`null` means that Firecube could not check the working tree. Firecube sets
+`dirty` to `false` only when it has evidence.
 
 ### WAL events
 
@@ -181,24 +259,55 @@ delete a claim that a successor acquired between the read and the delete.
 `firecube chunks claims clear` has the same limitation. Do not run two releases
 for the same product at the same time.
 
+### Exclusive maintenance claim
+
+The domain `<product>:maintenance:exclusive` is the exclusive maintenance claim
+of a product. It is a claim like any other, and the rules above apply to its
+file. Its `owner_id` is the id of the maintenance run.
+
+- A conforming writer MUST NOT write to the product while another owner holds
+  this claim. A stale claim counts as held.
+- A writer MUST refuse if it cannot read the claim file.
+- The check reads the one claim file by name,
+  `claims/<sha256(<product>:maintenance:exclusive)>.json`. It passes when the
+  file is absent or when its `owner_id` is the id of the writer.
+- A writer makes the check when it starts, when it takes its admission claim,
+  and when it ensures the resolved index.
+- The writer records a run start that the check refuses. The run has a
+  `run_started` event and one `run_failed` event with the refusal text, and no
+  other terminal event. If the failure record cannot be written, the run has no `run_failed`
+  event.
+- A maintenance operation that runs under its own exclusive claim records the id
+  of the holder in the key `holder_run_id`. The key is in the `meta` object of
+  the maintenance event record and in `maintenance.scope`.
+
 See [Write Safety](../concepts/orchestration/write-safety.md) for how claims
 coordinate concurrent writers.
 
-## Snapshots and `LATEST.json`
+## Compact cache
 
-A snapshot is a projection of the WAL into one chunk record per line, for
-readers that do not want to replay every run's events. Rebuilding a snapshot
-writes `snapshots/snapshot-<generation>.jsonl` (records sorted by key), a
-sibling `snapshot-<generation>.meta.json`, and then updates `LATEST.json` to
-point at the new generation. `<generation>` is a nanosecond timestamp, so
-generations sort chronologically.
+The compact cache is a projection of the WAL into one chunk record per line.
+Readers use it to avoid a replay of every run's events. A rebuild writes
+`compact/compact-<generation>.jsonl` with the records sorted by key. It then
+writes the sibling `compact/compact-<generation>.meta.json`. Last, it updates
+`compact/LATEST.json` to point at the new generation. `<generation>` is a
+nanosecond timestamp, so generations sort chronologically.
 
-`snapshot-<generation>.meta.json` and `LATEST.json` both carry
-`schema_version` (`"v2"`), `generation`, `completed_before` (Unix timestamp:
-runs completed before this instant are folded in), and `product`;
-`LATEST.json` adds `snapshot_path` and `snapshot_meta_path`, and the meta file
-adds `created_at` and `records` (line count). Snapshots are derived data: they
-MAY be deleted and rebuilt from the WAL at any time.
+`compact-<generation>.meta.json` and `compact/LATEST.json` both carry
+`schema_version` (`"v2"`), `generation`, `completed_before` and `product`.
+`completed_before` is a Unix timestamp. The cache folds in the runs that
+completed before this instant. The pointer adds `snapshot_path` and
+`snapshot_meta_path`. The meta file adds `created_at` and `records`, the line
+count. The keys keep their `snapshot_` names. Their values name files under
+`compact/`.
+
+A local rebuild holds `compact/compact.lock` while it writes. A rebuild on an
+object store takes no lock.
+
+If the pointer is absent, a reader replays the WAL. A store that has only the
+earlier layout therefore reads from the WAL. The compact cache is derived data.
+An operator MAY delete the `compact/` directory at any time. A rebuild
+creates the cache again from the WAL.
 
 ## Resolved Index: `index/current.json`
 
@@ -298,6 +407,10 @@ each documented file names its version explicitly. The compatibility rule:
 - A change that would break a conforming reader (removing a key, changing a
   type or the canonical-bytes rule) increments the `schema_version` of the
   affected document.
+- The move of the cache to `compact/`, the key `meta.producer` and the
+  exclusive maintenance claim change no `schema_version`. The new keys are
+  additive. The compact cache is derived data, and a reader that finds no
+  pointer replays the WAL.
 - Firecube refuses to act on an `index/current.json` whose `schema_version`
   it does not support (precedence row 6) rather than guessing.
 

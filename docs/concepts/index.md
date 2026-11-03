@@ -42,7 +42,7 @@ storage writes, resume checks, cleanup state, and observability.
 - **Output format follows data shape.** Use Zarr for gridded datacubes, Parquet
   for tabular records, and Tensogram for packaging finished Zarr products.
 - **ChunkManager keeps product lifecycle inspectable.** It records runs, spans,
-  claims, and snapshots so products can be resumed, inspected, recovered, and
+  claims, and the compact cache so products can be resumed, inspected, recovered, and
   cleaned up.
 - **Parallelism depends on the write model.** Pipeline workers, Parquet file
   writes, Zarr group fan-out, and direct-Zarr slot ranges have different safety
