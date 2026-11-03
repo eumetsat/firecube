@@ -35,6 +35,7 @@ from firecube.cli._formatter import (
     FirecubeGroup,
     install_option_groups_patch,
 )
+from firecube.cli._groups import register_groups
 from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._rename_hints import install_rename_hints
@@ -49,14 +50,6 @@ from firecube.cli._typed_options import (
     coerce_options_for_plugin,
 )
 from firecube.cli._uri_policy import parse_and_validate_source_uri
-from firecube.cli.advise import advise as advise_group
-from firecube.cli.archive import archive as archive_group
-from firecube.cli.catalog import catalog as catalog_group
-from firecube.cli.chunks import chunks as chunks_group
-from firecube.cli.completion import completion_cmd
-from firecube.cli.parquet import parquet as parquet_group
-from firecube.cli.plugins import plugins as plugins_group
-from firecube.cli.zarr import zarr as zarr_group
 from firecube.core.config import get_plugin_defaults, load_config_file
 from firecube.core.observability import set_current_span_attribute, span
 from firecube.core.product.resolver import ProductResolver
@@ -921,14 +914,7 @@ def ingest(
         shutdown_observability(timeout_millis=5000)
 
 
-cli.add_command(archive_group, name="archive")
-cli.add_command(advise_group, name="advise")
-cli.add_command(chunks_group, name="chunks")
-cli.add_command(plugins_group, name="plugins")
-cli.add_command(zarr_group, name="zarr")
-cli.add_command(catalog_group, name="catalog")
-cli.add_command(parquet_group, name="parquet")
-cli.add_command(completion_cmd, name="completion")
+register_groups(cli)
 
 
 def _print_plugin_options(plugin_name: str, ingestor_cls: type) -> None:
