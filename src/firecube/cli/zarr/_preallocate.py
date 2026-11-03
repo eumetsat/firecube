@@ -166,6 +166,7 @@ def preallocate(
 
     from firecube.ingestor.api import BaseIngestor
     from firecube.ingestor.runtime.preallocate import SlotWindowError, preallocate_product
+    from firecube.ingestor.runtime.producer import capture_producer
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
@@ -226,6 +227,20 @@ def preallocate(
             stac_search=stac_search,
             run_id="zarr-preallocate",
         )
+        # A dry run records no run, so it captures no producer.
+        producer = (
+            None
+            if dry_run
+            else capture_producer(
+                plugin_name=plugin,
+                plugin_cls=type(ingestor),
+                configs={
+                    "engine": ingestor.engine_config,
+                    "template": ingestor.template_config,
+                    "plugin": ingestor.plugin_config,
+                },
+            )
+        )
 
         try:
             # The operation records the run as terminal and releases its claim
@@ -248,6 +263,7 @@ def preallocate(
                 warn=_echo_err,
                 on_dry_run_group=_echo_dry_run_group,
                 logger=logger,
+                producer=producer,
             )
         except SlotWindowError as exc:
             raise click.UsageError(render(exc)) from exc

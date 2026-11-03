@@ -293,6 +293,47 @@ def test_force_reingest_with_run_level_zarr_coverage_commits_replacement(temp_wo
     assert current[prior_key]["status"] != "active"
 
 
+def test_force_reingest_of_a_real_run_replaces_prior_spans_and_spans_carry_no_producer(tmp_path):
+    """A producer in the register_run meta once hid prior spans from the replacement query."""
+    import numpy as np
+    import xarray as xr
+
+    from firecube.ingestor.api import GenericZarrIngestor
+    from tests.helpers.storage import make_test_context
+
+    class _Plugin(GenericZarrIngestor):
+        PRODUCT_NAME = name = "reingest_producer"
+        time_dim_name = "timestamp"
+
+        def discover_source_files(self, ctx):
+            return [0, 1]
+
+        def get_batch_groups(self, items, ctx):
+            return ["G"]
+
+        def build_dataset(self, group, items, ctx):
+            t = np.datetime64("2024-01-01", "ns") + np.asarray(items).astype("timedelta64[D]")
+            return xr.Dataset({"v": (("timestamp",), np.ones(len(items)))}, {"timestamp": t})
+
+    for force in (False, True):
+        opts = {"write_mode": "direct", "pipeline_workers": 1, "no_progress": True}
+        _Plugin().run(
+            make_test_context(tmp_path, product="p.zarr", options={**opts, "force_reingest": force})
+        )
+
+    manager = ChunkManager(binding=make_test_binding(tmp_path), workspace=tmp_path)
+    spans = [
+        r for r in _current_state(manager, product="p.zarr").values() if r.get("type") == "span"
+    ]
+    assert len({r["meta"]["run_id"] for r in spans if r["status"] == "active"}) == 1
+    assert all("producer" not in (r.get("meta") or {}) for r in spans)
+    assert any(
+        e["event_type"] == EVENT_REPLACEMENT_COMMITTED
+        for d in (tmp_path / "p.zarr" / ".firecube" / "runs").iterdir()
+        for e in _read_run_wal_events(tmp_path, product="p.zarr", run_id=d.name)
+    )
+
+
 def test_force_reingest_first_time_no_prior_spans_does_not_raise(temp_workspace):
     product = "test_product"
     output_path = str(temp_workspace / product)

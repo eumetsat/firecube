@@ -61,6 +61,7 @@ from firecube.ingestor.runtime.engine import run_sequential
 from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
 from firecube.ingestor.runtime.parallel_run_id import derive_pod_run_id
 from firecube.ingestor.runtime.preflight import preflight
+from firecube.ingestor.runtime.producer import capture_producer
 from firecube.ingestor.runtime.recording import SpanRecorder
 from firecube.ingestor.runtime.resume_guard import ResumeGuard
 from firecube.ingestor.runtime.workspace import LocalSourceFile, WorkspaceManager
@@ -1005,6 +1006,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             output_format=str(runtime_ctx.output_format or ""),
         )
         run_started_recorded = False
+        producer: dict[str, Any] | None = None
 
         from firecube.ingestor.runtime.output_guard import (
             fresh_output_run,
@@ -1127,14 +1129,26 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     )
                 )
 
-                # 5. Runtime control-plane lifecycle
+                # 5. Runtime control-plane lifecycle. The producer is captured once;
+                # the failure record below carries the same record. It stays out of
+                # slice_meta: register_run copies that into span records and into the
+                # force-reingest query, which matches prior spans on every meta key.
+                producer = capture_producer(
+                    plugin_name=self.name,
+                    plugin_cls=type(self),
+                    configs={
+                        "engine": self.engine_config,
+                        "template": self.template_config,
+                        "plugin": self.plugin_config,
+                    },
+                )
                 slice_meta = self._run_record_meta(runtime_plugin_ctx)
                 self._span_recorder.register_run_started(
                     run_id=run_id,
                     product=product,
                     output_path=str(runtime_ctx.target or ""),
                     output_format=str(runtime_ctx.output_format or ""),
-                    slice_meta=slice_meta,
+                    slice_meta={**slice_meta, "producer": producer},
                     slot_range=slot_range_for_record,
                     slot_group=self.engine_config.slot_group,
                 )
@@ -1219,7 +1233,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                         product=product,
                         output_path=str(runtime_ctx.target or ""),
                         output_format=str(runtime_ctx.output_format or ""),
-                        slice_meta=slice_meta,
+                        slice_meta={**slice_meta, "producer": producer},
                         error=str(exc),
                     )
                     execution_result.registered = True

@@ -396,6 +396,9 @@ def test_failed_ingest_records_stac_provenance(tmp_path, apis, monkeypatch):
         "search": SEARCH,
         "item_ids": ["coll-a/a-1", "coll-a/a-2"],
     }
+    (started,) = _event_metas(tmp_path / "out.zarr", "run_started")
+    assert started["producer"]["plugin"]["distribution"] == "firecube-test-plugins"
+    assert failed["producer"] == started["producer"]  # one capture per run
 
 
 @pytest.mark.parametrize(
@@ -429,6 +432,12 @@ def test_preallocate_discovers_once_and_records_stac_provenance(
             metas = _event_metas(target, event_type)
             assert metas
             assert [meta.get("stac_discovery") for meta in metas] == [expected] * len(metas)
+    # These plugins have no entry point, so the record names the plugin and an unknown source.
+    projected = [
+        (m["producer"]["plugin"]["name"], m["producer"]["source"]["kind"])
+        for m in _event_metas(target, "run_started")
+    ]
+    assert projected == [(plugin, "unknown")] * len(projected) != []
     observed = np.array([f"2025-06-0{day}T00:00:07" for day in (1, 2, 3)], dtype="datetime64[ns]")
     expected_owned = [1, 2, 3] if groups == ("g",) else [1, 2, 3, np.nan, np.nan]
     for group in groups:
@@ -437,6 +446,22 @@ def test_preallocate_discovers_once_and_records_stac_provenance(
             times = zarr.open_array(str(target), path=f"{group}/time", mode="r")
             np.testing.assert_array_equal(owned[:], expected_owned)
             np.testing.assert_array_equal(times[:3], observed)
+
+
+def test_preallocate_records_the_distribution_of_an_installed_plugin(tmp_path):
+    plugin = "direct_zarr_capable_test_plugin"
+    args = _ingest(tmp_path, command="zarr preallocate", plugin=plugin)
+
+    result = CliRunner().invoke(cli, args)
+
+    assert result.exit_code == 0, result.output
+    producers = [
+        m["producer"]["plugin"] for m in _event_metas(tmp_path / "out.zarr", "run_started")
+    ]
+    assert producers
+    assert {(p["name"], p["distribution"]) for p in producers} == {
+        (plugin, "firecube-test-plugins")
+    }
 
 
 @pytest.mark.parametrize(

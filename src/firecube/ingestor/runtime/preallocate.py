@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
@@ -151,6 +151,7 @@ def preallocate_product(
     warn: Callable[[str], None] = _ignore_line,
     on_dry_run_group: Callable[[PreallocateDryRunGroup], None] | None = None,
     logger: logging.Logger = _log,
+    producer: Mapping[str, Any] | None = None,
 ) -> None:
     """Create every declared array of a product at its full slot count.
 
@@ -184,6 +185,8 @@ def preallocate_product(
         warn: Receives each warning line.
         on_dry_run_group: Receives one preview per bounded group in a dry run.
         logger: Receives the run-record and claim failures.
+        producer: The producer record the run records keep at `meta["producer"]`.
+            `None` records none.
 
     Raises:
         SlotWindowError: The slot window or slot group does not fit the resolved index.
@@ -394,7 +397,7 @@ def preallocate_product(
                     windows_by_group=windows_by_group,
                     coord_chunk_sizes=coord_chunk_sizes,
                     slot_group=None,
-                    meta=_run_meta(ingestor, plugin_ctx),
+                    meta=_run_meta(ingestor, plugin_ctx, producer),
                     whole_extent_groups=whole_extent_groups,
                 )
             except BaseException:
@@ -649,7 +652,7 @@ def preallocate_product(
                         output_path=plugin_target,
                         output_format="zarr",
                         size=0,
-                        meta=_run_meta(ingestor, plugin_ctx, run_id=run_id),
+                        meta=_run_meta(ingestor, plugin_ctx, producer, run_id=run_id),
                     )
                     _preallocate_run_created = True
                 except Exception as exc:
@@ -678,7 +681,7 @@ def preallocate_product(
                         output_path=plugin_target,
                         output_format="zarr",
                         size=terminal_size,
-                        meta=_run_meta(ingestor, plugin_ctx, run_id=run_id),
+                        meta=_run_meta(ingestor, plugin_ctx, producer, run_id=run_id),
                         status=final_state,
                         error=(
                             None
@@ -759,12 +762,19 @@ def preallocate_product(
             raise _terminal_exc
 
 
-def _run_meta(ingestor: PreallocateHost, plugin_ctx: PluginContext, **extra: Any) -> dict[str, Any]:
-    """The meta of a preallocate run record, with the STAC provenance of a stac:// source."""
+def _run_meta(
+    ingestor: PreallocateHost,
+    plugin_ctx: PluginContext,
+    producer: Mapping[str, Any] | None,
+    **extra: Any,
+) -> dict[str, Any]:
+    """The meta of a preallocate run record, with STAC provenance and the producer record."""
     meta: dict[str, Any] = {"kind": "preallocate", **extra}
     stac_record = ingestor.stac_discovery_record(plugin_ctx)
     if stac_record is not None:
         meta["stac_discovery"] = stac_record
+    if producer is not None:
+        meta["producer"] = dict(producer)
     return meta
 
 
