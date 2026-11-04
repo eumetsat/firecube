@@ -1539,6 +1539,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/write-a-migration-step/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write A Migration Step
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3719,14 +3747,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/snapshots/" class="md-nav__link">
+      <a href="../../operations/chunk-manager/compact/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Snapshots
+    Compact Cache
   
 
     
@@ -3901,6 +3929,264 @@
     
   
     Restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintenance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintenance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/snapshot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Snapshot Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/adopt-a-foreign-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adopt A Foreign Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/migrate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/create-a-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Create A Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/verify-a-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verify A Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/migrate-an-adopted-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate An Adopted Store
   
 
     
@@ -4612,6 +4898,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4891,7 +5205,7 @@ what was written, which write domains were claimed, and which derived views can
 be used for fast inspection and cleanup.</p>
 <p>Use this page for the concept. Use
 <a href="../../operations/chunk-manager/">ChunkManager Operations</a> when you need to
-inspect, recover, delete, rebuild snapshots, or migrate a product.</p>
+inspect, recover, delete, rebuild the compact cache, or migrate a product.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>In <code>firecube chunks</code>, "chunk" means a ChunkManager record about Firecube
@@ -4910,8 +5224,8 @@ run/span coverage. It is not a physical Zarr array chunk.</p>
   coverage information.</li>
 <li><strong>Claims</strong> coordinate write domains so conflicting work does not write the
   same product area at the same time.</li>
-<li><strong>Snapshots</strong> are derived read models used by inspection and cleanup commands.
-  They can be rebuilt from the authoritative run history.</li>
+<li><strong>The compact cache</strong> is a derived read model used by inspection and cleanup
+  commands. Firecube can rebuild it from the authoritative run history.</li>
 </ul>
 <h2 id="why-it-matters">Why It Matters</h2>
 <ul>
@@ -4929,21 +5243,21 @@ run/span coverage. It is not a physical Zarr array chunk.</p>
 <p>Then use the operation page that matches what you found:</p>
 <ul>
 <li><strong><a href="../../operations/chunk-manager/inspect/">Inspect</a></strong> for detailed lists of
-  records, runs, claims, and snapshots.</li>
+  records, runs, claims, and the compact cache.</li>
 <li><strong><a href="../../operations/chunk-manager/recover/">Recover Runs And Claims</a></strong> when a
   run is stuck or a claim is stale.</li>
 <li><strong><a href="../../operations/chunk-manager/delete/">Delete And Reingest</a></strong> when records
   or storage data need cleanup.</li>
-<li><strong><a href="../../operations/chunk-manager/snapshots/">Snapshots</a></strong>
-  when snapshots are missing, stale, or need rebuilding.</li>
+<li><strong><a href="../../operations/chunk-manager/compact/">Compact Cache</a></strong>
+  when the compact cache is missing, stale, or needs rebuilding.</li>
 </ul>
 <p>Do not edit ChunkManager records by hand.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../operations/chunk-manager/">ChunkManager Operations</a></strong> — inspect, recover, delete, rebuild snapshots, or migrate a product</li>
+<li><strong><a href="../../operations/chunk-manager/">ChunkManager Operations</a></strong> — inspect, recover, delete, rebuild the compact cache, or migrate a product</li>
 <li><strong><a href="../storage/">Product Storage</a></strong> — understand targets, drivers, and write modes</li>
 <li><strong><a href="../chunkmanager/">Storage &amp; ChunkManager</a></strong> — return to the product storage model</li>
-<li><strong><a href="../glossary/">Glossary</a></strong> — check related terms such as run, span, claim, and snapshot</li>
+<li><strong><a href="../glossary/">Glossary</a></strong> — check related terms such as run, span, claim, and compact cache</li>
 </ul>
 
 

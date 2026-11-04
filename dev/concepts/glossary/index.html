@@ -1539,6 +1539,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/plugins/write-a-migration-step/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write A Migration Step
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3697,14 +3725,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations/chunk-manager/snapshots/" class="md-nav__link">
+      <a href="../../operations/chunk-manager/compact/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Snapshots
+    Compact Cache
   
 
     
@@ -3879,6 +3907,264 @@
     
   
     Restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintenance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintenance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/snapshot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Snapshot Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/adopt-a-foreign-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adopt A Foreign Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/migrate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/create-a-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Create A Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/verify-a-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verify A Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/maintenance/migrate-an-adopted-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate An Adopted Store
   
 
     
@@ -4590,6 +4876,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4856,17 +5170,17 @@ the readable data store and ChunkManager state.</p>
 <p><strong>Data store</strong> — The product data that users and downstream tools read, such as
 Zarr arrays, Parquet files, or a Tensogram <code>.tgm</code> file.</p>
 <p><strong>ChunkManager</strong> — Firecube's product lifecycle surface. It records runs, spans,
-write claims, snapshots, and cleanup state so products can be inspected,
+write claims, the compact cache, and cleanup state so products can be inspected,
 resumed, recovered, and cleaned up.</p>
 <p><strong>ChunkManager record</strong> — A logical Firecube record about run, span, claim, or
-snapshot state. It is not a physical Zarr array chunk.</p>
+compact cache state. It is not a physical Zarr array chunk.</p>
 <p><strong>Zarr chunk</strong> — A physical storage chunk inside a Zarr array. Zarr chunks are
 controlled by output-format tuning options and affect read/write performance.</p>
 <p><strong>Claim</strong> — A write-coordination record used to prevent conflicting work against
 the same product area.</p>
 <p><strong>Span</strong> — A record of what one run wrote, usually with group or time coverage.</p>
-<p><strong>Snapshot</strong> — A derived ChunkManager view used by inspection and cleanup
-commands.</p>
+<p><strong>Compact cache</strong> — A derived ChunkManager view used by inspection and cleanup
+commands. It lives in <code>.firecube/compact/</code>.</p>
 <p><strong>Storage driver</strong> — The I/O implementation selected for a run, such as
 <code>fsspec</code> or <code>obstore</code>.</p>
 <p><strong>Output format</strong> — The shape Firecube writes: Zarr for gridded datacubes,

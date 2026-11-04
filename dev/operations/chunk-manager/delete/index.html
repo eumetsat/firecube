@@ -16,7 +16,7 @@
         <link rel="prev" href="../post-crash-recovery/">
       
       
-        <link rel="next" href="../snapshots/">
+        <link rel="next" href="../compact/">
       
       
         
@@ -1526,6 +1526,34 @@
     
   
     Add Telemetry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/plugins/write-a-migration-step/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write A Migration Step
   
 
     
@@ -3757,14 +3785,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../snapshots/" class="md-nav__link">
+      <a href="../compact/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Snapshots
+    Compact Cache
   
 
     
@@ -3942,6 +3970,267 @@
     
   
     Restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintenance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintenance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/snapshot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Snapshot Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/adopt-a-foreign-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adopt A Foreign Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/migrate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/create-a-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Create A Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/verify-a-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verify A Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/migrate-an-adopted-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate An Adopted Store
   
 
     
@@ -4653,6 +4942,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4973,8 +5290,7 @@
 <h1 id="delete-and-reingest">Delete And Reingest</h1>
 <p>Use deletion commands when you need to remove old data, retry a failed range, or
 replace a written span.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">PRODUCT_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">PRODUCT_NAME</span><span class="o">=</span><span class="s2">&quot;MY_PRODUCT&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">PRODUCT_NAME</span><span class="o">=</span><span class="s2">&quot;MY_PRODUCT&quot;</span>
 </code></pre></div>
 <h2 id="preflight">Preflight</h2>
 <p>The full URI locates the product and the storage objects to delete. If you pass
@@ -4993,12 +5309,12 @@ For a local product:</p>
 <p><code>--manifest-only</code> does not need this storage configuration because it keeps the
 product data.</p>
 <p>Confirm no writer is using the product, then inspect the tracked records:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span>--include-span
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span>--include-span
 </code></pre></div>
 <h2 id="delete-tracked-records-and-storage">Delete Tracked Records And Storage</h2>
 <p>Preview first:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--dry-run
 </code></pre></div>
 <p>Expected output:</p>
@@ -5012,7 +5328,7 @@ delete</code> removes the records and leaves the data they describe in place. To
 delete span data, use <a href="#delete-storage-chunks-from-spans"><code>delete-span</code></a>.</p>
 <p>Delete after the dry-run matches your intent:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <p>Expected output:</p>
@@ -5020,7 +5336,7 @@ delete span data, use <a href="#delete-storage-chunks-from-spans"><code>delete-s
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>Records without storage objects: 2 (their data stays in storage; use firecube chunks delete-span to delete span data)
 </code></pre></div>
 <p>Verify:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>No chunks found matching criteria.
@@ -5029,7 +5345,7 @@ delete span data, use <a href="#delete-storage-chunks-from-spans"><code>delete-s
 <p>Use <code>--manifest-only</code> when the storage data should remain but Firecube should
 forget the tracked records:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--manifest-only<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
@@ -5039,13 +5355,13 @@ forget the tracked records:</p>
 <h2 id="delete-by-date-range">Delete By Date Range</h2>
 <p>Preview a date range:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--range<span class="w"> </span><span class="m">2024</span>-03-01,2024-03-02<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>--dry-run
 </code></pre></div>
 <p>Delete it:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--range<span class="w"> </span><span class="m">2024</span>-03-01,2024-03-02<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
@@ -5055,7 +5371,7 @@ semantic coverage.</p>
 <p>To filter by the data time range covered by each span (rather than the record
 timestamp), use <code>--time-range</code> instead:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--time-range<span class="w"> </span><span class="m">2024</span>-03-01:2024-03-02<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>--dry-run
 </code></pre></div>
@@ -5069,7 +5385,7 @@ time steps with NaN and marks them deleted (state=2). On other cubes it deletes
 the span's chunk keys.</p>
 <p>Preview:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--run-id<span class="w"> </span>docs-span-run<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>--dry-run
 </code></pre></div>
@@ -5078,7 +5394,7 @@ the span's chunk keys.</p>
 </code></pre></div>
 <p>Delete:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>--run-id<span class="w"> </span>docs-span-run<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
@@ -5093,7 +5409,7 @@ the span's chunk keys.</p>
 <p>When chunk keys are deleted, use <code>--force</code> only when you intentionally want to
 delete spans that are not time-chunk aligned:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span>--run-id<span class="w"> </span>docs-span-run<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span>--force<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span>--yes-i-really-mean-it
@@ -5106,19 +5422,19 @@ not be read again, for example while replacement data is still being prepared.</
 <p>Find the spans that cover the data time range. Each record's <code>meta</code> holds its
 <code>run_id</code> and <code>batch_id</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span>--time-range<span class="w"> </span><span class="m">2024</span>-03-01T00:00:00:2024-03-01T23:59:59<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span>--format<span class="w"> </span>json
 </code></pre></div>
 <p>Clear each span, then ingest its source data again:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span>--batch-id<span class="w"> </span>&lt;batch-id&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span>--dry-run
 <a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
 <a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>delete-span<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">  </span>--batch-id<span class="w"> </span>&lt;batch-id&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">  </span>--yes-i-really-mean-it
@@ -5128,7 +5444,7 @@ not be read again, for example while replacement data is still being prepared.</
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/source/2024-03-01<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
@@ -5148,7 +5464,7 @@ in-place (region overwrite) and appends any new tail timestamps. No separate
 delete step is required.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span>--input-data<span class="w"> </span><span class="s2">&quot;file://</span><span class="nv">$PWD</span><span class="s2">/replacement-data&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
@@ -5159,8 +5475,8 @@ delete step is required.</p>
 <p>Reingesting in place refuses insert attempts (timestamps that would land in the middle of
 existing data), incoming or existing duplicates, and NaT values. State=2
 (deleted) and state=3 (failed_batch) slots are refilled.</p>
-<p>Rebuild the snapshot after a large cleanup or reingest:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>snapshots<span class="w"> </span>rebuild<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
+<p>Rebuild the compact cache after a large cleanup or reingest:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>compact<span class="w"> </span>rebuild<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <h2 id="failure-recovery">Failure Recovery</h2>
 <table>
@@ -5213,7 +5529,7 @@ existing data), incoming or existing duplicates, and NaT values. State=2
 <ul>
 <li><strong><a href="../inspect/">Inspect ChunkManager State</a></strong> — find records before deletion</li>
 <li><strong><a href="../recover/">Recover Runs And Claims</a></strong> — clear active runs or claims that block deletion</li>
-<li><strong><a href="../snapshots/">Snapshots</a></strong> — rebuild the read model after cleanup</li>
+<li><strong><a href="../compact/">Compact Cache</a></strong> — rebuild the read model after cleanup</li>
 </ul>
 
 

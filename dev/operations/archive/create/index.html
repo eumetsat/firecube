@@ -1539,6 +1539,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guides/plugins/write-a-migration-step/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Write A Migration Step
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3622,14 +3650,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../chunk-manager/snapshots/" class="md-nav__link">
+      <a href="../../chunk-manager/compact/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Snapshots
+    Compact Cache
   
 
     
@@ -3942,6 +3970,267 @@
     
   
     Restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maintenance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Maintenance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/snapshot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Snapshot Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/adopt-a-foreign-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adopt A Foreign Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/migrate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/create-a-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Create A Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/verify-a-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Verify A Release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../maintenance/migrate-an-adopted-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate An Adopted Store
   
 
     
@@ -4653,6 +4942,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4973,12 +5290,11 @@
 <h1 id="create-archives">Create Archives</h1>
 <p>Use <code>firecube archive create</code> to convert an existing Zarr product into a
 portable <code>.tgm</code> or <code>.zip</code> archive.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">PRODUCT_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">ARCHIVE_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.tgm&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">ARCHIVE_URI</span><span class="o">=</span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.tgm&quot;</span>
 </code></pre></div>
 <h2 id="create-a-full-archive">Create A Full Archive</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--archive-format<span class="w"> </span>tensogram<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--compression<span class="w"> </span>zstd
@@ -4992,7 +5308,7 @@ portable <code>.tgm</code> or <code>.zip</code> archive.</p>
 <h2 id="create-a-zip-archive">Create A Zip Archive</h2>
 <p>Use <code>--archive-format zip</code> to pack the Zarr product into a single <code>.zip</code> file:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.zarr.zip&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--archive-format<span class="w"> </span>zip
 </code></pre></div>
@@ -5006,14 +5322,14 @@ portable <code>.tgm</code> or <code>.zip</code> archive.</p>
 <p>Use <code>--group</code> when the Zarr product has multiple groups and you want one of
 them:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--group<span class="w"> </span>data<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--compression<span class="w"> </span>zstd
 </code></pre></div>
 <h2 id="archive-a-time-range-or-variable-set">Archive A Time Range Or Variable Set</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--group<span class="w"> </span>F024<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--start-date<span class="w"> </span><span class="m">2024</span>-01-01<span class="w"> </span><span class="se">\</span>
@@ -5023,14 +5339,14 @@ them:</p>
 <h2 id="overwrite-an-existing-archive">Overwrite An Existing Archive</h2>
 <p>Preview the command when replacing an existing file:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--dry-run
 </code></pre></div>
 <p>Overwrite in a non-interactive shell:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--source<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--yes-i-really-mean-it
@@ -5043,7 +5359,7 @@ them:</p>
 </code></pre></div>
 <p>Each create is recorded as an <code>archive-create-…</code> run in the source product,
 with status <code>complete</code> or <code>failed</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>If Firecube cannot write the record, the run can stay <code>started</code>. See
 <a href="#access-and-claims">Access And Claims</a>.</p>
@@ -5066,13 +5382,13 @@ source.</p>
 <li>Fix the cause of the record error.</li>
 <li>
 <p>List the runs that have the status <code>started</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span>--status<span class="w"> </span>started
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span>--status<span class="w"> </span>started
 </code></pre></div>
 </li>
 <li>
 <p>Abandon the earlier <code>archive-create-…</code> run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;archive create record failed&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--yes-i-really-mean-it
