@@ -79,6 +79,10 @@ COMMAND_GROUPS["firecube"] = [
         "commands": ["zarr", "parquet", "chunks", "catalog"],
     },
     {
+        "name": "Maintenance",
+        "commands": ["snapshot", "migrate", "release"],
+    },
+    {
         "name": "Tools",
         "commands": ["plugins", "advise", "completion"],
     },

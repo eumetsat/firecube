@@ -60,6 +60,18 @@ OPERATOR_FACING_PATHS: frozenset[tuple[str, ...]] = frozenset(
         ("catalog", "intake"),
         ("zarr", "index", "show"),
         ("zarr", "index", "verify"),
+        ("snapshot", "take"),
+        ("snapshot", "list"),
+        ("snapshot", "show"),
+        ("snapshot", "diff"),
+        ("migrate", "run"),
+        ("migrate", "list"),
+        ("migrate", "status"),
+        ("migrate", "adopt"),
+        ("release", "create"),
+        ("release", "list"),
+        ("release", "show"),
+        ("release", "verify"),
     }
 )
 
@@ -84,6 +96,9 @@ TIER_3_PATHS: frozenset[tuple[str, ...]] = frozenset(
         ("chunks", "compact", "rebuild"),
         ("chunks", "snapshots", "rebuild"),
         ("zarr", "preallocate"),
+        ("migrate", "run"),
+        ("migrate", "adopt"),
+        ("release", "create"),
     }
 )
 
@@ -106,6 +121,9 @@ GROUP_AUDIENCE: dict[str, Literal["user", "operator"]] = {
     "advise": "user",
     "plugins": "user",
     "catalog": "operator",
+    "snapshot": "operator",
+    "migrate": "operator",
+    "release": "operator",
 }
 
 _AUDIENCE_PATHS: dict[tuple[str, ...], Literal["user", "operator"]] = dict.fromkeys(

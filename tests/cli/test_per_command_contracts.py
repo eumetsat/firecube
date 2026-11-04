@@ -62,6 +62,12 @@ def _write_args_without_storage(path: tuple[str, ...], tmp_path: Path) -> list[s
             return ["--target", target]
         case ("zarr", "preallocate"):
             return ["cli_test_plugin", "--target", target, "--product-name", "pn"]
+        case ("migrate", "run"):
+            return ["firecube:set-attrs", "--target", target]
+        case ("migrate", "adopt"):
+            return ["--target", target]
+        case ("release", "create"):
+            return ["v1", "--target", target]
         case _:
             raise AssertionError(f"unexpected write-tier command: {path!r}")
 
@@ -133,6 +139,8 @@ def _write_args_with_required_storage(path: tuple[str, ...], tmp_path: Path) -> 
                 "--write-mode",
                 "direct",
             ]
+        case ("migrate", "run") | ("migrate", "adopt") | ("release", "create"):
+            return [*_write_args_without_storage(path, tmp_path), "--product-name", "pn"]
         case _:
             raise AssertionError(f"unexpected write-tier command: {path!r}")
 

@@ -21,8 +21,11 @@ from firecube.cli.archive import archive as archive_group
 from firecube.cli.catalog import catalog as catalog_group
 from firecube.cli.chunks import chunks as chunks_group
 from firecube.cli.completion import completion_cmd
+from firecube.cli.migrate import migrate as migrate_group
 from firecube.cli.parquet import parquet as parquet_group
 from firecube.cli.plugins import plugins as plugins_group
+from firecube.cli.release import release as release_group
+from firecube.cli.snapshot import snapshot as snapshot_group
 from firecube.cli.zarr import zarr as zarr_group
 
 
@@ -31,6 +34,9 @@ def register_groups(cli: click.Group) -> None:
     cli.add_command(archive_group, name="archive")
     cli.add_command(advise_group, name="advise")
     cli.add_command(chunks_group, name="chunks")
+    cli.add_command(snapshot_group, name="snapshot")
+    cli.add_command(migrate_group, name="migrate")
+    cli.add_command(release_group, name="release")
     cli.add_command(plugins_group, name="plugins")
     cli.add_command(zarr_group, name="zarr")
     cli.add_command(catalog_group, name="catalog")
