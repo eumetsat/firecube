@@ -28,6 +28,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
+from firecube.core.controlplane._compact import (
+    read_latest_pointer,
+)
 from firecube.core.controlplane._helpers import (
     describe_control_plane,
 )
@@ -36,9 +39,6 @@ from firecube.core.controlplane._helpers import (
 )
 from firecube.core.controlplane._paths import run_dir_for
 from firecube.core.controlplane._projection import ManifestProjection
-from firecube.core.controlplane._snapshot import (
-    read_latest_pointer,
-)
 from firecube.core.controlplane._wal_reader import WalReader
 from firecube.core.controlplane._wal_writer import ManifestWalWriter
 from firecube.core.controlplane.claims import FilesystemClaimService
@@ -54,13 +54,13 @@ from firecube.core.controlplane.repo_utils import (
 )
 from firecube.core.controlplane.types import (
     CLAIMS_DIRNAME,
+    COMPACT_DIRNAME,
     CONTROL_DIRNAME,
     DEFAULT_RUN_STALE_THRESHOLD_S,
     EVENT_CONSOLIDATED_TIME_COORD,
     LATEST_POINTER,
     RUNS_DIRNAME,
     SCHEMA_VERSION,
-    SNAPSHOT_DIRNAME,
     TIME_COORD_CONSOLIDATION_RUN_ID,
     ChunkInfo,
     ClaimInfo,
@@ -427,6 +427,17 @@ class ManifestRepository:
     def list_stale_runs(self, *, product: str) -> list[RunInfo]:
         return [run for run in self.list_runs(product=product, non_terminal=True) if run.stale]
 
+    def scan_runs(self, *, product: str) -> tuple[list[RunInfo], list[tuple[str, str]]]:
+        """Read every run of the product from fresh listings, bypassing the run-entry cache.
+
+        A failed runs/ listing raises. Returns the readable runs and `(run_id, error)` for
+        each run that cannot be read. See `WalReader.scan_run_entries`.
+        """
+        self._ensure_bound()
+        assert self._wal_reader is not None
+        entries, unreadable = self._wal_reader.scan_run_entries(product)
+        return [self._run_info_from_entry(product, entry) for entry in entries], unreadable
+
     def abandon_run(
         self, *, product: str, run_id: str, reason: str, meta: dict[str, Any] | None = None
     ) -> dict[str, Any]:
@@ -520,6 +531,16 @@ class ManifestRepository:
         assert self.claims is not None
         return self.claims.list_product_claims(product=product)
 
+    def read_claim_by_domain(self, *, product: str, domain: str) -> ClaimInfo | None:
+        """Read one claim by its domain id with one GET, or return None when it is absent.
+
+        Raises ControlPlaneCorruptionError on a claim file that cannot be read or parsed.
+        """
+        if self.claims is None:
+            self._ensure_bound()
+        assert self.claims is not None
+        return self.claims.read_claim_by_domain(product=product, domain=domain)
+
     def resolve_claim_owner(self, *, product: str, owner_id: str) -> ClaimOwner:
         """Return the recorded runs among the candidate run ids of a claim owner id.
 
@@ -543,7 +564,12 @@ class ManifestRepository:
                 runs.append(self._run_info_from_entry(product, {**entry, "run_id": candidate}))
         return ClaimOwner(owner_id=owner_id, runs=tuple(runs))
 
-    def rebuild_snapshot(self, product: str) -> dict[str, Any]:
+    def rebuild_compact(self, product: str) -> dict[str, Any]:
+        """Project every completed run into a new compact-cache generation under compact/.
+
+        Writes the records, their meta file and compact/LATEST.json, and returns the
+        generation summary; refuses while claims or non-terminal runs exist.
+        """
         _rebuild_t0 = time.time()
         self._ensure_product_control_root(product)
         self._assert_compaction_allowed(product)
@@ -553,19 +579,17 @@ class ManifestRepository:
             raise ManifestError("Repository not bound — call bind() first")
         control_path, control_uri = self._resolver(product)
         try:
-            self._fs.makedirs(control_path.join(SNAPSHOT_DIRNAME), exist_ok=True)
+            self._fs.makedirs(control_path.join(COMPACT_DIRNAME), exist_ok=True)
         except Exception:
-            self.log.debug(
-                "makedirs failed for %s (non-fatal)", control_path.join(SNAPSHOT_DIRNAME)
-            )
+            self.log.debug("makedirs failed for %s (non-fatal)", control_path.join(COMPACT_DIRNAME))
 
         is_remote = is_remote_target(control_uri.to_str())
-        lock_path = control_path.join(SNAPSHOT_DIRNAME, "compact.lock")
+        lock_path = control_path.join(COMPACT_DIRNAME, "compact.lock")
         lock_token = uuid.uuid4().hex
         lock_acquired = False
         if is_remote:
             self.log.debug(
-                "rebuild_snapshot for %s: skipping local lock (remote target — orchestration handles exclusion)",
+                "rebuild_compact for %s: skipping local lock (remote target — orchestration handles exclusion)",
                 product,
             )
         if not is_remote:
@@ -589,9 +613,9 @@ class ManifestRepository:
             default=0.0,
         )
         generation = str(time.time_ns())
-        snapshot_path = control_path.join(SNAPSHOT_DIRNAME, f"snapshot-{generation}.jsonl")
-        snapshot_meta_path = control_path.join(SNAPSHOT_DIRNAME, f"snapshot-{generation}.meta.json")
-        latest_path = control_path.join(LATEST_POINTER)
+        compact_path = control_path.join(COMPACT_DIRNAME, f"compact-{generation}.jsonl")
+        compact_meta_path = control_path.join(COMPACT_DIRNAME, f"compact-{generation}.meta.json")
+        latest_path = control_path.join(COMPACT_DIRNAME, LATEST_POINTER)
 
         try:
             payload = "\n".join(
@@ -600,7 +624,7 @@ class ManifestRepository:
             )
             if payload:
                 payload += "\n"
-            with self._fs.open(snapshot_path, "w") as handle:
+            with self._fs.open(compact_path, "w") as handle:
                 handle.write(payload)
             meta = {
                 "schema_version": SCHEMA_VERSION,
@@ -610,7 +634,7 @@ class ManifestRepository:
                 "records": len(records),
                 "product": product,
             }
-            with self._fs.open(snapshot_meta_path, "w") as handle:
+            with self._fs.open(compact_meta_path, "w") as handle:
                 json.dump(meta, handle, separators=(",", ":"))
             with self._fs.open(latest_path, "w") as handle:
                 json.dump(
@@ -618,14 +642,14 @@ class ManifestRepository:
                         "schema_version": SCHEMA_VERSION,
                         "generation": generation,
                         "snapshot_path": (
-                            snapshot_path.path
-                            if snapshot_path.protocol == "file"
-                            else snapshot_path.to_str()
+                            compact_path.path
+                            if compact_path.protocol == "file"
+                            else compact_path.to_str()
                         ),
                         "snapshot_meta_path": (
-                            snapshot_meta_path.path
-                            if snapshot_meta_path.protocol == "file"
-                            else snapshot_meta_path.to_str()
+                            compact_meta_path.path
+                            if compact_meta_path.protocol == "file"
+                            else compact_meta_path.to_str()
                         ),
                         "completed_before": completed_before,
                         "product": product,
@@ -634,15 +658,13 @@ class ManifestRepository:
                     separators=(",", ":"),
                 )
             record_wal_snapshot_rebuild(time.time() - _rebuild_t0)
-            self.log.debug("rebuild_snapshot for %s: %.2fs", product, time.time() - _rebuild_t0)
-            snapshot_uri = control_uri.join(
-                SNAPSHOT_DIRNAME, f"snapshot-{generation}.jsonl"
-            ).to_str()
+            self.log.debug("rebuild_compact for %s: %.2fs", product, time.time() - _rebuild_t0)
+            compact_uri = control_uri.join(COMPACT_DIRNAME, f"compact-{generation}.jsonl").to_str()
             return {
                 "product": product,
                 "generation": generation,
                 "records": len(records),
-                "snapshot_path": snapshot_uri,
+                "snapshot_path": compact_uri,
                 "locked": False,
                 "remote": is_remote,
             }
@@ -794,7 +816,6 @@ class ManifestRepository:
             self.log.debug("makedirs failed for %s (non-fatal)", control_path)
         try:
             self._fs.makedirs(control_path.join(RUNS_DIRNAME), exist_ok=True)
-            self._fs.makedirs(control_path.join(SNAPSHOT_DIRNAME), exist_ok=True)
             self._fs.makedirs(control_path.join(CLAIMS_DIRNAME), exist_ok=True)
         except Exception:
             self.log.debug("makedirs failed for %s (non-fatal)", control_path)
@@ -901,8 +922,8 @@ class ManifestRepository:
         assert self._fs is not None
         return read_latest_pointer(product, fs=self._fs, resolver=self._resolver, log=self.log)
 
-    def _read_snapshot_records(self, latest: dict[str, Any]) -> list[dict[str, Any]]:
-        return self._projection._read_snapshot_records(latest)
+    def _read_compact_records(self, latest: dict[str, Any]) -> list[dict[str, Any]]:
+        return self._projection._read_compact_records(latest)
 
     def _run_info_from_entry(self, product: str, payload: dict[str, Any]) -> RunInfo:
         return self._projection._run_info_from_entry(product, payload)
@@ -925,7 +946,7 @@ class ManifestRepository:
                 f"{claim.domain} (owner={claim.owner_id}, stale={claim.stale})" for claim in claims
             )
             raise ManifestError(
-                f"Cannot rebuild snapshot for {product}: blocking claims exist: {rendered}. "
+                f"Cannot rebuild compact cache for {product}: blocking claims exist: {rendered}. "
                 "Clear claims explicitly first."
             )
 
@@ -936,7 +957,7 @@ class ManifestRepository:
                 for run in blocking_runs
             )
             raise ManifestError(
-                f"Cannot rebuild snapshot for {product}: non-terminal runs exist: {rendered}. "
+                f"Cannot rebuild compact cache for {product}: non-terminal runs exist: {rendered}. "
                 "Abandon stale runs explicitly first."
             )
 

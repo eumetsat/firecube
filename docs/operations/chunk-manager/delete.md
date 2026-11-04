@@ -4,7 +4,6 @@ Use deletion commands when you need to remove old data, retry a failed range, or
 replace a written span.
 
 ```bash
-PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
 PRODUCT_NAME="MY_PRODUCT"
 ```
 
@@ -34,7 +33,7 @@ product data.
 Confirm no writer is using the product, then inspect the tracked records:
 
 ```bash
-firecube chunks list --product-name "$PRODUCT_URI" --include-span
+firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr" --include-span
 ```
 
 ## Delete Tracked Records And Storage
@@ -43,7 +42,7 @@ Preview first:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --dry-run
 ```
 
@@ -64,7 +63,7 @@ Delete after the dry-run matches your intent:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --yes-i-really-mean-it
 ```
 
@@ -78,7 +77,7 @@ Records without storage objects: 2 (their data stays in storage; use firecube ch
 Verify:
 
 ```bash
-firecube chunks list --product-name "$PRODUCT_URI"
+firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
@@ -94,7 +93,7 @@ forget the tracked records:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --manifest-only \
   --yes-i-really-mean-it
 ```
@@ -111,7 +110,7 @@ Preview a date range:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --range 2024-03-01,2024-03-02 \
   --dry-run
 ```
@@ -120,7 +119,7 @@ Delete it:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --range 2024-03-01,2024-03-02 \
   --yes-i-really-mean-it
 ```
@@ -134,7 +133,7 @@ timestamp), use `--time-range` instead:
 
 ```bash
 firecube chunks delete \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --time-range 2024-03-01:2024-03-02 \
   --dry-run
 ```
@@ -154,7 +153,7 @@ Preview:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-span-run \
   --dry-run
 ```
@@ -169,7 +168,7 @@ Delete:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-span-run \
   --yes-i-really-mean-it
 ```
@@ -192,7 +191,7 @@ delete spans that are not time-chunk aligned:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-span-run \
   --force \
   --yes-i-really-mean-it
@@ -211,7 +210,7 @@ Find the spans that cover the data time range. Each record's `meta` holds its
 
 ```bash
 firecube chunks list \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --time-range 2024-03-01T00:00:00:2024-03-01T23:59:59 \
   --format json
 ```
@@ -220,13 +219,13 @@ Clear each span, then ingest its source data again:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --run-id <run-id> \
   --batch-id <batch-id> \
   --dry-run
 
 firecube chunks delete-span \
-  --product-name "$PRODUCT_URI" \
+  --product-name "file:///data/products/MY_PRODUCT.zarr" \
   --run-id <run-id> \
   --batch-id <batch-id> \
   --yes-i-really-mean-it
@@ -241,7 +240,7 @@ NaN-filled 1 spans and deleted 0 chunk keys from storage
 ```bash
 firecube ingest <plugin> \
   --input-data file:///data/source/2024-03-01 \
-  --target "$PRODUCT_URI" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
@@ -266,7 +265,7 @@ delete step is required.
 ```bash
 firecube ingest <plugin> \
   --input-data "file://$PWD/replacement-data" \
-  --target "$PRODUCT_URI" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
@@ -279,10 +278,10 @@ Reingesting in place refuses insert attempts (timestamps that would land in the 
 existing data), incoming or existing duplicates, and NaT values. State=2
 (deleted) and state=3 (failed_batch) slots are refilled.
 
-Rebuild the snapshot after a large cleanup or reingest:
+Rebuild the compact cache after a large cleanup or reingest:
 
 ```bash
-firecube chunks snapshots rebuild --product-name "$PRODUCT_URI"
+firecube chunks compact rebuild --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 ## Failure Recovery
@@ -301,4 +300,4 @@ firecube chunks snapshots rebuild --product-name "$PRODUCT_URI"
 
 - **[Inspect ChunkManager State](inspect.md)** — find records before deletion
 - **[Recover Runs And Claims](recover.md)** — clear active runs or claims that block deletion
-- **[Snapshots](snapshots.md)** — rebuild the read model after cleanup
+- **[Compact Cache](compact.md)** — rebuild the read model after cleanup

@@ -20,13 +20,13 @@ from collections.abc import Callable, Generator
 from datetime import datetime
 from typing import Any
 
+from firecube.core.controlplane._compact import load_current_state, read_compact_records
 from firecube.core.controlplane._event_processor import (
     apply_events,
     record_from_event,
     record_to_chunk_info,
     sorted_complete_runs,
 )
-from firecube.core.controlplane._snapshot import load_current_state, read_snapshot_records
 from firecube.core.controlplane.ranges import (
     normalize_index_ranges as _normalize_index_ranges,
 )
@@ -99,7 +99,7 @@ def _run_entry_wal_order(entry: dict[str, Any]) -> tuple[float, str]:
 
 
 class ManifestProjection:
-    """Read WAL and snapshot records through ManifestRepository's compatibility surface."""
+    """Read WAL and compact-cache records through ManifestRepository's compatibility surface."""
 
     def __init__(self, repo: Any) -> None:
         self._repo = repo
@@ -345,10 +345,10 @@ class ManifestProjection:
             apply_events(current, self._repo._read_run_events(product, run_entry), self._repo.log)
         return _apply_overwrite_ranges_to_active_coverage(current)
 
-    def _read_snapshot_records(self, latest: dict[str, Any]) -> list[dict[str, Any]]:
+    def _read_compact_records(self, latest: dict[str, Any]) -> list[dict[str, Any]]:
         self._repo._ensure_bound()
         assert self._repo._fs is not None
-        return read_snapshot_records(latest, fs=self._repo._fs)
+        return read_compact_records(latest, fs=self._repo._fs)
 
     def _run_info_from_entry(self, product: str, payload: dict[str, Any]) -> RunInfo:
         run_id = str(payload.get("run_id", ""))

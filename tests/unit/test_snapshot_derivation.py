@@ -131,31 +131,31 @@ def _seed_snapshot_state(
     }
 
 
-def test_snapshot_status_reads_records_field_canonical(tmp_path):
+def test_compact_status_reads_records_field_canonical(tmp_path):
     manager = _chunk_manager(tmp_path)
     _seed_snapshot_state(manager, product="product", meta={"records": 2})
 
-    status = manager.snapshot_status("product")
+    status = manager.compact_status("product")
 
     assert status["exists"] is True
     assert status["records"] == 2
 
 
-def test_snapshot_status_falls_back_to_record_count_legacy(tmp_path):
+def test_compact_status_falls_back_to_record_count_legacy(tmp_path):
     manager = _chunk_manager(tmp_path)
     _seed_snapshot_state(manager, product="product", meta={"record_count": 3})
 
-    status = manager.snapshot_status("product")
+    status = manager.compact_status("product")
 
     assert status["exists"] is True
     assert status["records"] == 3
 
 
-def test_snapshot_status_returns_zero_when_neither_field(tmp_path):
+def test_compact_status_returns_zero_when_neither_field(tmp_path):
     manager = _chunk_manager(tmp_path)
     _seed_snapshot_state(manager, product="product", meta={})
 
-    status = manager.snapshot_status("product")
+    status = manager.compact_status("product")
 
     assert status["exists"] is True
     assert status["records"] == 0

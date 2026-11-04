@@ -304,5 +304,5 @@ def test_finalize_injects_control_plane_storage_metrics(tmp_path):
     assert storage["control_root"]
     assert storage["latest_pointer"]
     assert storage["control_root"].endswith("/product.zarr/.firecube")
-    assert storage["latest_pointer"].endswith("/product.zarr/.firecube/LATEST.json")
+    assert storage["latest_pointer"].endswith("/product.zarr/.firecube/compact/LATEST.json")
     assert "._firecube_manifest.jsonl" not in str(storage.values())

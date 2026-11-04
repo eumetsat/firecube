@@ -36,7 +36,12 @@ from firecube.core.controlplane.types import (
     SCHEMA_FILENAME,
     WriteDomain,
 )
-from firecube.core.errors import ClaimConflictError, FirecubeError, Message
+from firecube.core.errors import (
+    ClaimConflictError,
+    FirecubeError,
+    Message,
+    ProductUnderMaintenanceError,
+)
 from firecube.ingestor.runtime.recording import SpanRecorder
 from firecube.ingestor.types.context import (
     IngestResult,
@@ -140,29 +145,59 @@ def _error_text(exc: BaseException) -> str:
 
 
 def _acquire_maintenance_claim(
-    *, manager, product: str, operation: str, owner_id: str
+    *,
+    manager,
+    product: str,
+    operation: str,
+    owner_id: str,
+    warn: Callable[[str], None],
+    holder_run_id: str | None = None,
 ) -> tuple[WriteDomain, Any]:
-    """Acquire the maintenance claim.
+    """Acquire the maintenance claim, then check the exclusive maintenance claim under it.
+
+    With `holder_run_id`, the product's exclusive maintenance claim must exist and be owned
+    by it, and is the one claim the listing lets through. A failed release of the acquired
+    claim goes to `warn`.
 
     Returns:
         The claim's domain and the handle whose release stops the heartbeat.
 
     Raises:
-        ArchiveClaimError: The product has an active claim, or the acquisition conflicts.
+        ArchiveClaimError: The product has an active claim, the acquisition conflicts, the
+            product is under exclusive maintenance, or `holder_run_id` does not own its
+            exclusive maintenance claim; the acquired claim is released first.
     """
-    active_claims = manager.list_claims(product=product)
-    if active_claims:
-        # Function-scope import: keeps the control-plane manager out of module import.
-        from firecube.core.controlplane.manager import maintenance_refusal_message
+    # Function-scope import: keeps the control-plane manager out of module import.
+    from firecube.core.controlplane.manager import (
+        exclusive_maintenance_holder_refusal,
+        holder_absent_message,
+        is_exclusive_maintenance_holder,
+        maintenance_refusal_message,
+    )
 
-        details = ", ".join(f"{claim.domain} (owner={claim.owner_id})" for claim in active_claims)
+    active_claims = manager.list_claims(product=product)
+    blocking_claims = [
+        claim
+        for claim in active_claims
+        if not is_exclusive_maintenance_holder(claim, product=product, holder_run_id=holder_run_id)
+    ]
+    if blocking_claims:
+        details = ", ".join(f"{claim.domain} (owner={claim.owner_id})" for claim in blocking_claims)
         raise ArchiveClaimError(
             maintenance_refusal_message(
                 repo=manager.repo,
                 product=product,
                 operation=operation,
                 detail=f"active write claim(s) exist: {details}",
-                claims=active_claims,
+                claims=blocking_claims,
+            ),
+            product=product,
+            operation=operation,
+        )
+    if holder_run_id is not None and not active_claims:
+        raise ArchiveClaimError(
+            holder_absent_message(
+                product=product, operation=operation, holder_run_id=holder_run_id
             ),
             product=product,
             operation=operation,
@@ -175,9 +210,6 @@ def _acquire_maintenance_claim(
             product=product, domain=domain, owner_id=owner_id, describe_conflict=False
         )
     except ClaimConflictError as exc:
-        # Function-scope import: keeps the control-plane manager out of module import.
-        from firecube.core.controlplane.manager import maintenance_refusal_message
-
         blocking: list[Any] = []
         with contextlib.suppress(Exception):
             blocking = manager.list_claims(product=product)
@@ -192,6 +224,26 @@ def _acquire_maintenance_claim(
             product=product,
             operation=operation,
         ) from exc
+    # An exclusive claim taken, released or changed between the listing and the acquire
+    # refuses here.
+    try:
+        if holder_run_id is None:
+            manager.check_exclusive_maintenance(product=product, owner_id=owner_id)
+            return domain, handle
+        refusal = exclusive_maintenance_holder_refusal(
+            repo=manager.repo, product=product, operation=operation, holder_run_id=holder_run_id
+        )
+    except ProductUnderMaintenanceError as exc:
+        _release_claim(handle, warn=warn)
+        raise ArchiveClaimError(
+            exc.message or str(exc), product=product, operation=operation
+        ) from exc
+    except BaseException:
+        _release_claim(handle, warn=warn)
+        raise
+    if refusal is not None:
+        _release_claim(handle, warn=warn)
+        raise ArchiveClaimError(refusal, product=product, operation=operation)
     return domain, handle
 
 
@@ -281,6 +333,7 @@ def create_archive(
     allow_nan: bool = True,
     allow_inf: bool = True,
     warn: Callable[[str], None] = _ignore_line,
+    holder_run_id: str | None = None,
 ) -> ArchiveCreateResult:
     """Write the session's store to a local .zip or .tgm archive.
 
@@ -303,6 +356,8 @@ def create_archive(
         allow_nan: Allow NaN values in a tensogram archive.
         allow_inf: Allow Inf values in a tensogram archive.
         warn: Receives each bookkeeping warning line, "Warning: " included.
+        holder_run_id: The run that holds the product's exclusive maintenance claim. Pass
+            it to archive under that claim; the run record names it. A plain store refuses it.
 
     Returns:
         The written archive, its size, the recorded run id and the tensogram summary.
@@ -310,7 +365,9 @@ def create_archive(
     Raises:
         ValueError: `archive_format` is unknown, or a zip archive gets a group, a
             variable list or a date; the call reads and writes nothing.
-        ArchiveClaimError: The product's claims refuse the archive; the call records no run.
+        ArchiveClaimError: The product's claims refuse the archive, another owner holds
+            its exclusive maintenance claim, or `holder_run_id` does not hold it or names a
+            plain store; the call records no run.
         ArchiveConversionError: The conversion raises `FileExistsError`, `ValueError`,
             `ImportError` or `CalendarArchiveError`; for a product, the call first tries to
             record the run as failed.
@@ -337,12 +394,27 @@ def create_archive(
         "end_date": end_date,
         "variables": variables,
     }
+    if holder_run_id is not None:
+        scope_meta["holder_run_id"] = holder_run_id
     # A plain Zarr store stays a pure read: no claim, no record, nothing written to it.
     manager = (
         session.control_plane()
         if session.exists(source_uri.join(CONTROL_DIRNAME, SCHEMA_FILENAME))
         else None
     )
+    if manager is None and holder_run_id is not None:
+        # A store without a control plane is never admitted, so no claim can admit a holder.
+        raise ArchiveClaimError(
+            Message(
+                "Cannot run {operation} for store {product} as holder {holder_run_id}: the "
+                "store is not a product, so no exclusive maintenance claim admits the holder.",
+                operation="archive_create",
+                product=product_name,
+                holder_run_id=holder_run_id,
+            ),
+            product=product_name,
+            operation="archive_create",
+        )
     claim_handle: Any = None
     tgm_result: dict[str, Any] | None = None
     try:
@@ -352,6 +424,8 @@ def create_archive(
                 product=product_name,
                 operation="archive_create",
                 owner_id=run_id,
+                warn=warn,
+                holder_run_id=holder_run_id,
             )
         scope_meta["archive_started_at"] = datetime.now(UTC).isoformat()
         try:
@@ -467,8 +541,9 @@ def restore_archive(
 
     Raises:
         ValueError: `archive_format` is unknown; the call reads and writes nothing.
-        ArchiveClaimError: The product's claims refuse the restore; the call tries to record
-            the run as started and failed.
+        ArchiveClaimError: The product's claims refuse the restore, or another owner holds
+            its exclusive maintenance claim; the call tries to record the run as started and
+            failed, once each.
         ArchiveConversionError: The restore raises `FileExistsError`, `ImportError` or
             `ValueError`, or produces no output; the call first tries to record the run as failed.
     """
@@ -495,16 +570,22 @@ def restore_archive(
     manager = session.control_plane()
     recorder = SpanRecorder(manager)
     run_started = False
+    start_refused = False
 
     def _record_started() -> None:
-        nonlocal run_started
-        recorder.register_run_started(
-            run_id=restore_run_id,
-            product=product_name,
-            output_path=target_uri_str,
-            output_format="zarr",
-            slice_meta=slice_meta,
-        )
+        nonlocal run_started, start_refused
+        try:
+            recorder.register_run_started(
+                run_id=restore_run_id,
+                product=product_name,
+                output_path=target_uri_str,
+                output_format="zarr",
+                slice_meta=slice_meta,
+            )
+        except ProductUnderMaintenanceError:
+            # The start is recorded and the refusal recorded it failed: never start it again.
+            start_refused = True
+            raise
         run_started = True
         manager.record_maintenance_started(
             product=product_name,
@@ -515,9 +596,15 @@ def restore_archive(
 
     def _record_failure(error: str) -> None:
         # Warn, never raise: a raise here replaces the restore error.
+        if start_refused:
+            # The exclusive-maintenance refusal already recorded the run failed.
+            return
         try:
             if not run_started:
-                _record_started()
+                try:
+                    _record_started()
+                except ProductUnderMaintenanceError:
+                    return
             recorder.register_run_failure(
                 run_id=restore_run_id,
                 product=product_name,
@@ -550,6 +637,7 @@ def restore_archive(
                 product=product_name,
                 operation="archive_restore",
                 owner_id=restore_run_id,
+                warn=warn,
             )
         except Exception as exc:
             _record_failure(str(exc))
@@ -557,6 +645,11 @@ def restore_archive(
         # The run is recorded before the restore touches the target; if that fails, nothing runs.
         try:
             _record_started()
+        except ProductUnderMaintenanceError as exc:
+            # The refusal already recorded the run failed; it surfaces as the archive's refusal.
+            raise ArchiveClaimError(
+                exc.message or str(exc), product=product_name, operation="archive_restore"
+            ) from exc
         except Exception as exc:
             _record_failure(str(exc))
             raise

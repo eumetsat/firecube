@@ -651,7 +651,7 @@ class TestChunkManagerIntegration:
         )
         assert (
             manager.get_latest_pointer("test_product")
-            == "s3://test-bucket/data/test_product/.firecube/LATEST.json"
+            == "s3://test-bucket/data/test_product/.firecube/compact/LATEST.json"
         )
 
     def test_rebind_setter_is_not_available(self, temp_workspace):
@@ -785,14 +785,14 @@ def test_repro_stale_snapshot_warning_names_only_options_snapshots_rebuild_has(
 ):
     with closing(_chunk_manager(temp_workspace)) as manager:
         _record_completed_span_run(manager, product="p", run_id="run-1", group="g", batch_id="b")
-        manager.rebuild_snapshot("p")
+        manager.rebuild_compact("p")
     now = time.time()
     monkeypatch.setattr(time, "time", lambda: now + 2 * 86400)
 
     with closing(_chunk_manager(temp_workspace)) as manager, caplog.at_level(logging.WARNING):
         manager.list_chunks(product="p", chunk_type="span")
 
-    command = cli.commands["chunks"].commands["snapshots"].commands["rebuild"]  # type: ignore[attr-defined]
+    command = cli.commands["chunks"].commands["compact"].commands["rebuild"]  # type: ignore[attr-defined]
     known = {opt for param in command.params for opt in param.opts} | {"--help"}
     printed = set(re.findall(r"--[a-z][\w-]*", caplog.text))
     assert "hours old" in caplog.text and printed <= known, (caplog.text, printed - known)

@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
@@ -151,6 +151,7 @@ def preallocate_product(
     warn: Callable[[str], None] = _ignore_line,
     on_dry_run_group: Callable[[PreallocateDryRunGroup], None] | None = None,
     logger: logging.Logger = _log,
+    producer: Mapping[str, Any] | None = None,
 ) -> None:
     """Create every declared array of a product at its full slot count.
 
@@ -184,6 +185,8 @@ def preallocate_product(
         warn: Receives each warning line.
         on_dry_run_group: Receives one preview per bounded group in a dry run.
         logger: Receives the run-record and claim failures.
+        producer: The producer record the run records keep at `meta["producer"]`.
+            `None` records none.
 
     Raises:
         SlotWindowError: The slot window or slot group does not fit the resolved index.
@@ -192,6 +195,8 @@ def preallocate_product(
         SchemaDriftError: An existing array disagrees with the plan or its ownership
             marker, or the target holds a legacy slot-index record without a
             resolved-index record.
+        ProductUnderMaintenanceError: Another owner holds the product's exclusive
+            maintenance claim; the run is recorded started and failed, the store untouched.
     """
     from firecube.core.controlplane.manager import check_legacy_index_record
     from firecube.core.errors import LegacyIndexRecordError
@@ -210,8 +215,9 @@ def preallocate_product(
 
     identity = session.product
     plugin_target = identity.product_uri.to_str()
-    # Run-lifecycle bookkeeping: ``ensure_resolved_index`` creates a
-    # non-terminal ``run.json`` (status=started). The operation MUST drive that
+    # Run-lifecycle bookkeeping: the run's start record (the materialization
+    # claim's, or the plain one below it) creates a non-terminal ``run.json``
+    # (status=started) before the first write. The operation MUST drive that
     # run to a terminal state (complete/failed) before returning so the next
     # slot-range ingest is not blocked by ``ResumeGuard`` on a stuck run.
     _preallocate_run_created = False
@@ -394,13 +400,30 @@ def preallocate_product(
                     windows_by_group=windows_by_group,
                     coord_chunk_sizes=coord_chunk_sizes,
                     slot_group=None,
-                    meta=_run_meta(ingestor, plugin_ctx),
+                    meta=_run_meta(ingestor, plugin_ctx, producer),
                     whole_extent_groups=whole_extent_groups,
                 )
             except BaseException:
                 _preallocate_claim_rejected = True
                 raise
             _preallocate_run_registered = True
+            _preallocate_run_created = True
+        else:
+            # No materialization claim admits this run, so its start record does,
+            # before the first write: the run stays non-terminal until the finally
+            # below, and a refused start (recorded failed) is never started again.
+            try:
+                chunk_manager.record_run_started(
+                    product=identity.product_name,
+                    run_id=run_id,
+                    output_path=plugin_target,
+                    output_format="zarr",
+                    size=0,
+                    meta=_run_meta(ingestor, plugin_ctx, producer),
+                )
+            except BaseException:
+                _preallocate_claim_rejected = True
+                raise
             _preallocate_run_created = True
 
         coord_names_by_group = {spec.group: spec.coord_names for spec in schema}
@@ -625,9 +648,9 @@ def preallocate_product(
     finally:
         # Terminate the preallocate run so the terminal event reaches the WAL
         # writer before the caller closes the manager. Guarded by
-        # ``_preallocate_run_created``: non-parallel plugins never call
-        # ``ensure_resolved_index``, so no run.json exists and any terminal
-        # write would be spurious.
+        # ``_preallocate_run_created``: a failure before the start record leaves
+        # no run.json, so the failure run is started here first; a refused start
+        # (``_preallocate_claim_rejected``) is already recorded and not retried.
         #
         # Defer a success-path ``record_run_terminal`` failure until
         # AFTER the claim release runs. Re-raising at the failure site
@@ -649,7 +672,7 @@ def preallocate_product(
                         output_path=plugin_target,
                         output_format="zarr",
                         size=0,
-                        meta=_run_meta(ingestor, plugin_ctx, run_id=run_id),
+                        meta=_run_meta(ingestor, plugin_ctx, producer, run_id=run_id),
                     )
                     _preallocate_run_created = True
                 except Exception as exc:
@@ -678,7 +701,7 @@ def preallocate_product(
                         output_path=plugin_target,
                         output_format="zarr",
                         size=terminal_size,
-                        meta=_run_meta(ingestor, plugin_ctx, run_id=run_id),
+                        meta=_run_meta(ingestor, plugin_ctx, producer, run_id=run_id),
                         status=final_state,
                         error=(
                             None
@@ -759,12 +782,19 @@ def preallocate_product(
             raise _terminal_exc
 
 
-def _run_meta(ingestor: PreallocateHost, plugin_ctx: PluginContext, **extra: Any) -> dict[str, Any]:
-    """The meta of a preallocate run record, with the STAC provenance of a stac:// source."""
+def _run_meta(
+    ingestor: PreallocateHost,
+    plugin_ctx: PluginContext,
+    producer: Mapping[str, Any] | None,
+    **extra: Any,
+) -> dict[str, Any]:
+    """The meta of a preallocate run record, with STAC provenance and the producer record."""
     meta: dict[str, Any] = {"kind": "preallocate", **extra}
     stac_record = ingestor.stac_discovery_record(plugin_ctx)
     if stac_record is not None:
         meta["stac_discovery"] = stac_record
+    if producer is not None:
+        meta["producer"] = dict(producer)
     return meta
 
 

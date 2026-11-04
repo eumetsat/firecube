@@ -39,7 +39,14 @@ from firecube.core.controlplane.types import (
     DeletionPlan,
     WriteDomain,
 )
-from firecube.core.errors import ClaimConflictError, ManifestError, Message, Param, StorageError
+from firecube.core.errors import (
+    ClaimConflictError,
+    ManifestError,
+    Message,
+    Param,
+    ProductUnderMaintenanceError,
+    StorageError,
+)
 from firecube.core.runtime import identity_from_storage_config
 from firecube.core.storage.session import _literal_delete
 from firecube.core.storage.uri import StorageUri
@@ -756,24 +763,54 @@ class DeletionEngine:
         )
 
     def _acquire_maintenance_claims(
-        self, *, products: Iterable[str], operation: str
-    ) -> list[tuple[str, WriteDomain]]:
+        self, *, products: Iterable[str], operation: str, holder_run_id: str | None = None
+    ) -> list[tuple[str, WriteDomain, Any]]:
+        """Acquire the maintenance claim of every product, refusing while any claim exists.
+
+        Lists each product's claims first, then acquires, then checks the exclusive
+        maintenance claim under each acquired claim. With `holder_run_id`, each product's
+        exclusive maintenance claim must exist and be owned by it, and is the one claim the
+        listing lets through. Every refusal releases the claims this call acquired before
+        it raises.
+
+        Returns:
+            `(product, domain, handle)` for each acquired claim; pass it to
+            `_clear_maintenance_claims`.
+
+        Raises:
+            ManifestError: A product has a claim, an acquisition conflicts, the product is
+                under exclusive maintenance, or `holder_run_id` does not own its exclusive
+                maintenance claim.
+        """
         product_list = sorted({product for product in products if product})
         if not product_list:
             return []
 
+        # Function-scope import: the manager module imports this one.
+        from firecube.core.controlplane.manager import (
+            check_exclusive_maintenance,
+            exclusive_maintenance_holder_refusal,
+            holder_absent_message,
+            is_exclusive_maintenance_holder,
+            maintenance_refusal_message,
+        )
+
         owner_id = f"maintenance:{operation}:{uuid.uuid4()}"
-        acquired: list[tuple[str, WriteDomain]] = []
+        acquired: list[tuple[str, WriteDomain, Any]] = []
         acquiring = product_list[0]
         try:
             for product in product_list:
                 active_claims = self.repo.list_claims(product=product)
-                if active_claims:
-                    # Function-scope import: the manager module imports this one.
-                    from firecube.core.controlplane.manager import maintenance_refusal_message
-
+                blocking_claims = [
+                    claim
+                    for claim in active_claims
+                    if not is_exclusive_maintenance_holder(
+                        claim, product=product, holder_run_id=holder_run_id
+                    )
+                ]
+                if blocking_claims:
                     details = ", ".join(
-                        f"{claim.domain} (owner={claim.owner_id})" for claim in active_claims
+                        f"{claim.domain} (owner={claim.owner_id})" for claim in blocking_claims
                     )
                     raise ManifestError(
                         maintenance_refusal_message(
@@ -781,18 +818,42 @@ class DeletionEngine:
                             product=product,
                             operation=operation,
                             detail=f"active write claim(s) exist: {details}",
-                            claims=active_claims,
+                            claims=blocking_claims,
+                        )
+                    )
+                if holder_run_id is not None and not active_claims:
+                    raise ManifestError(
+                        holder_absent_message(
+                            product=product, operation=operation, holder_run_id=holder_run_id
                         )
                     )
 
             for acquiring in product_list:
                 domain = WriteDomain(product=acquiring, category="maintenance", name=operation)
-                self.repo.acquire_claim(product=acquiring, domain=domain, owner_id=owner_id)
-                acquired.append((acquiring, domain))
+                handle = self.repo.acquire_claim(
+                    product=acquiring, domain=domain, owner_id=owner_id
+                )
+                acquired.append((acquiring, domain, handle))
+                # An exclusive claim taken, released or changed between the listing and the
+                # acquire refuses here.
+                if holder_run_id is None:
+                    check_exclusive_maintenance(
+                        repo=self.repo, product=acquiring, owner_id=owner_id
+                    )
+                    continue
+                refusal = exclusive_maintenance_holder_refusal(
+                    repo=self.repo,
+                    product=acquiring,
+                    operation=operation,
+                    holder_run_id=holder_run_id,
+                )
+                if refusal is not None:
+                    raise ManifestError(refusal)
+        except ProductUnderMaintenanceError as exc:
+            self._clear_maintenance_claims(acquired)
+            raise ManifestError(exc.message or str(exc)) from exc
         except ClaimConflictError as exc:
-            # Function-scope import: the manager module imports this one.
-            from firecube.core.controlplane.manager import maintenance_refusal_message
-
+            self._clear_maintenance_claims(acquired)
             detail = _error_text(exc) or "write claim acquisition failed"
             blocking: list[ClaimInfo] = []
             with suppress(Exception):
@@ -806,15 +867,24 @@ class DeletionEngine:
                     claims=blocking,
                 )
             ) from exc
-        except Exception:
+        except BaseException:
+            # An interrupt releases too: the callers' cleanup starts only after this returns.
             self._clear_maintenance_claims(acquired)
             raise
         return acquired
 
-    def _clear_maintenance_claims(self, claims: Iterable[tuple[str, WriteDomain]]) -> None:
-        for product, domain in reversed(list(claims)):
-            with suppress(Exception):
-                self.repo.clear_claim(product=product, domain_id=domain.identifier, force=True)
+    def _clear_maintenance_claims(self, claims: Iterable[tuple[str, WriteDomain, Any]]) -> None:
+        """Release each acquired claim, newest first; releasing stops its heartbeat too.
+
+        A failed release is logged; deleting the file alone lets the heartbeat write it back.
+        """
+        for product, domain, handle in reversed(list(claims)):
+            try:
+                handle.release()
+            except Exception:
+                self.log.exception(
+                    "Failed to release maintenance claim %s of %s", domain.identifier, product
+                )
 
     def _record_maintenance_started(
         self,
@@ -898,12 +968,18 @@ class DeletionEngine:
         delete_manifest: bool = True,
         storage_config: StorageConfig | None = None,
         dry_run: bool = False,
+        *,
+        holder_run_id: str | None = None,
     ) -> dict[str, Any]:
         """Execute a deletion plan.
 
         Storage deletion covers only records whose key names a storage object.
         Span, run and schema records are counted in ``records_without_storage``
         and never passed to storage deletion.
+
+        Pass ``holder_run_id`` to delete as the owner of each affected product's exclusive
+        maintenance claim. The deletion is refused unless that run owns it. The maintenance
+        record names the holder.
         """
         storage_chunks = [c for c in plan.chunks if c.chunk_type not in RECORD_ONLY_TYPES]
         records_without_storage = plan.count - len(storage_chunks)
@@ -923,19 +999,23 @@ class DeletionEngine:
         claims = self._acquire_maintenance_claims(
             products=affected_products,
             operation="delete_chunks",
+            holder_run_id=holder_run_id,
         )
 
         run_id = f"maintenance-delete-{uuid.uuid4().hex}"
 
         def _scope_for(product: str) -> dict[str, Any]:
             product_chunks = [c for c in plan.chunks if c.product == product]
-            return {
+            scope: dict[str, Any] = {
                 "chunks_count": len(product_chunks),
                 "size_bytes": sum(int(c.size or 0) for c in product_chunks),
                 "delete_storage": bool(delete_storage),
                 "delete_manifest": bool(delete_manifest),
                 "products_affected": affected_products,
             }
+            if holder_run_id is not None:
+                scope["holder_run_id"] = holder_run_id
+            return scope
 
         started_products: list[str] = []
         try:
@@ -1710,8 +1790,14 @@ class DeletionEngine:
         update_manifest: bool = True,
         update_state: bool = True,
         time_dim_name: str | None = None,
+        holder_run_id: str | None = None,
     ) -> dict[str, Any]:
-        """Delete Zarr concrete chunks from spans."""
+        """Delete Zarr concrete chunks from spans.
+
+        Pass ``holder_run_id`` to delete as the owner of the product's exclusive maintenance
+        claim. The deletion is refused unless that run owns it. The maintenance record names
+        the holder.
+        """
         spans_list = list(spans)
         if not spans_list:
             return {
@@ -1732,17 +1818,22 @@ class DeletionEngine:
         if not self.repo.base_uri:
             raise ManifestError("No base URI configured")
 
-        claims = self._acquire_maintenance_claims(products=[product], operation="delete_spans")
+        claims = self._acquire_maintenance_claims(
+            products=[product], operation="delete_spans", holder_run_id=holder_run_id
+        )
 
         run_id = f"maintenance-delete-spans-{uuid.uuid4().hex}"
 
         def _scope_for(_product: str) -> dict[str, Any]:
-            return {
+            scope: dict[str, Any] = {
                 "spans_count": len(spans_list),
                 "force": bool(force),
                 "update_manifest": bool(update_manifest),
                 "update_state": bool(update_state),
             }
+            if holder_run_id is not None:
+                scope["holder_run_id"] = holder_run_id
+            return scope
 
         started_products: list[str] = []
         try:

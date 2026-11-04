@@ -85,7 +85,7 @@ Examples:
   firecube chunks delete --all-products --yes-i-really-mean-it
 
 See also: firecube chunks list, firecube chunks delete-span,
-          firecube chunks snapshots rebuild
+          firecube chunks compact rebuild
 """,
 )
 @click.option(

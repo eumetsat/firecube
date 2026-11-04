@@ -64,6 +64,9 @@ Organization = "https://www.eumetsat.int/"
 [project.scripts]
 firecube = "firecube.cli.main:cli"
 
+[project.entry-points."firecube.migrations"]
+"firecube:set-attrs" = "firecube.ingestor.runtime.migrations.set_attrs:SetAttrs"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

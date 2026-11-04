@@ -39,7 +39,7 @@ OPERATIONS: Mapping[str, tuple[str, ...]] = MappingProxyType(
     {
         "abandon_run": ("chunks", "runs", "abandon"),
         "clear_claim": ("chunks", "claims", "clear"),
-        "rebuild_snapshot": ("chunks", "snapshots", "rebuild"),
+        "rebuild_compact": ("chunks", "compact", "rebuild"),
         "delete_span": ("chunks", "delete-span"),
         "preallocate": ("zarr", "preallocate"),
         "rebuild_index": ("zarr", "index", "rebuild"),

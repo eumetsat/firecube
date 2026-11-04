@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import uuid
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -131,6 +132,7 @@ def consolidate_time_coords(
     Raises:
         ConfigurationError: The storage type is s3, or a group's time coordinate cannot be resolved.
         ProductIdentityError: *target* and *product_name* form no valid product identity.
+        ProductUnderMaintenanceError: Another owner holds the product's exclusive maintenance claim; a dry run skips the check.
         SchemaDriftError: A group's store state forbids consolidation, such as drift or an engine-managed coordinate.
     """
     import zarr
@@ -142,13 +144,6 @@ def consolidate_time_coords(
             "remote (s3) consolidate-time-coord is not currently supported due to non-atomic crash-recovery; see follow-up plan"
         )
 
-    handle = create_zarr_store(uri=target, storage_config=storage_config, mode="a")
-    root = zarr.open_group(**handle.zarr_kwargs(), mode="a", zarr_format=3, use_consolidated=False)
-    reference = _read_consolidate_reference_index(
-        target,
-        storage_config,
-        product_name=product_name,
-    )
     summary = _ConsolidateSummary()
     consolidated_groups: list[str] = []
     pending_backfills: list[tuple[str, str, str]] = []
@@ -165,6 +160,21 @@ def consolidate_time_coords(
         )
     )
     try:
+        # The maintenance check precedes the writable open: that open creates
+        # root metadata on a store that lacks it.
+        if not dry_run:
+            manager.check_exclusive_maintenance(
+                product=identity.product_name, owner_id=f"consolidate-{uuid.uuid4().hex}"
+            )
+        handle = create_zarr_store(uri=target, storage_config=storage_config, mode="a")
+        root = zarr.open_group(
+            **handle.zarr_kwargs(), mode="a", zarr_format=3, use_consolidated=False
+        )
+        reference = _read_consolidate_reference_index(
+            target,
+            storage_config,
+            product_name=product_name,
+        )
         existing_seal_groups: set[str] = {
             group_name
             for event in manager.list_time_coord_consolidations(product=identity.product_name)

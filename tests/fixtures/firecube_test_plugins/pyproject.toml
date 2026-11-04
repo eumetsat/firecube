@@ -51,5 +51,11 @@ w14_counter_success = "w14_single_discovery_plugin:CounterSuccessIngestor"
 w14_lazy_success = "w14_single_discovery_plugin:LazySuccessIngestor"
 w14_override_empty = "w14_single_discovery_plugin:OverrideEmptyIngestor"
 
+[project.entry-points."firecube.migrations"]
+"cli-test:retitle" = "cli_test_plugin:RetitleStep"
+"cli-test:release" = "cli_test_plugin:ReleaseStep"
+"cli-test:needs-retitle" = "cli_test_plugin:NeedsRetitleStep"
+"cli-test:from-release" = "cli_test_plugin:FromReleaseStep"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/cli_test_plugin", "src/direct_zarr_capable_test_plugin", "src/direct_zarr_non_capable_test_plugin", "src/e2e_zarr_test_plugin", "src/multi_group_capable_test_plugin", "src/cf_time_dim_test_plugin", "src/slot_shape_test_plugin", "src/index_spec_test_plugin", "src/index_spec_integer_test_plugin", "src/callable_payload_test_plugin", "src/irregular_axis_test_plugin", "src/regular_axis_test_plugin", "src/indexed_write_test_plugin", "src/mixed_bounded_unbounded_test_plugin", "src/precip_daily_test_plugin", "src/w14_single_discovery_plugin"]

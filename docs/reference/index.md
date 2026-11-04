@@ -64,6 +64,14 @@ not part of the public contract and are rejected by the plugin contract test.
 
     [:octicons-arrow-right-24: Extensions](extensions.md)
 
+-   :material-database-edit:{ .lg .middle } **Metadata Migration**
+
+    ---
+
+    The types a plugin uses to declare a metadata-only migration step.
+
+    [:octicons-arrow-right-24: Metadata Migration](migration.md)
+
 -   :material-tools:{ .lg .middle } **Core Utilities**
 
     ---

@@ -68,6 +68,6 @@ Metrics, logs, and traces have their own configuration. See
 ## Next Steps
 
 - **[Recover Runs And Claims](../../operations/chunk-manager/recover.md)** — recover a stuck run or stale claim
-- **[Inspect ChunkManager State](../../operations/chunk-manager/inspect.md)** — inspect runs, claims, spans, or snapshots
+- **[Inspect ChunkManager State](../../operations/chunk-manager/inspect.md)** — inspect runs, claims, spans, or the compact cache
 - **[Observability](../observability/index.md)** — connect metrics, logs, and traces to external orchestrator jobs
 - **[Production Guide](../production-guide.md)** — choose reliable production defaults

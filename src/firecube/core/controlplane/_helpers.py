@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from firecube.core.controlplane.types import CONTROL_DIRNAME, LATEST_POINTER
+from firecube.core.controlplane.types import COMPACT_DIRNAME, CONTROL_DIRNAME, LATEST_POINTER
 from firecube.core.errors import ManifestError
 from firecube.core.filesystem import StorageFilesystem, create_filesystem
 from firecube.core.storage.uri import StorageUri
@@ -74,5 +74,5 @@ def describe_control_plane(
     return {
         "product_root": resolved_product_uri.to_str(),
         "control_root": control_root.to_str(),
-        "latest_pointer": control_root.join(LATEST_POINTER).to_str(),
+        "latest_pointer": control_root.join(COMPACT_DIRNAME, LATEST_POINTER).to_str(),
     }

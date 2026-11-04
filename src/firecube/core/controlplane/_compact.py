@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Snapshot reading, building, and compaction for the control plane.
+"""Compact-cache reading for the control plane.
 
-Snapshots are point-in-time materialized views of all completed-run records.
-They live under .firecube/snapshots/ with a LATEST.json pointer.
+The compact cache is a point-in-time materialized view of all completed-run records.
+It lives under .firecube/compact/ with a LATEST.json pointer in the same directory.
+Readers never read the v0.1.8 layout (.firecube/LATEST.json, .firecube/snapshots/);
+a store that holds only that layout replays the full WAL.
 
 Strategy:
-  - On read (list_chunks): try snapshot first, fall back to WAL replay
-  - On write (rebuild_snapshot): project all completed runs, write atomically
-  - Snapshots are advisory: WAL is always authoritative; snapshots accelerate reads
+  - On read (list_chunks): try the compact cache first, fall back to WAL replay
+  - On write (rebuild_compact): project all completed runs, write atomically
+  - The cache is advisory: WAL is always authoritative; the cache accelerates reads
 
 Parallel WAL replay (in _load_current_state):
   - Segment reads are IO-bound → parallelized via ThreadPoolExecutor (max 8 workers)
@@ -28,8 +30,8 @@ Parallel WAL replay (in _load_current_state):
   - Single-run case stays sequential (no thread pool overhead for trivial case)
 
 Thread safety:
-  - Snapshot reads are safe for concurrent use
-  - Snapshot writes use a local lock file (non-remote) or assume orchestration (remote)
+  - Compact-cache reads are safe for concurrent use
+  - Compact-cache writes use a local lock file (non-remote) or assume orchestration (remote)
   - Multiple readers + single writer is the expected concurrency model
 """
 
@@ -43,7 +45,7 @@ from typing import Any
 
 from firecube.core.controlplane._event_processor import apply_events, sorted_complete_runs
 from firecube.core.controlplane.metrics import record_wal_corruption
-from firecube.core.controlplane.types import LATEST_POINTER, SCHEMA_VERSION
+from firecube.core.controlplane.types import COMPACT_DIRNAME, LATEST_POINTER, SCHEMA_VERSION
 from firecube.core.errors import ControlPlaneCorruptionError, ManifestError, Message, Operation
 from firecube.core.filesystem import StorageFilesystem
 from firecube.core.storage.uri import StorageUri
@@ -52,9 +54,9 @@ from firecube.core.storage.uri import StorageUri
 def read_latest_pointer(
     product: str, *, fs: StorageFilesystem, resolver: Any, log: logging.Logger
 ) -> dict[str, Any] | None:
-    """Read LATEST.json pointer for a product's snapshot state."""
+    """Read a product's compact/LATEST.json pointer; return None when it is absent."""
     control_path, _control_uri = resolver(product)
-    latest_path = control_path.join(LATEST_POINTER)
+    latest_path = control_path.join(COMPACT_DIRNAME, LATEST_POINTER)
     if not fs.exists(latest_path):
         return None
     with fs.open(latest_path, "r") as handle:
@@ -77,28 +79,28 @@ def _stored_path_to_uri(raw: str) -> StorageUri:
     return StorageUri.from_local_path(raw)
 
 
-def read_snapshot_records(latest: dict[str, Any], *, fs: StorageFilesystem) -> list[dict[str, Any]]:
-    """Read all records from a snapshot file referenced by LATEST.json."""
-    snapshot_path_str = str(latest.get("snapshot_path") or "")
-    snapshot_meta_path_str = str(latest.get("snapshot_meta_path") or "")
-    if not snapshot_path_str or not snapshot_meta_path_str:
-        raise ManifestError("LATEST.json is missing snapshot path metadata")
-    snapshot_path = _stored_path_to_uri(snapshot_path_str)
-    snapshot_meta_path = _stored_path_to_uri(snapshot_meta_path_str)
-    if not fs.exists(snapshot_path):
-        raise FileNotFoundError(snapshot_path_str)
-    if not fs.exists(snapshot_meta_path):
-        raise FileNotFoundError(snapshot_meta_path_str)
-    with fs.open(snapshot_meta_path, "r") as handle:
+def read_compact_records(latest: dict[str, Any], *, fs: StorageFilesystem) -> list[dict[str, Any]]:
+    """Read all records from the compact-cache file that LATEST.json names."""
+    compact_path_str = str(latest.get("snapshot_path") or "")
+    compact_meta_path_str = str(latest.get("snapshot_meta_path") or "")
+    if not compact_path_str or not compact_meta_path_str:
+        raise ManifestError("LATEST.json is missing compact cache path metadata")
+    compact_path = _stored_path_to_uri(compact_path_str)
+    compact_meta_path = _stored_path_to_uri(compact_meta_path_str)
+    if not fs.exists(compact_path):
+        raise FileNotFoundError(compact_path_str)
+    if not fs.exists(compact_meta_path):
+        raise FileNotFoundError(compact_meta_path_str)
+    with fs.open(compact_meta_path, "r") as handle:
         meta = json.load(handle)
     if meta.get("schema_version") != SCHEMA_VERSION:
         record_wal_corruption()
         msg = (
-            f"Unsupported snapshot schema version in {snapshot_meta_path_str}: "
+            f"Unsupported compact cache schema version in {compact_meta_path_str}: "
             f"{meta.get('schema_version')}"
         )
         raise ControlPlaneCorruptionError(msg)
-    with fs.open(snapshot_path, "r") as handle:
+    with fs.open(compact_path, "r") as handle:
         records: list[dict[str, Any]] = []
         for line_number, line in enumerate(handle, start=1):
             text = str(line).strip()
@@ -108,7 +110,8 @@ def read_snapshot_records(latest: dict[str, Any], *, fs: StorageFilesystem) -> l
                 records.append(json.loads(text))
             except json.JSONDecodeError as exc:
                 raise ManifestError(
-                    f"Snapshot {snapshot_path_str} contains invalid JSON at line {line_number}: {exc}"
+                    f"Compact cache {compact_path_str} contains invalid JSON at line "
+                    f"{line_number}: {exc}"
                 ) from exc
         return records
 
@@ -125,8 +128,8 @@ def load_current_state(
 ) -> dict[str, dict[str, Any]]:
     """Load the current projected state for a product.
 
-    Tries snapshot + incremental WAL replay first.
-    Falls back to full WAL replay if snapshot is unavailable.
+    Tries the compact cache + incremental WAL replay first.
+    Falls back to full WAL replay if the compact cache is unavailable.
     Uses parallel reads for 2+ runs (ThreadPoolExecutor, max 8 workers).
     """
     _t0 = time.time()
@@ -146,29 +149,29 @@ def load_current_state(
 
     if latest is not None:
         cutoff_ts = float(latest.get("completed_before", 0.0) or 0.0)
-        snapshot_age_s = time.time() - cutoff_ts if cutoff_ts > 0 else 0.0
-        if snapshot_age_s > 86400:
+        compact_age_s = time.time() - cutoff_ts if cutoff_ts > 0 else 0.0
+        if compact_age_s > 86400:
             log.warning(
                 Message(
-                    "Snapshot for {product} is {hours:.1f} hours old (cutoff: {cutoff}). "
+                    "Compact cache for {product} is {hours:.1f} hours old (cutoff: {cutoff}). "
                     "Consider rebuilding it: {rebuild}",
                     product=product,
-                    hours=snapshot_age_s / 3600,
+                    hours=compact_age_s / 3600,
                     cutoff=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(cutoff_ts)),
-                    rebuild=Operation("rebuild_snapshot"),
+                    rebuild=Operation("rebuild_compact"),
                 )
             )
 
     current: dict[str, dict[str, Any]] = {}
     if latest is not None:
         try:
-            snapshot_records = read_snapshot_records(latest, fs=fs)
+            compact_records = read_compact_records(latest, fs=fs)
             current = {
-                record.get("key", ""): record for record in snapshot_records if record.get("key")
+                record.get("key", ""): record for record in compact_records if record.get("key")
             }
             cutoff = float(latest.get("completed_before", 0.0) or 0.0)
             # Use >= to avoid missing runs that complete at the same timestamp as the
-            # snapshot cutoff. Redundant replay of the last snapshotted run is harmless
+            # cache cutoff. Redundant replay of the last compacted run is harmless
             # (upsert semantics: same key -> same record -> no change).
             replay_runs = [
                 entry
@@ -176,7 +179,9 @@ def load_current_state(
                 if float(entry.get("completed_at", 0.0) or 0.0) >= cutoff
             ]
         except (FileNotFoundError, ManifestError) as exc:
-            log.error("Snapshot unavailable for %s; falling back to WAL replay: %s", product, exc)
+            log.error(
+                "Compact cache unavailable for %s; falling back to WAL replay: %s", product, exc
+            )
             replay_runs = complete_runs
             current = {}
     else:

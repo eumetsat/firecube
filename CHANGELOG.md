@@ -7,6 +7,126 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Run records name the producer of the run in `meta.producer`. The record holds
+  the plugin name, distribution and version, the Firecube version and a digest
+  of the run configuration. The `source.kind` field is `vcs`, `editable`,
+  `wheel` or `unknown`. A `null` value means the value is unknown.
+  - `firecube ingest` writes it to the `run_started` and `run_failed` records.
+  - `firecube zarr preallocate` writes it to the `run_started`,
+    `run_completed` and `run_failed` records.
+  - The `run_completed` record of an ingest and the span records do not carry it.
+- A product can hold an exclusive maintenance claim, with the domain
+  `<product>:maintenance:exclusive`. The call
+  `ChunkManager.acquire_exclusive_maintenance` takes it. It refuses while
+  another claim or another run that is not terminal exists on the product.
+- A recorded writer now refuses to run while another owner holds the exclusive
+  maintenance claim.
+  - `firecube ingest` and `firecube zarr preallocate` (also without a
+    coordinate) raise `ProductUnderMaintenanceError`.
+  - `firecube zarr index rebuild` prints the rendered refusal and exits 1.
+  - `firecube archive restore` and `firecube archive create` raise
+    `ArchiveClaimError`. `firecube chunks delete` raises `ManifestError`.
+  - Firecube records one `run_failed` for a refused ingest, preallocate or
+    archive restore.
+  - A refused archive create, delete or index rebuild leaves no run record.
+  - `firecube archive create` and `firecube chunks delete` check the claim
+    again after they acquire their own claim.
+  - If the claim is stale, clear it with `firecube chunks claims clear`, or
+    abandon its run with `firecube chunks runs abandon`.
+  - A `firecube zarr preallocate` without a coordinate records the start of
+    its run before its first write. It checks the exclusive claim at that
+    point.
+- The command group `firecube snapshot` captures the metadata documents of a
+  product. The commands are `take`, `list`, `show` and `diff`. A snapshot holds
+  the exact bytes of every Zarr metadata document and of the control-plane
+  documents. It holds no chunk. Snapshots live in the new directory
+  `.firecube/metadata/`.
+  - `firecube snapshot take` makes an `observation` snapshot and takes no claim.
+  - A maintenance run makes a `coherent` snapshot while it holds the exclusive
+    maintenance claim.
+- The command group `firecube migrate` changes attributes in the metadata
+  documents of a product with a recorded step. The commands are `list`, `run`,
+  `status` and `adopt`.
+  - A run takes the exclusive maintenance claim and writes its plan before its
+    first write. It takes a coherent snapshot before and after the change.
+  - A real run needs a control plane. On a store that has none, it exits 1 and
+    writes nothing. Run `firecube migrate adopt` first. `--dry-run` prints the
+    plan and writes nothing.
+  - Run the same command again to resume an interrupted run.
+  - A step id runs once per store. Firecube refuses the same id at another
+    version of its distribution.
+  - `firecube migrate adopt` gives a Zarr store that Firecube did not write a
+    control plane.
+  - `firecube migrate adopt` on a Zarr format 2 store prints a warning on
+    stderr. The warning says that Firecube cannot append to the store and that
+    ingest and preallocate do not support it. A Zarr format 3 store prints no
+    warning.
+- The built-in step `firecube:set-attrs` changes the attributes of one node.
+  Run it as `firecube migrate run firecube:set-attrs` with `--set`, `--remove`
+  and `--node`.
+- A plugin can register its own migration step in the entry-point group
+  `firecube.migrations`. The public contract is `MigrationStep`, `StoreView`,
+  `AttributePatch`, `MetadataPlan`, `ReleaseRecord`, `NodeView` and `ABSENT`,
+  all in `firecube.ingestor.api`. The guide "Write A Migration Step" explains
+  the contract.
+  - Firecube sorts the attributes of a plan into physical, interpretation,
+    descriptive and unknown classes.
+  - A run changes interpretation attributes only with `--allow interpretation`.
+    It changes unknown attributes only with `--allow unknown`.
+  - A run never changes a physical attribute.
+- A migration run and a release create set the root attribute
+  `firecube_last_modifier`. It names the operation, the run and the time.
+- The command group `firecube release` names a state of the metadata. The
+  commands are `create`, `list`, `show` and `verify`. A release binds a version
+  string to a coherent snapshot. Releases live in the new directory
+  `.firecube/releases/`.
+  - `firecube release verify` detects a change of the metadata documents. It
+    does not see an edit of chunk bytes.
+  - A migration step that sets `to_release` creates that release in the same
+    run.
+  - Both commands set the root attribute `firecube_release`.
+
+### Changed
+
+- `firecube_last_modifier` and `firecube_release` are now reserved root
+  attributes, so a plugin that declares either name as a root group attribute
+  is refused with a `ConfigurationError`. Rename the attribute in the
+  `ZarrGroupSpec` of the root group.
+- `firecube zarr multires` now refuses while another run holds the exclusive
+  maintenance claim. `firecube zarr consolidate-time-coord` does the same
+  unless you pass `--dry-run`. Both print the refusal and exit 1. Neither takes
+  a claim or records a run. Stop the maintenance run, or wait for it to end,
+  before you start either command.
+- `firecube chunks snapshots` is now `firecube chunks compact`. The commands
+  are `firecube chunks compact rebuild` and `firecube chunks compact status`.
+  The old name stays as a hidden alias for one release. Use the new name in
+  scripts.
+- The cache of chunk records now lives in `.firecube/compact/`. The pointer
+  file is `.firecube/compact/LATEST.json`. The manifest value `latest_pointer`
+  and `describe_control_plane()["latest_pointer"]` name that file.
+- After the upgrade, a read replays the whole WAL until you run
+  `firecube chunks compact rebuild`.
+- Firecube ignores the old `.firecube/snapshots/` directory and
+  `.firecube/LATEST.json`. Delete these files if you no longer need them.
+- The metric names and the keys of the JSON output do not change.
+
+### Fixed
+
+- `firecube chunks compact status` now reports the number of records in the
+  cache. Before, it always reported 0. The hidden alias
+  `firecube chunks snapshots status` had the same fault in 0.1.8.
+- If the pointer names a metadata file that is missing or damaged,
+  `firecube chunks compact status` now exits 1 and names the file. Run
+  `firecube chunks compact rebuild` to write the cache again.
+- A deletion that spans several products left the claims of the earlier
+  products in place when the claim of a later product conflicted. It now
+  releases every claim it acquired before it refuses.
+- The heartbeat of a deletion claim could write the claim file again after the
+  cleanup deleted it. The cleanup now releases the claim and stops the
+  heartbeat.
+
 ## [0.1.8] - 2026-11-02
 
 ### Added

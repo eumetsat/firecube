@@ -27,9 +27,10 @@ import time
 from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from firecube.core.config import StorageConfig
+from firecube.core.controlplane._compact import _stored_path_to_uri
 from firecube.core.controlplane._paths import run_dir_for
 from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.deletion import DeletionEngine
@@ -42,6 +43,9 @@ from firecube.core.controlplane.types import (
     INDEX_DIRNAME,
     RESOLVED_INDEX_ATTR,
     RESOLVED_INDEX_IDENTITY_HASH_ATTR,
+    RUN_JOURNAL_FILENAME,
+    RUNS_DIRNAME,
+    SCHEMA_FILENAME,
     SLOT_INDEX_CURRENT_FILENAME,
     SLOT_INDEX_DIRNAME,
     TIME_COORD_CONSOLIDATION_RUN_ID,
@@ -57,15 +61,19 @@ from firecube.core.controlplane.types import (
     SpanCoverage,
     WriteDomain,
     canonical_index_bytes,
+    exclusive_maintenance_domain,
 )
 from firecube.core.errors import (
     ClaimConflictError,
     ConfigurationError,
+    ControlPlaneCorruptionError,
+    ExclusiveMaintenanceRefusedError,
     LegacyIndexRecordError,
     ManifestError,
     Message,
     Operation,
     Placeholder,
+    ProductUnderMaintenanceError,
     ResolvedIndexAttrsConflictError,
     ResolvedIndexClaimTimeoutError,
     ResolvedIndexConflictError,
@@ -74,6 +82,7 @@ from firecube.core.errors import (
     SlotIndexUnmanagedStoreError,
 )
 from firecube.core.filesystem import StorageFilesystem
+from firecube.core.filesystem.protocol import StorageFilesystemFull
 from firecube.core.slot_index import (
     SLOT_INDEX_MODEL_ATTR,
     SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
@@ -89,6 +98,19 @@ from firecube.core.zarr.guard.metadata_authority import (
     hold_authority,
     set_attributes,
 )
+
+if TYPE_CHECKING:
+    # Methods import the snapshot module: it imports core.zarr.metadata_documents, which imports
+    # this package, so a module-level import would be circular.
+    from firecube.core.controlplane.metadata_snapshots import (
+        Snapshot,
+        SnapshotConsistency,
+        SnapshotDiff,
+        SnapshotRecord,
+    )
+    from firecube.core.controlplane.releases import ReleaseVerification, StoredRelease
+    from firecube.core.storage.uri import StorageUri
+    from firecube.core.zarr.metadata_documents import MetadataDocument
 
 log = logging.getLogger(__name__)
 
@@ -307,7 +329,7 @@ class ChunkManager:
         return self.repo.get_control_root_uri(product)
 
     def get_latest_pointer(self, product: str) -> str:
-        """Return the resolved LATEST.json pointer URI."""
+        """Return the resolved compact/LATEST.json pointer URI."""
         return self.repo.get_latest_pointer_uri(product)
 
     def close(self) -> None:
@@ -327,7 +349,12 @@ class ChunkManager:
         slot_range: tuple[int, int] | None = None,
         slot_group: str | None = None,
     ) -> None:
-        """Record the start of a new ingestion run."""
+        """Record the start of a new run, then check the product's exclusive maintenance claim.
+
+        Raises:
+            ProductUnderMaintenanceError: Another owner holds that claim, or it cannot be
+                read. The run is recorded failed with the refusal text before the raise.
+        """
         self.repo.record_run_started(
             product=product,
             run_id=run_id,
@@ -338,6 +365,122 @@ class ChunkManager:
             slot_range=slot_range,
             slot_group=slot_group,
         )
+        try:
+            self.check_exclusive_maintenance(product=product, owner_id=run_id)
+        except ProductUnderMaintenanceError as exc:
+            self._record_refused_start(
+                product=product,
+                run_id=run_id,
+                output_path=output_path,
+                output_format=output_format,
+                size=size,
+                meta=meta,
+                slot_range=slot_range,
+                slot_group=slot_group,
+                error=str(exc),
+            )
+            raise
+
+    def _record_refused_start(
+        self,
+        *,
+        product: str,
+        run_id: str,
+        output_path: str,
+        output_format: str,
+        size: int,
+        meta: dict[str, Any],
+        error: str,
+        slot_range: tuple[int, int] | None = None,
+        slot_group: str | None = None,
+    ) -> None:
+        """Record a run that the exclusive maintenance claim refused as failed; log a failure."""
+        try:
+            self.repo.record_run_terminal(
+                product=product,
+                run_id=run_id,
+                output_path=output_path,
+                output_format=output_format,
+                size=size,
+                meta=meta,
+                status="failed",
+                error=error,
+                slot_range=slot_range,
+                slot_group=slot_group,
+            )
+        except Exception:
+            # Log, never raise: the refusal is the error the caller must see.
+            self.log.exception("Failed to record refused run %s of %s as failed", run_id, product)
+
+    def check_exclusive_maintenance(self, *, product: str, owner_id: str) -> None:
+        """Refuse a writer while another owner holds the product's exclusive maintenance claim.
+
+        Reads the one claim file by name. An absent claim, or one that `owner_id` owns, passes.
+
+        Raises:
+            ProductUnderMaintenanceError: Another owner holds the claim, or it cannot be read.
+        """
+        check_exclusive_maintenance(repo=self.repo, product=product, owner_id=owner_id)
+
+    def acquire_exclusive_maintenance(self, *, product: str, run_id: str) -> ClaimHandle:
+        """Acquire the product's exclusive maintenance claim for `run_id`, then verify it is alone.
+
+        Under the claim it lists the product's claims and reads every run from fresh
+        listings. Any other claim, or any other run that is not terminal or cannot be read,
+        refuses. A listing or read error propagates after the claim is released. The caller
+        releases the returned handle; abandoning `run_id`, when it is a recorded run,
+        releases it too.
+
+        Raises:
+            ClaimConflictError: Another owner holds the exclusive claim.
+            ExclusiveMaintenanceRefusedError: Other claims or runs exist; the claim is released.
+        """
+        domain = exclusive_maintenance_domain(product)
+        handle = self.acquire_claim(product=product, domain=domain, owner_id=run_id)
+        try:
+            claims = [
+                claim
+                for claim in self.repo.list_product_claims(product=product)
+                if claim.domain != domain.identifier
+            ]
+            runs, unreadable = self.repo.scan_runs(product=product)
+            blocking_runs = [run for run in runs if not run.is_terminal and run.run_id != run_id]
+            unread = [(other, error) for other, error in unreadable if other != run_id]
+            if claims or blocking_runs or unread:
+                details: list[str] = []
+                if claims:
+                    details.append(
+                        "active write claim(s) exist: "
+                        + ", ".join(f"{claim.domain} (owner={claim.owner_id})" for claim in claims)
+                    )
+                if blocking_runs or unread:
+                    details.append(
+                        "non-terminal or unreadable run(s) exist: "
+                        + ", ".join(
+                            [f"{run.run_id} (status={run.status})" for run in blocking_runs]
+                            + [f"{other} (unreadable: {error})" for other, error in unread]
+                        )
+                    )
+                raise ExclusiveMaintenanceRefusedError(
+                    maintenance_refusal_message(
+                        repo=self.repo,
+                        product=product,
+                        operation="exclusive maintenance",
+                        detail="; ".join(details),
+                        claims=claims,
+                    ),
+                    product=product,
+                    claims=[claim.domain for claim in claims],
+                    runs=[run.run_id for run in blocking_runs] + [other for other, _ in unread],
+                )
+        except BaseException:
+            try:
+                handle.release()
+            except Exception:
+                # Log, never raise: the refusal or listing error is what the caller must see.
+                self.log.exception("Failed to release claim %s", domain.identifier)
+            raise
+        return handle
 
     def record_run_terminal(
         self,
@@ -374,12 +517,34 @@ class ChunkManager:
         run_id: str,
         replaces: list[str],
     ) -> None:
-        """Record informational replacement intent for a run."""
+        """Record informational replacement intent for a run, then check exclusive maintenance.
+
+        Raises:
+            ProductUnderMaintenanceError: Another owner holds the product's exclusive
+                maintenance claim, or it cannot be read. The run is recorded failed first.
+        """
         self.repo.record_run_started_with_replacement(
             product=product,
             run_id=run_id,
             replaces=replaces,
         )
+        try:
+            self.check_exclusive_maintenance(product=product, owner_id=run_id)
+        except ProductUnderMaintenanceError as exc:
+            # The run started earlier; its terminal record names what abandon would name.
+            entry: dict[str, Any] = {}
+            with contextlib.suppress(Exception):
+                entry = self.repo._get_run_entry(product=product, run_id=run_id)
+            self._record_refused_start(
+                product=product,
+                run_id=run_id,
+                output_path=str(entry.get("output_path") or entry.get("run_uri") or ""),
+                output_format=str(entry.get("output_format") or "control"),
+                size=int(entry.get("size", 0) or 0),
+                meta={"operation": "replacement"},
+                error=str(exc),
+            )
+            raise
 
     def record_replacement_committed(
         self,
@@ -704,8 +869,10 @@ class ChunkManager:
         on that group conflicts, whatever its window, and the recorded run
         range covers ``[0, slot count)``.
 
-        If this method raises, no run is registered and no terminalization is
-        needed. If it returns normally, the caller must release the returned
+        If this method raises, the claim is released and no terminalization is
+        needed: a peer refusal registers no run, and an exclusive maintenance
+        refusal (`ProductUnderMaintenanceError`) has already recorded the run
+        failed. If it returns normally, the caller must release the returned
         handle after materialization and record a terminal run state on every
         exit path.
         """
@@ -1061,14 +1228,21 @@ class ChunkManager:
         delete_manifest: bool = True,
         storage_config: StorageConfig | None = None,
         dry_run: bool = False,
+        *,
+        holder_run_id: str | None = None,
     ) -> dict[str, Any]:
-        """Execute a deletion plan, optionally removing storage and manifest entries."""
+        """Execute a deletion plan, optionally removing storage and manifest entries.
+
+        Pass `holder_run_id` to delete as the owner of each product's exclusive maintenance
+        claim. See :meth:`DeletionEngine.execute_deletion`.
+        """
         return self.deletion_engine.execute_deletion(
             plan,
             delete_storage,
             delete_manifest,
             storage_config,
             dry_run,
+            holder_run_id=holder_run_id,
         )
 
     def delete_spans(
@@ -1081,12 +1255,14 @@ class ChunkManager:
         update_manifest: bool = True,
         update_state: bool = True,
         time_dim_name: str | None = None,
+        holder_run_id: str | None = None,
     ) -> dict[str, Any]:
         """Delete specific span records with optional dry-run and manifest updates.
 
         ``yes_i_really_mean_it`` acknowledges the collateral-span guard that
         blocks force-deletion when other active spans share the same physical
-        chunk keys. See :meth:`DeletionEngine.delete_spans`.
+        chunk keys. Pass ``holder_run_id`` to delete as the owner of the product's
+        exclusive maintenance claim. See :meth:`DeletionEngine.delete_spans`.
         """
         return self.deletion_engine.delete_spans(
             spans,
@@ -1096,13 +1272,15 @@ class ChunkManager:
             update_manifest=update_manifest,
             update_state=update_state,
             time_dim_name=time_dim_name,
+            holder_run_id=holder_run_id,
         )
 
-    def rebuild_snapshot(self, product: str) -> dict[str, Any]:
-        """Compact completed-run WAL events into a snapshot for faster reads."""
-        return self.repo.rebuild_snapshot(product)
+    def rebuild_compact(self, product: str) -> dict[str, Any]:
+        """Compact completed-run WAL events into the compact cache for faster reads."""
+        return self.repo.rebuild_compact(product)
 
-    def snapshot_status(self, product: str) -> dict[str, Any]:
+    def compact_status(self, product: str) -> dict[str, Any]:
+        """Report the age, generation and record count of the product's compact cache."""
         self.repo._ensure_bound()
         latest = self.repo._read_latest_pointer(product)
         if latest is None:
@@ -1114,16 +1292,20 @@ class ChunkManager:
         if cutoff > 0:
             completed_before_iso = datetime.fromtimestamp(cutoff, tz=UTC).isoformat()
 
-        snapshot_meta_path = str(latest.get("snapshot_meta_path") or "")
+        compact_meta_path = str(latest.get("snapshot_meta_path") or "")
         records = 0
         repo_fs = self.repo._fs
-        if snapshot_meta_path and repo_fs is not None:
+        if compact_meta_path and repo_fs is not None:
             try:
-                with repo_fs.open(snapshot_meta_path, "r") as fh:
+                meta_uri = _stored_path_to_uri(compact_meta_path)
+                with repo_fs.open(meta_uri, "r") as fh:
                     meta = json.load(fh)
                 records = int(meta.get("records", meta.get("record_count", 0)))
-            except Exception:
-                records = 0
+            except (OSError, ValueError, TypeError, AttributeError, OverflowError) as exc:
+                raise ManifestError(
+                    f"The compact cache metadata file {compact_meta_path} is missing or "
+                    f"unreadable: {exc}"
+                ) from exc
 
         return {
             "exists": True,
@@ -1320,6 +1502,11 @@ class ChunkManager:
         This is the engine's resolved-index API. It uses a dedicated
         ``resolved_index:current`` write claim and implements the fresh-store
         and matched-existing precedence needed for startup negotiation.
+
+        Raises:
+            ProductUnderMaintenanceError: Another owner than ``record.recorded_by_run_id``
+                holds the product's exclusive maintenance claim, or it cannot be read.
+                The ``resolved_index:current`` claim is released first; no record is written.
         """
 
         if run_id is not None and run_id != record.recorded_by_run_id:
@@ -1342,8 +1529,17 @@ class ChunkManager:
                     ),
                     self._holding(domain, record.recorded_by_run_id),
                 ):
+                    # Leaving the block on a refusal releases resolved_index:current.
+                    self.check_exclusive_maintenance(
+                        product=product, owner_id=record.recorded_by_run_id
+                    )
                     return self._apply_resolved_index_precedence(product, record)
             except ClaimConflictError:
+                # A loser reads and writes nothing before this check, as the
+                # winner checks right after it acquires.
+                self.check_exclusive_maintenance(
+                    product=product, owner_id=record.recorded_by_run_id
+                )
                 # Unified 5-row convergence policy (see also
                 # ``ensure_slot_index_model``). The two loser-branch policies
                 # must stay identical so operators do not see one primitive
@@ -2059,6 +2255,430 @@ class ChunkManager:
             label="slot-index",
         )
 
+    def _metadata_store(self, product: str) -> tuple[StorageFilesystemFull, StorageUri]:
+        """Return the driver and the root of the product, where `.firecube/metadata/` lives."""
+        fs, product_root = self.repo._get_fs(self.repo.get_product_root_uri(product))
+        return cast(StorageFilesystemFull, fs), product_root
+
+    def take_snapshot(
+        self,
+        product: str,
+        *,
+        run_id: str | None,
+        trigger: str,
+        consistency: SnapshotConsistency,
+    ) -> SnapshotRecord:
+        """Capture every metadata document of the product and publish the record as the latest.
+
+        An `observation` takes `run_id=None`. A `coherent` snapshot reads the exclusive
+        maintenance claim before and after the capture; `run_id` must own it.
+
+        Raises:
+            ValueError: `run_id` does not fit `consistency`, or `trigger` is empty.
+            ManifestError: A coherent snapshot's claim is absent, unreadable or owned by
+                another run. Nothing is written.
+            ControlPlaneCorruptionError: `refs/latest.json` does not parse. Nothing is written.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        def verify_holder() -> None:
+            refusal = exclusive_maintenance_holder_refusal(
+                repo=self.repo,
+                product=product,
+                operation="coherent metadata snapshot",
+                holder_run_id=str(run_id),
+            )
+            if refusal is not None:
+                raise ManifestError(refusal)
+
+        fs, product_root = self._metadata_store(product)
+        return metadata_snapshots.take_snapshot(
+            fs,
+            product_root,
+            run_id=run_id,
+            trigger=trigger,
+            consistency=consistency,
+            verify_holder=verify_holder,
+        )
+
+    def list_snapshots(self, product: str) -> list[SnapshotRecord]:
+        """Return every metadata snapshot record of the product, oldest first."""
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        return metadata_snapshots.list_records(fs, metadata_snapshots.metadata_root(product_root))
+
+    def read_snapshot(self, product: str, snapshot_id: str) -> Snapshot:
+        """Return a snapshot record and its manifest; `latest` names the newest.
+
+        Raises:
+            ManifestError: The id is malformed or names no snapshot.
+            ControlPlaneCorruptionError: A stored file does not match its id or does not parse.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        root = metadata_snapshots.metadata_root(product_root)
+        return metadata_snapshots.read_snapshot(fs, root, snapshot_id)
+
+    def diff_snapshots(self, product: str, before: str, after: str) -> SnapshotDiff:
+        """Diff two snapshots of the product by path and, for changed nodes, by parsed facets.
+
+        Each id is a record id or `latest`.
+
+        Raises:
+            ManifestError: An id is malformed or names no snapshot.
+            ControlPlaneCorruptionError: A stored file does not match its id or does not parse.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        root = metadata_snapshots.metadata_root(product_root)
+        return metadata_snapshots.diff_snapshots(
+            metadata_snapshots.read_snapshot(fs, root, before),
+            metadata_snapshots.read_snapshot(fs, root, after),
+            lambda blob_id: metadata_snapshots.read_blob(fs, root, blob_id),
+        )
+
+    def write_metadata_blob(self, product: str, data: bytes) -> str:
+        """Store `data` under `.firecube/metadata/blobs/` unless it exists; return its sha256 hex.
+
+        An existing blob is never rewritten.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        return metadata_snapshots.write_blob(
+            fs, metadata_snapshots.metadata_root(product_root), data
+        )
+
+    def read_metadata_blob(self, product: str, blob_id: str) -> bytes:
+        """Return the bytes of the blob whose sha256 hex is `blob_id`.
+
+        Raises:
+            ManifestError: `blob_id` is not 64 lowercase hex digits.
+            ControlPlaneCorruptionError: The blob is missing or its bytes do not match the id.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+
+        fs, product_root = self._metadata_store(product)
+        root = metadata_snapshots.metadata_root(product_root)
+        return metadata_snapshots.read_blob(fs, root, blob_id)
+
+    def enumerate_metadata_documents(self, product: str) -> list[MetadataDocument]:
+        """Read the product's metadata documents live, as a snapshot captures them, sorted by path.
+
+        The read writes nothing and takes no claim.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+        from firecube.core.zarr.metadata_documents import enumerate_metadata_documents
+
+        fs, product_root = self._metadata_store(product)
+        return metadata_snapshots.captured_documents(enumerate_metadata_documents(fs, product_root))
+
+    def _run_journal_uri(self, product: str, run_id: str) -> StorageUri:
+        self.repo._ensure_bound()
+        assert self.repo._resolver is not None
+        run_dir, _run_uri = run_dir_for(self.repo._resolver, product, run_id)
+        return run_dir.join(RUN_JOURNAL_FILENAME)
+
+    def write_run_journal(self, product: str, run_id: str, data: bytes) -> None:
+        """Create `.firecube/runs/<run_id>/plan.json` with `data` once.
+
+        A journal that already holds the same bytes is kept.
+
+        Raises:
+            ValueError: `run_id` is not a single path segment.
+            ManifestError: The journal exists with other bytes; nothing is written.
+        """
+        uri = self._run_journal_uri(product, run_id)
+        fs = cast(StorageFilesystemFull, self.repo._fs)
+        with contextlib.suppress(Exception):
+            fs.makedirs(uri.parent(), exist_ok=True)
+        try:
+            fs.atomic_writer.write_atomic(uri, data)
+        except FileExistsError:
+            if fs.read_bytes(uri) != data:
+                raise ManifestError(
+                    f"run journal {uri.to_str()} already exists with other content"
+                ) from None
+
+    def read_run_journal(self, product: str, run_id: str) -> bytes | None:
+        """Return the bytes of `.firecube/runs/<run_id>/plan.json`, or `None` when the run has none.
+
+        Raises:
+            ValueError: `run_id` is not a single path segment.
+        """
+        uri = self._run_journal_uri(product, run_id)
+        fs = cast(StorageFilesystemFull, self.repo._fs)
+        try:
+            return fs.read_bytes(uri)
+        except FileNotFoundError:
+            return None
+
+    def list_run_journals(self, product: str, *, prefix: str) -> list[str]:
+        """Return the ids starting with `prefix` of runs that hold a journal, from a fresh listing.
+
+        A journal written before its run's start was recorded is listed too. A failed
+        listing of `runs/` raises; an absent `runs/` lists none.
+        """
+        from firecube.core.controlplane._wal_reader import WalReader
+
+        self.repo._ensure_bound()
+        assert self.repo._resolver is not None
+        control_path, _control_uri = self.repo._resolver(product)
+        runs_dir = control_path.join(RUNS_DIRNAME)
+        fs = cast(Any, self.repo._fs)
+        try:
+            listed = fs.ls(runs_dir, detail=False, refresh=True)
+        except FileNotFoundError:
+            return []
+        run_ids = (
+            WalReader._run_id_from_dir(WalReader._entry_to_uri(item, runs_dir), runs_dir)
+            for item in listed
+        )
+        return sorted(
+            run_id
+            for run_id in run_ids
+            if run_id.startswith(prefix) and fs.exists(runs_dir.join(run_id, RUN_JOURNAL_FILENAME))
+        )
+
+    def scan_runs(self, *, product: str) -> tuple[list[RunInfo], list[tuple[str, str]]]:
+        """Read every run of the product from fresh listings, for an admission that fails closed.
+
+        A failed `runs/` listing raises. Returns the readable runs and `(run_id, error)`
+        for each run that cannot be read.
+        """
+        return self.repo.scan_runs(product=product)
+
+    def has_control_plane(self, product: str) -> bool:
+        """Return whether the product has `.firecube/schema.json` or any run, from fresh reads."""
+        self.repo._ensure_bound()
+        assert self.repo._resolver is not None
+        control_path, _control_uri = self.repo._resolver(product)
+        fs = cast(StorageFilesystemFull, self.repo._fs)
+        if fs.exists(control_path.join(SCHEMA_FILENAME)):
+            return True
+        runs, unreadable = self.repo.scan_runs(product=product)
+        return bool(runs or unreadable)
+
+    def _releases_store(self, product: str) -> tuple[StorageFilesystemFull, StorageUri]:
+        """Return the driver and the `.firecube/releases/` directory of the product."""
+        from firecube.core.controlplane import releases
+
+        fs, product_root = self._metadata_store(product)
+        return fs, releases.releases_root(product_root)
+
+    def _require_maintenance_holder(self, product: str, run_id: str, operation: str) -> None:
+        refusal = exclusive_maintenance_holder_refusal(
+            repo=self.repo, product=product, operation=operation, holder_run_id=run_id
+        )
+        if refusal is not None:
+            raise ManifestError(refusal)
+
+    def _run_entries(self, product: str) -> list[tuple[RunInfo, dict[str, Any]]]:
+        """Read every run from fresh listings; refuse when one cannot be read."""
+        self.repo._ensure_bound()
+        assert self.repo._wal_reader is not None
+        entries, unreadable = self.repo._wal_reader.scan_run_entries(product)
+        if unreadable:
+            listed = ", ".join(f"{run_id} ({error})" for run_id, error in unreadable)
+            raise ManifestError(f"runs of product {product} cannot be read: {listed}")
+        return [(self.repo._run_info_from_entry(product, entry), entry) for entry in entries]
+
+    def latest_run_producer(self, product: str) -> tuple[str, dict[str, Any]] | None:
+        """Return `(run_id, producer)` from the `run_started` event of the latest run that records one.
+
+        Returns `None` when no run records a producer.
+
+        Raises:
+            ManifestError: A run cannot be read.
+        """
+        from firecube.core.controlplane import releases
+
+        entries = [
+            {**entry, "run_id": info.run_id, "started_at": info.started_at}
+            for info, entry in self._run_entries(product)
+        ]
+        return releases.latest_producer(
+            entries, lambda entry: self.repo._read_run_events(product, dict(entry))
+        )
+
+    def check_release_version(self, product: str, version: str) -> None:
+        """Refuse a version whose record the storage drivers cannot write, list or read.
+
+        It reads no record and writes nothing; run it before a release's first write.
+
+        Raises:
+            ReleaseVersionUnstorableError: A driver cannot write, list or read the record.
+        """
+        from firecube.core.controlplane import releases
+
+        _fs, root = self._releases_store(product)
+        releases.check_storable(root, version)
+
+    def create_release(
+        self,
+        product: str,
+        *,
+        version: str,
+        snapshot_id: str,
+        run_id: str,
+        note: str | None = None,
+    ) -> StoredRelease:
+        """Write the record of release `version` once, naming a coherent snapshot; publish no ref.
+
+        `run_id` must hold the exclusive maintenance claim. The record lists the runs
+        started after the current release and the latest `run_started` producer.
+
+        Raises:
+            ManifestError: `run_id` does not hold the claim, the snapshot is missing or
+                not coherent, or a run cannot be read. Nothing is written.
+            ReleaseExistsError: A record of `version` exists. Nothing is written.
+        """
+        from firecube.core.controlplane import releases
+
+        self._require_maintenance_holder(product, run_id, "release create")
+        snapshot = self.read_snapshot(product, snapshot_id)
+        if snapshot.record.consistency != "coherent":
+            raise ManifestError(
+                f"snapshot {snapshot_id} is an observation; a release names a coherent snapshot"
+            )
+        fs, root = self._releases_store(product)
+        existing = releases.find_release(fs, root, version)
+        if existing is not None:
+            raise releases.ReleaseExistsError(
+                f"release {version!r} exists already and names snapshot {existing.snapshot}",
+                version=version,
+                snapshot=existing.snapshot,
+            )
+        previous_version = releases.read_current_version(fs, root)
+        previous = None
+        if previous_version is not None:
+            previous = releases.find_release(fs, root, previous_version)
+            if previous is None:
+                raise ControlPlaneCorruptionError(
+                    f"the current release {previous_version!r} of product {product} has no record"
+                )
+        runs = releases.runs_since(
+            ((info.run_id, info.started_at) for info, _entry in self._run_entries(product)),
+            None if previous is None else previous.created_at,
+        )
+        found = self.latest_run_producer(product)
+        release = releases.StoredRelease(
+            version=version,
+            created_at=time.time(),
+            previous=previous_version,
+            snapshot=snapshot.record.snapshot_id,
+            runs_since_previous=runs,
+            producer=None if found is None else found[1],
+            producer_status=releases.PRODUCER_UNKNOWN
+            if found is None
+            else releases.PRODUCER_RECORDED,
+            note=note,
+            created_by_run=run_id,
+        )
+        releases.create_record(fs, root, release)
+        return release
+
+    def publish_current_release(self, product: str, version: str, *, run_id: str) -> None:
+        """Publish `.firecube/releases/refs/current.json` naming `version`, replacing it whole.
+
+        `run_id` must hold the exclusive maintenance claim, and a record of `version` must exist.
+
+        Raises:
+            ManifestError: `run_id` does not hold the claim. Nothing is written.
+            ReleaseNotFoundError: No record of `version` exists. Nothing is written.
+        """
+        from firecube.core.controlplane import releases
+
+        self._require_maintenance_holder(product, run_id, "release create")
+        fs, root = self._releases_store(product)
+        if releases.find_release(fs, root, version) is None:
+            raise releases.ReleaseNotFoundError(
+                f"product {product} has no release {version!r} to make current", version=version
+            )
+        releases.publish_current(fs, root, version)
+
+    def list_releases(self, product: str) -> list[StoredRelease]:
+        """Return every release record of the product, oldest first.
+
+        Raises:
+            ControlPlaneCorruptionError: A record does not parse or sits under another version's key.
+        """
+        from firecube.core.controlplane import releases
+
+        fs, root = self._releases_store(product)
+        return releases.list_records(fs, root)
+
+    def find_release(self, product: str, version: str) -> StoredRelease | None:
+        """Return the record of release `version`, or `None` when the product has none."""
+        from firecube.core.controlplane import releases
+
+        fs, root = self._releases_store(product)
+        return releases.find_release(fs, root, version)
+
+    def current_release(self, product: str) -> StoredRelease | None:
+        """Return the release that `refs/current.json` names, or `None` when there is none.
+
+        Raises:
+            ControlPlaneCorruptionError: The ref does not parse or names a missing record.
+        """
+        from firecube.core.controlplane import releases
+
+        fs, root = self._releases_store(product)
+        version = releases.read_current_version(fs, root)
+        if version is None:
+            return None
+        release = releases.find_release(fs, root, version)
+        if release is None:
+            raise ControlPlaneCorruptionError(
+                f"the current release {version!r} of product {product} has no record"
+            )
+        return release
+
+    def read_release(self, product: str, version: str | None = None) -> StoredRelease:
+        """Return the record of release `version`; `None` names the current release.
+
+        Raises:
+            ReleaseNotFoundError: No such release, or no current release.
+        """
+        from firecube.core.controlplane import releases
+
+        release = (
+            self.current_release(product)
+            if version is None
+            else self.find_release(product, version)
+        )
+        if release is None:
+            what = "no current release" if version is None else f"no release {version!r}"
+            raise releases.ReleaseNotFoundError(f"product {product} has {what}", version=version)
+        return release
+
+    def verify_release(self, product: str, version: str | None = None) -> ReleaseVerification:
+        """Compare the live metadata documents with the snapshot of release `version`.
+
+        `None` names the current release. Only metadata documents are compared, so an
+        edit of chunk bytes is not detected.
+
+        Raises:
+            ReleaseNotFoundError: No such release, or no current release.
+            ControlPlaneCorruptionError: The release's snapshot cannot be read.
+        """
+        from firecube.core.controlplane import releases
+
+        release = self.read_release(product, version)
+        snapshot = self.read_snapshot(product, release.snapshot)
+        return releases.compare_documents(
+            release.version,
+            release.snapshot,
+            ((entry.path, entry.digest) for entry in snapshot.documents),
+            (
+                (document.path, document.digest)
+                for document in self.enumerate_metadata_documents(product)
+            ),
+        )
+
 
 def _abandon_operation(product_uri: str, run_id: str) -> Operation:
     """Name the abandon of one run, its reason left as a placeholder."""
@@ -2127,6 +2747,154 @@ def maintenance_refusal_message(
             )
         )
     return Message.join("", lines)
+
+
+def check_exclusive_maintenance(*, repo: ManifestRepository, product: str, owner_id: str) -> None:
+    """Refuse `owner_id` while another owner holds the product's exclusive maintenance claim.
+
+    Reads the one claim file by name. An absent claim, or one that `owner_id` owns, passes.
+
+    Raises:
+        ProductUnderMaintenanceError: Another owner holds the claim, or it cannot be read.
+    """
+    domain = exclusive_maintenance_domain(product)
+    try:
+        claim = repo.read_claim_by_domain(product=product, domain=domain.identifier)
+    except Exception as exc:
+        raise ProductUnderMaintenanceError(
+            Message(
+                "The exclusive maintenance claim {claim_domain} of product {product} could "
+                "not be read, so {writer} is refused: {error}",
+                claim_domain=domain.identifier,
+                product=product,
+                writer=owner_id,
+                error=str(exc),
+            ),
+            product=product,
+            owner_id=None,
+            stale=None,
+        ) from exc
+    if claim is None or claim.owner_id == owner_id:
+        return
+    raise ProductUnderMaintenanceError(
+        under_maintenance_message(repo=repo, product=product, writer=owner_id, claim=claim),
+        product=product,
+        owner_id=claim.owner_id,
+        stale=claim.stale,
+    )
+
+
+def is_exclusive_maintenance_holder(
+    claim: ClaimInfo | None, *, product: str, holder_run_id: str | None
+) -> bool:
+    """Return whether `claim` is the product's exclusive maintenance claim and `holder_run_id` owns it.
+
+    A `holder_run_id` of `None` owns nothing, so the result is then `False`.
+    """
+    return (
+        holder_run_id is not None
+        and claim is not None
+        and claim.domain == exclusive_maintenance_domain(product).identifier
+        and claim.owner_id == holder_run_id
+    )
+
+
+def holder_absent_message(*, product: str, operation: str, holder_run_id: str) -> Message:
+    """Return the message that refuses a holder's operation when no exclusive claim is present."""
+    return Message(
+        "Cannot run {operation} for product {product} as holder {holder_run_id}: the product "
+        "has no exclusive maintenance claim {claim_domain}.",
+        operation=operation,
+        product=product,
+        holder_run_id=holder_run_id,
+        claim_domain=exclusive_maintenance_domain(product).identifier,
+    )
+
+
+def exclusive_maintenance_holder_refusal(
+    *, repo: ManifestRepository, product: str, operation: str, holder_run_id: str
+) -> Message | None:
+    """Return why `holder_run_id` does not hold the product's exclusive maintenance claim.
+
+    Reads the one claim file by name. An absent claim, another owner's claim and an
+    unreadable claim each refuse. Return `None` when `holder_run_id` owns the claim.
+    """
+    domain = exclusive_maintenance_domain(product)
+    try:
+        claim = repo.read_claim_by_domain(product=product, domain=domain.identifier)
+    except Exception as exc:
+        return Message(
+            "The exclusive maintenance claim {claim_domain} of product {product} could "
+            "not be read, so {writer} is refused: {error}",
+            claim_domain=domain.identifier,
+            product=product,
+            writer=holder_run_id,
+            error=str(exc),
+        )
+    if is_exclusive_maintenance_holder(claim, product=product, holder_run_id=holder_run_id):
+        return None
+    if claim is None:
+        return holder_absent_message(
+            product=product, operation=operation, holder_run_id=holder_run_id
+        )
+    return under_maintenance_message(repo=repo, product=product, writer=holder_run_id, claim=claim)
+
+
+def under_maintenance_message(
+    *, repo: ManifestRepository, product: str, writer: str, claim: ClaimInfo
+) -> Message:
+    """Return the message that refuses `writer` under another owner's exclusive maintenance claim.
+
+    Name the claim's owner. For a stale claim, add the clear operation and, when the
+    owner resolves to exactly one recorded run, the abandon operation. An unresolved
+    product root drops both operations; an owner read error drops the abandon.
+    """
+    facts: dict[str, object] = {
+        "product": product,
+        "writer": writer,
+        "claim_owner": claim.owner_id,
+        "claim_domain": claim.domain,
+    }
+    refusal = Message(
+        "Product {product} is under exclusive maintenance by {claim_owner} "
+        "(claim {claim_domain}), so {writer} is refused.",
+        **facts,
+    )
+    if not claim.stale:
+        return Message(
+            "{refusal} Retry when that maintenance has finished.", refusal=refusal, **facts
+        )
+    stale = Message(
+        "{refusal} The claim is stale: no heartbeat for {age}.",
+        refusal=refusal,
+        age=_format_duration(max(time.time() - claim.last_heartbeat_at, 0.0)),
+        **facts,
+    )
+    try:
+        product_uri = repo.get_product_root_uri(product)
+    except Exception:
+        return stale
+    abandon: str = ""
+    try:
+        run = repo.resolve_claim_owner(product=product, owner_id=claim.owner_id).run
+    except Exception:
+        run = None
+    if run is not None:
+        abandon = Message(
+            "\nor abandon run {run_id} (status: {status}), which releases the claims it "
+            "alone owns:\n  {abandon}",
+            run_id=run.run_id,
+            status=run.status,
+            abandon=_abandon_operation(product_uri, run.run_id),
+        )
+    return Message(
+        "{stale}\nIf no process of {claim_owner} is running, clear the claim:\n  {clear}{abandon}",
+        stale=stale,
+        clear=_clear_operation(product_uri, claim.domain, force=False),
+        abandon=abandon,
+        product_uri=product_uri,
+        **facts,
+    )
 
 
 def check_legacy_index_record(

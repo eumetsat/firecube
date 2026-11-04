@@ -49,7 +49,7 @@ When changing the engine, identify the runtime area first:
   packaging;
 - storage and filesystem drivers: local/S3 behavior, fsspec, obstore, and URI
   handling;
-- ChunkManager: run records, spans, claims, snapshots, recovery, and cleanup;
+- ChunkManager: run records, spans, claims, the compact cache, recovery, and cleanup;
 - observability: structured logs, OpenTelemetry traces, Pushgateway metrics, and
   plugin telemetry boundaries;
 - CLI: command groups, required flags, safety gates, and output formatting.
@@ -151,5 +151,5 @@ the matching unit and integration tests rather than only the changed file.
 
 - **[Plugin Templates](../reference/templates.md)** — standard plugin authoring surface
 - **[Hooks & Lifecycle](../reference/hooks.md)** — custom pipeline types
-- **[ChunkManager Records](../concepts/chunk-management.md)** — product state, runs, spans, claims, and snapshots
+- **[ChunkManager Records](../concepts/chunk-management.md)** — product state, runs, spans, claims, and the compact cache
 - **[Plugin Development](../guides/plugins/index.md)** — external plugin guides

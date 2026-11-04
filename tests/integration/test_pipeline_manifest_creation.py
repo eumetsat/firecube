@@ -47,7 +47,7 @@ class PipelineIngestorForTesting(GenericZarrIngestor):
 
 @pytest.mark.parametrize("pipeline_workers", [2, 1])
 def test_pipeline_manifest_creation(tmp_path, pipeline_workers):
-    """Execution creates WAL immediately and snapshots only on explicit rebuild."""
+    """Execution creates WAL immediately and the compact cache only on explicit rebuild."""
     source_dir = tmp_path / "source"
     source_dir.mkdir()
     (source_dir / "input.nc").touch()
@@ -74,7 +74,7 @@ def test_pipeline_manifest_creation(tmp_path, pipeline_workers):
     control_root = output_path / ".firecube"
     assert control_root.exists(), f"Control root not found at {control_root}"
     assert (control_root / "schema.json").exists()
-    assert not (control_root / "LATEST.json").exists()
+    assert not (control_root / "compact" / "LATEST.json").exists()
 
     runs_dir = control_root / "runs"
     assert any(runs_dir.iterdir()), "Expected at least one run WAL directory"
@@ -82,8 +82,8 @@ def test_pipeline_manifest_creation(tmp_path, pipeline_workers):
     manager = ChunkManager(
         binding=make_test_binding(target_dir.parent), workspace=tmp_path / "cm-work"
     )
-    rebuild = manager.rebuild_snapshot(target_dir.name)
+    rebuild = manager.rebuild_compact(target_dir.name)
 
     assert rebuild["records"] >= 1
-    assert (control_root / "LATEST.json").exists()
-    assert any((control_root / "snapshots").glob("snapshot-*.jsonl"))
+    assert (control_root / "compact" / "LATEST.json").exists()
+    assert any((control_root / "compact").glob("compact-*.jsonl"))

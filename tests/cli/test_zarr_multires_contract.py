@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -206,3 +207,59 @@ def test_case_insensitive_flags_accepted(tmp_path: Path) -> None:
     )
 
     assert "Invalid value" not in result.output
+
+
+@pytest.mark.contract
+def test_multires_refused_under_exclusive_maintenance(tmp_path: Path) -> None:
+    from firecube.core.controlplane import ChunkManager
+    from tests.helpers.storage import make_test_binding
+
+    store = tmp_path / "x.zarr"
+    ds = xr.Dataset(
+        {"FWI": (["lat", "lon"], np.ones((4, 4), dtype="f4"))},
+        coords={"lat": [0.0, 1.0, 2.0, 3.0], "lon": [0.0, 1.0, 2.0, 3.0]},
+    )
+    ds.to_zarr(store, zarr_format=3, consolidated=False)
+    (tmp_path / "ws").mkdir()
+    manager = ChunkManager(binding=make_test_binding(tmp_path, product="x.zarr"), workspace=tmp_path / "ws")  # fmt: skip
+    claim = manager.acquire_exclusive_maintenance(product="x.zarr", run_id="other-maintenance-run")
+    before = {k: v for k, v in _store_bytes(store).items() if not k.startswith(".firecube")}
+    try:
+        flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "2"]
+        result = _invoke_multires(["--target", store.as_uri(), "--product-name", "x.zarr", *flags])
+    finally:
+        claim.release()
+        manager.close()
+
+    after = {k: v for k, v in _store_bytes(store).items() if not k.startswith(".firecube")}
+    assert result.exit_code == 1, result.output
+    assert "maintenance" in result.output.lower()
+    assert after == before
+
+
+@pytest.mark.parametrize(("claimed", "other"), [("logical_name", None), ("b.zarr", "a.zarr")])
+def test_library_multires_checks_written_store_when_name_differs(
+    tmp_path: Path, claimed: str, other: str | None
+) -> None:
+    from firecube.core.config import StorageConfig
+    from firecube.core.controlplane import ChunkManager
+    from firecube.core.errors import ProductUnderMaintenanceError
+    from firecube.core.storage.uri import StorageUri
+    from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
+    from tests.helpers.storage import make_test_binding, make_test_session
+
+    store = tmp_path / (claimed if other else "physical.zarr")
+    xr.Dataset({"v": (["lat", "lon"], np.ones((4, 4)))}, coords={"lat": range(4), "lon": range(4)}).to_zarr(store, zarr_format=3, consolidated=False)  # fmt: skip
+    held = make_test_binding(tmp_path, product=store.name)
+    held = replace(held, identity=replace(held.identity, product_name=claimed))
+    holder = ChunkManager(binding=held, workspace=tmp_path)
+    builder = ZarrMultiresBuilder(
+        StorageConfig(storage_type="local", storage_driver="fsspec"),
+        product_name=other or claimed,
+        product_uri=StorageUri.from_local_path(tmp_path / (other or store.name)),
+        session=make_test_session(tmp_path, product=other) if other else None,
+    )
+    claim = holder.acquire_exclusive_maintenance(product=claimed, run_id="other-run")
+    with claim, pytest.raises(ProductUnderMaintenanceError):
+        builder.build(MultiresConfig(product=claimed, group="", resolutions=[2.0]))
+    assert not (store / "multires").exists()

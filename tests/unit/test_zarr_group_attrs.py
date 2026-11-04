@@ -42,6 +42,7 @@ from firecube.core.controlplane.types import WriteDomain
 from firecube.core.zarr.guard.metadata_authority import (
     EMPTY_GROUP_DOCUMENT,
     AuthorityBasis,
+    DocumentPreconditionError,
     MetadataAuthority,
     MetadataAuthorityError,
     MetadataScope,
@@ -50,9 +51,11 @@ from firecube.core.zarr.guard.metadata_authority import (
     hold_authority,
     publish_document,
     publish_document_if_absent,
+    publish_raw,
     set_attributes,
     update_document,
 )
+from firecube.core.zarr.metadata_documents import ABSENT, metadata_document_digest
 from firecube.core.zarr.region_writer import RegionZarrWriter
 from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.templates.direct_zarr import (
@@ -380,6 +383,81 @@ def test_publish_document_if_absent_never_replaces_a_document(tmp_path: Path) ->
         publish_document_if_absent(auth, store, "g/x/zarr.json", b'{"zarr_format": 2}')
     assert not (tmp_path / "x").exists()
     assert not (tmp_path / "g" / "x").exists()
+
+
+_V2_DOCS: dict[str, dict[str, Any]] = {
+    ".zattrs": {"k": 1},
+    ".zgroup": {"zarr_format": 2},
+    ".zarray": {"zarr_format": 2, "shape": [2], "chunks": [2], "dtype": "<i4"},
+    ".zmetadata": {"zarr_consolidated_format": 1, "metadata": {}},
+}
+
+
+_WRONG_FORMAT = {
+    **{f"v3-as-{n}": (n, json.loads(_GROUP_DOC)) for n in _V2_DOCS},
+    "v2-as-zarr-json": ("zarr.json", _V2_DOCS[".zgroup"]),
+}
+
+
+@pytest.mark.unit
+def test_publish_raw_writes_only_where_the_stored_digest_is_the_expected_one(
+    tmp_path: Path,
+) -> None:
+    _local_root(tmp_path)
+    store = LocalStore(tmp_path)
+    auth = MetadataAuthority.process_local(_scope(tmp_path))
+    existing = (tmp_path / "g" / "zarr.json").read_bytes()
+    for expect in (metadata_document_digest(b"{}"), ABSENT):  # stale digest; ABSENT over a document
+        with pytest.raises(DocumentPreconditionError):
+            publish_raw(auth, store, "g/zarr.json", _GROUP_DOC, expect=expect)
+    assert (tmp_path / "g" / "zarr.json").read_bytes() == existing
+
+    publish_raw(auth, store, "h/zarr.json", _GROUP_DOC, expect=ABSENT)
+    publish_raw(auth, store, "g/zarr.json", _GROUP_DOC, expect=metadata_document_digest(existing))
+
+    assert (tmp_path / "h" / "zarr.json").read_bytes() == _GROUP_DOC
+    assert (tmp_path / "g" / "zarr.json").read_bytes() == _GROUP_DOC
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("name", sorted(_V2_DOCS))
+def test_publish_raw_admits_each_v2_document_name(tmp_path: Path, name: str) -> None:
+    auth = MetadataAuthority.process_local(_scope(tmp_path))
+    data = json.dumps(_V2_DOCS[name]).encode()
+
+    publish_raw(auth, LocalStore(tmp_path), f"n/{name}", data, expect=ABSENT)
+
+    assert (tmp_path / "n" / name).read_bytes() == data
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("name", "document"), _WRONG_FORMAT.values(), ids=_WRONG_FORMAT)
+def test_publish_raw_refuses_a_payload_of_the_wrong_format(
+    tmp_path: Path, name: str, document: dict[str, Any]
+) -> None:
+    auth = MetadataAuthority.process_local(_scope(tmp_path))
+
+    with pytest.raises(ValueError, match="not a"):
+        publish_raw(
+            auth, LocalStore(tmp_path), f"n/{name}", json.dumps(document).encode(), expect=ABSENT
+        )
+
+    assert not (tmp_path / "n").exists()
+
+
+@pytest.mark.unit
+def test_publish_raw_refuses_an_out_of_scope_path_and_a_chunk_key(tmp_path: Path) -> None:
+    _local_root(tmp_path)
+    auth = MetadataAuthority.process_local(_scope(tmp_path, "g"))
+    attrs = b'{"k": 1}'
+
+    with pytest.raises(MetadataAuthorityError, match="outside the scope"):
+        publish_raw(auth, LocalStore(tmp_path), "x/.zattrs", attrs, expect=ABSENT)
+    with pytest.raises(ValueError, match="not a metadata document key"):
+        publish_raw(auth, LocalStore(tmp_path), "g/a/c/0", attrs, expect=ABSENT)
+
+    assert not (tmp_path / "x").exists()
+    assert not (tmp_path / "g" / "a" / "c" / "0").exists()
 
 
 @pytest.mark.unit

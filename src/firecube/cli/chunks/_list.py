@@ -46,7 +46,7 @@ Examples:
   firecube chunks list --product-name file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks delete, firecube chunks runs list,
-          firecube chunks snapshots status
+          firecube chunks compact status
 """,
 )
 @click.option(

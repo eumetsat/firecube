@@ -20,7 +20,9 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from firecube.ingestor.api import (
+    AttributePatch,
     BaseIngestor,
+    MetadataPlan,
     OutputPaths,
     PipelineBatch,
     PipelineResult,
@@ -28,6 +30,7 @@ from firecube.ingestor.api import (
     PluginConfig,
     PluginContext,
     RuntimeIngestContext,
+    StoreView,
     register_ingestor,
 )
 
@@ -55,3 +58,66 @@ class CliTestIngestor(BaseIngestor):
         state: PipelineRunState,
     ) -> Mapping[str, Any]:
         return self.default_aggregate_metrics(ctx, state)
+
+
+class _FixtureStep:
+    """Base of the migration steps that the migrate tests install under `firecube.migrations`."""
+
+    id: str = ""
+    depends_on: tuple[str, ...] = ()
+    from_release: str | None = None
+    to_release: str | None = None
+    descriptive_keys: frozenset[str] = frozenset()
+
+    def __init__(self, options: Mapping[str, Any]) -> None:
+        self.options = options
+
+    def plan(self, view: StoreView) -> MetadataPlan:
+        raise NotImplementedError
+
+
+REPLAN_FORBIDDEN = False  # a test sets it to prove that a resume replays the journal
+
+
+class RetitleStep(_FixtureStep):
+    """Set two root attributes and one attribute of the array `temp`."""
+
+    id = "cli-test:retitle"
+
+    def plan(self, view: StoreView) -> MetadataPlan:
+        if REPLAN_FORBIDDEN:
+            raise AssertionError("plan() was called again after the migration was interrupted")
+        return (
+            AttributePatch("", set={"title": "Retitled", "institution": "Fixture Institute"}),
+            AttributePatch("temp", set={"long_name": "Air temperature"}),
+        )
+
+
+class ReleaseStep(_FixtureStep):
+    """Set one root attribute and cut release 0.1.1 inside the run."""
+
+    id = "cli-test:release"
+    to_release = "0.1.1"
+
+    def plan(self, view: StoreView) -> MetadataPlan:
+        return (AttributePatch("", set={"product_version": "0.1.1"}),)
+
+
+class NeedsRetitleStep(_FixtureStep):
+    """Set a root comment once `cli-test:retitle` has run."""
+
+    id = "cli-test:needs-retitle"
+    depends_on = ("cli-test:retitle",)
+
+    def plan(self, view: StoreView) -> MetadataPlan:
+        return (AttributePatch("", set={"comment": "after retitle"}),)
+
+
+class FromReleaseStep(_FixtureStep):
+    """Set a root comment, but only on a store at release 9.9.9."""
+
+    id = "cli-test:from-release"
+    from_release = "9.9.9"
+
+    def plan(self, view: StoreView) -> MetadataPlan:
+        return (AttributePatch("", set={"comment": "from 9.9.9"}),)

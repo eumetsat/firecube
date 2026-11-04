@@ -27,7 +27,7 @@ command with the right environment, storage access, and resources.
 - Source discovery inside the command.
 - Batching and pipeline workers.
 - Product writes through the selected storage driver.
-- ChunkManager records for runs, spans, claims, snapshots, and cleanup state.
+- ChunkManager records for runs, spans, claims, the compact cache, and cleanup state.
 - Resume checks before writing.
 - Write-safety checks for claims and direct-Zarr slot ranges.
 - Metrics, logs, and traces emitted by the command.

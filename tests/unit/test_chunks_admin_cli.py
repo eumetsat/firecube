@@ -20,8 +20,8 @@ import time
 from click.testing import CliRunner
 
 from firecube.cli.chunks._claims import claims_group
+from firecube.cli.chunks._compact import compact_group
 from firecube.cli.chunks._runs import runs_group
-from firecube.cli.chunks._snapshots import snapshots_group
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import ClaimInfo, RunInfo
 from tests.helpers.storage import make_test_binding
@@ -52,7 +52,7 @@ class _FakeClaimsManager:
 
 
 class _FakeSnapshotManager:
-    def rebuild_snapshot(self, product):
+    def rebuild_compact(self, product):
         return {"product": product, "generation": "123", "records": 4}
 
 
@@ -126,16 +126,16 @@ def test_chunks_claims_clear(monkeypatch):
     assert manager.cleared == [("TEST_PRODUCT.zarr", "TEST_PRODUCT.zarr:zarr_group:F024", True)]
 
 
-def test_chunks_snapshots_rebuild_json(monkeypatch):
+def test_chunks_compact_rebuild_json(monkeypatch):
     runner = CliRunner()
     product_uri = "file:///tmp/TEST_PRODUCT.zarr"
     monkeypatch.setattr(
-        "firecube.cli.chunks._snapshots.resolve_manager",
+        "firecube.cli.chunks._compact.resolve_manager",
         lambda *args, **kwargs: _FakeSnapshotManager(),
     )
 
     result = runner.invoke(
-        snapshots_group,
+        compact_group,
         ["rebuild", "--product-name", product_uri, "--format", "json"],
         obj={},
     )

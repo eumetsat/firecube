@@ -136,7 +136,7 @@ def test_list_chunks_skips_list_runs_when_no_slice_collision(
 
     manager.close()
     manager = _fresh_manager(tmp_path)
-    manager.rebuild_snapshot(product)
+    manager.rebuild_compact(product)
 
     with caplog.at_level(logging.DEBUG, logger=_MANAGER_LOGGER):
         chunks = manager.list_chunks(product=product, chunk_type="span")
@@ -176,7 +176,7 @@ def test_list_chunks_calls_list_runs_once_when_slice_collision_present(
 
     manager.close()
     manager = _fresh_manager(tmp_path)
-    manager.rebuild_snapshot(product)
+    manager.rebuild_compact(product)
 
     with caplog.at_level(logging.DEBUG, logger=_MANAGER_LOGGER):
         chunks = manager.list_chunks(product=product, chunk_type="span")

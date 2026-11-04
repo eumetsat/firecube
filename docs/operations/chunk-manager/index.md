@@ -2,11 +2,7 @@
 
 Use these pages to operate the `.firecube/` control plane for one product.
 ChunkManager commands inspect and change product-local run history, span
-records, write claims, snapshots, and cleanup state.
-
-```bash
-PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
-```
+records, write claims, the compact cache, and cleanup state.
 
 ## Command Groups
 
@@ -17,7 +13,7 @@ PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
 | `firecube chunks claims` | Inspect or clear write-coordination claims. |
 | `firecube chunks delete` | Delete tracked records, and the storage objects of records that have them. |
 | `firecube chunks delete-span` | Delete storage chunks described by span records. |
-| `firecube chunks snapshots` | Check or rebuild snapshot read models. |
+| `firecube chunks compact` | Check or rebuild the compact cache. |
 
 ## Locate The Product
 
@@ -25,7 +21,7 @@ Pass the full product URI through `--product-name` so the command locates the
 product directly:
 
 ```bash
-firecube chunks list --product-name "$PRODUCT_URI"
+firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
@@ -77,7 +73,7 @@ Record-only deletion with `--manifest-only` does not need it.
 
 ## Next Steps
 
-- **[Inspect ChunkManager State](inspect.md)** — list records, runs, claims, or snapshots
+- **[Inspect ChunkManager State](inspect.md)** — list records, runs, claims, or the compact cache
 - **[Recover Runs And Claims](recover.md)** — recover a stuck run or stale claim
 - **[Delete And Reingest](delete.md)** — run cleanup or reingestion workflows
-- **[Snapshots](snapshots.md)** — rebuild fast listings for chunk-manager commands
+- **[Compact Cache](compact.md)** — rebuild fast listings for chunk-manager commands

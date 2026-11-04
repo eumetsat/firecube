@@ -39,6 +39,20 @@ class ContractEntry:
     expected_failures: list[tuple[list[str], str]] = field(default_factory=list)
 
 
+def _maintenance(
+    group: str, leaf: str, tier: TierLiteral, role: str | None = "product-input"
+) -> tuple[tuple[str, ...], ContractEntry]:
+    """Contract row of a snapshot, migrate or release leaf; ``role`` None means no URI."""
+    path = (group, leaf)
+    return path, ContractEntry(
+        path=path,
+        tier=tier,
+        uri_roles={} if role is None else {"--target": role},
+        required_storage_flags=["--product-name"] if tier == "write" else [],
+        smart_default_eligible=False,
+    )
+
+
 CLI_COMMAND_CONTRACTS: Mapping[tuple[str, ...], ContractEntry] = {
     ("ingest",): ContractEntry(
         path=("ingest",),
@@ -375,6 +389,22 @@ CLI_COMMAND_CONTRACTS: Mapping[tuple[str, ...], ContractEntry] = {
         smart_default_eligible=False,
         expected_failures=[],
     ),
+    ("chunks", "compact", "rebuild"): ContractEntry(
+        path=("chunks", "compact", "rebuild"),
+        tier="control-plane",
+        uri_roles={},
+        required_storage_flags=[],
+        smart_default_eligible=False,
+        expected_failures=[],
+    ),
+    ("chunks", "compact", "status"): ContractEntry(
+        path=("chunks", "compact", "status"),
+        tier="control-plane",
+        uri_roles={},
+        required_storage_flags=[],
+        smart_default_eligible=False,
+        expected_failures=[],
+    ),
     ("chunks", "snapshots", "rebuild"): ContractEntry(
         path=("chunks", "snapshots", "rebuild"),
         tier="control-plane",
@@ -398,6 +428,22 @@ CLI_COMMAND_CONTRACTS: Mapping[tuple[str, ...], ContractEntry] = {
         required_storage_flags=[],
         smart_default_eligible=False,
         expected_failures=[],
+    ),
+    **dict(
+        [
+            _maintenance("snapshot", "take", "control-plane", "product-input-output"),
+            _maintenance("snapshot", "list", "control-plane"),
+            _maintenance("snapshot", "show", "control-plane"),
+            _maintenance("snapshot", "diff", "control-plane"),
+            _maintenance("migrate", "run", "write", "product-input-output"),
+            _maintenance("migrate", "list", "config-scoped", None),
+            _maintenance("migrate", "status", "control-plane"),
+            _maintenance("migrate", "adopt", "write", "product-input-output"),
+            _maintenance("release", "create", "write", "product-input-output"),
+            _maintenance("release", "list", "control-plane"),
+            _maintenance("release", "show", "control-plane"),
+            _maintenance("release", "verify", "control-plane"),
+        ]
     ),
 }
 

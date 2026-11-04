@@ -185,7 +185,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
         cli,
         [
             "chunks",
-            "snapshots",
+            "compact",
             "rebuild",
             "--product-name",
             product_uri,
@@ -200,8 +200,8 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
     )
     # Claims block BEFORE runs (see repo.py::_assert_compaction_allowed), so the
     # first message we see mentions the claims. Both branches contain the
-    # "cannot rebuild snapshot" prefix.
-    assert "cannot rebuild snapshot" in str(result.exception).lower()
+    # "cannot rebuild compact cache" prefix.
+    assert "cannot rebuild compact cache" in str(result.exception).lower()
 
     # --- Phase 3: claim sweep -- 3 cleared, 2 preserved ---
     result = runner.invoke(
@@ -274,7 +274,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
         cli,
         [
             "chunks",
-            "snapshots",
+            "compact",
             "rebuild",
             "--product-name",
             product_uri,
@@ -315,7 +315,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
         cli,
         [
             "chunks",
-            "snapshots",
+            "compact",
             "rebuild",
             "--product-name",
             product_uri,
@@ -327,7 +327,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
         f"rebuild should succeed after full recovery; exit={result.exit_code} "
         f"output={result.output!r} exc={result.exception!r}"
     )
-    assert "Rebuilt snapshot" in result.output
+    assert "Rebuilt compact cache" in result.output
 
 
 # --- Test 2: T5 op-count assertion (end-to-end enforce()) ---------------------

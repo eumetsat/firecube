@@ -5,7 +5,7 @@ ChunkManager records Firecube uses to keep the product inspectable, retryable,
 and safe to operate.
 
 The data store is the Zarr store, Parquet dataset, or Tensogram file. ChunkManager
-records run history, spans, write claims, snapshots, and cleanup state for that
+records run history, spans, write claims, the compact cache, and cleanup state for that
 same product.
 
 <figure markdown="span">
@@ -36,12 +36,12 @@ for the same run. Keep them together when you want Firecube to resume, inspect,
 recover, or clean up the product later.
 
 ChunkManager records are not physical Zarr chunks. A ChunkManager record is a
-Firecube lifecycle record about runs, spans, claims, or snapshots. A Zarr chunk
+Firecube lifecycle record about runs, spans, claims, or the compact cache. A Zarr chunk
 is a physical array shard inside a Zarr store.
 
 ## Next Steps
 
 - **[Product Storage](storage.md)** — choose local/S3 storage, driver, and write mode
-- **[ChunkManager Records](chunk-management.md)** — understand runs, spans, claims, and snapshots
-- **[ChunkManager Operations](../operations/chunk-manager/index.md)** — inspect, recover, delete, rebuild snapshots, or migrate a product
+- **[ChunkManager Records](chunk-management.md)** — understand runs, spans, claims, and the compact cache
+- **[ChunkManager Operations](../operations/chunk-manager/index.md)** — inspect, recover, delete, rebuild the compact cache, or migrate a product
 - **[Storage Drivers](../reference/storage-drivers.md)** — inspect driver values and capabilities

@@ -35,9 +35,11 @@ from firecube.core.slot_index import SlotAxis, SlotIndexModel
 SCHEMA_VERSION = "v2"
 CONTROL_DIRNAME = ".firecube"
 LATEST_POINTER = "LATEST.json"
-SNAPSHOT_DIRNAME = "snapshots"
+COMPACT_DIRNAME = "compact"
 RUNS_DIRNAME = "runs"
 CLAIMS_DIRNAME = "claims"
+METADATA_DIRNAME = "metadata"
+RELEASES_DIRNAME = "releases"
 SCHEMA_FILENAME = "schema.json"
 DEFAULT_RUN_STALE_THRESHOLD_S = 3600
 EVENT_RUN_STARTED_WITH_REPLACEMENT = "run_started_with_replacement"
@@ -82,19 +84,29 @@ INDEX_DIRNAME = "index"
 INDEX_CURRENT_FILENAME = "current.json"
 RESOLVED_INDEX_ATTR = "firecube_resolved_index"
 RESOLVED_INDEX_IDENTITY_HASH_ATTR = "firecube_resolved_index_identity_hash"
+# Root attrs that only the maintenance executors write: the last migration and the current release.
+LAST_MODIFIER_ATTR = "firecube_last_modifier"
+RELEASE_ATTR = "firecube_release"
 
 MAINTENANCE_OP_DELETE = "delete"
 MAINTENANCE_OP_SCRUB = "scrub"
 MAINTENANCE_OP_ARCHIVE_RESTORE = "archive_restore"
 MAINTENANCE_OP_ARCHIVE_CREATE = "archive_create"
+MAINTENANCE_OP_MIGRATE = "migrate"
+MAINTENANCE_OP_ADOPT = "adopt"
+MAINTENANCE_OP_RELEASE_CREATE = "release_create"
 MAINTENANCE_OPS = frozenset(
     {
         MAINTENANCE_OP_DELETE,
         MAINTENANCE_OP_SCRUB,
         MAINTENANCE_OP_ARCHIVE_RESTORE,
         MAINTENANCE_OP_ARCHIVE_CREATE,
+        MAINTENANCE_OP_MIGRATE,
+        MAINTENANCE_OP_ADOPT,
+        MAINTENANCE_OP_RELEASE_CREATE,
     }
 )
+RUN_JOURNAL_FILENAME = "plan.json"
 MAINTENANCE_KIND = "maintenance"
 
 
@@ -104,6 +116,10 @@ def canonical_index_bytes(index: dict[str, Any]) -> bytes:
     return json.dumps(index, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
         "utf-8"
     )
+
+
+canonical_json_bytes = canonical_index_bytes
+"""Return the canonical UTF-8 JSON encoding of any JSON object: sorted keys, no whitespace."""
 
 
 SourceRefKind = Literal["path", "uri", "identifier"]
@@ -266,6 +282,15 @@ class WriteDomain:
         """Return the SHA-256 hashed filename for the claim file."""
         digest = hashlib.sha256(self.identifier.encode("utf-8")).hexdigest()
         return f"{digest}.json"
+
+
+EXCLUSIVE_MAINTENANCE_NAME: Final = "exclusive"
+"""Name of the maintenance claim domain that excludes every other recorded writer."""
+
+
+def exclusive_maintenance_domain(product: str) -> WriteDomain:
+    """Return the product's exclusive maintenance domain, `<product>:maintenance:exclusive`."""
+    return WriteDomain(product=product, category="maintenance", name=EXCLUSIVE_MAINTENANCE_NAME)
 
 
 @dataclass(slots=True)

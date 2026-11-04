@@ -253,8 +253,8 @@ def rebuild_index_record(
                 "materialize the group's coord"
             )
         record = resolved.as_resolved_index_record(run_id=run_id)
-        # ``ensure_resolved_index`` creates the run before it can conflict, so a
-        # conflict still leaves a run that must be recorded failed.
+        # ``ensure_resolved_index`` does not create the run; the caller's
+        # recording does. A conflict still leaves a run that must be recorded failed.
         try:
             persisted_record, outcome = chunk_manager.ensure_resolved_index(
                 product=product_name,

@@ -6,13 +6,13 @@ clean up, archive, or restore Firecube products.
 Operations commands work against a product URI:
 
 ```bash
-PRODUCT_URI="file:///data/products/MY_PRODUCT.zarr"
+firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 For S3 products, use the full S3 URI:
 
 ```bash
-PRODUCT_URI="s3://bucket/products/MY_PRODUCT.zarr"
+firecube chunks list --product-name "s3://bucket/products/MY_PRODUCT.zarr"
 ```
 
 ## Preflight
@@ -47,7 +47,7 @@ For S3 products, configure the S3 storage settings and credentials described in
 | Inspect product state | [Inspect ChunkManager State](chunk-manager/inspect.md) |
 | Recover from a crashed run | [Recover Runs And Claims](chunk-manager/recover.md) |
 | Delete stale data or reingest a range | [Delete And Reingest](chunk-manager/delete.md) |
-| Rebuild snapshots | [Snapshots](chunk-manager/snapshots.md) |
+| Rebuild the compact cache | [Compact Cache](chunk-manager/compact.md) |
 | Create a portable `.tgm` archive | [Create Archives](archive/create.md) |
 | Inspect or validate an archive | [Inspect And Validate Archives](archive/inspect.md) |
 | Restore an archive to Zarr | [Restore Archives](archive/restore.md) |
