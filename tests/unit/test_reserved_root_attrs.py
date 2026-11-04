@@ -31,6 +31,8 @@ def test_reserved_root_attrs_exact_frozenset() -> None:
         "firecube_slot_index_model_identity_hash",
         "firecube_resolved_index",
         "firecube_resolved_index_identity_hash",
+        "firecube_last_modifier",
+        "firecube_release",
     } == RESERVED_ROOT_ATTRS
 
 
@@ -51,6 +53,8 @@ def test_empty_attrs_are_allowed() -> None:
             {"firecube_resolved_index_identity_hash": "a" * 64},
             "firecube_resolved_index_identity_hash",
         ),
+        ({"firecube_last_modifier": "{}"}, "firecube_last_modifier"),
+        ({"firecube_release": "{}"}, "firecube_release"),
     ],
 )
 def test_reserved_names_raise_name_only(attrs: dict[str, str], expected_name: str) -> None:
@@ -72,3 +76,5 @@ def test_root_names_are_not_array_reserved_attrs() -> None:
     assert "firecube_slot_index_model_identity_hash" not in RESERVED_ARRAY_ATTRS
     assert "firecube_resolved_index" not in RESERVED_ARRAY_ATTRS
     assert "firecube_resolved_index_identity_hash" not in RESERVED_ARRAY_ATTRS
+    assert "firecube_last_modifier" not in RESERVED_ARRAY_ATTRS
+    assert "firecube_release" not in RESERVED_ARRAY_ATTRS

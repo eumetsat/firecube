@@ -83,19 +83,29 @@ INDEX_DIRNAME = "index"
 INDEX_CURRENT_FILENAME = "current.json"
 RESOLVED_INDEX_ATTR = "firecube_resolved_index"
 RESOLVED_INDEX_IDENTITY_HASH_ATTR = "firecube_resolved_index_identity_hash"
+# Root attrs that only the maintenance executors write: the last migration and the current release.
+LAST_MODIFIER_ATTR = "firecube_last_modifier"
+RELEASE_ATTR = "firecube_release"
 
 MAINTENANCE_OP_DELETE = "delete"
 MAINTENANCE_OP_SCRUB = "scrub"
 MAINTENANCE_OP_ARCHIVE_RESTORE = "archive_restore"
 MAINTENANCE_OP_ARCHIVE_CREATE = "archive_create"
+MAINTENANCE_OP_MIGRATE = "migrate"
+MAINTENANCE_OP_ADOPT = "adopt"
+MAINTENANCE_OP_RELEASE_CREATE = "release_create"
 MAINTENANCE_OPS = frozenset(
     {
         MAINTENANCE_OP_DELETE,
         MAINTENANCE_OP_SCRUB,
         MAINTENANCE_OP_ARCHIVE_RESTORE,
         MAINTENANCE_OP_ARCHIVE_CREATE,
+        MAINTENANCE_OP_MIGRATE,
+        MAINTENANCE_OP_ADOPT,
+        MAINTENANCE_OP_RELEASE_CREATE,
     }
 )
+RUN_JOURNAL_FILENAME = "plan.json"
 MAINTENANCE_KIND = "maintenance"
 
 

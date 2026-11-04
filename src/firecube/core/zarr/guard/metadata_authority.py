@@ -41,7 +41,9 @@ This module is the one place a firecube writer changes a node document:
   `publish_document_if_absent` puts one only where none exists, deciding
   under the node lock, so it never replaces a document another writer
   created or changed meanwhile; `update_document` reads one, has the caller
-  merge into it and puts the result, all under the node lock.
+  merge into it and puts the result, all under the node lock. `publish_raw`
+  replaces one document, v3 or v2, only when its stored bytes still have the
+  digest its caller planned against, deciding under the node lock.
 
 The node locks exclude threads of this process only. Between processes the
 claim the authority names is the exclusion, and an authority with basis
@@ -68,7 +70,7 @@ import threading
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import zarr
 from zarr.abc.store import Store
@@ -80,8 +82,12 @@ from firecube.core.errors import FirecubeError
 from firecube.core.zarr._zarr_compat import sync
 from firecube.core.zarr.guard._unit_locks import _store_identity, canonical_array_path
 
+if TYPE_CHECKING:
+    from firecube.core.zarr.metadata_documents import _Absent
+
 __all__ = [
     "AuthorityBasis",
+    "DocumentPreconditionError",
     "HeldClaim",
     "MetadataAuthority",
     "MetadataAuthorityError",
@@ -92,11 +98,21 @@ __all__ = [
     "hold_authority",
     "publish_document",
     "publish_document_if_absent",
+    "publish_raw",
     "set_attributes",
     "update_document",
 ]
 
 _DOCUMENT_NAME = "zarr.json"
+_V2_GROUP_NAME = ".zgroup"
+_V2_ARRAY_NAME = ".zarray"
+_V2_ATTRS_NAME = ".zattrs"
+_V2_CONSOLIDATED_NAME = ".zmetadata"
+_V3_NAMES = frozenset({_DOCUMENT_NAME})
+# The documents `publish_raw` writes: the v3 node document and the four v2 ones.
+_RAW_NAMES = frozenset(
+    {_DOCUMENT_NAME, _V2_GROUP_NAME, _V2_ARRAY_NAME, _V2_ATTRS_NAME, _V2_CONSOLIDATED_NAME}
+)
 # The v3 document zarr stores for an empty group; a test compares it with what
 # zarr itself writes, so a zarr change fails there instead of drifting here.
 EMPTY_GROUP_DOCUMENT = b'{\n  "attributes": {},\n  "zarr_format": 3,\n  "node_type": "group"\n}'
@@ -109,6 +125,44 @@ class MetadataAuthorityError(FirecubeError):
     lies outside its scope, or when the store is not the one it names. The
     store is untouched when this is raised.
     """
+
+
+class DocumentPreconditionError(FirecubeError):
+    """A stored document lacks the bytes its writer planned against; the write leaves the store as it is.
+
+    Attributes:
+        path: The store key of the document.
+        expected: The digest the writer expected, or ``ABSENT`` for no document.
+        found: The digest of the stored bytes, or ``ABSENT`` when the key holds none.
+    """
+
+    def __init__(self, path: str, *, expected: str | _Absent, found: str | _Absent) -> None:
+        """Build the error and its sentence from the key and the two digests.
+
+        Args:
+            path: The store key of the document.
+            expected: The digest the writer expected, or ``ABSENT``.
+            found: The digest of the stored bytes, or ``ABSENT``.
+        """
+        self.path = path
+        self.expected = expected
+        self.found = found
+        wanted = f"digest {expected}" if isinstance(expected, str) else "no document"
+        held = f"digest {found}" if isinstance(found, str) else "none"
+        super().__init__(
+            f"refusing to write {path!r}: expected {wanted}, the store holds {held}; "
+            "the document changed since the write was planned"
+        )
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (_restore_precondition_error, (type(self), self.path, self.expected, self.found))
+
+
+def _restore_precondition_error(
+    cls: type[DocumentPreconditionError], path: str, expected: str | _Absent, found: str | _Absent
+) -> DocumentPreconditionError:
+    """Rebuild a pickled or copied `DocumentPreconditionError` from its fields."""
+    return cls(path, expected=expected, found=found)
 
 
 class AuthorityBasis(enum.Enum):
@@ -672,28 +726,85 @@ def set_attributes(
         return current.update_attributes(dict(attrs)) if attrs else current
 
 
-def _document_node(key: str) -> tuple[str, str]:
-    """The canonical key and node path of a ``zarr.json`` key; ValueError when it is none."""
+def _document_node(key: str, *, names: frozenset[str] = _V3_NAMES) -> tuple[str, str]:
+    """The canonical key and node path of a document key; ValueError when its name is not in *names*.
+
+    The default admits ``zarr.json`` only; `publish_raw` passes the v2 names too.
+    """
     canonical = canonical_array_path(key)
     node, _, name = canonical.rpartition("/")
-    if name != _DOCUMENT_NAME:
-        raise ValueError(f"{key!r} is not a {_DOCUMENT_NAME} document key")
+    if name not in names:
+        if names == _V3_NAMES:
+            raise ValueError(f"{key!r} is not a {_DOCUMENT_NAME} document key")
+        raise ValueError(f"{key!r} is not a metadata document key ({', '.join(sorted(names))})")
     return canonical, node
 
 
-def _checked_document(key: str, payload: bytes) -> tuple[str, str]:
-    """The canonical key and node path of a ``zarr.json`` put; ValueError when it is none."""
-    canonical, node = _document_node(key)
+def _is_v3_node(document: object) -> bool:
+    return (
+        isinstance(document, dict)
+        and document.get("zarr_format") == 3
+        and document.get("node_type") in ("array", "group")
+    )
+
+
+def _is_v2_group(document: object) -> bool:
+    return (
+        isinstance(document, dict) and document.get("zarr_format") == 2 and "shape" not in document
+    )
+
+
+def _is_v2_array(document: object) -> bool:
+    return (
+        isinstance(document, dict)
+        and document.get("zarr_format") == 2
+        and all(key in document for key in ("shape", "chunks", "dtype"))
+    )
+
+
+def _is_v2_attrs(document: object) -> bool:
+    # Any JSON object is a valid attribute set; a v3 node document is refused
+    # because it is a node document put under the wrong name.
+    return isinstance(document, dict) and not _is_v3_node(document)
+
+
+def _is_v2_consolidated(document: object) -> bool:
+    return (
+        isinstance(document, dict)
+        and document.get("zarr_consolidated_format") == 1
+        and isinstance(document.get("metadata"), dict)
+    )
+
+
+# Per document name: the payload check and what the refusal calls the payload.
+_PAYLOAD_CHECKS: Mapping[str, tuple[Callable[[object], bool], str]] = {
+    _DOCUMENT_NAME: (_is_v3_node, "Zarr v3 node document"),
+    _V2_GROUP_NAME: (_is_v2_group, "Zarr v2 group document"),
+    _V2_ARRAY_NAME: (_is_v2_array, "Zarr v2 array document"),
+    _V2_ATTRS_NAME: (_is_v2_attrs, "Zarr v2 attributes document"),
+    _V2_CONSOLIDATED_NAME: (_is_v2_consolidated, "Zarr v2 consolidated metadata document"),
+}
+
+
+def _checked_document(
+    key: str, payload: bytes, *, names: frozenset[str] = _V3_NAMES
+) -> tuple[str, str]:
+    """The canonical key and node path of a document put; ValueError when key or payload is wrong.
+
+    A ``zarr.json`` payload must be a v3 node document. A ``.zgroup`` or
+    ``.zarray`` payload must carry ``zarr_format`` 2 and, for an array,
+    ``shape``, ``chunks`` and ``dtype``. A ``.zattrs`` payload is a JSON object
+    that is not a v3 node document. A ``.zmetadata`` payload carries
+    ``zarr_consolidated_format`` 1 and a ``metadata`` object.
+    """
+    canonical, node = _document_node(key, names=names)
     try:
         document = json.loads(payload)
     except ValueError as exc:
         raise ValueError(f"payload for {canonical!r} is not JSON: {exc}") from exc
-    if (
-        not isinstance(document, dict)
-        or document.get("zarr_format") != 3
-        or document.get("node_type") not in ("array", "group")
-    ):
-        raise ValueError(f"payload for {canonical!r} is not a Zarr v3 node document")
+    check, description = _PAYLOAD_CHECKS[canonical.rpartition("/")[2]]
+    if not check(document):
+        raise ValueError(f"payload for {canonical!r} is not a {description}")
     return canonical, node
 
 
@@ -792,3 +903,60 @@ def update_document(
         _checked_document(canonical, payload)
         sync(store.set(canonical, default_buffer_prototype().buffer.from_bytes(payload)))
         return True
+
+
+def publish_raw(
+    authority: MetadataAuthority | None,
+    store: Store,
+    path: str,
+    data: bytes,
+    *,
+    expect: str | _Absent,
+) -> None:
+    """Replace one v3 or v2 metadata document when the store still holds the expected bytes.
+
+    It checks the key and *data*, then the authority, before it touches the
+    store. Under the node's lock it reads the stored bytes and compares their
+    `metadata_document_digest` with *expect*. It puts *data* in the same lock hold, in
+    one put, as `publish_document` does. Under ``ABSENT`` it creates the key
+    only where none exists. Between processes, the claim the authority names
+    is the exclusion.
+
+    Args:
+        authority: The authority over the node the document belongs to.
+        store: The store to put into.
+        path: ``zarr.json``, ``.zattrs``, ``.zgroup``, ``.zarray`` or
+            ``.zmetadata``, at the root or below ``<node path>/``.
+        data: The whole document. A ``zarr.json`` must be a v3 node document;
+            a ``.zgroup`` or ``.zarray`` must carry ``zarr_format`` 2 (an array
+            also ``shape``, ``chunks`` and ``dtype``); a ``.zattrs`` must be a
+            JSON object that is not a v3 node document; a ``.zmetadata`` must
+            carry ``zarr_consolidated_format`` 1 and a ``metadata`` object.
+        expect: The ``sha256:<hex>`` digest the stored bytes must have, or
+            ``ABSENT`` when the key must hold no document.
+
+    Raises:
+        DocumentPreconditionError: The stored bytes do not have the expected
+            digest, or exist under ``ABSENT``. Nothing is written.
+        MetadataAuthorityError: The authority is missing, released, out of
+            scope, or names another store.
+        ValueError: *path* names no metadata document, or *data* does not
+            fit its name.
+        TypeError: *expect* is neither a string nor ``ABSENT``.
+    """
+    # Imported here: metadata_documents.py loads the control-plane package, which imports this module.
+    from firecube.core.zarr.metadata_documents import ABSENT, metadata_document_digest
+
+    if expect is not ABSENT and not isinstance(expect, str):
+        raise TypeError(f"expect must be a digest string or ABSENT, got {type(expect).__name__}")
+    canonical, node = _checked_document(path, data, names=_RAW_NAMES)
+    with _authorized(authority, store, node) as auth, _node_lock(auth, node):
+        stored = sync(store.get(canonical, prototype=default_buffer_prototype()))
+        found = ABSENT if stored is None else metadata_document_digest(stored.to_bytes())
+        if found != expect:
+            raise DocumentPreconditionError(canonical, expected=expect, found=found)
+        buffer = default_buffer_prototype().buffer.from_bytes(data)
+        if expect is ABSENT:
+            sync(store.set_if_not_exists(canonical, buffer))
+        else:
+            sync(store.set(canonical, buffer))

@@ -43,6 +43,9 @@ from firecube.core.controlplane.types import (
     INDEX_DIRNAME,
     RESOLVED_INDEX_ATTR,
     RESOLVED_INDEX_IDENTITY_HASH_ATTR,
+    RUN_JOURNAL_FILENAME,
+    RUNS_DIRNAME,
+    SCHEMA_FILENAME,
     SLOT_INDEX_CURRENT_FILENAME,
     SLOT_INDEX_DIRNAME,
     TIME_COORD_CONSOLIDATION_RUN_ID,
@@ -105,6 +108,7 @@ if TYPE_CHECKING:
         SnapshotRecord,
     )
     from firecube.core.storage.uri import StorageUri
+    from firecube.core.zarr.metadata_documents import MetadataDocument
 
 log = logging.getLogger(__name__)
 
@@ -2358,6 +2362,103 @@ class ChunkManager:
         fs, product_root = self._metadata_store(product)
         root = metadata_snapshots.metadata_root(product_root)
         return metadata_snapshots.read_blob(fs, root, blob_id)
+
+    def enumerate_metadata_documents(self, product: str) -> list[MetadataDocument]:
+        """Read the product's metadata documents live, as a snapshot captures them, sorted by path.
+
+        The read writes nothing and takes no claim.
+        """
+        from firecube.core.controlplane import metadata_snapshots
+        from firecube.core.zarr.metadata_documents import enumerate_metadata_documents
+
+        fs, product_root = self._metadata_store(product)
+        return metadata_snapshots.captured_documents(enumerate_metadata_documents(fs, product_root))
+
+    def _run_journal_uri(self, product: str, run_id: str) -> StorageUri:
+        self.repo._ensure_bound()
+        assert self.repo._resolver is not None
+        run_dir, _run_uri = run_dir_for(self.repo._resolver, product, run_id)
+        return run_dir.join(RUN_JOURNAL_FILENAME)
+
+    def write_run_journal(self, product: str, run_id: str, data: bytes) -> None:
+        """Create `.firecube/runs/<run_id>/plan.json` with `data` once.
+
+        A journal that already holds the same bytes is kept.
+
+        Raises:
+            ValueError: `run_id` is not a single path segment.
+            ManifestError: The journal exists with other bytes; nothing is written.
+        """
+        uri = self._run_journal_uri(product, run_id)
+        fs = cast(StorageFilesystemFull, self.repo._fs)
+        with contextlib.suppress(Exception):
+            fs.makedirs(uri.parent(), exist_ok=True)
+        try:
+            fs.atomic_writer.write_atomic(uri, data)
+        except FileExistsError:
+            if fs.read_bytes(uri) != data:
+                raise ManifestError(
+                    f"run journal {uri.to_str()} already exists with other content"
+                ) from None
+
+    def read_run_journal(self, product: str, run_id: str) -> bytes | None:
+        """Return the bytes of `.firecube/runs/<run_id>/plan.json`, or `None` when the run has none.
+
+        Raises:
+            ValueError: `run_id` is not a single path segment.
+        """
+        uri = self._run_journal_uri(product, run_id)
+        fs = cast(StorageFilesystemFull, self.repo._fs)
+        try:
+            return fs.read_bytes(uri)
+        except FileNotFoundError:
+            return None
+
+    def list_run_journals(self, product: str, *, prefix: str) -> list[str]:
+        """Return the ids starting with `prefix` of runs that hold a journal, from a fresh listing.
+
+        A journal written before its run's start was recorded is listed too. A failed
+        listing of `runs/` raises; an absent `runs/` lists none.
+        """
+        from firecube.core.controlplane._wal_reader import WalReader
+
+        self.repo._ensure_bound()
+        assert self.repo._resolver is not None
+        control_path, _control_uri = self.repo._resolver(product)
+        runs_dir = control_path.join(RUNS_DIRNAME)
+        fs = cast(Any, self.repo._fs)
+        try:
+            listed = fs.ls(runs_dir, detail=False, refresh=True)
+        except FileNotFoundError:
+            return []
+        run_ids = (
+            WalReader._run_id_from_dir(WalReader._entry_to_uri(item, runs_dir), runs_dir)
+            for item in listed
+        )
+        return sorted(
+            run_id
+            for run_id in run_ids
+            if run_id.startswith(prefix) and fs.exists(runs_dir.join(run_id, RUN_JOURNAL_FILENAME))
+        )
+
+    def scan_runs(self, *, product: str) -> tuple[list[RunInfo], list[tuple[str, str]]]:
+        """Read every run of the product from fresh listings, for an admission that fails closed.
+
+        A failed `runs/` listing raises. Returns the readable runs and `(run_id, error)`
+        for each run that cannot be read.
+        """
+        return self.repo.scan_runs(product=product)
+
+    def has_control_plane(self, product: str) -> bool:
+        """Return whether the product has `.firecube/schema.json` or any run, from fresh reads."""
+        self.repo._ensure_bound()
+        assert self.repo._resolver is not None
+        control_path, _control_uri = self.repo._resolver(product)
+        fs = cast(StorageFilesystemFull, self.repo._fs)
+        if fs.exists(control_path.join(SCHEMA_FILENAME)):
+            return True
+        runs, unreadable = self.repo.scan_runs(product=product)
+        return bool(runs or unreadable)
 
 
 def _abandon_operation(product_uri: str, run_id: str) -> Operation:

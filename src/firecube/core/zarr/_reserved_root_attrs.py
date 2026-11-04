@@ -20,8 +20,9 @@ to be persisted to a Zarr root.
 
 Firecube-internal writers MUST NOT call this guard. The slot-index service
 (ChunkManager.ensure_slot_index_model._mirror_attrs) is the authoritative writer for the
-reserved root attrs and writes them DIRECTLY. Drift detection on subsequent runs is handled by
-the precedence matrix in _apply_slot_model_precedence, not by this guard.
+reserved index root attrs and writes them DIRECTLY. Drift detection on subsequent runs is handled by
+the precedence matrix in _apply_slot_model_precedence, not by this guard. The migrate and
+release executors are the only writers of `firecube_last_modifier` and `firecube_release`.
 
 In short: "assert no reserved root attrs appear in user/plugin-supplied attrs" — that is the
 entire contract.
@@ -36,6 +37,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from firecube.core.controlplane.types import (
+    LAST_MODIFIER_ATTR,
+    RELEASE_ATTR,
     RESOLVED_INDEX_ATTR,
     RESOLVED_INDEX_IDENTITY_HASH_ATTR,
 )
@@ -52,6 +55,8 @@ RESERVED_ROOT_ATTRS: frozenset[str] = frozenset(
         SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR,
         RESOLVED_INDEX_ATTR,
         RESOLVED_INDEX_IDENTITY_HASH_ATTR,
+        LAST_MODIFIER_ATTR,
+        RELEASE_ATTR,
     }
 )
 

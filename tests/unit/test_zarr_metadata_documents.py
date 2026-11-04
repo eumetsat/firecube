@@ -18,10 +18,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from pathlib import Path
 from typing import Any, Literal
 
+import numpy as np
 import pytest
+import xarray as xr
 import zarr
 
 from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
@@ -30,6 +33,7 @@ from firecube.core.zarr.metadata_documents import (
     ABSENT,
     MetadataDocument,
     MetadataDocumentKind,
+    build_consolidated_image,
     enumerate_metadata_documents,
     metadata_document_digest,
     must_understand,
@@ -206,6 +210,75 @@ def test_array_added_after_consolidation_is_enumerated(tmp_path: Path, fmt: Lite
     paths = {d.path for d in enumerate_metadata_documents(fs, uri)}
 
     assert ("late/zarr.json" if fmt == 3 else "late/.zarray") in paths
+
+
+def _xarray_store(tmp_path: Path, fmt: Literal[2, 3]) -> tuple[Path, dict[str, MetadataDocument]]:
+    root = tmp_path / f"x{fmt}.zarr"
+    data = xr.Dataset({"v": ("x", np.arange(4.0), {"units": "m"})}, coords={"x": np.arange(4)})
+    data.to_zarr(root, zarr_format=fmt, consolidated=True, encoding={"v": {"chunks": (2,)}})
+    fs = FsspecFilesystem.from_binding(make_test_binding(tmp_path, product=root.name))
+    return root, {
+        d.path: d for d in enumerate_metadata_documents(fs, StorageUri.from_local_path(root))
+    }
+
+
+def _chunk_files(root: Path) -> dict[str, bytes]:
+    return {str(p.relative_to(root)): p.read_bytes() for p in root.rglob("*") if p.name.isdigit()}
+
+
+@pytest.mark.parametrize("fmt", [2, 3], ids=["v2", "v3"])
+def test_built_image_equals_zarr_consolidation_of_the_edited_store(
+    tmp_path: Path, fmt: Literal[2, 3]
+) -> None:
+    root, docs = _xarray_store(tmp_path, fmt)
+    array, attrs = (
+        (docs["v/zarr.json"], None) if fmt == 3 else (docs["v/.zarray"], docs["v/.zattrs"])
+    )
+    edited_path, edited = patch_attributes(array, attrs=attrs, set={"units": "km", "added": 1})
+    after = {**{p: d.raw for p, d in docs.items()}, edited_path: edited}
+    oracle, written = tmp_path / "oracle.zarr", tmp_path / "written.zarr"
+    for copy in (oracle, written):
+        shutil.copytree(root, copy)
+        (copy / edited_path).write_bytes(edited)
+    zarr.consolidate_metadata(str(oracle))
+    image_name = ".zmetadata" if fmt == 2 else "zarr.json"
+
+    image = build_consolidated_image(after, fmt)
+    (written / image_name).write_bytes(image)
+
+    assert json.loads(image) == json.loads((oracle / image_name).read_bytes())
+    assert _chunk_files(written) == _chunk_files(root)
+
+
+def test_image_of_a_foreign_zarray_with_attributes_reads_as_the_live_store(tmp_path: Path) -> None:
+    root, docs = _xarray_store(tmp_path, 2)
+    zarray = {**json.loads(docs["v/.zarray"].raw), "attributes": {"units": "zarray", "z": 1}}
+    zattrs = {**json.loads(docs["v/.zattrs"].raw), "units": "zattrs"}
+    (root / "v" / ".zarray").write_text(json.dumps(zarray))
+    (root / "v" / ".zattrs").write_text(json.dumps(zattrs))
+    after = {p: (root / p).read_bytes() for p in docs}
+
+    (root / ".zmetadata").write_bytes(build_consolidated_image(after, 2))
+
+    live = zarr.open_group(root, mode="r", use_consolidated=False)["v"].attrs.asdict()
+    assert zarr.open_group(root, mode="r", use_consolidated=True)["v"].attrs.asdict() == live
+    via_xarray = [xr.open_zarr(root, consolidated=c).v.attrs for c in (True, False)]
+    assert via_xarray[0] == via_xarray[1]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {".zgroup": {"zarr_format": 2, "shape": [4]}},
+        {"v/.zarray": {"zarr_format": 2, "chunks": [2]}},
+    ],
+    ids=["zgroup-holds-shape", "zarray-lacks-shape"],
+)
+def test_image_refuses_a_v2_group_with_shape_and_an_array_without(extra: dict[str, Any]) -> None:
+    documents = {".zgroup": {"zarr_format": 2}, **extra}
+
+    with pytest.raises(ValueError):
+        build_consolidated_image({k: json.dumps(v).encode() for k, v in documents.items()}, 2)
 
 
 @pytest.mark.parametrize(

@@ -15,9 +15,9 @@
 """Zarr metadata documents of a store, captured as bytes and read as JSON.
 
 The module lists, hashes, parses and patches the metadata documents of Zarr v2
-and v3 stores. It parses the JSON itself and never round-trips a document
-through zarr-python's models, which drop or add keys. Nothing here writes to a
-store.
+and v3 stores, and builds a root consolidated image from them. It parses the
+JSON itself and never round-trips a document through zarr-python's models,
+which drop or add keys. Nothing here writes to a store.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import posixpath
+import unicodedata
 from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from enum import Enum, StrEnum
@@ -48,6 +49,7 @@ __all__ = [
     "MetadataDocument",
     "MetadataDocumentKind",
     "NodeView",
+    "build_consolidated_image",
     "enumerate_metadata_documents",
     "metadata_document_digest",
     "must_understand",
@@ -431,12 +433,17 @@ def _unique_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return content
 
 
+def _load_raw_object(path: str, raw: bytes) -> dict[str, Any]:
+    """Parse *raw* as a JSON object, refusing a duplicate key that a rewrite would lose."""
+    content = json.loads(raw, object_pairs_hook=_unique_keys)
+    if not isinstance(content, dict):
+        raise ValueError(f"{path} is not a JSON object")
+    return content
+
+
 def _load_object(document: MetadataDocument) -> dict[str, Any]:
     """Parse *document* as a JSON object, refusing a duplicate key that a rewrite would lose."""
-    content = json.loads(document.raw, object_pairs_hook=_unique_keys)
-    if not isinstance(content, dict):
-        raise ValueError(f"{document.path} is not a JSON object")
-    return content
+    return _load_raw_object(document.path, document.raw)
 
 
 def _patched(
@@ -500,3 +507,153 @@ def patch_attributes(
     if attrs is None:
         return posixpath.join(view.path, _V2_ATTRS), _dump(_patched({}, set, remove))
     return attrs.path, _dump(_patched(_load_object(attrs), set, remove))
+
+
+_CONSOLIDATED_FIELD = "consolidated_metadata"
+
+
+def _empty_inline_image() -> dict[str, Any]:
+    """The image zarr writes into every child group entry: inline and empty."""
+    return {"kind": "inline", "must_understand": False, "metadata": {}}
+
+
+def _image_order(node: str) -> tuple[int, str]:
+    """Zarr's order of image entries: by depth, then by case-folded NFKC path."""
+    return node.count("/"), unicodedata.normalize("NFKC", node).casefold()
+
+
+def _image_inputs(documents: Mapping[str, bytes]) -> dict[str, dict[str, bytes]]:
+    """Group the node documents by node path and name; skip images and ``.firecube/``."""
+    nodes: dict[str, dict[str, bytes]] = {}
+    for path, raw in documents.items():
+        if path.split("/", 1)[0] == CONTROL_DIRNAME:
+            continue
+        node, _, name = path.rpartition("/")
+        if name == _V2_CONSOLIDATED:
+            continue
+        if name not in {_V3_NODE, _V2_GROUP, _V2_ARRAY, _V2_ATTRS}:
+            raise ValueError(f"{path} is not a Zarr metadata document")
+        nodes.setdefault(node, {})[name] = raw
+    return nodes
+
+
+def _require_parent_groups(groups: Collection[str], nodes: Collection[str]) -> None:
+    """Refuse a node whose parent is not a group of the image, as a live walk never reaches it."""
+    for node in nodes:
+        parent = posixpath.dirname(node)
+        if node and parent not in groups:
+            raise ValueError(f"node {node!r} lies below {parent!r}, which is not a group")
+
+
+def _v3_image(nodes: Mapping[str, Mapping[str, bytes]]) -> bytes:
+    content: dict[str, dict[str, Any]] = {}
+    for node, names in nodes.items():
+        refused = sorted(names.keys() - {_V3_NODE})
+        if refused:
+            raise ValueError(f"{posixpath.join(node, refused[0])} is a Zarr v2 document")
+        path = posixpath.join(node, _V3_NODE)
+        document = _load_raw_object(path, names[_V3_NODE])
+        if document.get("zarr_format") != 3 or document.get("node_type") not in ("group", "array"):
+            raise ValueError(f"{path} is not a Zarr v3 node document")
+        content[node] = document
+    groups = {node for node, document in content.items() if document["node_type"] == "group"}
+    if "" not in groups:
+        raise ValueError(f"the image needs a root group document {_V3_NODE}")
+    _require_parent_groups(groups, content)
+
+    entries: dict[str, Any] = {}
+    for node in sorted(content.keys() - {""}, key=_image_order):
+        entry = {"attributes": {}, **content[node]}
+        if node in groups:
+            entry[_CONSOLIDATED_FIELD] = _empty_inline_image()
+        entries[node] = entry
+    root = content[""]
+    root[_CONSOLIDATED_FIELD] = {**_empty_inline_image(), "metadata": entries}
+    return _dump(root)
+
+
+def _v2_node(node: str, names: Mapping[str, bytes]) -> tuple[str, dict[str, Any], Any]:
+    """The name, parsed document and parsed attributes of one v2 node."""
+    if _V3_NODE in names:
+        raise ValueError(f"{posixpath.join(node, _V3_NODE)} is a Zarr v3 document")
+    kinds = sorted(names.keys() & {_V2_GROUP, _V2_ARRAY})
+    if len(kinds) != 1:
+        found = ", ".join(posixpath.join(node, name) for name in sorted(names))
+        raise ValueError(f"node {node!r} needs exactly one of .zgroup and .zarray, found {found}")
+    path = posixpath.join(node, kinds[0])
+    document = _load_raw_object(path, names[kinds[0]])
+    if document.get("zarr_format") != 2:
+        raise ValueError(f"{path} is not a Zarr v2 node document")
+    if ("shape" in document) != (kinds[0] == _V2_ARRAY):
+        # A consolidated reader tells a v2 array from a group by its shape key alone.
+        raise ValueError(f"{path} disagrees with its shape key about the node kind")
+    attrs: Any = {}
+    if _V2_ATTRS in names:
+        attrs = _load_raw_object(posixpath.join(node, _V2_ATTRS), names[_V2_ATTRS])
+    return kinds[0], document, attrs
+
+
+def _v2_image(nodes: Mapping[str, Mapping[str, bytes]]) -> bytes:
+    parsed = {node: _v2_node(node, names) for node, names in nodes.items()}
+    groups = {node for node, (name, _, _) in parsed.items() if name == _V2_GROUP}
+    if "" not in groups:
+        raise ValueError(f"the image needs a root group document {_V2_GROUP}")
+    _require_parent_groups(groups, parsed)
+
+    _, root, root_attrs = parsed[""]
+    metadata: dict[str, Any] = {_V2_GROUP: root, _V2_ATTRS: root_attrs}
+    for node in sorted(parsed.keys() - {""}, key=_image_order):
+        name, document, attrs = parsed[node]
+        if name == _V2_GROUP:
+            document = {**document, _CONSOLIDATED_FIELD: _empty_inline_image()}
+        metadata[f"{node}/{name}"] = document
+        # Readers merge entries in order, so .zattrs must follow and beat an "attributes" key.
+        metadata[f"{node}/{_V2_ATTRS}"] = attrs
+    image = {"metadata": metadata, "zarr_consolidated_format": 1}
+    return json.dumps(image, allow_nan=True).encode("utf-8")
+
+
+def build_consolidated_image(documents: Mapping[str, bytes], zarr_format: int) -> bytes:
+    """Return the root consolidated image that the given node documents make.
+
+    For documents that zarr 3.2.1 writes, the result equals, as parsed JSON, what
+    ``zarr.consolidate_metadata`` writes. The function writes nothing; the caller
+    decides where an image belongs.
+
+    Every node document goes into the image as its bytes parse. The function
+    makes three changes, as zarr does:
+
+    - each child group entry carries an empty inline ``consolidated_metadata``;
+    - each node entry carries attributes, ``{}`` when the node stores none;
+    - entries go by depth, then by case-folded path.
+
+    Beyond these, it adds no default and drops no unknown key, unlike zarr.
+    A foreign document therefore keeps its own keys in the image.
+
+    In a v2 image each node's ``.zattrs`` entry follows its ``.zarray`` or
+    ``.zgroup`` entry. A reader that merges them in order then takes the
+    stored attributes over an ``attributes`` key inside the node document.
+
+    Args:
+        documents: Store-relative path to bytes, as ``MetadataDocument.path`` and
+            ``MetadataDocument.raw`` spell them, with the planned changes applied. A
+            ``.zmetadata`` and every ``.firecube/`` path are skipped.
+        zarr_format: ``3`` builds the root ``zarr.json`` with its
+            ``consolidated_metadata`` replaced or added. ``2`` builds the root
+            ``.zmetadata``.
+
+    Returns:
+        The bytes of the root ``zarr.json`` (v3) or ``.zmetadata`` (v2).
+
+    Raises:
+        ValueError: *zarr_format* is not 2 or 3, or a path names no metadata
+            document. A document is not a JSON object, repeats a key or belongs
+            to the other format. The root group is missing. A node sits below
+            something other than a group. A v2 node has both or neither of
+            ``.zgroup`` and ``.zarray``, a ``.zgroup`` holds ``shape``, or a
+            ``.zarray`` lacks it.
+    """
+    if zarr_format not in (2, 3):
+        raise ValueError(f"zarr_format must be 2 or 3, got {zarr_format!r}")
+    nodes = _image_inputs(documents)
+    return _v3_image(nodes) if zarr_format == 3 else _v2_image(nodes)

@@ -59,6 +59,15 @@ from firecube.ingestor.contracts.interfaces import (
     SourceFile,
     is_dataset_producer,
 )
+from firecube.ingestor.contracts.migration import (
+    ABSENT,
+    AttributePatch,
+    MetadataPlan,
+    MigrationStep,
+    NodeView,
+    ReleaseRecord,
+    StoreView,
+)
 from firecube.ingestor.errors import (
     ConfigurationError,
     IngestorError,
@@ -126,11 +135,13 @@ if TYPE_CHECKING:
     from firecube.ingestor.templates.generic import GenericParquetIngestor, GenericZarrIngestor
     from firecube.ingestor.templates.generic_tensogram import GenericTensogramIngestor
 __all__ = [
+    "ABSENT",
     "AUTO",
     "FIRECUBE_STATIC_WRITTEN_ATTR",
     "RESERVED_ARRAY_ATTRS",
     "AppendStrategy",
     "AppendWriteStrategy",
+    "AttributePatch",
     "AxisSpec",
     "BaseIngestor",
     "CatalogGroupInfo",
@@ -158,8 +169,11 @@ __all__ = [
     "ItemManifestEntry",
     "LocalSourceFile",
     "ManifestError",
+    "MetadataPlan",
+    "MigrationStep",
     "MissingIrregularCoordinateError",
     "NoDiscoveredItemsError",
+    "NodeView",
     "OutputPaths",
     "ParquetTemplateConfig",
     "PipelineBatch",
@@ -173,6 +187,7 @@ __all__ = [
     "RangeOverlapError",
     "RegionWriteStrategy",
     "RegularTimeAxis",
+    "ReleaseRecord",
     "ResolvedIndex",
     "ResolvedIndexRecord",
     "ResultMetrics",
@@ -186,6 +201,7 @@ __all__ = [
     "StorageContext",
     "StorageError",
     "StorageMetrics",
+    "StoreView",
     "TemplateConfig",
     "TensogramTemplateConfig",
     "TensogramWriteStrategy",
