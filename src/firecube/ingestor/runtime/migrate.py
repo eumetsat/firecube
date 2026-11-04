@@ -16,8 +16,8 @@
 
 `migrate_product` runs one `MigrationStep` under the product's exclusive maintenance
 claim. It journals the planned documents before the first store write, so an
-interrupted run resumes from the journal. `adopt_product` gives a store that Firecube
-did not write a control plane. `apply_metadata_plan` writes planned documents and is
+interrupted run resumes from the journal. A real run refuses a store with no control
+plane; `adopt_product` gives a store that Firecube did not write one, as a separate step. `apply_metadata_plan` writes planned documents and is
 shared with the release executor.
 """
 
@@ -43,6 +43,7 @@ from firecube.core.controlplane.types import (
     exclusive_maintenance_domain,
 )
 from firecube.core.errors import (
+    CommandName,
     FirecubeError,
     Message,
     Operation,
@@ -149,6 +150,7 @@ _NODE_KINDS: Final = frozenset(
         MetadataDocumentKind.V2_ATTRS,
     }
 )
+_ADOPT_COMMAND: Final = CommandName(("migrate", "adopt"), library="adopt_product")
 _BEFORE, _AFTER, _THIRD = "before", "after", "third"
 _JOURNALED: Final = "journaled"
 
@@ -355,6 +357,8 @@ class MigrationResult:
 @dataclass(frozen=True)
 class AdoptionResult:
     """What `adopt_product` did.
+
+    Adopting a Zarr format 2 store also sends one warning, because Firecube cannot append to it.
 
     Attributes:
         outcome: `"adopted"`, or `"already-product"` when the store had a control plane.
@@ -653,6 +657,47 @@ def _patch_node(
         raise MigrationPlanError(f"node {node or '/'!r} cannot be patched: {exc}") from exc
 
 
+def _rebuilt_image(documents: Mapping[str, MetadataDocument], zarr_format: int) -> bytes:
+    nodes = {
+        path: document.raw
+        for path, document in documents.items()
+        if path.split("/", 1)[0] != CONTROL_DIRNAME
+    }
+    try:
+        return build_consolidated_image(nodes, zarr_format)
+    except (ValueError, RecursionError) as exc:
+        raise MigrationPlanError(f"the root consolidated image cannot be rebuilt: {exc}") from exc
+
+
+def plan_consolidated_image(documents: Sequence[MetadataDocument]) -> tuple[PlannedDocument, ...]:
+    """Return the root consolidated image rebuilt from `documents` when its bytes differ.
+
+    A store without a root image, or whose image already has the rebuilt bytes, gets
+    none. Nothing is read or written.
+
+    Raises:
+        MigrationPlanError: The store has no root group, a group below the root has its
+            own image, or the image cannot be built.
+    """
+    original = {document.path: document for document in documents}
+    zarr_format = _zarr_format(original)
+    image = _image_path(original, zarr_format)
+    if image is None:
+        return ()
+    data = _rebuilt_image(original, zarr_format)
+    if data == original[image].raw:
+        return ()
+    return (
+        PlannedDocument(
+            path=image,
+            before=original[image].digest,
+            after=metadata_document_digest(data),
+            data=data,
+            image=True,
+        ),
+    )
+
+
 def plan_documents(
     documents: Sequence[MetadataDocument], plan: Sequence[AttributePatch]
 ) -> tuple[PlannedDocument, ...]:
@@ -690,17 +735,7 @@ def plan_documents(
         if path not in original or original[path].raw != document.raw
     )
     if changed and image is not None:
-        nodes = {
-            path: document.raw
-            for path, document in current.items()
-            if path.split("/", 1)[0] != CONTROL_DIRNAME
-        }
-        try:
-            data = build_consolidated_image(nodes, zarr_format)
-        except (ValueError, RecursionError) as exc:
-            raise MigrationPlanError(
-                f"the root consolidated image cannot be rebuilt: {exc}"
-            ) from exc
+        data = _rebuilt_image(current, zarr_format)
         current[image] = MetadataDocument(
             path=image, kind=original[image].kind, raw=data, digest=metadata_document_digest(data)
         )
@@ -948,6 +983,15 @@ def _adopt(
                 )
         raise
     report(f"adopted the store as product {product} (run {run_id}, Zarr format {zarr_format})")
+    if zarr_format == 2:
+        warn(
+            Message(
+                "Warning: the store of product {product} is Zarr format 2. Firecube cannot "
+                "append to it, so ingest and preallocate do not support this store. Convert "
+                "it to Zarr format 3 outside Firecube before you ingest into it.",
+                product=product,
+            )
+        )
     return run_id, zarr_format
 
 
@@ -968,12 +1012,13 @@ def adopt_product(
 
     A store with `.firecube/schema.json` or recorded runs is already a product and
     stays as it is. The run records the store as imported, with chunks unverified,
-    and invents no span history. It writes no Zarr document.
+    and invents no span history. It writes no Zarr document. Adopting a Zarr format 2
+    store succeeds and warns that Firecube cannot append to it.
 
     Args:
         session: The storage session bound to the store.
         report: Receives the line that names the run.
-        warn: Receives each bookkeeping warning line, "Warning: " included.
+        warn: Receives each warning line, "Warning: " included. A Zarr format 2 store gets one.
 
     Returns:
         The outcome, the run id and the store's Zarr format.
@@ -1052,8 +1097,25 @@ def list_migrations(*, manager: ChunkManager, product: str) -> tuple[MigrationRu
 
 
 def _current_release(manager: ChunkManager, product: str) -> ReleaseRecord | None:
-    """Return the product's current release; a product has none before release records exist."""
-    return None
+    """Return the release that `.firecube/releases/refs/current.json` names, or `None`."""
+    # Function-scope import: the release module imports this one.
+    from firecube.ingestor.runtime.release import to_release_record
+
+    stored = manager.current_release(product)
+    return None if stored is None else to_release_record(stored)
+
+
+def _refuse_existing_release(manager: ChunkManager, product: str, step: MigrationStep) -> None:
+    """Refuse a fresh run whose `to_release` names a release that exists, before metadata writes."""
+    if step.to_release is None:
+        return
+    existing = manager.find_release(product, step.to_release)
+    if existing is not None:
+        raise StepPreconditionError(
+            f"step {step.id!r} creates release {step.to_release!r}, which exists already "
+            f"and names snapshot {existing.snapshot}",
+            step_id=step.id,
+        )
 
 
 def _snapshot_documents(
@@ -1232,11 +1294,13 @@ def _report_plan(report: Callable[[str], None], prepared: _Prepared) -> None:
     _report_documents(report, prepared)
 
 
-def _report_documents(report: Callable[[str], None], prepared: _Prepared) -> None:
+def _report_documents(
+    report: Callable[[str], None], prepared: _Prepared, *, outcome_label: str = "outcome"
+) -> None:
     for item in prepared.documents:
         action = "keep" if item.before == item.after else "write"
         report(f"{action} {item.path}{' (consolidated image)' if item.image else ''}")
-    report(f"outcome: {prepared.outcome}")
+    report(f"{outcome_label}: {prepared.outcome}")
 
 
 def _journal_entries(
@@ -1397,8 +1461,8 @@ def migrate_product(
     The run holds the product's exclusive maintenance claim. It takes a coherent
     snapshot, plans against it and journals every planned document before the first
     write. It then writes the documents, the root consolidated image last, verifies
-    the store and takes a second snapshot. A store without a control plane is adopted
-    first. A step that ran before at the same identity is not run again. An
+    the store and takes a second snapshot. A real run refuses a store without a control
+    plane and writes nothing; `adopt_product` gives it one first. A step that ran before at the same identity is not run again. An
     interrupted, unrecorded or failed run of the step resumes from its journal.
 
     Args:
@@ -1408,9 +1472,10 @@ def migrate_product(
         step_options: The options the step is built with.
         allow: Attribute classes the run may change beyond descriptive ones:
             `"interpretation"`, `"unknown"`, or both.
-        dry_run: Report the plan and the classes, and write nothing: no adoption, no claim.
-        create_release: Records the release a step names in `to_release`. Without it,
-            such a step is refused.
+        dry_run: Report the plan and the classes, and write nothing: no claim. On a store
+            without a control plane, report first that a real run needs adoption.
+        create_release: Records the release a step names in `to_release`, inside the
+            run's claim. Defaults to `release_in_run` of the release module.
         report: Receives progress and plan lines.
         warn: Receives each bookkeeping warning line, "Warning: " included.
 
@@ -1421,15 +1486,20 @@ def migrate_product(
         ValueError: `allow` names a class other than interpretation and unknown.
         StepIdentityError: The step is not installed, has no distribution, or ran
             before at another distribution version.
-        StepPreconditionError: A step it depends on is not applied, or the store is at
-            another release.
+        StepPreconditionError: A step it depends on is not applied, the store is at
+            another release, or the release the step creates exists already.
+        ReleaseVersionUnstorableError: A storage driver cannot write, list or read the
+            record of the step's `to_release`. Nothing is written.
+        ReleaseConflictError: A resumed run's release record exists, and the live
+            metadata differs from its snapshot.
         AttributeClassError: The plan changes an attribute its class refuses.
         MetadataStateError: Planned documents hold a third state.
         MigrationPlanError: The step refuses its options, fails to plan, or plans a
             change the store cannot take.
         ClaimConflictError: Another owner holds the exclusive maintenance claim.
         ExclusiveMaintenanceRefusedError: Other claims or unfinished runs exist.
-        MigrationRefusedError: The step's runs changed while the run waited for its claim.
+        MigrationRefusedError: A real run finds the store without a control plane, and
+            nothing is written; or the step's runs changed while the run waited for its claim.
     """
     unknown = sorted(set(allow) - ALLOWABLE_CLASSES)
     if unknown:
@@ -1437,21 +1507,39 @@ def migrate_product(
     allowed = frozenset(allow)
     installed, distribution, version = _installed_step(load_steps, step_id)
     step = _built_step(installed, step_options or {})
-    if step.to_release is not None and create_release is None:
-        raise MigrationRefusedError(
-            f"step {step_id!r} creates release {step.to_release!r}, and this executor "
-            "has no release support",
-            step_id=step_id,
-        )
+    if create_release is None:
+        # Function-scope import: the release module imports this one.
+        from firecube.ingestor.runtime.release import release_in_run
+
+        create_release = release_in_run
     identity = (distribution, version)
     product = session.product.product_name
     product_uri = session.product.product_uri.to_str()
     manager = session.control_plane()
     try:
+        if step.to_release is not None:
+            # Before the control-plane refusal, the journal and the dry run: the stamp must never lack its record.
+            manager.check_release_version(product, step.to_release)
         is_product = manager.has_control_plane(product)
-        if not is_product and not dry_run:
-            _adopt(manager, product, manager.enumerate_metadata_documents(product), report, warn)
-            is_product = True
+        if not is_product:
+            if not dry_run:
+                raise MigrationRefusedError(
+                    Message(
+                        "the store of product {product} has no control plane; adopt it with "
+                        "{adopt} before running a migration",
+                        product=product,
+                        adopt=_ADOPT_COMMAND,
+                    ),
+                    step_id=step_id,
+                )
+            report(
+                Message(
+                    "the store of product {product} has no control plane; a real run needs "
+                    "{adopt} first",
+                    product=product,
+                    adopt=_ADOPT_COMMAND,
+                )
+            )
         history = _history(manager, product) if is_product else []
         live = _digests(manager.enumerate_metadata_documents(product))
         applied, resume = _prior_runs(history, live, step_id, identity, product_uri)
@@ -1522,6 +1610,7 @@ def _dry_run(
             resumed_from=run.run_id,
         )
     _check_preconditions(step, history, _current_release(manager, product))
+    _refuse_existing_release(manager, product, step)
     documents = manager.enumerate_metadata_documents(product)
     now = datetime.now(UTC)
     view = StoreView(node_views(documents), release=_current_release(manager, product), now=now)
@@ -1539,7 +1628,7 @@ def _dry_run(
             raise
         prepared = None
     if prepared is not None:
-        _report_documents(report, prepared)
+        _report_documents(report, prepared, outcome_label="planned outcome")
     _refuse_classes(step.id, verdicts)
     assert prepared is not None
     return MigrationResult(
@@ -1594,7 +1683,7 @@ def _run(
     identity: tuple[str, str],
     resume: tuple[Any, _Journal] | None,
     allow: Collection[str],
-    create_release: ReleaseCreator | None,
+    create_release: ReleaseCreator,
     report: Callable[[str], None],
     warn: Callable[[str], None],
 ) -> MigrationResult:
@@ -1666,6 +1755,7 @@ def _run(
                 report(f"resuming the plan of run {resume[1].run_id}")
             else:
                 _check_preconditions(step, history, _current_release(manager, product))
+                _refuse_existing_release(manager, product, step)
                 before = manager.take_snapshot(
                     product, run_id=run_id, trigger="migrate-before", consistency="coherent"
                 )
@@ -1737,12 +1827,6 @@ def _run(
             if journal.to_release is None:
                 after_snapshot = take_after()
             else:
-                if create_release is None:
-                    raise MigrationRefusedError(
-                        f"run {run_id} plans release {journal.to_release!r}, and this "
-                        "executor has no release support",
-                        step_id=step.id,
-                    )
                 # The creator keeps the snapshot a checkpoint of the release already names.
                 release = create_release(
                     manager=manager,

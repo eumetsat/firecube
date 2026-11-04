@@ -39,6 +39,7 @@ COMPACT_DIRNAME = "compact"
 RUNS_DIRNAME = "runs"
 CLAIMS_DIRNAME = "claims"
 METADATA_DIRNAME = "metadata"
+RELEASES_DIRNAME = "releases"
 SCHEMA_FILENAME = "schema.json"
 DEFAULT_RUN_STALE_THRESHOLD_S = 3600
 EVENT_RUN_STARTED_WITH_REPLACEMENT = "run_started_with_replacement"

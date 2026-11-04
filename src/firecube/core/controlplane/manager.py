@@ -66,6 +66,7 @@ from firecube.core.controlplane.types import (
 from firecube.core.errors import (
     ClaimConflictError,
     ConfigurationError,
+    ControlPlaneCorruptionError,
     ExclusiveMaintenanceRefusedError,
     LegacyIndexRecordError,
     ManifestError,
@@ -107,6 +108,7 @@ if TYPE_CHECKING:
         SnapshotDiff,
         SnapshotRecord,
     )
+    from firecube.core.controlplane.releases import ReleaseVerification, StoredRelease
     from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.metadata_documents import MetadataDocument
 
@@ -2459,6 +2461,223 @@ class ChunkManager:
             return True
         runs, unreadable = self.repo.scan_runs(product=product)
         return bool(runs or unreadable)
+
+    def _releases_store(self, product: str) -> tuple[StorageFilesystemFull, StorageUri]:
+        """Return the driver and the `.firecube/releases/` directory of the product."""
+        from firecube.core.controlplane import releases
+
+        fs, product_root = self._metadata_store(product)
+        return fs, releases.releases_root(product_root)
+
+    def _require_maintenance_holder(self, product: str, run_id: str, operation: str) -> None:
+        refusal = exclusive_maintenance_holder_refusal(
+            repo=self.repo, product=product, operation=operation, holder_run_id=run_id
+        )
+        if refusal is not None:
+            raise ManifestError(refusal)
+
+    def _run_entries(self, product: str) -> list[tuple[RunInfo, dict[str, Any]]]:
+        """Read every run from fresh listings; refuse when one cannot be read."""
+        self.repo._ensure_bound()
+        assert self.repo._wal_reader is not None
+        entries, unreadable = self.repo._wal_reader.scan_run_entries(product)
+        if unreadable:
+            listed = ", ".join(f"{run_id} ({error})" for run_id, error in unreadable)
+            raise ManifestError(f"runs of product {product} cannot be read: {listed}")
+        return [(self.repo._run_info_from_entry(product, entry), entry) for entry in entries]
+
+    def latest_run_producer(self, product: str) -> tuple[str, dict[str, Any]] | None:
+        """Return `(run_id, producer)` from the `run_started` event of the latest run that records one.
+
+        Returns `None` when no run records a producer.
+
+        Raises:
+            ManifestError: A run cannot be read.
+        """
+        from firecube.core.controlplane import releases
+
+        entries = [
+            {**entry, "run_id": info.run_id, "started_at": info.started_at}
+            for info, entry in self._run_entries(product)
+        ]
+        return releases.latest_producer(
+            entries, lambda entry: self.repo._read_run_events(product, dict(entry))
+        )
+
+    def check_release_version(self, product: str, version: str) -> None:
+        """Refuse a version whose record the storage drivers cannot write, list or read.
+
+        It reads no record and writes nothing; run it before a release's first write.
+
+        Raises:
+            ReleaseVersionUnstorableError: A driver cannot write, list or read the record.
+        """
+        from firecube.core.controlplane import releases
+
+        _fs, root = self._releases_store(product)
+        releases.check_storable(root, version)
+
+    def create_release(
+        self,
+        product: str,
+        *,
+        version: str,
+        snapshot_id: str,
+        run_id: str,
+        note: str | None = None,
+    ) -> StoredRelease:
+        """Write the record of release `version` once, naming a coherent snapshot; publish no ref.
+
+        `run_id` must hold the exclusive maintenance claim. The record lists the runs
+        started after the current release and the latest `run_started` producer.
+
+        Raises:
+            ManifestError: `run_id` does not hold the claim, the snapshot is missing or
+                not coherent, or a run cannot be read. Nothing is written.
+            ReleaseExistsError: A record of `version` exists. Nothing is written.
+        """
+        from firecube.core.controlplane import releases
+
+        self._require_maintenance_holder(product, run_id, "release create")
+        snapshot = self.read_snapshot(product, snapshot_id)
+        if snapshot.record.consistency != "coherent":
+            raise ManifestError(
+                f"snapshot {snapshot_id} is an observation; a release names a coherent snapshot"
+            )
+        fs, root = self._releases_store(product)
+        existing = releases.find_release(fs, root, version)
+        if existing is not None:
+            raise releases.ReleaseExistsError(
+                f"release {version!r} exists already and names snapshot {existing.snapshot}",
+                version=version,
+                snapshot=existing.snapshot,
+            )
+        previous_version = releases.read_current_version(fs, root)
+        previous = None
+        if previous_version is not None:
+            previous = releases.find_release(fs, root, previous_version)
+            if previous is None:
+                raise ControlPlaneCorruptionError(
+                    f"the current release {previous_version!r} of product {product} has no record"
+                )
+        runs = releases.runs_since(
+            ((info.run_id, info.started_at) for info, _entry in self._run_entries(product)),
+            None if previous is None else previous.created_at,
+        )
+        found = self.latest_run_producer(product)
+        release = releases.StoredRelease(
+            version=version,
+            created_at=time.time(),
+            previous=previous_version,
+            snapshot=snapshot.record.snapshot_id,
+            runs_since_previous=runs,
+            producer=None if found is None else found[1],
+            producer_status=releases.PRODUCER_UNKNOWN
+            if found is None
+            else releases.PRODUCER_RECORDED,
+            note=note,
+            created_by_run=run_id,
+        )
+        releases.create_record(fs, root, release)
+        return release
+
+    def publish_current_release(self, product: str, version: str, *, run_id: str) -> None:
+        """Publish `.firecube/releases/refs/current.json` naming `version`, replacing it whole.
+
+        `run_id` must hold the exclusive maintenance claim, and a record of `version` must exist.
+
+        Raises:
+            ManifestError: `run_id` does not hold the claim. Nothing is written.
+            ReleaseNotFoundError: No record of `version` exists. Nothing is written.
+        """
+        from firecube.core.controlplane import releases
+
+        self._require_maintenance_holder(product, run_id, "release create")
+        fs, root = self._releases_store(product)
+        if releases.find_release(fs, root, version) is None:
+            raise releases.ReleaseNotFoundError(
+                f"product {product} has no release {version!r} to make current", version=version
+            )
+        releases.publish_current(fs, root, version)
+
+    def list_releases(self, product: str) -> list[StoredRelease]:
+        """Return every release record of the product, oldest first.
+
+        Raises:
+            ControlPlaneCorruptionError: A record does not parse or sits under another version's key.
+        """
+        from firecube.core.controlplane import releases
+
+        fs, root = self._releases_store(product)
+        return releases.list_records(fs, root)
+
+    def find_release(self, product: str, version: str) -> StoredRelease | None:
+        """Return the record of release `version`, or `None` when the product has none."""
+        from firecube.core.controlplane import releases
+
+        fs, root = self._releases_store(product)
+        return releases.find_release(fs, root, version)
+
+    def current_release(self, product: str) -> StoredRelease | None:
+        """Return the release that `refs/current.json` names, or `None` when there is none.
+
+        Raises:
+            ControlPlaneCorruptionError: The ref does not parse or names a missing record.
+        """
+        from firecube.core.controlplane import releases
+
+        fs, root = self._releases_store(product)
+        version = releases.read_current_version(fs, root)
+        if version is None:
+            return None
+        release = releases.find_release(fs, root, version)
+        if release is None:
+            raise ControlPlaneCorruptionError(
+                f"the current release {version!r} of product {product} has no record"
+            )
+        return release
+
+    def read_release(self, product: str, version: str | None = None) -> StoredRelease:
+        """Return the record of release `version`; `None` names the current release.
+
+        Raises:
+            ReleaseNotFoundError: No such release, or no current release.
+        """
+        from firecube.core.controlplane import releases
+
+        release = (
+            self.current_release(product)
+            if version is None
+            else self.find_release(product, version)
+        )
+        if release is None:
+            what = "no current release" if version is None else f"no release {version!r}"
+            raise releases.ReleaseNotFoundError(f"product {product} has {what}", version=version)
+        return release
+
+    def verify_release(self, product: str, version: str | None = None) -> ReleaseVerification:
+        """Compare the live metadata documents with the snapshot of release `version`.
+
+        `None` names the current release. Only metadata documents are compared, so an
+        edit of chunk bytes is not detected.
+
+        Raises:
+            ReleaseNotFoundError: No such release, or no current release.
+            ControlPlaneCorruptionError: The release's snapshot cannot be read.
+        """
+        from firecube.core.controlplane import releases
+
+        release = self.read_release(product, version)
+        snapshot = self.read_snapshot(product, release.snapshot)
+        return releases.compare_documents(
+            release.version,
+            release.snapshot,
+            ((entry.path, entry.digest) for entry in snapshot.documents),
+            (
+                (document.path, document.digest)
+                for document in self.enumerate_metadata_documents(product)
+            ),
+        )
 
 
 def _abandon_operation(product_uri: str, run_id: str) -> Operation:
