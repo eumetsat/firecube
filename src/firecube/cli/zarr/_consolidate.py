@@ -125,6 +125,7 @@ def consolidate_time_coord(
     Use it for existing cubes with chunks=(1,) on the time coordinate.
     Always run with --dry-run first.
     """
+    from firecube.core.errors import ProductUnderMaintenanceError
     from firecube.core.zarr.coord_consolidation import (
         ProductIdentityError,
         consolidate_time_coords,
@@ -161,6 +162,8 @@ def consolidate_time_coord(
         )
     except ProductIdentityError as exc:
         raise click.UsageError(render(exc)) from exc
+    except ProductUnderMaintenanceError as exc:
+        raise click.ClickException(render(exc)) from exc
 
     if dry_run:
         click.echo("Summary:")

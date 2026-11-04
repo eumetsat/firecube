@@ -537,3 +537,29 @@ def test_consolidate_time_coord_on_calendar_store_is_a_safe_noop(tmp_path: Path)
     assert result.exit_code == 0, result.output
     assert "Group /data: already sealed, skipping" in result.output
     assert _md5_of_files(cube / "data") == before
+
+
+def test_consolidate_time_coord_refused_under_exclusive_maintenance(tmp_path: Path) -> None:
+    """A held exclusive maintenance claim refuses the command and leaves the store as it was."""
+    from firecube.core.controlplane import ChunkManager
+    from tests.helpers.storage import make_test_binding
+
+    cube = tmp_path / "cube.zarr"
+    _create_legacy_cube(cube, total=10)
+    (tmp_path / "ws").mkdir()
+    manager = ChunkManager(binding=make_test_binding(tmp_path, product="cube.zarr"), workspace=tmp_path / "ws")  # fmt: skip
+    claim = manager.acquire_exclusive_maintenance(product="cube.zarr", run_id="other-maintenance-run")  # fmt: skip
+
+    def snapshot() -> dict[str, str]:
+        return {k: v for k, v in _md5_of_files(cube).items() if not k.startswith(".firecube")}
+
+    before = snapshot()
+    try:
+        result = CliRunner().invoke(cli, _consolidate_args(cube))
+    finally:
+        claim.release()
+        manager.close()
+
+    assert result.exit_code == 1, result.output
+    assert "maintenance" in result.output.lower()
+    assert snapshot() == before

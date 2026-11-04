@@ -32,7 +32,7 @@ from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
-from firecube.core.errors import ConfigurationError
+from firecube.core.errors import ConfigurationError, ProductUnderMaintenanceError
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
@@ -155,7 +155,7 @@ def multires(
             product_uri=identity.product_uri,
             session=session,
         ).build(config)
-    except (ImportError, ValueError, ConfigurationError) as exc:
+    except (ImportError, ValueError, ConfigurationError, ProductUnderMaintenanceError) as exc:
         raise click.ClickException(render(exc)) from exc
 
     click.echo(json.dumps(result, indent=2))

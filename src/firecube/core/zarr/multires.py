@@ -22,6 +22,7 @@ StorageConfig and ChunkManager infrastructure.
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
@@ -118,16 +119,20 @@ class ZarrMultiresBuilder:
         return product_uri.to_str()
 
     def _session_for(self, cfg: MultiresConfig) -> StorageSession:
-        if self.session is not None:
+        store_uri = self._store_uri_for(cfg.product)
+        # A supplied session serves only the store it is bound to; otherwise the
+        # maintenance check and the layer writes would address different stores.
+        if self.session is not None and self.session.product.product_uri.to_str() == store_uri:
             return self.session
 
         driver_config = StorageDriverConfig.from_storage_config(self.storage_config)
+        # Bind to the exact store `_store_uri_for` returns, so the maintenance
+        # check and the layer writes address the same store.
         resolved_product = ProductTarget.resolve(
-            cfg.product,
+            store_uri,
             driver_config,
             product_name=cfg.product,
             plugin_default_format="zarr",
-            default_base_uri=self.product_uri.parent(),
         )
         return StorageSession(
             StorageBinding(
@@ -145,6 +150,15 @@ class ZarrMultiresBuilder:
         """Build multiresolution layers for the given configuration."""
         if not cfg.resolutions:
             raise ValueError("At least one resolution must be provided for multires.")
+
+        session = self._session_for(cfg)
+        manager = session.control_plane()
+        try:
+            manager.check_exclusive_maintenance(
+                product=session.product.product_name, owner_id=f"multires-{uuid.uuid4().hex}"
+            )
+        finally:
+            manager.close()
 
         store_uri = self._store_uri_for(cfg.product)
         log.info(
@@ -166,7 +180,7 @@ class ZarrMultiresBuilder:
             logger=log,
             group=cfg.group,
             strict=True,
-            session=self._session_for(cfg),
+            session=session,
             time_dim_name=cfg.time_dim_name,
             lat_name=cfg.lat_name,
             lon_name=cfg.lon_name,
