@@ -227,13 +227,16 @@ def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
     ]
 ```
 
-The root group can carry attributes. Firecube refuses these four names,
-because the root document also holds the index mirror:
+The root group can carry attributes. Firecube refuses these six names,
+because the root document also holds the index mirror and the maintenance
+stamps:
 
 - `firecube_resolved_index`
 - `firecube_resolved_index_identity_hash`
 - `firecube_slot_index_model`
 - `firecube_slot_index_model_identity_hash`
+- `firecube_last_modifier`
+- `firecube_release`
 
 `firecube zarr preallocate` writes the attributes of each declared group, the
 root group included. If a cube has no attributes, run `firecube zarr

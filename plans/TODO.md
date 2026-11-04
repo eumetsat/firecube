@@ -5,19 +5,22 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 ## Active Work
 
-### Next plan: metadata snapshots (B1) and `zarr migrate` (B3) (2026-11-03)
+### Open after the metadata snapshots and migrate plan (2026-11-04)
 
-Internal contributor material. The foundations plan landed the compact cache, `core/zarr/documents.py`, producer identity and the exclusive maintenance claim (`plans/DONE.md`, 2026-11-03). B1 and B3 are written against that code. The decisions below are carried, not open.
+Internal contributor material. The plan landed the metadata snapshot store, release records, the migrate executor and the `snapshot`, `migrate` and `release` command groups (`plans/DONE.md`, 2026-11-04). Each item is recorded, not scheduled. The label names the evidence.
 
-- **Snapshots (decided).** Take a snapshot before and after each migration and on demand. A snapshot is coherent under the exclusive claim. `snapshot take` is labelled observation. No run takes a snapshot at its end.
-- **Root attributes (decided).** No ingest run writes root attributes. Migrate writes `firecube_last_modifier` only, under the exclusive claim.
-- **Where the snapshot store lives.** It belongs under `core/controlplane/`, behind `ChunkManager` facade methods, not in `core/zarr/snapshot.py`. Every `.firecube/` mutation goes through `ChunkManager` (`plans/DESIGN.md`). Records and refs hold relative paths. `.firecube/snapshots/` can still hold v0.1.8 `snapshot-*` files. B1 ignores them.
-- **Identity of an applied step.** A plan digest depends on the store state, so `(step.id, hash(dist, version, plan bytes))` cannot be compared across reruns. Key the code identity on the distribution and version of the step. Journal the plan. Classify a rerun of an applied step against the journaled after-documents: all after is a no-op, anything else is a third state and is refused.
-- **`publish_raw` and v2 names.** `_document_node` (`metadata_authority.py:675-681`) accepts only `zarr.json`. No driver offers a conditional put (`protocol.py:30-160`). Compare `expect` under the node lock, with the exclusive claim as the cross-process guard.
-- **Consolidated images.** The executor rebuilds the root image (v2 `.zmetadata`, v3 root `consolidated_metadata`) from the planned after-state and publishes it last. A non-root group with its own image refuses the plan.
-- **CLI placement.** `zarr` is a user-audience group (`_audience.py:101`). A two-word operator path `("zarr", "migrate")` fails `tests/cli/test_audience_groups.py:56-73`. `main.py` has 3 lines left under its ceiling row (960 of 963) for a top-level `snapshot` group.
-- **Consumers.** A metadata-only migrate serves attribute edits as the mlcast cubes need them. `rename-dim` moves a coordinate folder, and IDEAS §44 changes a stored dtype. Both need the data-moving tier (D4).
-- **No CLI acquires the exclusive claim yet (read).** Nothing in `src` calls `ChunkManager.acquire_exclusive_maintenance`. The claim has no operator command. B3 adds the first caller. The operator docs must not promise a command until then.
+- **`ensure_slot_index_model` has no production caller and no exclusive check (recorded, read).** The method is in `src/firecube/core/controlplane/manager.py`. Add the check before a caller appears.
+- **Snapshots have no retention (recorded, read).** No pin, no expiry and no garbage collection exist, and nothing deletes a blob. A future expiry must make an expired snapshot say what it can no longer restore. No command restores a snapshot today.
+- **The fsspec driver breaks `find` on a file name with `#`, `?`, a tab or a newline (found, not fixed, ran).** `FsspecFilesystem._from_path` (`src/firecube/core/filesystem/fsspec_backend.py:240`) builds `StorageUri.parse(f"file://{path}")` from a literal local path, and `find` (lines 299-304) calls it on every listed path. A name with `#` or `?` raises `ValueError`. A tab, CR or LF is dropped, and the later read raises `FileNotFoundError`. `core/zarr/zip_archive.py:110`, `core/controlplane/metadata_snapshots.py:513` and source discovery inherit it. `core/zarr/validation.py:184` may too (inferred, not run). The obstore driver is right (`obstore_backend.py:123` uses `StorageUri.from_local_path(path)`). Use that call in `_from_path` for the `file` protocol. The release store lists records with `fs.ls` until the driver is fixed.
+- **A failed migrate run cannot be abandoned or superseded (found, not fixed, ran).** `abandon_run` (`src/firecube/core/controlplane/_wal_writer.py:397`) skips terminal runs, and a failed migrate run is terminal. `_prior_runs` (`src/firecube/ingestor/runtime/migrate.py`, near line 1366) replays the journal of the latest failed run and checks it for third states first. After a failed run, three changes refuse the step: a later change of a planned document, an unplanned drift and a new distribution version. The operator must restore the documents by hand. A fix needs an explicit abandon of a failed migrate run that keeps the earlier events and the journal and lets `_prior_runs` skip the run. It needs a decision on the operator command.
+- **The per-write maintenance check accepts an absent claim (found, not fixed, ran).** `ChunkManager.check_exclusive_maintenance` (`src/firecube/core/controlplane/manager.py:415`) passes when no claim exists, which suits ordinary writers. `apply_metadata_plan` (`migrate.py:879`) calls it before every document write, so a migration whose claim `chunks runs abandon` cleared keeps publishing documents. Only the coherent after-snapshot, the release record and the ref then refuse. A fix needs a check that the claim is held by the owner, for the maintenance writers only.
+- **A step runs once per step id per store (recorded, ran).** The identity of an applied step is `(step id, distribution, version)`. A second `firecube migrate run firecube:set-attrs` with other options prints `already applied`, writes nothing and does not say that it ignored the options. Rerunning an earlier step after a later step changed the same documents refuses as a third state, because the later `firecube_last_modifier` stamp changes the after-set. A fix adds a digest of the options to the identity, or documents the limit.
+- **`firecube zarr consolidate-time-coord --dry-run` on a missing target creates `zarr.json` (found, not fixed, read).** The writable open at `src/firecube/core/zarr/coord_consolidation.py:169` creates root metadata. A dry run needs a read-only open.
+- **`migrate.py` has 1834 lines and `release.py` 566 (recorded, read).** A split of the classifier, the journal and the image planning changes no behaviour.
+- **A hard-killed `release create` leaves its run `started` (recorded, ran).** The next create uses a new run id and is refused until `chunks runs abandon` retires the old run and `chunks claims clear` clears the claim. A resumable release run id, as migrate has, would drop the step.
+- **`runs_since_previous` of a release record lists every run started after the previous release (recorded, ran).** The list includes the creating run and the adopt run. Decide whether the field lists writer runs only.
+- **`ChunkManager.latest_run_producer` reads every run when none records a producer (recorded, read).** It reads the WAL events newest first until a producer is found. The cost grows with the run count. Reuse the first scan of run entries.
+- **`firecube_last_modifier.run_id` of a replayed failed migrate run names the run of the journal (recorded, ran).** The `resumed_from` key links it to the run that completed.
 
 ### Open after the maintenance foundations (2026-11-03)
 
@@ -26,14 +29,13 @@ Internal contributor material. The foundations plan (`plans/DONE.md`, 2026-11-03
 - **A compact pointer with an empty `snapshot_meta_path` still reports `records: 0` (found, kept, ran).** `ChunkManager.compact_status` reads the meta file only when the pointer names it. A pointer that lacks the path gives no error. Raise `ManifestError` when the pointer lacks the path. The fix for a missing or unreadable meta file landed in 1bb7449.
 - **A plugin that returns `OutputPaths(primary=Path(ctx.target))` fails over a local `file://` target (found, not fixed, ran).** The run ends with `ValueError: Malformed URI 'file:/tmp/...'` at `engine.py:918`, in the `is_remote_target` call. The fixture `cli_test_plugin/__init__.py:50` returns that path. `tests/integration/test_ingest_stac_options.py:171-181` works around it. It reproduced on the tree before the producer change. The maintainer decided that it gets its own plan off `main`, later.
 - **`stac_discovery` in `slice_meta` probably breaks force-reingest replacement over `stac://` sources (inferred, not reproduced).** `base.py:597-602` adds `meta["stac_discovery"]` to the dict that `register_run` copies into span records. The replacement query compares the non-excluded keys of that dict. The same defect with `producer` was reproduced and fixed in 72e7a4c. Needs a repro with a `stac://` source.
-- **`archive restore` by the holder stays refused, and no CLI command passes `holder_run_id` (recorded, read).** Archive create and chunk deletion pass for the holder when a library caller names its run id (07d3fbc). B3 decides whether migrate needs restore or a CLI option.
-- **`ensure_slot_index_model` has no exclusive check (found, not fixed, read).** The method (`manager.py`) has no production caller. Add the check before B3 relies on the claim or a caller appears.
+- **`archive restore` by the holder stays refused, and no CLI command passes `holder_run_id` (recorded, read).** Archive create and chunk deletion pass for the holder when a library caller names its run id (07d3fbc). The migrate executor needs neither restore nor a CLI option, so the holder case stays a library feature.
 - **A `zarr preallocate` whose only time axis is irregular materializes its coordinate with no materialization claim (found, not fixed, inferred, not run).** The path is `preallocate.py:600-608` at ed45b92. Reproduce it with two concurrent preallocates before a fix.
-- **A run marked abandoned while its process still writes is not excluded (recorded, read).** The exclusive claim is checked at a run start and at an index ensure. A stale but live writer can continue after `chunks runs abandon`. B3 needs a check that a writer repeats, or a rule that the maintenance owner stops the writers first.
+- **A run marked abandoned while its process still writes is not excluded (recorded, read).** The exclusive claim is checked at a run start and at an index ensure. A stale but live writer can continue after `chunks runs abandon`. The migrate and release executors repeat the check before every write, and the operator pages say that the maintenance owner stops the writers first.
 - **`docs/operations/parallel-zarr-writes.md` tells the operator to abandon a run only when the run is stale (found, not fixed, read).** A stale run can have a live process, and that process can continue to write after the abandon. Change the sentence to say that the process must have stopped. The page is at line 269 of the troubleshooting table. This is a docs fix.
-- **`zarr multires` and `zarr consolidate-time-coord` rewrite consolidated root documents outside the claim (found, not fixed, read).** They take no claim and record no run. The writes are `layers.py:203-219` (a refresh of every consolidated group, the root included) and `coord_consolidation.py:221, 263-275, 608-642`. Every mlcast catalog entry is consolidated. Plan B1+B3 brings both under the claim, or does not call its snapshots coherent.
+- **`zarr multires` and `zarr consolidate-time-coord` take no claim and record no run (recorded, read).** Both now refuse while another run holds the exclusive claim, but a run that starts while one of them writes is not stopped. They rewrite consolidated root documents (`layers.py:203-219`, `coord_consolidation.py`), so a coherent snapshot taken during either is not guaranteed.
 - **A coordinate-free `zarr preallocate` blocks peer slot-range ingests (found, accepted, ran).** Since a5fc159 such a preallocate records its `run_started` before the first write. `ResumeGuard` sees a live serial run for the whole span and refuses peer slot-range ingests. Review accepted it. To restore the concurrency, add explicit safe-preallocate rules to `ResumeGuard` (`resume_guard.py:550`).
-- **Writers the exclusive claim does not cover (recorded, read).** `zarr multires`, `zarr consolidate-time-coord`, plugin CLI commands and anything outside Firecube record no run start and take no claim. They write under an exclusive claim. The second run that `chunks delete` opens through `mark_chunks_replaced` stays outside the check on purpose, because delete holds its own claim.
+- **Writers the exclusive claim does not cover (recorded, read).** Plugin CLI commands and anything outside Firecube record no run start, make no check and take no claim. `zarr multires` and `zarr consolidate-time-coord` check once at their start. A writer that makes no check writes under an exclusive claim. The second run that `chunks delete` opens through `mark_chunks_replaced` stays outside the check on purpose, because delete holds its own claim.
 - **A symlink loop in the documents walk does not reproduce (checked, no change, ran).** The earlier note inferred that `enumerate_metadata_documents` never returns on a loop. The fsspec local driver types a symlinked directory `other`, so the walk never follows it. The obstore driver raises an error and does not hang (probe of 2026-11-03). Add a visited set only if a layout is found that loops.
 - **Test gaps in `tests/unit/test_zarr_metadata_documents.py` (found, not fixed, read).** Review notes of n6 round 1 and 2 stay open. N1, N6 and N8 closed in 5a64213.
     - N2: the patch test has no explicit null attributes row.
@@ -841,35 +843,18 @@ See: DONE.md "DirectZarr plugin parity — core fixes" (2026-06-25).
 
 The fresh-target safety fix deliberately limits `GenericParquetIngestor` to fresh targets. Do not remove the target guard merely after adding run IDs to part names. Before supporting resume or force-reingest, define a stable, plugin-declared logical slice identity independent of batching and temporary paths; specify physical part ownership, replay deduplication, exact-slice replacement, and failure-safe promotion/recording through `ChunkManager` and the selected driver. Tests must verify rows and active spans across disjoint runs, repeated inputs, changed batch sizes, partial replacement, and failed promotion. The current target guard is covered by `tests/integration/test_parquet_target_safety.py`.
 
-## Zarr migration framework (deferred from CF-1.8 plan)
+## Data-moving migration tier (deferred from CF-1.8 plan)
 
-**Goal**: a generic Zarr migration framework so future migrations (rename-dim, rename-array, set-default-attrs, schema upgrades, etc.) plug in via a Protocol implementation rather than each shipping its own CLI command. Decided against `migrate-dim` and similar name-coupled one-offs.
+The metadata-only migration framework landed (`plans/DONE.md`, 2026-11-04). A migration that moves chunks stays open, for example `rename-dim`. It renames the coordinate folder (`{group}/timestamp` to `{group}/time`), rewrites `dimension_names` and rebuilds the consolidated metadata. The internal control-plane array names stay. A step of this tier needs its own executor and a data-safe journal, because the metadata executor never moves a chunk. IDEAS §44 (a stored dtype) belongs to this tier.
 
-**Shape**: `MigrationStrategy` Protocol (`@runtime_checkable`) + in-source registry + a generic safety runner.
+Acceptance criteria for the plan that builds this tier:
 
-**Generic runner responsibilities**:
-- Refuse to run if `ChunkManager.list_runs(non_terminal=True)` returns any non-terminal runs.
-- Refuse to run if `ChunkManager.list_claims()` returns active claims on target groups.
-- Acquire and release a write claim around the migration.
-- Provide `--dry-run`.
-- Group-explicit `--group <g>` or `--all-groups`.
-- Use `ChunkManager` facade + `create_filesystem(config)` — never raw `.firecube/` writes or `fsspec.filesystem(...)`.
+- Compatibility matrix tests cover at least the 8 rows defined in the `cf18-compliance` plan.
+- An end-to-end test runs `legacy cube -> migrate -> append with new dim -> readback`.
+- An integration test shows that a migration refuses to run while another claim is active.
+- An integration test shows that `--dry-run` mutates nothing.
 
-**CLI shape**: `firecube zarr migrate <strategy-name> [strategy-args] [--dry-run] [--group <g> | --all-groups]`, with `firecube zarr migrate --list` and per-strategy `--help`.
-
-**First strategy to ship**: `rename-dim` (the operation the CF-1.8 plan would have shipped). Required behavior:
-- Walk every Zarr array in the target.
-- Rewrite `dimension_names` in each array's metadata.
-- Rename the coordinate variable folder (`{group}/timestamp` to `{group}/time`).
-- Rebuild consolidated metadata if present.
-- Preserve internal control-plane array names (e.g. `firecube_timestamp_state` stays — only its inner dim name changes).
-
-**Out of scope for v1**: multi-resolution pyramid groups; `--force` to bypass safety; auto-migration on append.
-
-**Acceptance criteria for the follow-up plan**:
-- Compatibility matrix tests for at least the 8 rows defined in `cf18-compliance` plan.
-- E2E `legacy cube -> migrate -> append with new dim -> readback` test.
-- Integration tests covering refusal-on-active-claim and dry-run-no-mutation.
+Out of scope for the first step of this tier: multi-resolution pyramid groups, a `--force` option that bypasses the safety checks, and automatic migration on append.
 
 ---
 

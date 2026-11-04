@@ -54,6 +54,8 @@ def test_layout_paths_match_constants() -> None:
         f"{cp_types.RUNS_DIRNAME}/",
         f"{cp_types.CLAIMS_DIRNAME}/",
         f"{cp_types.COMPACT_DIRNAME}/",
+        f"{cp_types.METADATA_DIRNAME}/",
+        f"{cp_types.RELEASES_DIRNAME}/",
         f"{cp_types.INDEX_DIRNAME}/{cp_types.INDEX_CURRENT_FILENAME}",
         f"{cp_types.SLOT_INDEX_DIRNAME}/{cp_types.SLOT_INDEX_CURRENT_FILENAME}",
     ]

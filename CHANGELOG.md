@@ -38,9 +38,67 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   - A `firecube zarr preallocate` without a coordinate records the start of
     its run before its first write. It checks the exclusive claim at that
     point.
+- The command group `firecube snapshot` captures the metadata documents of a
+  product. The commands are `take`, `list`, `show` and `diff`. A snapshot holds
+  the exact bytes of every Zarr metadata document and of the control-plane
+  documents. It holds no chunk. Snapshots live in the new directory
+  `.firecube/metadata/`.
+  - `firecube snapshot take` makes an `observation` snapshot and takes no claim.
+  - A maintenance run makes a `coherent` snapshot while it holds the exclusive
+    maintenance claim.
+- The command group `firecube migrate` changes attributes in the metadata
+  documents of a product with a recorded step. The commands are `list`, `run`,
+  `status` and `adopt`.
+  - A run takes the exclusive maintenance claim and writes its plan before its
+    first write. It takes a coherent snapshot before and after the change.
+  - A real run needs a control plane. On a store that has none, it exits 1 and
+    writes nothing. Run `firecube migrate adopt` first. `--dry-run` prints the
+    plan and writes nothing.
+  - Run the same command again to resume an interrupted run.
+  - A step id runs once per store. Firecube refuses the same id at another
+    version of its distribution.
+  - `firecube migrate adopt` gives a Zarr store that Firecube did not write a
+    control plane.
+  - `firecube migrate adopt` on a Zarr format 2 store prints a warning on
+    stderr. The warning says that Firecube cannot append to the store and that
+    ingest and preallocate do not support it. A Zarr format 3 store prints no
+    warning.
+- The built-in step `firecube:set-attrs` changes the attributes of one node.
+  Run it as `firecube migrate run firecube:set-attrs` with `--set`, `--remove`
+  and `--node`.
+- A plugin can register its own migration step in the entry-point group
+  `firecube.migrations`. The public contract is `MigrationStep`, `StoreView`,
+  `AttributePatch`, `MetadataPlan`, `ReleaseRecord`, `NodeView` and `ABSENT`,
+  all in `firecube.ingestor.api`. The guide "Write A Migration Step" explains
+  the contract.
+  - Firecube sorts the attributes of a plan into physical, interpretation,
+    descriptive and unknown classes.
+  - A run changes interpretation attributes only with `--allow interpretation`.
+    It changes unknown attributes only with `--allow unknown`.
+  - A run never changes a physical attribute.
+- A migration run and a release create set the root attribute
+  `firecube_last_modifier`. It names the operation, the run and the time.
+- The command group `firecube release` names a state of the metadata. The
+  commands are `create`, `list`, `show` and `verify`. A release binds a version
+  string to a coherent snapshot. Releases live in the new directory
+  `.firecube/releases/`.
+  - `firecube release verify` detects a change of the metadata documents. It
+    does not see an edit of chunk bytes.
+  - A migration step that sets `to_release` creates that release in the same
+    run.
+  - Both commands set the root attribute `firecube_release`.
 
 ### Changed
 
+- `firecube_last_modifier` and `firecube_release` are now reserved root
+  attributes, so a plugin that declares either name as a root group attribute
+  is refused with a `ConfigurationError`. Rename the attribute in the
+  `ZarrGroupSpec` of the root group.
+- `firecube zarr multires` now refuses while another run holds the exclusive
+  maintenance claim. `firecube zarr consolidate-time-coord` does the same
+  unless you pass `--dry-run`. Both print the refusal and exit 1. Neither takes
+  a claim or records a run. Stop the maintenance run, or wait for it to end,
+  before you start either command.
 - `firecube chunks snapshots` is now `firecube chunks compact`. The commands
   are `firecube chunks compact rebuild` and `firecube chunks compact status`.
   The old name stays as a hidden alias for one release. Use the new name in

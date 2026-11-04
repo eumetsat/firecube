@@ -58,10 +58,10 @@ The check runs at three points. It runs when a run starts. It runs when archive 
 
 Firecube tries to record a refused ingest, preallocate or archive restore as a failed run. If it cannot write that record, it logs the error and the run stays started. A refused archive create, chunk deletion or index rebuild leaves no run. Ingest, preallocate and index rebuild raise `ProductUnderMaintenanceError`. Archive create and archive restore raise `ArchiveClaimError`. Chunk deletion raises `ManifestError`. See [Recover Runs And Claims](../../operations/chunk-manager/recover.md) for what to do.
 
+`zarr multires` and `zarr consolidate-time-coord` check the claim once, when they start. They take no claim and record no run. `zarr consolidate-time-coord --dry-run` skips the check.
+
 Some writers never check the claim:
 
-- `zarr multires`
-- `zarr consolidate-time-coord`
 - commands that a plugin adds under `firecube plugins`
 - any process outside Firecube
 

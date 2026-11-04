@@ -132,6 +132,7 @@ nav:
     - Develop Further:
       - Add Configuration Options: guides/plugins/add-config-options.md
       - Add Telemetry: guides/plugins/observability.md
+      - Write A Migration Step: guides/plugins/write-a-migration-step.md
     - Beyond The Templates:
       - Plugin Extensions: guides/plugins/extensions.md
       - Custom Pipeline Plugins: guides/plugins/base-ingestor.md
@@ -196,6 +197,14 @@ nav:
       - Create: operations/archive/create.md
       - Inspect And Validate: operations/archive/inspect.md
       - Restore: operations/archive/restore.md
+    - Maintenance:
+      - Overview: operations/maintenance/index.md
+      - Snapshot Metadata: operations/maintenance/snapshot.md
+      - Adopt A Foreign Store: operations/maintenance/adopt-a-foreign-store.md
+      - Migrate Metadata: operations/maintenance/migrate.md
+      - Create A Release: operations/maintenance/create-a-release.md
+      - Verify A Release: operations/maintenance/verify-a-release.md
+      - Migrate An Adopted Store: operations/maintenance/migrate-an-adopted-store.md
   - Showcase:
     - Overview: showcase/index.md
     - "Firecube 101: NetCDF To Zarr": showcase/netcdf-to-zarr.ipynb
@@ -215,6 +224,7 @@ nav:
       - Exceptions: reference/exceptions.md
       - Index Specification: reference/parallelism.md
       - Extensions: reference/extensions.md
+      - Metadata Migration: reference/migration.md
     - Core Utilities: reference/core-utilities.md
     - CLI Reference: reference/cli.md
     - Configuration: reference/config.md
