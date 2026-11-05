@@ -127,6 +127,15 @@ class ReleaseListing:
     current: str | None
 
 
+def _frozen(value: Any) -> Any:
+    """Return `value` with every mapping read-only and every list a tuple."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _frozen(item) for key, item in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(_frozen(item) for item in value)
+    return value
+
+
 def to_release_record(stored: StoredRelease) -> ReleaseRecord:
     """Return the public release record of a stored one."""
     return ReleaseRecord(
@@ -139,6 +148,7 @@ def to_release_record(stored: StoredRelease) -> ReleaseRecord:
         producer_status=stored.producer_status,
         note=stored.note,
         created_by_run=stored.created_by_run,
+        retention=None if stored.retention is None else _frozen(stored.retention),
     )
 
 

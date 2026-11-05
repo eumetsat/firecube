@@ -23,10 +23,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
+from types import MappingProxyType
 from typing import Any, Final, Literal
 
 from firecube.core.errors import ManifestError
@@ -40,6 +42,7 @@ RUNS_DIRNAME = "runs"
 CLAIMS_DIRNAME = "claims"
 METADATA_DIRNAME = "metadata"
 RELEASES_DIRNAME = "releases"
+INVENTORIES_DIRNAME = "inventories"
 SCHEMA_FILENAME = "schema.json"
 DEFAULT_RUN_STALE_THRESHOLD_S = 3600
 EVENT_RUN_STARTED_WITH_REPLACEMENT = "run_started_with_replacement"
@@ -873,3 +876,111 @@ class SlotIndexModelRecord:
             recorded_at=parsed["recorded_at"],
             recorded_by_run_id=parsed["recorded_by_run_id"],
         )
+
+
+InventoryKind = Literal["digest", "s3-versions"]
+"""What an inventory records: object digests, or the S3 versions of the objects."""
+
+INVENTORY_KIND_DIGEST: Final = "digest"
+INVENTORY_KIND_S3_VERSIONS: Final = "s3-versions"
+LIFECYCLE_UNAVAILABLE: Final = "unavailable"
+_INVENTORY_KINDS: Final = frozenset({INVENTORY_KIND_DIGEST, INVENTORY_KIND_S3_VERSIONS})
+_SHA256_DIGEST: Final = re.compile(r"sha256:[0-9a-f]{64}")
+
+
+def _optional_text(value: object, name: str) -> None:
+    if value is not None and (not isinstance(value, str) or not value):
+        raise ValueError(f"{name} must be a non-empty string or None, not {value!r}")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InventoryObject:
+    """One object of a product, as an inventory manifest lists it.
+
+    Attributes:
+        key: The product-relative key, `/`-separated, with no empty, `.` or `..` segment.
+        size: The object's length in bytes.
+        digest: `sha256:<hex>` of the object's bytes, or `None`.
+        version_id: The S3 version id of the object, or `None`.
+        etag: The ETag of that version, or `None`.
+        delete_marker: Whether the key's latest version is a delete marker.
+    """
+
+    key: str
+    size: int
+    digest: str | None = None
+    version_id: str | None = None
+    etag: str | None = None
+    delete_marker: bool = False
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.key, str) or not self.key:
+            raise ValueError(f"an inventory key is a non-empty string, not {self.key!r}")
+        if any(segment in {"", ".", ".."} for segment in self.key.split("/")):
+            raise ValueError(f"inventory key {self.key!r} has an empty, '.' or '..' segment")
+        if isinstance(self.size, bool) or not isinstance(self.size, int) or self.size < 0:
+            raise ValueError(f"the size of {self.key!r} is not a non-negative integer")
+        if self.digest is not None and (
+            not isinstance(self.digest, str) or not _SHA256_DIGEST.fullmatch(self.digest)
+        ):
+            raise ValueError(f"the digest of {self.key!r} is not sha256:<64 hex digits>")
+        _optional_text(self.version_id, f"the version id of {self.key!r}")
+        _optional_text(self.etag, f"the etag of {self.key!r}")
+        if not isinstance(self.delete_marker, bool):
+            raise ValueError(f"the delete marker flag of {self.key!r} is not a boolean")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Inventory:
+    """The objects of a product at one cut, as an inventory manifest records them.
+
+    A `digest` inventory gives every object a digest and no version fields. An
+    `s3-versions` inventory gives every object a version id.
+
+    Attributes:
+        kind: `digest` or `s3-versions`.
+        objects: The objects, sorted by key, one entry per key.
+        bucket_versioning: The bucket's versioning state when the inventory was taken, or `None`.
+        lifecycle: The bucket's lifecycle rules, `"unavailable"` when unreadable, or `None`.
+    """
+
+    kind: InventoryKind
+    objects: tuple[InventoryObject, ...]
+    bucket_versioning: str | None = None
+    lifecycle: Mapping[str, Any] | Literal["unavailable"] | None = None
+
+    def __post_init__(self) -> None:
+        if self.kind not in _INVENTORY_KINDS:
+            raise ValueError(f"inventory kind must be 'digest' or 's3-versions', not {self.kind!r}")
+        if not isinstance(self.objects, tuple) or not all(
+            isinstance(item, InventoryObject) for item in self.objects
+        ):
+            raise ValueError("inventory objects must be a tuple of InventoryObject")
+        for before, after in zip(self.objects, self.objects[1:], strict=False):
+            if not before.key < after.key:
+                raise ValueError(
+                    f"inventory keys must be sorted and unique: {before.key!r} comes "
+                    f"before {after.key!r}"
+                )
+        for item in self.objects:
+            if self.kind == INVENTORY_KIND_DIGEST and (
+                item.digest is None
+                or item.version_id is not None
+                or item.etag is not None
+                or item.delete_marker
+            ):
+                raise ValueError(
+                    f"a digest inventory entry needs a digest and no version fields: {item.key!r}"
+                )
+            if self.kind == INVENTORY_KIND_S3_VERSIONS and item.version_id is None:
+                raise ValueError(f"an s3-versions inventory entry needs a version id: {item.key!r}")
+        _optional_text(self.bucket_versioning, "bucket_versioning")
+        lifecycle = self.lifecycle
+        if isinstance(lifecycle, Mapping):
+            # The JSON round trip refuses a value JSON cannot hold and copies the caller's mapping.
+            frozen = MappingProxyType(json.loads(canonical_index_bytes(dict(lifecycle))))
+            object.__setattr__(self, "lifecycle", frozen)
+        elif lifecycle is not None and lifecycle != LIFECYCLE_UNAVAILABLE:
+            raise ValueError(
+                f"lifecycle must be a mapping, 'unavailable' or None, not {lifecycle!r}"
+            )
