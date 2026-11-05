@@ -147,8 +147,11 @@ def _file_digest(path: Path) -> str:
         return _stream_digest(stream)
 
 
-def _deleted_key_problem(key: object) -> str | None:
-    """Return why `key` cannot be a deleted product key, or `None` when it can."""
+def deleted_key_problem(key: object) -> str | None:
+    """Return why `key` cannot be a deleted key of a delta marker, or `None` when it can.
+
+    A chain restore refuses a marker that lists such a key, so a release never writes one.
+    """
     if not isinstance(key, str):
         return "is not a string"
     if not key:
@@ -168,8 +171,11 @@ def _deleted_key_problem(key: object) -> str | None:
     return None
 
 
-def _marker_problem(marker: Mapping[str, Any]) -> str | None:
-    """Return why `marker` is not a valid archive marker, or `None` when it is."""
+def marker_problem(marker: Mapping[str, Any]) -> str | None:
+    """Return why `marker` is not a valid archive marker, or `None` when it is.
+
+    A chain restore and `validate_zip` both apply this check.
+    """
     if set(marker) != _MARKER_KEYS:
         missing = sorted(_MARKER_KEYS.difference(marker))
         extra = sorted(set(marker).difference(_MARKER_KEYS))
@@ -200,7 +206,7 @@ def _marker_problem(marker: Mapping[str, Any]) -> str | None:
     if not isinstance(base_digest, str) or not _DIGEST.fullmatch(base_digest):
         return "it is a delta whose base_digest is not a sha256:<hex> digest"
     for key in deleted:
-        if (problem := _deleted_key_problem(key)) is not None:
+        if (problem := deleted_key_problem(key)) is not None:
             return f"its deleted key {key!r} {problem}"
     if len(set(deleted)) != len(deleted):
         return "it lists a deleted key twice"
@@ -221,7 +227,7 @@ def _checked_marker(path: Path, archive: str) -> Mapping[str, Any]:
         raise _broken(
             archive, path, Message("the archive has no {entry} marker", entry=MARKER_ENTRY)
         )
-    if (problem := _marker_problem(marker)) is not None:
+    if (problem := marker_problem(marker)) is not None:
         raise _broken(
             archive,
             path,
@@ -474,8 +480,9 @@ def _verify_restored(
                 "the restored object {key!r} does not hold the archive entry's bytes", key=key
             )
             raise _broken(archive, link.path, reason)
+    root = _local_root(session)
     for key, link in removed.items():
-        if session.exists(product_uri.join(key)):
+        if _holds_object(session, root, key):
             reason = Message("the deleted key {key!r} is still present after the restore", key=key)
             raise _broken(archive, link.path, reason)
 
@@ -485,6 +492,19 @@ def _local_root(session: StorageSession) -> Path | None:
     product_uri = session.product.product_uri
     # An object store such as s3 has no symlinks, so only a local product is checked.
     return Path(product_uri.path) if product_uri.protocol == "file" else None
+
+
+def _holds_object(session: StorageSession, root: Path | None, key: str) -> bool:
+    """Return whether an object, not a directory, is at `key` of the session's product.
+
+    A later key may turn the path of a deleted key into a directory, as a rank change does.
+    """
+    if root is None:
+        return session.exists(session.product.product_uri.join(key))
+    try:
+        return not stat.S_ISDIR((root / key).lstat().st_mode)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
 
 
 def _symlink_reason(node: Path, key: str) -> Message:
@@ -513,6 +533,28 @@ def _refuse_symlink(root: Path | None, key: str, link: ChainLink, archive: str) 
             return  # nothing exists below a missing component or a file
         if stat.S_ISLNK(mode):
             raise _broken(archive, link.path, _symlink_reason(node, key))
+
+
+def _remove_empty_parents(root: Path | None, key: str) -> None:
+    """Remove the local directories a deleted `key` leaves empty, nearest first.
+
+    A directory goes only while it is empty and not a symlink, and the product root
+    never goes. The walk stops at the first directory that stays. A remote product passes.
+    """
+    if root is None:
+        return
+    parts = key.split("/")[:-1]
+    while parts:
+        node = root.joinpath(*parts)
+        try:
+            if not stat.S_ISDIR(node.lstat().st_mode):
+                return
+            node.rmdir()
+        except FileNotFoundError:
+            pass  # the driver removed it already
+        except OSError:
+            return  # it still holds something
+        parts.pop()
 
 
 def refuse_symlinked_target(links: Sequence[ChainLink], session: StorageSession) -> None:
@@ -611,10 +653,11 @@ def apply_chain(
 
     Before any write, every archive must still have the digest `resolve_chain` recorded, and
     no symlink may lie on the local path of a restored key. The base then prepares the
-    target as the zip restore does and puts its entries. Each delta puts its entries and
-    deletes its `deleted` keys, one literal object each. Every entry put must hash to its
-    recorded digest. Last, every restored object is read back against its archive entry,
-    and every deleted key must be absent.
+    target as the zip restore does and puts its entries. Each delta first deletes its
+    `deleted` keys, one literal object each, with the local directories that leaves empty.
+    It then puts its entries. Every entry put must hash to its recorded digest. Last,
+    every restored object is read back against its archive entry, and no object may
+    remain at a deleted key.
 
     Args:
         links: The chain `resolve_chain` returned, the full archive first.
@@ -657,11 +700,8 @@ def apply_chain(
 
     product_uri = session.product.product_uri
     for link in links[1:]:
-        with _open_unchanged(link, archive) as handle, zipfile.ZipFile(handle) as zf:
-            _put_entries(session, zf, link, root, archive)
-        for key in link.entries:
-            expected[key] = (link, link.entries[key])
-            removed.pop(key, None)
+        # Deletes come first: a replacement key may sit where a deleted key, or its
+        # directory, was. `resolve_chain` refused a delta that both holds and deletes a key.
         for key in link.deleted:
             uri = product_uri.join(key)
             if not session.exists(uri):
@@ -671,8 +711,14 @@ def apply_chain(
                 raise _broken(archive, link.path, reason)
             _refuse_symlink(root, key, link, archive)
             session.delete_literal(uri)
+            _remove_empty_parents(root, key)
             expected.pop(key, None)
             removed[key] = link
+        with _open_unchanged(link, archive) as handle, zipfile.ZipFile(handle) as zf:
+            _put_entries(session, zf, link, root, archive)
+        for key in link.entries:
+            expected[key] = (link, link.entries[key])
+            removed.pop(key, None)
 
     _verify_restored(session, expected, removed, archive)
     return _summary(session, links, target, sorted(expected))

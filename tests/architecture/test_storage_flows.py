@@ -523,6 +523,9 @@ def test_delta_chain_restore_equals_the_second_release_inventory(tmp_path: Path,
     source = root / "p.zarr"
     _write_counts_zarr(source)
     zarr.open_group(str(source), mode="a").create_array("gone", data=np.arange(3.0))
+    group = zarr.open_group(str(source), mode="a")
+    group.create_array("grow", data=np.arange(3.0))  # rank 1 now, rank 2 in the second release
+    group.create_array("shrink", data=np.ones((3, 2)))  # rank 2 now, rank 1 in the second
     session = _build_local_archive_session(str(source), root, driver)[1]
     adopt_product(session=session)
     archives = [tmp_path / "a1.zip", tmp_path / "a2.zip"]
@@ -532,6 +535,11 @@ def test_delta_chain_restore_equals_the_second_release_inventory(tmp_path: Path,
     shutil.rmtree(source / "gone")
     (source / "counts" / "c" / "0").write_bytes(b"changed chunk")
     zarr.open_group(str(source), mode="a").create_array("new", data=np.arange(3.0))
+    shutil.rmtree(source / "grow")  # chunk object grow/c/0 becomes the directory grow/c/0/
+    shutil.rmtree(source / "shrink")  # and the directory shrink/c/0/ becomes the object shrink/c/0
+    group = zarr.open_group(str(source), mode="a")
+    group.create_array("grow", data=np.ones((3, 2)))
+    group.create_array("shrink", data=np.arange(3.0))
     second = create_release_for_product(
         session=session, version="1.1", archive=StorageUri.from_local_path(archives[1])
     ).release
@@ -561,6 +569,7 @@ def test_delta_chain_restore_equals_the_second_release_inventory(tmp_path: Path,
 
     expected = {o["key"]: o["digest"] for o in inventory["objects"]}
     assert "gone/zarr.json" not in expected and "new/zarr.json" in expected
+    assert {"grow/c/0/0", "shrink/c/0"} <= set(expected)
     assert digests(target) == expected
 
 

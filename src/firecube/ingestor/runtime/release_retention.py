@@ -255,6 +255,33 @@ def _require_inventory_bytes(
                 raise refuse(name)
 
 
+def _refuse_unrestorable_deletes(deleted: list[str], base: str, *, version: str) -> None:
+    """Refuse a delta whose marker would list a deleted key that a chain restore refuses.
+
+    Raises:
+        ReleaseRefusedError: A deleted key fails the restore's admission; nothing is archived.
+    """
+    from firecube.core.zarr.zip_chain import deleted_key_problem
+
+    refused = [(key, problem) for key in deleted if (problem := deleted_key_problem(key))]
+    if not refused:
+        return
+    key, problem = refused[0]
+    raise ReleaseRefusedError(
+        Message(
+            "The key {key!r} was deleted since release {base!r} and {problem}, so it cannot be "
+            "restored from an archive chain and no delta archive lists it. Deleted keys "
+            "refused: {count}. Write a full archive with {archive_full} instead.",
+            key=key,
+            base=base,
+            problem=problem,
+            count=len(refused),
+            archive_full=Param("archive_full"),
+        ),
+        version=version,
+    )
+
+
 def zip_retention(
     *,
     session: StorageSession,
@@ -270,7 +297,8 @@ def zip_retention(
     """Return the step that retains release `version` in a zip archive at `archive`.
 
     The step takes the snapshot id. It refuses an existing file at the archive path,
-    then takes and writes the digest inventory. It archives every inventoried key when
+    then takes the digest inventory. It refuses a delta that deletes a key a chain
+    restore refuses, and otherwise writes the inventory. It archives every inventoried key when
     the current release retains no zip archive or `archive_full` is set. Otherwise it
     archives the keys that are new or changed since that release's inventory, plus
     every metadata document. The archive is written as its own run, with `run_id` as
@@ -313,6 +341,7 @@ def zip_retention(
                 if base_digests.get(key) != digest or _is_metadata_document(key)
             )
             deleted = sorted(set(base_digests).difference(digests))
+            _refuse_unrestorable_deletes(deleted, base.version, version=version)
         inventory_id = manager.write_inventory(product, inventory)
         report(f"inventory {inventory_id} lists {len(digests)} objects")
         mode = MODE_FULL if base is None else MODE_DELTA

@@ -387,6 +387,19 @@ def test_refused_chain_restore_changes_nothing_not_even_a_run_record(tmp_path, c
     assert _tree(target) == before
 
 
+@pytest.mark.parametrize(
+    "edit",
+    [lambda m: {**m, "deleted": ["line\nbreak"]}, lambda m: {"mode": "garbage"}],
+    ids=["control-character-deleted-key", "unknown-mode"],
+)
+def test_validate_reports_a_marker_that_restore_refuses_as_invalid(tmp_path, edit):
+    _rewrite(_release_chain(tmp_path)[1], tmp_path / "bad.zip", edit=edit)
+    r = CliRunner().invoke(
+        cli, ["archive", "validate", "--archive", (tmp_path / "bad.zip").as_uri()]
+    )
+    assert r.exit_code == 1 and "INVALID" in r.output, r.output
+
+
 def test_delta_deleting_a_glob_named_key_keeps_its_sibling(tmp_path):
     r = _restore(_release_chain(tmp_path)[1], tmp_path / "t.zarr")
     assert r.exit_code == 0, r.output

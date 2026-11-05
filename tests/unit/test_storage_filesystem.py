@@ -67,9 +67,7 @@ class TestFsspecFilesystem:
         assert StorageUri.from_local_path(tmp_path / name) in found
 
     @pytest.mark.parametrize("name", ["a\tb.bin", "a\nb.bin"])
-    def test_find_keeps_tab_or_newline_in_local_name_exact(
-        self, tmp_path: Path, name: str
-    ) -> None:
+    def test_find_keeps_tab_or_newline_in_local_name_exact(self, tmp_path: Path, name: str) -> None:
         (tmp_path / name).write_bytes(b"x")
         fs = FsspecFilesystem.from_binding(make_test_binding(tmp_path))
 

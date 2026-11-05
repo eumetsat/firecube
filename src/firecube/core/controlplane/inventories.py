@@ -29,6 +29,7 @@ literally. Only the ChunkManager facade calls the I/O functions here.
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections.abc import Mapping
 from typing import Any, Final
@@ -91,6 +92,14 @@ def _product_key(product_root: StorageUri, uri: StorageUri) -> str:
     return uri.path[len(prefix) :]
 
 
+def _is_writer_temporary(key: str) -> bool:
+    """Return whether *key* names a publication temporary or an atomic-writer temporary."""
+    name = key.rsplit("/", 1)[-1]
+    if is_publication_temp(key):
+        return True
+    return key.startswith(_CONTROL_PREFIX) and _ATOMIC_WRITER_TEMP.fullmatch(name) is not None
+
+
 def excluded_from_inventory(product_root: StorageUri, key: str) -> bool:
     """Return whether an inventory of *product_root* leaves *key* out, or refuse the key.
 
@@ -126,12 +135,9 @@ def excluded_from_inventory(product_root: StorageUri, key: str) -> bool:
                 product_uri=product_uri,
             )
         )
-    name = key.rsplit("/", 1)[-1]
-    if key.startswith(_CLAIMS_PREFIX) or is_publication_temp(key):
+    if key.startswith(_CLAIMS_PREFIX) or _is_writer_temporary(key):
         return True
-    if key.startswith(_CONTROL_PREFIX) and _ATOMIC_WRITER_TEMP.fullmatch(name):
-        return True
-    if product_root.protocol == "file" and _LOCAL_STAGING_SUFFIX.search(name):
+    if product_root.protocol == "file" and _LOCAL_STAGING_SUFFIX.search(key.rsplit("/", 1)[-1]):
         raise ManifestError(
             Message(
                 "The file {key!r} of {product_uri} ends in '#<digits>', the name an "
@@ -167,20 +173,75 @@ def _read_listed(fs: StorageFilesystemFull, product_root: StorageUri, uri: Stora
         raise ManifestError(message) from exc
 
 
+def _unlisted_local_files(product_root: StorageUri, listed: set[str]) -> list[str]:
+    """Return the sorted keys of the regular files below a local product that *listed* lacks.
+
+    The walk follows no symlink and skips `.firecube/claims/` and firecube's own temporaries.
+    """
+    root = product_root.path.rstrip("/") or "/"
+    unlisted: list[str] = []
+    pending = [""]
+    while pending:
+        prefix = pending.pop()
+        try:
+            with os.scandir(os.path.join(root, prefix)) as scan:
+                entries = list(scan)
+        except FileNotFoundError:
+            continue  # a directory removed since the listing; its files are not on disk
+        for entry in entries:
+            key = f"{prefix}{entry.name}"
+            if entry.is_dir(follow_symlinks=False):
+                if f"{key}/" != _CLAIMS_PREFIX:
+                    pending.append(f"{key}/")
+            elif (
+                entry.is_file(follow_symlinks=False)
+                and key not in listed
+                and not _is_writer_temporary(key)
+            ):
+                unlisted.append(key)
+    return sorted(unlisted)
+
+
+def _refuse_unlisted_local_files(product_root: StorageUri, listed: set[str]) -> None:
+    """Refuse a local product with a regular file on disk that the driver's listing missed.
+
+    Raises:
+        ManifestError: Such a file exists; the message names the first and the count.
+    """
+    unlisted = _unlisted_local_files(product_root, listed)
+    if unlisted:
+        raise ManifestError(
+            Message(
+                "Files of {product_uri} on disk that its storage driver does not list: "
+                "{count}, the first {key!r}. No inventory is taken. The obstore driver does "
+                "not list a name that ends in '#<digits>': rename such a file. A file written "
+                "while the inventory is taken is not listed either.",
+                product_uri=product_root.to_str(),
+                count=len(unlisted),
+                key=unlisted[0],
+            )
+        )
+
+
 def build_digest_inventory(fs: StorageFilesystemFull, product_root: StorageUri) -> Inventory:
     """List every object of the product and record its size and sha256 digest.
 
     Each object is read whole, once, by the URI the listing returned. On a remote
     product an excluded key is read too, so a rewritten key cannot hide among them.
+    On a local product one walk of the directory tree checks that the listing missed no file.
 
     Raises:
         ManifestError: The listing returned an object outside the product, a key twice,
-            a key `excluded_from_inventory` refuses, or an object that is not there.
+            a key `excluded_from_inventory` refuses, or an object that is not there; or
+            a local product holds a regular file the listing missed.
     """
     entries: list[InventoryObject] = []
     seen: set[str] = set()
-    for uri in fs.find(product_root):
-        key = _product_key(product_root, uri)
+    listed = [(uri, _product_key(product_root, uri)) for uri in fs.find(product_root)]
+    if product_root.protocol == "file":
+        # A driver's listing may hide a name (obstore: `<name>#<digits>`); the walk does not.
+        _refuse_unlisted_local_files(product_root, {key for _uri, key in listed})
+    for uri, key in listed:
         if key in seen:
             raise ManifestError(
                 Message(

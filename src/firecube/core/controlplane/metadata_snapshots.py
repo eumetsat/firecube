@@ -44,10 +44,6 @@ from firecube.core.controlplane._content_addressed import (
     require_id,
     sha256_hex,
 )
-
-# releases.py still imports these two helpers from this module under their old names.
-from firecube.core.controlplane._content_addressed import makedirs as _makedirs  # noqa: F401
-from firecube.core.controlplane._content_addressed import publish as _publish  # noqa: F401
 from firecube.core.controlplane.types import (
     CONTROL_DIRNAME,
     METADATA_DIRNAME,

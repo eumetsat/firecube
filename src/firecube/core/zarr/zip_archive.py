@@ -498,7 +498,10 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     """Return the problems found in a zarr zip archive; an empty list means valid.
 
     quick: check the zip directory and Zarr metadata only, skip the CRC check of every entry.
+    A marker must pass the checks a chain restore applies to it.
     """
+    from firecube.core.zarr.zip_chain import marker_problem  # zip_chain imports this module
+
     path = Path(archive.removeprefix("file://"))
     if not path.is_file():
         raise FileNotFoundError(f"Archive not found: {archive}")
@@ -517,6 +520,8 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     except ValueError as exc:
         issues.append(str(exc))
         marker = None
+    if marker is not None and (problem := marker_problem(marker)) is not None:
+        issues.append(f"Entry {MARKER_ENTRY!r} is not a valid archive marker: {problem}")
     is_delta = _is_delta(marker)
 
     if "zarr.json" not in keys:

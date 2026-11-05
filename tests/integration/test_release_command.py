@@ -320,6 +320,45 @@ def test_second_release_archive_is_a_delta_of_changed_objects_and_metadata_docum
     assert "Base:" in _cli(store, "release", "show").output
 
 
+def _retention_files(store: Path) -> list[str]:
+    return sorted(p.name for p in (store / ".firecube/releases").rglob("*.json"))
+
+
+def test_obstore_release_refuses_a_name_its_listing_hides_and_writes_nothing(tmp_path):
+    store = _store(tmp_path, 3)
+    (store / "payload#12").write_text("hidden from the obstore listing")
+    before, archive = _retention_files(store), tmp_path / "one.zip"
+    flags = ["--archive", archive.as_uri(), "--storage-driver", "obstore"]
+    _cli(store, "release", "create", "1.0", *flags, exit_code=1)
+    assert not archive.exists()
+    assert _retention_files(store) == before  # no inventory, no release record
+
+
+@pytest.mark.parametrize("name", ["a#b", "#tag", "x#1y"])
+def test_obstore_release_keeps_a_hash_name_its_listing_always_showed(tmp_path, name):
+    store = _store(tmp_path, 3)
+    (store / name).write_text("listed")
+    args = ("--archive", (tmp_path / "one.zip").as_uri(), "--storage-driver", "obstore")
+    release = _json(store, "release", "create", "1.0", *args)["release"]
+    assert name in _inventory(store, release)
+    assert name in _entries(tmp_path / "one.zip")
+
+
+def test_release_whose_delta_would_delete_a_newline_named_key_is_refused_with_archive_full(
+    tmp_path,
+):
+    store = _store(tmp_path, 3)
+    driver = ("--storage-driver", "fsspec")
+    (store / "line\nbreak").write_text("x")
+    _archived(store, "1.0", tmp_path / "one.zip", *driver)
+    (store / "line\nbreak").unlink()
+    before = _retention_files(store)
+    flags = ["--archive", (tmp_path / "two.zip").as_uri(), *driver]
+    assert "--archive-full" in _cli(store, "release", "create", "2.0", *flags, exit_code=1).output
+    assert not (tmp_path / "two.zip").exists()
+    assert _retention_files(store) == before
+
+
 def test_release_verify_reports_a_deleted_base_archive_as_a_broken_chain(tmp_path):
     store = _store(tmp_path, 3)
     _archived(store, "1.0", tmp_path / "one.zip")
