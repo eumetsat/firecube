@@ -3848,6 +3848,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../archive/read-a-release-with-xarray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read A Release With Xarray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4135,6 +4163,28 @@
     <span class="md-ellipsis">
       
         Verify The Metadata
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify-a-zip-archive-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify A Zip Archive Release
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify-a-release-with-object-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify A Release With Object Versions
       
     </span>
   </a>
@@ -5169,6 +5219,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#verify-a-zip-archive-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify A Zip Archive Release
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify-a-release-with-object-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify A Release With Object Versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-what-changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5225,9 +5297,13 @@
 <p>Use <code>firecube release verify</code> to find out whether the metadata of a product
 still equals a release.</p>
 <p>The command compares the live metadata documents with the snapshot of the
-release. It detects a change of the metadata documents only. It does not see an
-edit of chunk bytes. Content protection is the policy of the storage bucket.
-Firecube detects drift and does not prevent it.</p>
+release. It does not see an edit of chunk bytes. Content protection is the policy
+of the storage bucket. Firecube detects drift and does not prevent it.</p>
+<p>If the release retains its chunk bytes, the command also tests that retention.
+For a zip archive, it tests the archive file and the
+<a href="../create-a-release/#retain-the-chunk-bytes">backup chain</a> below it. For object
+versions, it tests the bucket settings and the listed versions. The command exits
+1 when the metadata differs or the retention does not hold.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
 <li>Make sure that the release exists. List the releases with
@@ -5242,7 +5318,8 @@ Firecube detects drift and does not prevent it.</p>
 <p>The command re-reads the live metadata documents. It compares them byte for
 byte with the snapshot of the release. Without a version, it uses the current
 release. The command takes no claim and writes nothing.</p>
-<p>If the metadata matches, the command exits 0:</p>
+<p>If the metadata matches and the retention of the release holds, the command exits
+0. A release without retention has nothing more to hold:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Release 1.0.0: metadata matches snapshot dadfa2e8c110e0fd…
 </code></pre></div>
 <p>If any document differs, the command exits 1 and names the paths:</p>
@@ -5251,16 +5328,92 @@ release. The command takes no claim and writes nothing.</p>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  removed: .zmetadata
 </code></pre></div>
 <p>Add <code>-f json</code> for a machine-readable result with the keys <code>added</code>, <code>changed</code>,
-<code>removed</code>, <code>matches</code>, <code>snapshot</code> and <code>version</code>.</p>
+<code>removed</code>, <code>matches</code>, <code>retention</code>, <code>snapshot</code> and <code>version</code>.</p>
+<h2 id="verify-a-zip-archive-release">Verify A Zip Archive Release</h2>
+<p>For a release made with <code>--archive</code>, the command prints two more lines after the
+metadata line:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Release 1.2.0: metadata matches snapshot f4ca8645…
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>archive: present
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>backup chain: intact
+</code></pre></div>
+<p>The <code>archive:</code> line describes the archive file of this release:</p>
+<ul>
+<li><code>present</code>: the file exists and has the recorded digest.</li>
+<li><code>missing</code>: no file exists at the recorded path.</li>
+<li><code>changed</code>: the file exists and has another digest.</li>
+</ul>
+<p>The <code>backup chain:</code> line describes the previous backups below an incremental
+backup. The command follows the previous backup of each link through the release
+records. It tests that each previous backup exists and has its recorded digest.
+If a link fails, the line names the version of the first failing link, counted
+from the newest:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>archive: present
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>backup chain: broken at 1.1.0
+</code></pre></div>
+<p>A full backup has no previous backup, so its backup chain is <code>intact</code>. The command
+hashes every archive file of the backup chain, so a long chain of large files
+takes time.</p>
+<p>The JSON result holds the same facts in a <code>retention</code> object:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;retention&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">&quot;archive&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;present&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">&quot;backup_chain&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;broken&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nt">&quot;broken_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nt">&quot;holds&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;zip&quot;</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">}</span>
+</code></pre></div>
+<p>The <code>holds</code> key is <code>true</code> when the retained bytes are intact. A release without
+retention has <code>"kind": null</code> and <code>"holds": true</code>, and the text output has no
+extra lines.</p>
+<h2 id="verify-a-release-with-object-versions">Verify A Release With Object Versions</h2>
+<p>For a release made with <code>--retain-versions</code>, the command prints four lines after
+the metadata line:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Release 2.0.0: metadata matches snapshot 803de3fb…
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>retention: unchanged
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>lifecycle: unchanged
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>inventory: intact
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>checked: all
+</code></pre></div>
+<ul>
+<li><code>retention:</code> is <code>changed</code> when the versioning state of the bucket differs from
+  the state that the release recorded.</li>
+<li><code>lifecycle:</code> is <code>changed</code> when the lifecycle configuration of the bucket
+  differs from the recorded one. A recorded value <code>unavailable</code> compares equal
+  only to an unreadable configuration.</li>
+<li><code>inventory:</code> is <code>lost N</code> when N tested versions are gone, are delete markers,
+  have another size or cannot be reached. The command lists each lost key below the line as
+  <code>lost: &lt;key&gt;</code>.</li>
+<li><code>checked:</code> is <code>all</code> or <code>sample N</code>.</li>
+</ul>
+<p>By default, the command sends one HEAD request for each listed version. On a large
+product this takes time and costs requests. To test a random subset, add
+<code>--sample</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>verify<span class="w"> </span><span class="m">2</span>.0.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;s3://my-bucket/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--storage-type<span class="w"> </span>s3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--sample<span class="w"> </span><span class="m">100</span>
+</code></pre></div>
+<p>The line <code>checked: sample 100</code> shows that the command tested a subset. A sample
+that is larger than the number of versions tests all of them and prints
+<code>checked: all</code>. A sample does not prove that every version exists. <code>--sample</code>
+applies to a release made with <code>--retain-versions</code> only. For a zip release the
+command ignores it.</p>
+<p>The JSON result holds <code>kind</code>, <code>holds</code>, <code>retention</code>, <code>lifecycle</code>, <code>inventory</code>,
+<code>lost</code>, <code>checked</code> and <code>checked_count</code>, and a <code>lost_keys</code> list when a version is
+lost.</p>
 <h2 id="see-what-changed">See What Changed</h2>
 <p>To see what changed inside a document, compare the snapshot of the release
 with a new snapshot:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>take<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>diff<span class="w"> </span>&lt;release-snapshot-id&gt;<span class="w"> </span>latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>take<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>diff<span class="w"> </span>&lt;release-snapshot-id&gt;<span class="w"> </span>latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
 </code></pre></div>
 <p>The identifier of the release snapshot is in the output of
 <code>firecube release show</code>. See <a href="../snapshot/">Snapshot Metadata</a>.</p>
@@ -5281,13 +5434,48 @@ with a new snapshot:</p>
 </tr>
 <tr>
 <td><code>release verify</code> exits 0 but the data is wrong</td>
-<td>Verify does not read chunk bytes.</td>
+<td>Verify does not read the chunk bytes of the live product.</td>
 <td>Protect the chunks with the bucket policy. Compare them with your own checksums.</td>
 </tr>
 <tr>
 <td><code>product … has no release '…'</code></td>
 <td>The version does not exist.</td>
 <td>Run <code>firecube release list</code>.</td>
+</tr>
+<tr>
+<td><code>archive: missing</code> and exit 1</td>
+<td>No file exists at the archive path of the release.</td>
+<td>Put the file back at the path in <code>Archive:</code> of <code>release show</code>. If you lost the file, create a new release with <code>--archive-full</code>.</td>
+</tr>
+<tr>
+<td><code>archive: changed</code> and exit 1</td>
+<td>The file has another digest than the record.</td>
+<td>Replace the file with a good copy. Do not restore from the changed file.</td>
+</tr>
+<tr>
+<td><code>backup chain: broken at &lt;version&gt;</code> and exit 1</td>
+<td>A previous backup of an incremental backup is missing or changed, or its record is missing.</td>
+<td>Put back the good copy of the archive of that version. If no copy exists, the newer incremental backups cannot be restored. Create a new release with <code>--archive-full</code>.</td>
+</tr>
+<tr>
+<td><code>retention: changed</code> and exit 1</td>
+<td>The versioning state of the bucket is not the recorded one.</td>
+<td>Enable versioning again. If the change is intended, create a new release.</td>
+</tr>
+<tr>
+<td><code>lifecycle: changed</code> and exit 1</td>
+<td>A lifecycle rule of the bucket changed.</td>
+<td>Make sure that no rule expires the retained versions. Delete such a rule, or create a new release.</td>
+</tr>
+<tr>
+<td><code>inventory: lost N</code> and exit 1</td>
+<td>N listed object versions are gone or unreachable.</td>
+<td>Read the <code>lost:</code> keys. Restore the versions from a copy. If you cannot, the release no longer holds those bytes.</td>
+</tr>
+<tr>
+<td><code>… needs an s3 product on the fsspec storage driver</code></td>
+<td>The release lists object versions, and the command used the <code>obstore</code> driver.</td>
+<td>Run the command with <code>--storage-driver fsspec</code>.</td>
 </tr>
 </tbody>
 </table>

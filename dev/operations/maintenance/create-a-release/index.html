@@ -3848,6 +3848,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../archive/read-a-release-with-xarray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read A Release With Xarray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4121,6 +4149,45 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retain-the-chunk-bytes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retain The Chunk Bytes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Retain The Chunk Bytes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retain-in-a-zip-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retain In A Zip Archive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retain-as-object-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retain As Object Versions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -5191,6 +5258,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#retain-the-chunk-bytes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retain The Chunk Bytes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Retain The Chunk Bytes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retain-in-a-zip-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retain In A Zip Archive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retain-as-object-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retain As Object Versions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#recover-from-an-interrupted-create" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5249,8 +5355,10 @@
 the metadata. It also lists the runs since the previous release and the producer
 of the latest run that recorded one. <code>release create</code> stamps the root attribute
 <code>firecube_release</code> with the version.</p>
-<p>A release names metadata only. It does not cover chunk bytes. To compare the
-metadata with a release later, see <a href="../verify-a-release/">Verify A Release</a>.</p>
+<p>By default, a release names metadata only. It does not cover chunk bytes. To
+keep the chunk bytes of a release, see
+<a href="#retain-the-chunk-bytes">Retain The Chunk Bytes</a>. To compare the metadata with
+a release later, see <a href="../verify-a-release/">Verify A Release</a>.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
 <li>Stop every writer of the product. See
@@ -5282,6 +5390,7 @@ metadata with a release later, see <a href="../verify-a-release/">Verify A Relea
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  adopt-345bfd72-…
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  migrate-2e97c56b-…
 <a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>  release-bb4fa223-…
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>Retention:    none
 </code></pre></div>
 <p>On a Zarr v3 store, the first line is <code>wrote zarr.json</code>. The other lines keep
 their shape. The <code>Runs since</code> list holds the runs of your store.</p>
@@ -5308,15 +5417,168 @@ release:</p>
 <p>Without a version, the command shows the current release. It exits 1 when the
 release does not exist. If a migration step created the release, the list of
 runs includes the migrate run.</p>
+<h2 id="retain-the-chunk-bytes">Retain The Chunk Bytes</h2>
+<p>You run Firecube's incremental backup manually for each release. It captures
+only the state at the cut of that release. It provides no scheduled or ongoing
+protection of the live product. <code>release verify</code> verifies the backup files, not
+the live data.</p>
+<p>A release can also keep the objects that it names. Choose one of two options.
+They exclude each other. Both write an inventory, which lists every object of
+the product with its size and its digest or version identifier. The inventory
+leaves out <code>.firecube/claims/</code> and the temporary files of publication.</p>
+<p>The inventory is not atomic. No storage backend lists a product in one step.
+The inventory is coherent only while every writer of the product is stopped.
+Firecube holds its own claim and does not stop a process outside Firecube.</p>
+<h3 id="retain-in-a-zip-archive">Retain In A Zip Archive</h3>
+<p>Choose the retention when you create a release. A record is never rewritten, so
+<code>release create</code> refuses to add an archive to a version that exists. Use a
+version that no record uses. Add <code>--archive</code> with a <code>file://</code> URI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="m">1</span>.1.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT-1.1.0.zip&quot;</span>
+</code></pre></div>
+<p>The archive is a local ZIP file. The product can be remote. The product must be
+a Zarr v3 store, because the command refuses a product without a root
+<code>zarr.json</code>.</p>
+<p>The command prints two more progress lines than a release without retention.
+The first backup of a product is a full backup:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>inventory 3415078ca68e6b0e… lists 31 objects
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>full backup /data/archives/MY_PRODUCT-1.1.0.zip holds 31 objects, 18187 bytes
+</code></pre></div>
+<p>A later release writes an incremental backup if the current release also
+retains a ZIP archive and <code>--archive-full</code> is not set. The progress line then
+starts with <code>incremental backup</code> and counts only the objects that it holds.</p>
+<p>The output of <code>release create</code> and <code>release show</code> ends with a <code>Retention:</code>
+block:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Retention:
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  Kind:              zip
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  Archive:           file:///data/archives/MY_PRODUCT-1.1.0.zip
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  Mode:              full
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  Chain length:      1
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  Deleted keys:      0
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>  Size (bytes):      18187
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>  Digest:            sha256:4c403f8cfea97d55…
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>  Inventory:         3415078ca68e6b0e…
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>  Run:               archive-create-157c693e-…
+</code></pre></div>
+<p>The first release with an archive writes a full backup. It holds every object of
+the inventory. If the current release retains a ZIP archive, the next release
+writes an incremental backup. An incremental backup holds three kinds of entry:</p>
+<ul>
+<li>every object that is new or has another digest than in the previous inventory</li>
+<li>every Zarr metadata document, whatever its digest</li>
+<li>one entry, <code>firecube-archive.json</code>, the marker</li>
+</ul>
+<p>The marker names the previous release, the file of the previous backup and the
+digest of that file. It also lists the keys that the product deleted since the
+previous release. The <code>Retention:</code> block of an incremental backup shows
+<code>Mode: incremental</code>, the <code>Previous release:</code> version, the <code>Chain length:</code> and the
+<code>Deleted keys:</code> count. To read the marker of an archive, run
+<code>firecube archive info --archive &lt;uri&gt;</code>.</p>
+<p>The backups of a product form a backup chain. The chain starts at a full backup
+and ends at the newest incremental backup. Each incremental backup depends on the
+previous backup. The chain length of a full backup is 1.</p>
+<p>To write a full backup in place of an incremental backup, add <code>--archive-full</code>.
+Use it to start a new backup chain.</p>
+<p>Each archive needs its own path. A path that holds anything is refused, and
+Firecube never overwrites it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Error: Something exists at /data/archives/MY_PRODUCT-1.1.0.zip, the path given as --archive. A release never reuses or overwrites an archive: remove it or pick another path, then run again.
+</code></pre></div>
+<p>The refusal comes before the command takes the inventory.</p>
+<p>An archive file is the only copy of the bytes. The durability of a backup chain
+rests on its full backup and on every incremental backup between the full backup
+and the newest one. If one archive is lost or changed, Firecube cannot restore
+the newer ones. Copy every archive of a backup chain to storage that you back
+up. Write a new full backup from time to time with <code>--archive-full</code>, to keep
+backup chains short.</p>
+<p>An archive holds the objects of the inventory. It does not hold the record of its
+own release, the pointer to the current release or the completed run of the
+release. Firecube writes them after the inventory. They arrive in the next
+incremental backup.</p>
+<p>Firecube publishes an archive with a hard link, so that two releases never
+overwrite one file. A filesystem without hard links fails to publish the archive.
+Such filesystems are FUSE mounts, FAT volumes and some network shares. Write the
+archive to a local disk and copy it afterwards.</p>
+<p>Firecube refuses two kinds of key before it writes the archive:</p>
+<ul>
+<li>A local file whose name ends in <code>#&lt;digits&gt;</code>, for example <code>payload#12</code>. Rename
+  the file.</li>
+<li>A key that the product deleted since the previous release and whose name holds
+  a control character, for example a newline. A restore of the backup chain
+  cannot restore such a key. Add <code>--archive-full</code> to write a full backup instead.</li>
+</ul>
+<p>Both refusals leave no inventory, no archive and no release record. The refusal
+of a deleted key reads:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Error: The key &#39;line\nbreak&#39; was deleted since release &#39;1&#39; and holds a control character, so it cannot be restored from a backup chain and no incremental backup lists it. Deleted keys refused: 1. Write a full backup with --archive-full instead.
+</code></pre></div>
+<h3 id="retain-as-object-versions">Retain As Object Versions</h3>
+<p>On a versioned S3 bucket, the release can record the version identifier of each
+object. This copies no bytes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="m">2</span>.0.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;s3://my-bucket/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--storage-type<span class="w"> </span>s3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>--retain-versions
+</code></pre></div>
+<p>Expected output ends with these lines:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>inventory 5393dc285018cee1… lists 26 object versions and 0 delete markers
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>…
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Retention:
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  Kind:              s3-versions
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  Bucket versioning: enabled
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>  Objects:           26
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>  Inventory:         5393dc285018cee1…
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>  Run:               release-e8cc87f3-…
+</code></pre></div>
+<p>The option has these requirements. Assume that the settings of the bucket stay
+the same while the command runs. Then Firecube refuses the command before it
+writes anything when a requirement is not met. If the versioning of the bucket changes during the command,
+the refusal can come late. By then the command has stamped the root attribute
+and taken the snapshot.</p>
+<ul>
+<li>The product is on S3 and you use <code>--storage-driver fsspec</code>. The <code>obstore</code>
+  driver cannot list object versions.</li>
+<li>The bucket has versioning enabled. A bucket with versioning <code>suspended</code> or
+  <code>absent</code> is refused.</li>
+<li>Every current object has a version identifier. An object that was written before
+  you enabled versioning has none. The command names the count and the first key.
+  Copy each such object over itself, then run the command again.</li>
+</ul>
+<p>Versioning must stay enabled for as long as you rely on the release. The
+retained bytes also depend on the lifecycle rules of the bucket. A lifecycle
+rule that expires old versions destroys the bytes that the release names. Firecube
+records the lifecycle configuration when the bucket allows it to read the
+configuration. Otherwise it records <code>unavailable</code>. <code>release verify</code> reports a
+change of either setting. See <a href="../verify-a-release/">Verify A Release</a>.</p>
+<p>To verify a large release fast, run <code>firecube release verify --sample N</code>. The
+option applies to a release made with <code>--retain-versions</code> only.</p>
+<p>Firecube tested <code>--retain-versions</code> against a mock S3 server only. It has not
+run against a real object store. Run <code>release verify</code> on your store after the
+first release.</p>
 <h2 id="recover-from-an-interrupted-create">Recover From An Interrupted Create</h2>
 <p>Run the same <code>release create</code> command again. The rerun resumes from the last
 completed step. If the first run stamped the root attribute but did not record
 the release, the rerun continues from the snapshot step:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>run release-cec9a4c8-… stamped release &#39;1.0&#39; before; resuming from the snapshot
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>run release-cec9a4c8-… stamped release &#39;1.0&#39; before; resuming from the snapshot
 </code></pre></div>
 <p>If a record exists but the release is not current, the rerun completes the
 release. It does so only while the live metadata still equals the snapshot of
 the record.</p>
+<p>If the first run wrote an archive and stopped before it recorded the release, the
+archive file stays. Firecube never reuses it, because the file can differ from
+the inventory of a new run. The rerun is refused and writes nothing:</p>
+<ol>
+<li>Delete the archive file that the message names, or choose another path.</li>
+<li>Run the same <code>release create</code> command again.</li>
+</ol>
+<p>The rerun takes a new inventory and writes a new archive. The inventory file of
+the stopped run stays in <code>.firecube/releases/inventories/</code>. Nothing refers to it
+and it does no harm.</p>
+<p>If a record of the version exists already, give the same <code>--archive</code> value or
+none. A record is never rewritten. A different archive for an existing version is
+refused. Choose another version.</p>
 <p>A release process that is killed outright leaves its run in the status
 <code>started</code> and the exclusive claim in place. The next <code>release create</code> is
 refused until you retire that run. This differs from an interrupted
@@ -5326,19 +5588,19 @@ new <code>release create</code> always starts a new run, so abandon the old run.
 <li>Make sure that no process of the run is still running.</li>
 <li>Abandon the run. This also releases the claim that the run owns:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;release process killed&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--yes-i-really-mean-it
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;release process killed&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <ol>
 <li>If the claim names no recorded run, clear it:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--domain<span class="w"> </span>MY_PRODUCT:maintenance:exclusive<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--force<span class="w"> </span>--yes-i-really-mean-it
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--domain<span class="w"> </span>MY_PRODUCT:maintenance:exclusive<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>--force<span class="w"> </span>--yes-i-really-mean-it
 </code></pre></div>
 <ol>
 <li>Run the same <code>release create</code> command again.</li>
@@ -5379,6 +5641,66 @@ new <code>release create</code> always starts a new run, so abandon the old run.
 <td>The version does not exist.</td>
 <td>Run <code>firecube release list</code>.</td>
 </tr>
+<tr>
+<td><code>Something exists at …, the path given as --archive</code></td>
+<td>A file already exists at the archive path.</td>
+<td>Delete the file or choose another path. Run the command again.</td>
+</tr>
+<tr>
+<td><code>Invalid value for '--archive': a release archive is a local file:// URI.</code></td>
+<td>The archive URI is not a local <code>file://</code> URI.</td>
+<td>Give a <code>file://</code> URI. The product can stay remote.</td>
+</tr>
+<tr>
+<td><code>--archive-full requires --archive.</code></td>
+<td><code>--archive-full</code> has no archive to select.</td>
+<td>Add <code>--archive</code>.</td>
+</tr>
+<tr>
+<td><code>--archive and --retain-versions are mutually exclusive.</code></td>
+<td>A release retains by one means.</td>
+<td>Use one of the two options.</td>
+</tr>
+<tr>
+<td><code>--retain-versions needs an s3 product on the fsspec storage driver</code></td>
+<td>The product is not on S3, or the driver is <code>obstore</code>.</td>
+<td>Use an S3 product with <code>--storage-driver fsspec</code>.</td>
+</tr>
+<tr>
+<td><code>The bucket of … has versioning absent</code> (or <code>suspended</code>)</td>
+<td>The bucket does not keep versions.</td>
+<td>Enable versioning on the bucket. Run the command again.</td>
+</tr>
+<tr>
+<td><code>… current objects of … have no usable version id</code></td>
+<td>Objects were written before versioning was enabled.</td>
+<td>Copy each object over itself. Run the command again.</td>
+</tr>
+<tr>
+<td><code>The product … has no Zarr v3 root document zarr.json</code></td>
+<td>The product is not a Zarr v3 store.</td>
+<td>Create the release without <code>--archive</code>.</td>
+</tr>
+<tr>
+<td><code>Release '…' exists and retains …</code></td>
+<td>The version has a record with other retention.</td>
+<td>Choose another version.</td>
+</tr>
+<tr>
+<td><code>Files of … on disk that its storage driver does not list: …</code> or <code>The file '…' of … ends in '#&lt;digits&gt;'</code></td>
+<td>A local file has a name that ends in <code>#&lt;digits&gt;</code>.</td>
+<td>Rename the file. Run the command again.</td>
+</tr>
+<tr>
+<td><code>The key '…' was deleted since release '…' and holds a control character</code></td>
+<td>An incremental backup cannot list the deleted key, and a restore of the backup chain cannot restore it.</td>
+<td>Add <code>--archive-full</code>. Run the command again.</td>
+</tr>
+<tr>
+<td>An operating-system error such as <code>Operation not permitted</code> while the archive is published</td>
+<td>The filesystem of the archive has no hard links.</td>
+<td>Write the archive to a local disk.</td>
+</tr>
 </tbody>
 </table>
 <p>The storage limits on a version string are:</p>
@@ -5393,7 +5715,9 @@ new <code>release create</code> always starts a new run, so abandon the old run.
 </ul>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../verify-a-release/">Verify A Release</a></strong> — detect a change of the metadata since the release</li>
+<li><strong><a href="../verify-a-release/">Verify A Release</a></strong> — detect a change of the metadata, or a loss of retained bytes, since the release</li>
+<li><strong><a href="../../archive/restore/#restore-an-incremental-backup-chain">Restore An Incremental Backup Chain</a></strong> — rebuild a product from the backups of a release</li>
+<li><strong><a href="../../archive/read-a-release-with-xarray/">Read A Release With Xarray</a></strong> — open the data of a release from its archive</li>
 <li><strong><a href="../migrate/">Migrate Metadata</a></strong> — change attributes before a new release</li>
 <li><strong><a href="../">Maintenance Operations</a></strong> — overview of the command groups</li>
 </ul>

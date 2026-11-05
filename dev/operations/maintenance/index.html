@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/operations/maintenance/">
       
       
-        <link rel="prev" href="../archive/restore/">
+        <link rel="prev" href="../archive/read-a-release-with-xarray/">
       
       
         <link rel="next" href="snapshot/">
@@ -3848,6 +3848,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../archive/read-a-release-with-xarray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read A Release With Xarray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -5179,8 +5207,9 @@
 
 <h1 id="maintenance-operations">Maintenance Operations</h1>
 <p>Use maintenance operations to change the metadata of a finished Zarr product
-and to keep a record of each state you hand over. They never read or write a
-chunk.</p>
+and to keep a record of each state you hand over. They do not write a chunk.
+Two options of <code>release create</code> read chunk objects: <code>--archive</code> reads them to
+archive them, and <code>--retain-versions</code> lists their versions.</p>
 <p>The <code>firecube snapshot</code> commands work on any Zarr v2 or v3 store. A real
 <code>migrate run</code> and <code>release create</code> need a control plane. A store that Firecube
 did not write has none, so run <code>migrate adopt</code> on it first.</p>
@@ -5229,7 +5258,7 @@ for the other writers that check it.</p>
 </tr>
 <tr>
 <td><code>firecube release</code></td>
-<td>Name one state of the metadata, and detect later whether it changed.</td>
+<td>Name one state of the metadata, and detect later whether it changed. Optionally keep the chunk bytes of the state in a zip archive, or as object versions on S3.</td>
 </tr>
 </tbody>
 </table>

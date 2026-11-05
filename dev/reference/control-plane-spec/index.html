@@ -3831,6 +3831,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/archive/read-a-release-with-xarray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read A Release With Xarray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -5227,6 +5255,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Releases: releases/">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inventories-releasesinventories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inventories: releases/inventories/
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -5529,6 +5574,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Releases: releases/">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inventories-releasesinventories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inventories: releases/inventories/
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -5650,6 +5712,10 @@ normative.</p>
 <td><code>v1</code></td>
 </tr>
 <tr>
+<td>Inventories: <code>releases/inventories/&lt;hash&gt;.json</code></td>
+<td><code>v1</code></td>
+</tr>
+<tr>
 <td>Migration journal: <code>runs/&lt;run_id&gt;/plan.json</code></td>
 <td><code>v1</code></td>
 </tr>
@@ -5676,11 +5742,16 @@ normative.</p>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    metadata/refs/latest.json          Pointer to the newest snapshot record
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    releases/&lt;key&gt;.json          Release record, one file per release version
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    releases/refs/current.json   Pointer to the current release
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    releases/inventories/&lt;hash&gt;.json   Inventory of the objects of the product at one cut
 </code></pre></div>
 <p>Only the directories a product has used exist. A serial ingest without a
 declared index has no <code>index/</code> directory. A product with no compact cache
 rebuild has no <code>compact/</code> directory. A product with no snapshot has no
-<code>metadata/</code> directory. A product with no release has no <code>releases/</code> directory.</p>
+<code>metadata/</code> directory. A release run creates the <code>releases/</code> directory when it
+first writes a release file. A release run that retains chunk bytes creates the
+<code>releases/inventories/</code> directory when it writes the inventory. A run that fails
+or stops after that write can leave an inventory that no release record names.
+That file is harmless, and Firecube does not remove it.</p>
 <p>Earlier releases wrote <code>snapshots/snapshot-&lt;generation&gt;.jsonl</code>,
 <code>snapshots/snapshot-&lt;generation&gt;.meta.json</code> and a <code>LATEST.json</code> at the root of
 <code>.firecube/</code>. Firecube writes none of them now. Firecube ignores them on read.
@@ -5697,7 +5768,8 @@ the file already exists. The journal <code>plan.json</code> fails too, unless th
 file holds the same bytes.</p>
 <p>The blobs, manifests and records under <code>metadata/</code> are content-addressed. A
 writer that finds one present leaves it as it is and does not fail. Two
-snapshots of unchanged metadata share one manifest.</p>
+snapshots of unchanged metadata share one manifest. Inventories under
+<code>releases/inventories/</code> follow the same rule.</p>
 <p><code>run.json</code> is replaced atomically in place because peer processes read it while
 the run is live. The pointers <code>metadata/refs/latest.json</code> and
 <code>releases/refs/current.json</code> are replaced atomically in place.</p>
@@ -6670,6 +6742,195 @@ name. A reader MUST refuse a record whose <code>version</code> encodes to anothe
 <td>string</td>
 <td>Id of the <code>release_create</code> run, or of the <code>migrate</code> run that created the release</td>
 </tr>
+<tr>
+<td><code>retention</code></td>
+<td>object</td>
+<td>Optional. What the release retains of the objects of the product, see below. A record without the key retains nothing.</td>
+</tr>
+</tbody>
+</table>
+<p>The key <code>retention</code> is additive on <code>v1</code>. A reader MUST treat a record without it
+as a release that retains nothing. A reader that finds the key with a value that
+is not an object MUST refuse the record. A writer omits the key for a release
+that retains nothing.</p>
+<p>The object <code>retention</code> has the key <code>kind</code>. The value is <code>zip</code> or <code>s3-versions</code>.
+The other keys depend on the kind.</p>
+<p>For the kind <code>zip</code>, the release keeps the objects in a ZIP archive on a local
+file system:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kind</code></td>
+<td>string</td>
+<td><code>"zip"</code></td>
+</tr>
+<tr>
+<td><code>uri</code></td>
+<td>string</td>
+<td><code>file://</code> URI of the archive</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>string</td>
+<td><code>"zip"</code></td>
+</tr>
+<tr>
+<td><code>size_bytes</code></td>
+<td>integer</td>
+<td>Length of the archive in bytes</td>
+</tr>
+<tr>
+<td><code>digest</code></td>
+<td>string</td>
+<td><code>sha256:</code> followed by the hex digest of the archive file</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>string</td>
+<td><code>full</code> when the archive is a full backup of the inventory, <code>incremental</code> when it holds the changes since the previous release</td>
+</tr>
+<tr>
+<td><code>previous_release</code></td>
+<td>string or null</td>
+<td>Version of the release whose archive this archive extends, <code>null</code> for a full backup</td>
+</tr>
+<tr>
+<td><code>chain_length</code></td>
+<td>integer</td>
+<td>Number of archives in the backup chain, from this one down to the full backup, both included. A full backup has the length 1.</td>
+</tr>
+<tr>
+<td><code>deleted_key_count</code></td>
+<td>integer</td>
+<td>Number of keys of the previous inventory that this inventory no longer lists. A full backup has the count 0.</td>
+</tr>
+<tr>
+<td><code>inventory</code></td>
+<td>string</td>
+<td>Id of the inventory that the archive was written from</td>
+</tr>
+<tr>
+<td><code>created_by_run</code></td>
+<td>string</td>
+<td>Id of the <code>archive_create</code> run that wrote the archive</td>
+</tr>
+</tbody>
+</table>
+<p>A full backup holds every object of the inventory. An incremental backup holds each
+object that is new or whose digest differs from the previous inventory. It also holds
+every Zarr metadata document (<code>zarr.json</code>, <code>.zgroup</code>, <code>.zarray</code>, <code>.zattrs</code>,
+<code>.zmetadata</code>), whatever its digest. The names of the deleted keys are in the
+archive, in the reserved root entry <code>firecube-archive.json</code>, not in the record.
+That entry also names the previous release, the previous archive and its digest.</p>
+<p>The marker <code>firecube-archive.json</code> is a JSON object with exactly these eight keys.
+A reader MUST refuse a marker with a missing key or an extra key:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Null for a full backup</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>version</code></td>
+<td>string</td>
+<td>No</td>
+<td>Version of the release that the archive retains. It is not empty.</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>string</td>
+<td>No</td>
+<td><code>full</code> or <code>incremental</code>. The same value as <code>retention.mode</code>.</td>
+</tr>
+<tr>
+<td><code>previous_release</code></td>
+<td>string or null</td>
+<td>Yes, required</td>
+<td>Version of the release whose archive this archive extends. An incremental backup needs a non-empty string.</td>
+</tr>
+<tr>
+<td><code>previous_backup_uri</code></td>
+<td>string or null</td>
+<td>Yes, required</td>
+<td>The <code>retention.uri</code> of the previous release. An incremental backup needs a non-empty string.</td>
+</tr>
+<tr>
+<td><code>previous_backup_digest</code></td>
+<td>string or null</td>
+<td>Yes, required</td>
+<td>The <code>retention.digest</code> of the previous release, in the form <code>sha256:</code> and 64 lowercase hex digits. An incremental backup needs this form.</td>
+</tr>
+<tr>
+<td><code>inventory</code></td>
+<td>string</td>
+<td>No</td>
+<td>Id of the inventory that lists the objects of the archive. It has 64 lowercase hex digits.</td>
+</tr>
+<tr>
+<td><code>metadata_manifest</code></td>
+<td>string</td>
+<td>No</td>
+<td>Id of the manifest of the snapshot that the release names. It has 64 lowercase hex digits.</td>
+</tr>
+<tr>
+<td><code>deleted_keys</code></td>
+<td>array of strings</td>
+<td>No, the array is empty</td>
+<td>Keys of the previous inventory that the current inventory no longer lists. The keys are unique.</td>
+</tr>
+</tbody>
+</table>
+<p>A full backup has <code>null</code> in the three <code>previous_*</code> keys and an empty <code>deleted_keys</code>
+array. A key in <code>deleted_keys</code> must not be empty or absolute. It must not hold a
+backslash or a character from U+0000 to U+001F or U+007F. It must not have an empty, <code>.</code> or <code>..</code> segment.
+It must not name a file below <code>.firecube/claims/</code> or the entry <code>firecube-archive.json</code>.</p>
+<p>For the kind <code>s3-versions</code>, the release keeps no bytes. It records the version
+of each object, which the bucket must keep:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kind</code></td>
+<td>string</td>
+<td><code>"s3-versions"</code></td>
+</tr>
+<tr>
+<td><code>inventory</code></td>
+<td>string</td>
+<td>Id of the inventory that lists the versions</td>
+</tr>
+<tr>
+<td><code>bucket_versioning</code></td>
+<td>string</td>
+<td>The versioning state of the bucket at the cut, always <code>enabled</code></td>
+</tr>
+<tr>
+<td><code>object_count</code></td>
+<td>integer</td>
+<td>Number of objects in the inventory, delete markers not counted</td>
+</tr>
+<tr>
+<td><code>created_by_run</code></td>
+<td>string</td>
+<td>Id of the <code>release_create</code> run</td>
+</tr>
 </tbody>
 </table>
 <p>The pointer <code>refs/current.json</code> has the keys <code>schema_version</code> and <code>version</code>.
@@ -6680,11 +6941,123 @@ release in this order:</p>
 <li>The root attributes <code>firecube_release</code> and <code>firecube_last_modifier</code>.</li>
 <li>The consolidated image, if the store has one.</li>
 <li>The snapshot, which therefore contains the stamps and the image.</li>
+<li>The inventory, only for a release that retains objects.</li>
+<li>The archive, only for the kind <code>zip</code>.</li>
 <li>The record.</li>
 <li>The pointer <code>refs/current.json</code>.</li>
 </ol>
 <p>A record that <code>refs/current.json</code> does not name is an earlier release or a
-release whose publication did not finish.</p>
+release whose publication did not finish. An inventory or an archive that no
+record names is the leftover of a release whose publication did not finish.
+A writer MUST NOT reuse a leftover archive. A leftover inventory is harmless.</p>
+<h3 id="inventories-releasesinventories">Inventories: <code>releases/inventories/</code></h3>
+<p>An inventory lists the objects of the product at the cut of one release. The
+file name is <code>&lt;hash&gt;.json</code>. <code>&lt;hash&gt;</code> is the SHA-256 hex digest of the file, and
+the record names it in <code>retention.inventory</code>. The file is canonical JSON: sorted
+keys, no spaces, UTF-8. A writer MUST NOT rewrite or delete an inventory. A
+reader MUST check that the bytes of the file hash to its name.</p>
+<p>An inventory has these keys:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schema_version</code></td>
+<td>string</td>
+<td><code>"v1"</code></td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>string</td>
+<td><code>digest</code> for the kind <code>zip</code>, <code>s3-versions</code> for the kind <code>s3-versions</code></td>
+</tr>
+<tr>
+<td><code>objects</code></td>
+<td>array</td>
+<td>One entry for each object, sorted by <code>key</code>, without a repeated key</td>
+</tr>
+<tr>
+<td><code>bucket_versioning</code></td>
+<td>string</td>
+<td>Only for <code>s3-versions</code>: the versioning state of the bucket, always <code>enabled</code></td>
+</tr>
+<tr>
+<td><code>lifecycle</code></td>
+<td>object or string</td>
+<td>Only for <code>s3-versions</code>: the lifecycle rules of the bucket, <code>{}</code> when it has none, or <code>"unavailable"</code> when the rules could not be read</td>
+</tr>
+</tbody>
+</table>
+<p>Each entry of <code>objects</code> has these keys:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>key</code></td>
+<td>string</td>
+<td>Path of the object relative to the product root, with <code>/</code> separators. It has no empty, <code>.</code> or <code>..</code> segment.</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>integer</td>
+<td>Length of the object in bytes. A delete marker has the size 0.</td>
+</tr>
+<tr>
+<td><code>digest</code></td>
+<td>string</td>
+<td>Only for <code>digest</code>: <code>sha256:</code> followed by the hex digest of the bytes</td>
+</tr>
+<tr>
+<td><code>version_id</code></td>
+<td>string</td>
+<td>Only for <code>s3-versions</code>: the current version of the object</td>
+</tr>
+<tr>
+<td><code>etag</code></td>
+<td>string</td>
+<td>Only for <code>s3-versions</code>: the ETag of that version, when the bucket reports one</td>
+</tr>
+<tr>
+<td><code>delete_marker</code></td>
+<td>boolean</td>
+<td>Only for <code>s3-versions</code>, and only <code>true</code>: the current version of the key is a delete marker</td>
+</tr>
+</tbody>
+</table>
+<p>A <code>digest</code> inventory lists every object below the product root, including the
+files below <code>.firecube/</code>. It leaves out <code>.firecube/claims/</code> and the temporary
+objects of the writers of Firecube. An <code>s3-versions</code> inventory lists the current
+version of each key under the same exclusions. A key whose current version is a
+delete marker has an entry with <code>delete_marker</code> set.</p>
+<p>The inventory records the product at the cut, before the release run completes.
+A restored backup chain reproduces the inventory. It does not reproduce the completed
+live product. The writer publishes records after the cut. These include the
+inventory of the release, the release record, the new current pointer and the
+completed state of the release run. The archive step also records its own audit
+run. None of them is part of the archive of that release.
+The inventory of the next release includes the release record of the previous
+release.</p>
+<p>A writer refuses a key that it cannot record literally and writes no inventory.
+On a local product, the writer also refuses a regular file that the storage
+driver does not list.
+On <code>s3-versions</code> an object with no usable version id also stops the release.
+Such an object was written before the bucket enabled versioning.</p>
+<p>No storage backend lists a prefix atomically. A write that lands between the
+first and the last listed object makes the inventory incoherent. An inventory is
+coherent only while the operator keeps every other writer of the product stopped.
+The exclusive maintenance claim excludes the writers of Firecube and no other
+process. Firecube does not enforce the stop.</p>
 <h2 id="migration-journal-runsrun_idplanjson">Migration journal: <code>runs/&lt;run_id&gt;/plan.json</code></h2>
 <p>A writer creates the journal once, before the run writes to the store. A writer
 MUST NOT change it afterwards. The file is canonical JSON with these keys:</p>
@@ -6871,7 +7244,10 @@ each documented file names its version explicitly. The compatibility rule:</p>
 <li>The directories <code>metadata/</code> and <code>releases/</code>, the file <code>plan.json</code> and the
   maintenance operations <code>migrate</code>, <code>adopt</code> and <code>release_create</code> change no
   <code>schema_version</code> of an earlier document. Each new document starts at <code>v1</code>.</li>
-<li>A reader MUST refuse a snapshot, release or journal document whose
+<li>The directory <code>releases/inventories/</code> and the key <code>retention</code> of a release
+  record change no <code>schema_version</code>. The key is additive, and a record without
+  it stays valid. An inventory starts at <code>v1</code>.</li>
+<li>A reader MUST refuse a snapshot, release, inventory or journal document whose
   <code>schema_version</code> it does not support.</li>
 <li>Firecube refuses to act on an <code>index/current.json</code> whose <code>schema_version</code>
   it does not support (precedence row 6) rather than guessing.</li>

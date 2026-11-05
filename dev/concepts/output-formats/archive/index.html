@@ -3931,6 +3931,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../operations/archive/read-a-release-with-xarray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read A Release With Xarray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -5186,15 +5214,18 @@ is the package Firecube creates from an existing Zarr product.</p>
 <figure>
   <img alt="A Zarr product is packaged into Tensogram data messages plus a final ChunkManager message, then restored back to Zarr." src="../../../assets/images/firecube-tensogram-flow.svg" width="820" />
 <br />
-<figcaption>Firecube packages selected Zarr data into <code>.tgm</code> messages and stores ChunkManager records as the final message, so restore keeps the cube lifecycle inspectable.</figcaption>
+<figcaption>Firecube packages selected Zarr data into <code>.tgm</code> messages and stores ChunkManager records as the final message. A restore recreates the spans and the runs that own them.</figcaption>
 </figure>
 <h2 id="tensogram-and-zarr">Tensogram And Zarr</h2>
 <p>Zarr is the normal layout for incremental writes and partial reads. Tensogram
 is the portable representation: it packages selected Zarr data into messages
 inside one file. Restoring the file recreates a Zarr product.</p>
-<p>When Firecube packages one of its Zarr products, it also includes the associated
-ChunkManager records. A restored product therefore retains the run and
-coordination history needed by Firecube operations.</p>
+<p>When Firecube packages one of its Zarr products, it also includes the spans, the
+runs and the claims of the product. A restore replays the spans and the runs that
+own them. It does not restore the claims, the metadata snapshots or the release
+records. A restored product has the history of what
+was written, and it has no release. To keep a release, retain it in a zip
+archive. See <a href="../../../operations/archive/restore/">Restore Archives</a>.</p>
 <h2 id="open-with-xarray">Open With Xarray</h2>
 <p>Consumers with <code>tensogram-xarray</code> installed can also open <code>.tgm</code> files through
 Xarray:</p>

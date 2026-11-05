@@ -16,7 +16,7 @@
         <link rel="prev" href="../inspect/">
       
       
-        <link rel="next" href="../../maintenance/">
+        <link rel="next" href="../read-a-release-with-xarray/">
       
       
         
@@ -3909,6 +3909,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#restore-an-incremental-backup-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restore An Incremental Backup Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Restore An Incremental Backup Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#name-the-restored-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Name The Restored State
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-the-restored-product" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3967,6 +3995,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../read-a-release-with-xarray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read A Release With Xarray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5191,6 +5247,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#restore-an-incremental-backup-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restore An Incremental Backup Chain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Restore An Incremental Backup Chain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#name-the-restored-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Name The Restored State
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-the-restored-product" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5284,6 +5368,12 @@ a Zarr store.</p>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  Coordinates:
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  Control-plane: restored
 </code></pre></div>
+<p>A <code>.tgm</code> archive carries the spans, the runs and the claims of the product. A
+restore replays the spans and the runs that own them. It writes a record of the
+restore itself and a <code>schema.json</code>. It does not restore the claims, the metadata
+snapshots or the release records. A product restored from a <code>.tgm</code> has no
+release. To keep a release, retain it in a zip archive. See
+<a href="../../maintenance/create-a-release/#retain-the-chunk-bytes">Create A Release</a>.</p>
 <h2 id="restore-a-zip-archive">Restore A Zip Archive</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT.zarr.zip&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -5298,18 +5388,105 @@ before Firecube deletes the target or restores any entry.</p>
 and a <code>zarr.json</code> entry that is not valid Zarr v3 metadata. If a check fails,
 Firecube deletes and replaces no existing data. It can already have written the
 control-plane records of the restore.</p>
-<h2 id="verify-the-restored-product">Verify The Restored Product</h2>
-<p>Inspect the restored product's run history:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
+<p>A zip archive keeps the control plane of the product, except the claims. The
+metadata snapshots and the release records come back with the data.</p>
+<h2 id="restore-an-incremental-backup-chain">Restore An Incremental Backup Chain</h2>
+<p>A release made with <code>--archive</code> writes a full backup first. Each later release
+writes an incremental backup. The full backup and the incremental backups above
+it form a backup chain. To restore a release, restore its newest backup. Name
+the newest incremental backup, not the full backup:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT-1.2.0.zip&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/restored/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Run ID                               Status    State   Parts Events
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>------------------------------------------------------------------------
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>archive-restore-3e67c307-...         complete  active  4     4
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>direct_zarr_capable_test_plugin-...  complete  active  1     7
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Zarr restored: /data/restored/MY_PRODUCT.zarr
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  Variables: pressure, temperature
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  Coordinates:
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  Control-plane: restored
+</code></pre></div>
+<p>The command reads the backup chain from the markers of the backups. The marker
+of an incremental backup names the previous backup by absolute path and by
+digest. The command follows the markers down to a full backup. It restores the
+full backup first, then each incremental backup in order. An incremental backup
+puts its objects and deletes the keys that its marker lists as <code>deleted_keys</code>.
+The command deletes exactly the listed keys and expands no wildcard.</p>
+<p>Firecube checks the whole backup chain before it writes anything. If a previous
+backup is missing, has another digest, or cannot be read, the command exits 1. It
+leaves the target unchanged and writes no run record:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Error: Cannot restore the backup chain of /data/archives/MY_PRODUCT-1.2.0.zip: it breaks at /data/archives/MY_PRODUCT-1.1.0.zip: the archive file does not exist
+</code></pre></div>
+<p>Keep every backup of a chain at the path that the marker names. A moved backup
+breaks the chain. To inspect a marker, run
+<code>firecube archive info --archive "&lt;uri&gt;"</code>.</p>
+<p>The restored product equals the inventory of the release, and not the live
+product at the end of the release. Firecube writes the record of the release, the
+pointer to the current release and the completed run after the inventory. They
+are not in the backup. They arrive with the next incremental backup. After the
+restore, the current release of the product is the previous release, and the
+record of the restored release is absent. <code>release verify</code> of the previous
+release can report changed metadata, because the restored <code>zarr.json</code> is the one
+of the newer release. To name the restored state, create a new release after the
+steps in <a href="#name-the-restored-state">Name The Restored State</a>.</p>
+<p>The restore uses the target rules of a zip restore. A target that exists is
+refused without <code>--overwrite</code>. Firecube refuses a local target that holds a
+symlink on the path of a key that the chain puts or deletes. The symlink can
+point inside or outside the product. The refusal comes before the command writes
+anything. A symlink on a path that the chain does not touch is not refused. If
+the restore fails after it starts to write, the target stays partly restored and
+Firecube does not roll it back. Delete the target and run the command again.</p>
+<p>Each incremental backup applies its deletions before its objects. A Zarr array
+that changed its rank between two releases therefore restores.</p>
+<h3 id="name-the-restored-state">Name The Restored State</h3>
+<p>A restore copies the runs of the archived product. The inventory of a release
+holds the run of that release as <code>started</code>, because Firecube completes the run
+after it takes the inventory. The copy is not a live process. While it stays
+<code>started</code>, <code>release create</code> on the restored product exits 1.</p>
+<ol>
+<li>Check that the original writer has stopped. If the release process of the
+   original product still runs, do not abandon a run.</li>
+<li>List the runs of the restored product that are still <code>started</code>:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span>--status<span class="w"> </span>started
+</code></pre></div>
+<p>The run to abandon has an ID that starts with <code>release-</code>. It is the run of
+   the newest archived release. Expected output resembles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Run ID                               Status     State    Parts Events
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>--------------------------------------------------------------------------------
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>release-af838c6e-a5bb-4a7a-adcc-69d250497292 started    active   1     1
+</code></pre></div>
+<ol>
+<li>Abandon the copied run:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--run-id<span class="w"> </span><span class="s2">&quot;&lt;run-id&gt;&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;copied from the archive; original writer stopped&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<p>The command prints <code>Abandoned run &lt;run-id&gt; for</code> and the name of the target.
+4. Create the release. Use a version that no record of the product uses:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="s2">&quot;restored-1.2.0&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+</code></pre></div>
+<p>To check the result, run <code>firecube release show --target "$RESTORED_URI"
+--product-name MY_PRODUCT</code>. The current release is the new version.</p>
+<p>If you skip steps 1 to 3, the create command exits 1 and names the run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Error: Cannot run exclusive maintenance for product MY_PRODUCT: non-terminal or unreadable run(s) exist: release-af838c6e-a5bb-4a7a-adcc-69d250497292 (status=started).
+</code></pre></div>
+<h2 id="verify-the-restored-product">Verify The Restored Product</h2>
+<p>Inspect the restored product's run history:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
+</code></pre></div>
+<p>Expected output resembles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Run ID                               Status    State   Parts Events
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>------------------------------------------------------------------------
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>archive-restore-3e67c307-...         complete  active  4     4
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>direct_zarr_capable_test_plugin-...  complete  active  1     7
 </code></pre></div>
 <p>Inspect restored ChunkManager records:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
 </code></pre></div>
 <h2 id="overwrite-an-existing-restore-target">Overwrite An Existing Restore Target</h2>
 <p><code>--overwrite</code> replaces the whole target. Data and run history written to the
@@ -5330,18 +5507,21 @@ restore releases its claim when it ends. If the target or a kept path is a
 symlink, Firecube refuses the overwrite and deletes nothing. Firecube treats a
 remote <code>.tgm</code> target as before.</p>
 <p>Preview:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--dry-run
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span>--dry-run<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
+<p>In a non-interactive shell, the preview needs <code>--yes-i-really-mean-it</code> too. The
+preview changes nothing.</p>
 <p>Overwrite in a non-interactive shell:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--yes-i-really-mean-it
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <h2 id="recover-from-an-interrupted-overwrite">Recover From An Interrupted Overwrite</h2>
 <p>On a local target, a restore that stops during the replacement leaves a
@@ -5352,26 +5532,26 @@ as before, so it need not leave a run to find. Take these steps:</p>
 <ol>
 <li>List the runs and read the status of the restore run:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span>
 </code></pre></div>
 <ol>
 <li>If the restore run is still <code>started</code>, abandon it. Its ID starts with
    <code>archive-restore-</code>. Do not abandon a run in another status.</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--run-id<span class="w"> </span><span class="s2">&quot;&lt;run-id&gt;&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;interrupted restore&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>--yes-i-really-mean-it
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span>--run-id<span class="w"> </span><span class="s2">&quot;&lt;run-id&gt;&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;interrupted restore&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <ol>
 <li>Run the restore again:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span>--yes-i-really-mean-it
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>firecube<span class="w"> </span>archive<span class="w"> </span>restore<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ARCHIVE_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESTORED_URI</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span>--overwrite<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <p>The target can hold a partial restore until step 3 ends.</p>
 <h2 id="failure-recovery">Failure Recovery</h2>
@@ -5425,6 +5605,31 @@ as before, so it need not leave a run to find. Take these steps:</p>
 <td>Do not restore this archive. Create a new archive from the source product.</td>
 </tr>
 <tr>
+<td><code>Cannot restore the backup chain of …: it breaks at …: the archive file does not exist</code></td>
+<td>A previous backup is not at the path that the marker names.</td>
+<td>Put the backup back at that path. If no copy exists, restore an older release or a full backup.</td>
+</tr>
+<tr>
+<td><code>Cannot restore the backup chain of …: … the file has digest …, not the … its incremental backup records</code></td>
+<td>A previous backup changed after Firecube wrote it.</td>
+<td>Replace it with the good copy. Run <code>firecube release verify</code> to find the broken link.</td>
+</tr>
+<tr>
+<td><code>Cannot restore the backup chain of …: it breaks at …: the target holds a symlink at …</code></td>
+<td>A local target has a symlink on the path of a key that the chain puts or deletes.</td>
+<td>Delete the symlink or restore to another target.</td>
+</tr>
+<tr>
+<td><code>release create</code> on a restored product: <code>non-terminal or unreadable run(s) exist</code></td>
+<td>The restore copied the <code>started</code> run of an archived release.</td>
+<td>Follow <a href="#name-the-restored-state">Name The Restored State</a>.</td>
+</tr>
+<tr>
+<td>Restore of an incremental backup stops with an error after it started</td>
+<td>The target is partly restored.</td>
+<td>Delete the target. Run the command again.</td>
+</tr>
+<tr>
 <td>Restored product has no expected variables</td>
 <td>The archive is missing expected content.</td>
 <td>Run <code>archive info</code> and <code>archive list</code>.</td>
@@ -5434,6 +5639,8 @@ as before, so it need not leave a run to find. Take these steps:</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../inspect/">Inspect And Validate Archives</a></strong> — confirm archive contents before restoring</li>
+<li><strong><a href="../read-a-release-with-xarray/">Read A Release With Xarray</a></strong> — open the data of a release from its archive or from a restored copy</li>
+<li><strong><a href="../../maintenance/verify-a-release/">Verify A Release</a></strong> — check the archives of a release before you need them</li>
 <li><strong><a href="../../chunk-manager/">ChunkManager Operations</a></strong> — inspect or operate the restored product state</li>
 </ul>
 

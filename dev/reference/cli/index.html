@@ -3833,6 +3833,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/archive/read-a-release-with-xarray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Read A Release With Xarray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -8996,6 +9024,11 @@ snapshot and makes the new release current. a rerun of an interrupted
 create resumes. a version whose store changed since is refused. a store
 without a control plane is refused: use migrate adopt first. with --format
 json the progress lines go to stderr.</p>
+<p>--archive also retains the chunk bytes of the release in a local zip
+archive, a full or an incremental backup; --retain-versions retains them
+as the object versions of a versioned s3 bucket. an interrupted create
+that wrote an archive is
+refused on rerun until the file is removed.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>firecube release create [OPTIONS] VERSION
 </code></pre></div>
@@ -9051,6 +9084,24 @@ json the progress lines go to stderr.</p>
 <td>text</td>
 <td>Free text kept in the release record.</td>
 <td>None</td>
+</tr>
+<tr>
+<td><code>--archive</code></td>
+<td>text</td>
+<td>Retain the product's objects in a zip archive at this file:// URI. The archive is a full backup when the current release retains no zip archive, else an incremental backup of what changed since the current release. Nothing may exist at the path.</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>--archive-full</code></td>
+<td>boolean</td>
+<td>Write a full backup even when an incremental backup is possible. Requires --archive.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td><code>--retain-versions</code></td>
+<td>boolean</td>
+<td>Record the version id of every object instead of copying bytes. Needs a versioned s3 bucket and the fsspec driver. Exclusive with --archive.</td>
+<td><code>False</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -9191,9 +9242,15 @@ release exists.</p>
 <p>compare the metadata of a product with a release</p>
 <p>VERSION names the release; without it the current release is used. exits 0
 when every metadata document equals the release snapshot byte for byte, and
-1 on any difference, listing the changed, added and removed paths. this
-detects metadata drift only: an edit of chunk bytes is not seen. exits 1
-also when no such release exists.</p>
+1 on any difference, listing the changed, added and removed paths. an edit
+of chunk bytes is not seen by the metadata comparison. a release that
+retains its chunk bytes is checked too: a zip release reports whether its
+archive is present, missing or changed and whether the backup chain below
+it is intact; a release made with --retain-versions reports whether the
+bucket versioning and lifecycle are unchanged and whether the listed
+object versions still exist, all of them or --sample N. exits 1 also when
+the archive is missing or changed, the backup chain is broken, a version is lost
+or a bucket setting changed, and when no such release exists.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>firecube release verify [OPTIONS] [VERSION]
 </code></pre></div>
@@ -9243,6 +9300,12 @@ also when no such release exists.</p>
 <td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
 <td>Output format; json prints sorted keys.</td>
 <td><code>text</code></td>
+</tr>
+<tr>
+<td><code>--sample</code></td>
+<td>integer range (<code>1</code> and above)</td>
+<td>Check this many randomly chosen object versions instead of all. Applies to a release made with --retain-versions only.</td>
+<td>None</td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
