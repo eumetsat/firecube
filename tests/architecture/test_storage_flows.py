@@ -496,6 +496,8 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
         return {f.relative_to(p).as_posix() for f in p.rglob("*") if f.is_file()}
 
     assert keys(target) == {k for k in keys(source) if not k.startswith(".firecube/claims/")}
+    differing = [k for k in keys(target) if (target / k).read_bytes() != (source / k).read_bytes()]
+    assert differing == [], f"restored bytes differ from the source for {differing}"
     restored = zarr.open_group(str(target), mode="r")
     arrays = dict(zarr.open_group(str(source), mode="r").members(max_depth=None))
     assert len(arrays) >= 4  # counts, t, nest/deep/inner, nest/deep/x
