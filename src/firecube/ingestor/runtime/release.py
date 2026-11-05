@@ -521,7 +521,7 @@ def create_release_for_product(
             # Refused before any claim, run or inventory; the step checks again under the claim.
             refuse_existing_archive(archive_path, version=version)
         if existing is None and retain_versions:
-            from firecube.ingestor.runtime.release_retention import preflight_version_retention
+            from firecube.ingestor.runtime.release_versions import preflight_version_retention
 
             # Read-only refusals before any claim, run or write; the step lists again under the claim.
             preflight_version_retention(session, version=version)
@@ -609,7 +609,7 @@ def _run(
             warn=warn,
         )
     elif retain_versions:
-        from firecube.ingestor.runtime.release_retention import versions_retention
+        from firecube.ingestor.runtime.release_versions import versions_retention
 
         scope_meta.update(retain_versions=True)
         retain = versions_retention(
