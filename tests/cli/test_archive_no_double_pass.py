@@ -27,7 +27,7 @@ def test_archive_create_passes_product_session_without_storage_config(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    from firecube.core.tensogram import converter
+    from firecube.core.archive.tensogram import converter
 
     captured: dict[str, Any] = {}
 

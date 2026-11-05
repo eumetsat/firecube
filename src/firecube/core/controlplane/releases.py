@@ -36,7 +36,8 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Final, Literal
 
-from firecube.core.controlplane.metadata_snapshots import _makedirs, _publish
+from firecube.core.controlplane._content_addressed import makedirs as _makedirs
+from firecube.core.controlplane._content_addressed import publish as _publish
 from firecube.core.controlplane.types import (
     CONTROL_DIRNAME,
     EVENT_RUN_STARTED,
@@ -133,6 +134,8 @@ class StoredRelease:
         producer_status: `"recorded"` when `producer` is set, else `"unknown"`.
         note: The free text given at creation, or `None`.
         created_by_run: The id of the maintenance run that wrote the record.
+        retention: The retention object (a JSON object), or `None` when the release
+            retains nothing. An absent key reads as `None`.
     """
 
     version: str
@@ -144,6 +147,7 @@ class StoredRelease:
     producer_status: Literal["recorded", "unknown"]
     note: str | None
     created_by_run: str
+    retention: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -282,9 +286,21 @@ def _current_uri(root: StorageUri) -> StorageUri:
     return root.join(REFS_DIRNAME, CURRENT_REF_FILENAME)
 
 
+def _thaw(value: Any) -> Any:
+    """Return `value` with every mapping a dict and every sequence a list, as `json` writes them."""
+    if isinstance(value, Mapping):
+        return {key: _thaw(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_thaw(item) for item in value]
+    return value
+
+
 def record_payload(release: StoredRelease) -> dict[str, Any]:
-    """Return the JSON object stored for a release record."""
-    return {
+    """Return the JSON object stored for a release record.
+
+    The `retention` key is written only when the release has retention.
+    """
+    payload: dict[str, Any] = {
         "schema_version": RELEASE_SCHEMA_VERSION,
         "version": release.version,
         "created_at": release.created_at,
@@ -296,6 +312,9 @@ def record_payload(release: StoredRelease) -> dict[str, Any]:
         "note": release.note,
         "created_by_run": release.created_by_run,
     }
+    if release.retention is not None:
+        payload["retention"] = _thaw(release.retention)
+    return payload
 
 
 def _load_json(data: bytes, uri: StorageUri) -> dict[str, Any]:
@@ -336,6 +355,9 @@ def _release_from_payload(content: Mapping[str, Any], uri: StorageUri) -> Stored
         status = content["producer_status"]
         if status != (PRODUCER_UNKNOWN if producer is None else PRODUCER_RECORDED):
             raise ValueError(f"producer_status {status!r} does not fit the producer")
+        retention = content.get("retention")
+        if "retention" in content and not isinstance(retention, dict):
+            raise TypeError("retention is not an object")
         return StoredRelease(
             version=version,
             created_at=float(content["created_at"]),
@@ -346,6 +368,7 @@ def _release_from_payload(content: Mapping[str, Any], uri: StorageUri) -> Stored
             producer_status=status,
             note=_optional_str(content["note"], "note"),
             created_by_run=run,
+            retention=retention,
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise ControlPlaneCorruptionError(f"{uri.to_str()} is not a release record: {exc}") from exc

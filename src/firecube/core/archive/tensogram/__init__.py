@@ -14,7 +14,7 @@
 
 """Tensogram integration for Firecube — optional dependency."""
 
-from firecube.core.tensogram.schema import (
+from firecube.core.archive.tensogram.schema import (
     ARCHIVE_VERSION,
     KEY_ARCHIVE_VERSION,
     KEY_GROUP,

@@ -111,6 +111,7 @@ class ReleaseRecord:
         producer_status: `"recorded"` when `producer` is set, `"unknown"` when no run records one.
         note: The free text given at creation, or `None`.
         created_by_run: The id of the maintenance run that created the release.
+        retention: What the release retains of the chunk bytes, or `None` when it retains none.
     """
 
     version: str
@@ -122,6 +123,7 @@ class ReleaseRecord:
     producer_status: Literal["recorded", "unknown"]
     note: str | None
     created_by_run: str
+    retention: Mapping[str, Any] | None = None
 
 
 class StoreView:

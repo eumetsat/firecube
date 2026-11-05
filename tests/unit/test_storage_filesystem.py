@@ -55,6 +55,26 @@ class TestFsspecFilesystem:
 
         assert uri in fs.find(root)
 
+    @pytest.mark.parametrize("name", ["a#b.bin", "a?b.bin"])
+    def test_find_lists_local_name_with_fragment_or_query_character(
+        self, tmp_path: Path, name: str
+    ) -> None:
+        (tmp_path / name).write_bytes(b"x")
+        fs = FsspecFilesystem.from_binding(make_test_binding(tmp_path))
+
+        found = fs.find(StorageUri.from_local_path(tmp_path))
+
+        assert StorageUri.from_local_path(tmp_path / name) in found
+
+    @pytest.mark.parametrize("name", ["a\tb.bin", "a\nb.bin"])
+    def test_find_keeps_tab_or_newline_in_local_name_exact(self, tmp_path: Path, name: str) -> None:
+        (tmp_path / name).write_bytes(b"x")
+        fs = FsspecFilesystem.from_binding(make_test_binding(tmp_path))
+
+        found = fs.find(StorageUri.from_local_path(tmp_path))
+
+        assert [u.path for u in found] == [str(tmp_path / name)]
+
     def test_read_bytes_roundtrip(self, tmp_path: Path) -> None:
         fs = FsspecFilesystem.from_binding(make_test_binding(tmp_path))
         uri = StorageUri.from_local_path(tmp_path / "meta.json")

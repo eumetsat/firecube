@@ -81,7 +81,7 @@ _FSSPEC_PERMANENT_ALLOWLIST = frozenset(
         "src/firecube/core/zarr/validation.py",
         # PERMANENT: `_has_controlplane_root(source)` legacy fallback for remote
         # sources that have not been migrated to the session-aware path.
-        "src/firecube/core/tensogram/converter.py",
+        "src/firecube/core/archive/tensogram/converter.py",
     }
 )
 
@@ -182,9 +182,9 @@ _PERMANENT_DERIVE_TARGET_URI_USERS = frozenset(
         # PERMANENT: runtime context builder resolves target URI from storage config.
         "src/firecube/core/runtime.py",
         # PERMANENT: tensogram converter targets a storage-config-derived archive URI.
-        "src/firecube/core/tensogram/converter.py",
+        "src/firecube/core/archive/tensogram/converter.py",
         # PERMANENT: tensogram restore needs base URI to resolve archive sources.
-        "src/firecube/core/tensogram/restore.py",
+        "src/firecube/core/archive/tensogram/restore.py",
         # PERMANENT: multires uses the helper for the level-0 anchor.
         "src/firecube/core/zarr/multires.py",
     }
@@ -200,7 +200,7 @@ _PERMANENT_CREATE_FILESYSTEM_USERS = frozenset(
         # PERMANENT: controlplane _helpers.open_controlplane_fs_cached uses create_filesystem(binding) for driver-aware control-plane filesystem construction — legitimate internal adapter.
         "src/firecube/core/controlplane/_helpers.py",
         # PERMANENT: control-plane codec reconstructs the product-local control plane via the driver-aware factory.
-        "src/firecube/core/tensogram/controlplane_codec.py",
+        "src/firecube/core/archive/tensogram/controlplane_codec.py",
         # PERMANENT: intake parquet-catalog discovery reconstructs a per-call read filesystem from a derived StorageBinding — legitimate read-side seam (T3.4).
         "src/firecube/core/intake.py",
         # PERMANENT: scrub builds a ChunkManager filesystem from the session StorageBinding for driver-correct deletion (T3.4).
@@ -784,10 +784,10 @@ _LIVE_ROWS: dict[tuple[str, str, str, int], str] = {  # (path, function, callee,
     ("core/zarr/coord_consolidation.py", "_refresh_consolidated_metadata", "open_group", 1): (
         "PERMANENT: the refresh must see whether a group carries a snapshot before it rewrites it"
     ),
-    ("core/zarr/zip_archive.py", "_refuse_invalid_metadata", "open_group", 1): (
+    ("core/archive/zip/archive.py", "_refuse_invalid_metadata", "open_group", 1): (
         "PERMANENT: parses one archive document alone, its consolidated block included"
     ),
-    ("core/zarr/zip_archive.py", "validate_zip", "open_group", 1): (
+    ("core/archive/zip/archive.py", "validate_zip", "open_group", 1): (
         "PERMANENT: parses every document whole, snapshots included; a second open reads the "
         "members live"
     ),

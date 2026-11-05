@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pyarrow as pa
@@ -212,10 +213,61 @@ def test_contract_help_mentions_declared_flags(path: tuple[str, ...], entry: Con
     result = CliRunner().invoke(cli, [*path, "--help"])
 
     assert result.exit_code == 0, result.output
-    for flag in _help_flags_for(entry):
+    for flag in [*_help_flags_for(entry), *entry.uri_roles, *entry.extra_options]:
         if not flag.startswith("--"):
             continue
-        assert flag in result.output, (path, flag)
+        assert re.search(rf"(?<![\w-]){re.escape(flag)}(?![\w-])", result.output), (path, flag)
+
+
+@pytest.mark.parametrize(
+    ("extra", "refusal"),
+    [
+        (["--archive", "/tmp/r.zip"], "Invalid value for '--archive'"),
+        (["--archive", "FILE:///tmp/r.zip"], "Invalid value for '--archive'"),
+        (["--archive", "s3://bucket/r.zip"], "Invalid value for '--archive'"),
+        (["--archive-full"], "--archive-full requires --archive"),
+        (["--archive", "file:///tmp/r.zip", "--retain-versions"], "mutually exclusive"),
+    ],
+    ids=[
+        "bare-path",
+        "uppercase-scheme",
+        "remote-s3",
+        "full-without-archive",
+        "archive-and-versions",
+    ],
+)
+@pytest.mark.contract
+def test_release_create_refuses_misused_retention_options(
+    extra: list[str], refusal: str, tmp_path: Path
+) -> None:
+    args = _write_args_with_required_storage(("release", "create"), tmp_path)
+    result = CliRunner().invoke(cli, ["release", "create", *args, *extra])
+
+    assert result.exit_code == 2, result.output
+    assert refusal in result.output
+
+
+@pytest.mark.contract
+def test_release_create_admits_a_file_uri_archive(tmp_path: Path) -> None:
+    args = _write_args_with_required_storage(("release", "create"), tmp_path)
+    archive = tmp_path / "r.zip"
+    result = CliRunner().invoke(cli, ["release", "create", *args, "--archive", archive.as_uri()])
+
+    assert result.exit_code == 1, result.output
+    assert "has no control plane; adopt it before creating a release" in result.output
+    assert not archive.exists()
+    assert not (tmp_path / "out.zarr").exists()
+
+
+@pytest.mark.contract
+def test_release_verify_sample_refuses_zero(tmp_path: Path) -> None:
+    target = (tmp_path / "out.zarr").as_uri()
+    result = CliRunner().invoke(
+        cli, ["release", "verify", "--target", target, "--product-name", "pn", "--sample", "0"]
+    )
+
+    assert result.exit_code == 2, result.output
+    assert "Invalid value for '--sample'" in result.output
 
 
 @pytest.mark.parametrize(

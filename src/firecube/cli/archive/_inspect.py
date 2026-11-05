@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import json
+import zipfile
 from typing import Any
 
 import click
@@ -46,6 +47,16 @@ def _echo_archive_info(info_dict: dict[str, Any], *, as_json: bool, format_label
     click.echo(f"Size:           {info_dict['size_bytes'] / (1024 * 1024):.2f} MB")
     if "entries" in info_dict:
         click.echo(f"Entries:        {info_dict['entries']}")
+    marker = info_dict.get("marker")
+    if marker is not None:
+        deleted_keys = marker.get("deleted_keys")
+        click.echo(f"Mode:           {marker.get('mode', '-')}")
+        click.echo(f"Version:        {marker.get('version', '-')}")
+        click.echo(f"Previous release: {marker.get('previous_release') or '-'}")
+        click.echo(f"Previous backup URI: {marker.get('previous_backup_uri') or '-'}")
+        click.echo(
+            f"Deleted keys:   {len(deleted_keys) if isinstance(deleted_keys, list) else '-'}"
+        )
     click.echo(
         "Groups:         " + (", ".join(g or "(root)" for g in info_dict["groups"]) or "(none)")
     )
@@ -101,15 +112,18 @@ def info(ctx: click.Context, archive: str, output_format: str) -> None:
     """
     local_path = _local_archive(archive)
     if _is_zip_archive(archive):
-        from firecube.core.zarr.zip_archive import zip_info
+        from firecube.core.archive.zip.archive import zip_info
 
-        info_dict = zip_info(local_path)
+        try:
+            info_dict = zip_info(local_path)
+        except (ValueError, zipfile.BadZipFile) as exc:
+            raise click.ClickException(str(exc)) from exc
         _echo_archive_info(
             info_dict, as_json=output_format == "json", format_label=info_dict["format"]
         )
         return
 
-    from firecube.core.tensogram.inspection import TensogramArchiveError, tgm_info
+    from firecube.core.archive.tensogram.inspection import TensogramArchiveError, tgm_info
 
     try:
         info_dict = tgm_info(local_path, operation="firecube archive info")
@@ -156,7 +170,7 @@ def validate(ctx: click.Context, archive: str, quick: bool) -> None:
     """
     local_path = _local_archive(archive)
     if _is_zip_archive(archive):
-        from firecube.core.zarr.zip_archive import validate_zip
+        from firecube.core.archive.zip.archive import validate_zip
 
         zip_issues = validate_zip(local_path, quick=quick)
         if not zip_issues:
@@ -167,7 +181,7 @@ def validate(ctx: click.Context, archive: str, quick: bool) -> None:
             click.echo(f"  {zip_issue}")
         raise SystemExit(1)
 
-    from firecube.core.tensogram.inspection import validate_tgm
+    from firecube.core.archive.tensogram.inspection import validate_tgm
 
     validation = validate_tgm(local_path, quick=quick, operation="firecube archive validate")
     hard_issues = validation.issues
@@ -211,7 +225,7 @@ def list_cmd(ctx: click.Context, archive: str) -> None:
     """
     local_path = _local_archive(archive)
     if _is_zip_archive(archive):
-        from firecube.core.zarr.zip_archive import list_zip
+        from firecube.core.archive.zip.archive import list_zip
 
         listing = list_zip(local_path)
         click.echo(f"Groups: {len(listing)}")
@@ -220,7 +234,7 @@ def list_cmd(ctx: click.Context, archive: str) -> None:
             click.echo(dataset)
         return
 
-    from firecube.core.tensogram.inspection import open_tgm_listing
+    from firecube.core.archive.tensogram.inspection import open_tgm_listing
 
     with open_tgm_listing(local_path, operation="firecube archive list") as listing:
         click.echo(f"Messages: {listing.message_count}")

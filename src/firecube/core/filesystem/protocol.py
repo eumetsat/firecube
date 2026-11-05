@@ -19,7 +19,8 @@ Not part of firecube.core.api or firecube.ingestor.api.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
 from firecube.core.storage.uri import StorageUri
@@ -141,6 +142,68 @@ class RangedRead(Protocol):
     """Byte-range read capability for storage drivers."""
 
     def read_range(self, path: str, start: int, end: int) -> bytes: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ObjectVersion:
+    """One version or delete marker of an object in a versioned bucket.
+
+    Attributes:
+        key: The object key in the bucket, as the store lists it, without a leading slash.
+        version_id: The version id the store reports, or None when it reports none.
+        is_latest: True for the current version, or None when the store does not say.
+        is_delete_marker: True when the entry is a delete marker, not object bytes.
+        size: The object size in bytes, or None for a delete marker.
+        etag: The ETag as the store returns it, quotes included, or None for a delete marker.
+    """
+
+    key: str
+    version_id: str | None
+    is_latest: bool | None
+    is_delete_marker: bool
+    size: int | None
+    etag: str | None
+
+
+@runtime_checkable
+class ObjectVersions(Protocol):
+    """Object version capability for storage drivers on a versioned bucket.
+
+    A driver reports it from `capabilities()` only when it can serve it.
+    The methods exist on a driver that does not report it, and raise there.
+    """
+
+    def bucket_versioning(self, uri: StorageUri) -> str:
+        """Return the versioning state of the bucket of ``uri``.
+
+        Returns:
+            ``"enabled"``, ``"suspended"``, or ``"absent"`` for a bucket that never had versioning.
+        """
+        ...
+
+    def list_versions(self, prefix_uri: StorageUri) -> list[ObjectVersion]:
+        """List every version and every delete marker of the objects below ``prefix_uri``.
+
+        ``prefix_uri`` names a directory: its path is followed by a slash in the listing.
+        The listing follows every page until the store says it is complete.
+        """
+        ...
+
+    def head_version(self, uri: StorageUri, version_id: str) -> ObjectVersion | None:
+        """Return version ``version_id`` of the object at ``uri``, or None when the store has none.
+
+        A version that is a delete marker returns an entry with ``is_delete_marker`` true.
+        """
+        ...
+
+    def lifecycle(self, uri: StorageUri) -> Mapping[str, Any] | None:
+        """Return the lifecycle configuration of the bucket of ``uri`` as JSON-ready values.
+
+        Returns:
+            ``{"Rules": [...]}``, ``{}`` when the bucket has no configuration,
+            or None when the store denies the read.
+        """
+        ...
 
 
 @runtime_checkable

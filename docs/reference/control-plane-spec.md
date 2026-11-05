@@ -15,6 +15,7 @@ Two format versions apply, and every JSON document carries its own
 | Index records: `index/current.json`, `slot_index/current.json` | `v1` |
 | Metadata snapshots: manifests, records and `metadata/refs/latest.json` | `v1` |
 | Release records and the release ref: every document under `releases/` | `v1` |
+| Inventories: `releases/inventories/<hash>.json` | `v1` |
 | Migration journal: `runs/<run_id>/plan.json` | `v1` |
 
 ## Layout
@@ -41,12 +42,17 @@ The control plane lives inside the product root, in a directory named
     metadata/refs/latest.json          Pointer to the newest snapshot record
     releases/<key>.json          Release record, one file per release version
     releases/refs/current.json   Pointer to the current release
+    releases/inventories/<hash>.json   Inventory of the objects of the product at one cut
 ```
 
 Only the directories a product has used exist. A serial ingest without a
 declared index has no `index/` directory. A product with no compact cache
 rebuild has no `compact/` directory. A product with no snapshot has no
-`metadata/` directory. A product with no release has no `releases/` directory.
+`metadata/` directory. A release run creates the `releases/` directory when it
+first writes a release file. A release run that retains chunk bytes creates the
+`releases/inventories/` directory when it writes the inventory. A run that fails
+or stops after that write can leave an inventory that no release record names.
+That file is harmless, and Firecube does not remove it.
 
 Earlier releases wrote `snapshots/snapshot-<generation>.jsonl`,
 `snapshots/snapshot-<generation>.meta.json` and a `LATEST.json` at the root of
@@ -68,7 +74,8 @@ file holds the same bytes.
 
 The blobs, manifests and records under `metadata/` are content-addressed. A
 writer that finds one present leaves it as it is and does not fail. Two
-snapshots of unchanged metadata share one manifest.
+snapshots of unchanged metadata share one manifest. Inventories under
+`releases/inventories/` follow the same rule.
 
 `run.json` is replaced atomically in place because peer processes read it while
 the run is live. The pointers `metadata/refs/latest.json` and
@@ -513,6 +520,69 @@ A release record has these keys:
 | `producer_status` | string | `recorded` when `producer` is an object, else `unknown` |
 | `note` | string or null | Free text given when the release was created |
 | `created_by_run` | string | Id of the `release_create` run, or of the `migrate` run that created the release |
+| `retention` | object | Optional. What the release retains of the objects of the product, see below. A record without the key retains nothing. |
+
+The key `retention` is additive on `v1`. A reader MUST treat a record without it
+as a release that retains nothing. A reader that finds the key with a value that
+is not an object MUST refuse the record. A writer omits the key for a release
+that retains nothing.
+
+The object `retention` has the key `kind`. The value is `zip` or `s3-versions`.
+The other keys depend on the kind.
+
+For the kind `zip`, the release keeps the objects in a ZIP archive on a local
+file system:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `kind` | string | `"zip"` |
+| `uri` | string | `file://` URI of the archive |
+| `format` | string | `"zip"` |
+| `size_bytes` | integer | Length of the archive in bytes |
+| `digest` | string | `sha256:` followed by the hex digest of the archive file |
+| `mode` | string | `full` when the archive is a full backup of the inventory, `incremental` when it holds the changes since the previous release |
+| `previous_release` | string or null | Version of the release whose archive this archive extends, `null` for a full backup |
+| `chain_length` | integer | Number of archives in the backup chain, from this one down to the full backup, both included. A full backup has the length 1. |
+| `deleted_key_count` | integer | Number of keys of the previous inventory that this inventory no longer lists. A full backup has the count 0. |
+| `inventory` | string | Id of the inventory that the archive was written from |
+| `created_by_run` | string | Id of the `archive_create` run that wrote the archive |
+
+A full backup holds every object of the inventory. An incremental backup holds each
+object that is new or whose digest differs from the previous inventory. It also holds
+every Zarr metadata document (`zarr.json`, `.zgroup`, `.zarray`, `.zattrs`,
+`.zmetadata`), whatever its digest. The names of the deleted keys are in the
+archive, in the reserved root entry `firecube-archive.json`, not in the record.
+That entry also names the previous release, the previous archive and its digest.
+
+The marker `firecube-archive.json` is a JSON object with exactly these eight keys.
+A reader MUST refuse a marker with a missing key or an extra key:
+
+| Key | Type | Null for a full backup | Meaning |
+|---|---|---|---|
+| `version` | string | No | Version of the release that the archive retains. It is not empty. |
+| `mode` | string | No | `full` or `incremental`. The same value as `retention.mode`. |
+| `previous_release` | string or null | Yes, required | Version of the release whose archive this archive extends. An incremental backup needs a non-empty string. |
+| `previous_backup_uri` | string or null | Yes, required | The `retention.uri` of the previous release. An incremental backup needs a non-empty string. |
+| `previous_backup_digest` | string or null | Yes, required | The `retention.digest` of the previous release, in the form `sha256:` and 64 lowercase hex digits. An incremental backup needs this form. |
+| `inventory` | string | No | Id of the inventory that lists the objects of the archive. It has 64 lowercase hex digits. |
+| `metadata_manifest` | string | No | Id of the manifest of the snapshot that the release names. It has 64 lowercase hex digits. |
+| `deleted_keys` | array of strings | No, the array is empty | Keys of the previous inventory that the current inventory no longer lists. The keys are unique. |
+
+A full backup has `null` in the three `previous_*` keys and an empty `deleted_keys`
+array. A key in `deleted_keys` must not be empty or absolute. It must not hold a
+backslash or a character from U+0000 to U+001F or U+007F. It must not have an empty, `.` or `..` segment.
+It must not name a file below `.firecube/claims/` or the entry `firecube-archive.json`.
+
+For the kind `s3-versions`, the release keeps no bytes. It records the version
+of each object, which the bucket must keep:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `kind` | string | `"s3-versions"` |
+| `inventory` | string | Id of the inventory that lists the versions |
+| `bucket_versioning` | string | The versioning state of the bucket at the cut, always `enabled` |
+| `object_count` | integer | Number of objects in the inventory, delete markers not counted |
+| `created_by_run` | string | Id of the `release_create` run |
 
 The pointer `refs/current.json` has the keys `schema_version` and `version`.
 The value of `version` is the version of the current release.
@@ -523,11 +593,71 @@ release in this order:
 1. The root attributes `firecube_release` and `firecube_last_modifier`.
 2. The consolidated image, if the store has one.
 3. The snapshot, which therefore contains the stamps and the image.
-4. The record.
-5. The pointer `refs/current.json`.
+4. The inventory, only for a release that retains objects.
+5. The archive, only for the kind `zip`.
+6. The record.
+7. The pointer `refs/current.json`.
 
 A record that `refs/current.json` does not name is an earlier release or a
-release whose publication did not finish.
+release whose publication did not finish. An inventory or an archive that no
+record names is the leftover of a release whose publication did not finish.
+A writer MUST NOT reuse a leftover archive. A leftover inventory is harmless.
+
+### Inventories: `releases/inventories/`
+
+An inventory lists the objects of the product at the cut of one release. The
+file name is `<hash>.json`. `<hash>` is the SHA-256 hex digest of the file, and
+the record names it in `retention.inventory`. The file is canonical JSON: sorted
+keys, no spaces, UTF-8. A writer MUST NOT rewrite or delete an inventory. A
+reader MUST check that the bytes of the file hash to its name.
+
+An inventory has these keys:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `schema_version` | string | `"v1"` |
+| `kind` | string | `digest` for the kind `zip`, `s3-versions` for the kind `s3-versions` |
+| `objects` | array | One entry for each object, sorted by `key`, without a repeated key |
+| `bucket_versioning` | string | Only for `s3-versions`: the versioning state of the bucket, always `enabled` |
+| `lifecycle` | object or string | Only for `s3-versions`: the lifecycle rules of the bucket, `{}` when it has none, or `"unavailable"` when the rules could not be read |
+
+Each entry of `objects` has these keys:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `key` | string | Path of the object relative to the product root, with `/` separators. It has no empty, `.` or `..` segment. |
+| `size` | integer | Length of the object in bytes. A delete marker has the size 0. |
+| `digest` | string | Only for `digest`: `sha256:` followed by the hex digest of the bytes |
+| `version_id` | string | Only for `s3-versions`: the current version of the object |
+| `etag` | string | Only for `s3-versions`: the ETag of that version, when the bucket reports one |
+| `delete_marker` | boolean | Only for `s3-versions`, and only `true`: the current version of the key is a delete marker |
+
+A `digest` inventory lists every object below the product root, including the
+files below `.firecube/`. It leaves out `.firecube/claims/` and the temporary
+objects of the writers of Firecube. An `s3-versions` inventory lists the current
+version of each key under the same exclusions. A key whose current version is a
+delete marker has an entry with `delete_marker` set.
+
+The inventory records the product at the cut, before the release run completes.
+A restored backup chain reproduces the inventory. It does not reproduce the completed
+live product. The writer publishes records after the cut. These include the
+inventory of the release, the release record, the new current pointer and the
+completed state of the release run. The archive step also records its own audit
+run. None of them is part of the archive of that release.
+The inventory of the next release includes the release record of the previous
+release.
+
+A writer refuses a key that it cannot record literally and writes no inventory.
+On a local product, the writer also refuses a regular file that the storage
+driver does not list.
+On `s3-versions` an object with no usable version id also stops the release.
+Such an object was written before the bucket enabled versioning.
+
+No storage backend lists a prefix atomically. A write that lands between the
+first and the last listed object makes the inventory incoherent. An inventory is
+coherent only while the operator keeps every other writer of the product stopped.
+The exclusive maintenance claim excludes the writers of Firecube and no other
+process. Firecube does not enforce the stop.
 
 ## Migration journal: `runs/<run_id>/plan.json`
 
@@ -618,7 +748,10 @@ each documented file names its version explicitly. The compatibility rule:
 - The directories `metadata/` and `releases/`, the file `plan.json` and the
   maintenance operations `migrate`, `adopt` and `release_create` change no
   `schema_version` of an earlier document. Each new document starts at `v1`.
-- A reader MUST refuse a snapshot, release or journal document whose
+- The directory `releases/inventories/` and the key `retention` of a release
+  record change no `schema_version`. The key is additive, and a record without
+  it stays valid. An inventory starts at `v1`.
+- A reader MUST refuse a snapshot, release, inventory or journal document whose
   `schema_version` it does not support.
 - Firecube refuses to act on an `index/current.json` whose `schema_version`
   it does not support (precedence row 6) rather than guessing.

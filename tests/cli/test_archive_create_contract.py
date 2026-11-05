@@ -126,7 +126,7 @@ def test_create_resolves_file_uri_archive(tmp_path: Path, monkeypatch) -> None:
             "compression": kwargs["compression"],
         }
 
-    import firecube.core.tensogram.converter as converter
+    import firecube.core.archive.tensogram.converter as converter
 
     monkeypatch.setattr(converter, "zarr_to_tgm", fake_zarr_to_tgm)
 

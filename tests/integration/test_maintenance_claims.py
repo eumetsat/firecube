@@ -33,6 +33,9 @@ from click.testing import CliRunner
 
 from firecube.cli._errors import render
 from firecube.cli.main import cli
+from firecube.core.archive.tensogram import restore as tgm_restore
+from firecube.core.archive.tensogram.converter import zarr_to_tgm
+from firecube.core.archive.zip import archive as zip_archive
 from firecube.core.controlplane import ChunkInfo, ChunkManager
 from firecube.core.controlplane.claims import FilesystemClaimService
 from firecube.core.controlplane.repo import ManifestRepository
@@ -55,9 +58,6 @@ from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
 from firecube.core.index_spec import IndexSpec, IntegerAxis, RegularTimeAxis
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
-from firecube.core.tensogram import restore as tgm_restore
-from firecube.core.tensogram.converter import zarr_to_tgm
-from firecube.core.zarr import zip_archive
 from firecube.core.zarr.scrub import run_scrub
 from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.runtime.archive import ArchiveClaimError, create_archive, restore_archive

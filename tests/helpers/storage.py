@@ -51,7 +51,7 @@ _OPEN_FSSPEC_URL_PATCH_TARGETS: tuple[str, ...] = (
     "firecube.core.filesystem.ops._open_fsspec_url",
     # Module-level bindings under the original name.
     "firecube.core.zarr.validation._open_fsspec_url",
-    "firecube.core.tensogram.converter._open_fsspec_url",
+    "firecube.core.archive.tensogram.converter._open_fsspec_url",
 )
 
 

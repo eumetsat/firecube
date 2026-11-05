@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import contextlib
 import uuid
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -334,6 +334,8 @@ def create_archive(
     allow_inf: bool = True,
     warn: Callable[[str], None] = _ignore_line,
     holder_run_id: str | None = None,
+    keys: Iterable[str] | None = None,
+    marker: Mapping[str, Any] | None = None,
 ) -> ArchiveCreateResult:
     """Write the session's store to a local .zip or .tgm archive.
 
@@ -358,28 +360,39 @@ def create_archive(
         warn: Receives each bookkeeping warning line, "Warning: " included.
         holder_run_id: The run that holds the product's exclusive maintenance claim. Pass
             it to archive under that claim; the run record names it. A plain store refuses it.
+        keys: The product keys a zip archive holds; `None` archives every key.
+        marker: The JSON object a zip archive holds at its reserved marker entry.
 
     Returns:
         The written archive, its size, the recorded run id and the tensogram summary.
 
     Raises:
-        ValueError: `archive_format` is unknown, or a zip archive gets a group, a
-            variable list or a date; the call reads and writes nothing.
+        ValueError: `archive_format` is unknown, a zip archive gets a group, a
+            variable list or a date, or a tensogram archive gets `keys` or `marker`;
+            the call reads and writes nothing.
         ArchiveClaimError: The product's claims refuse the archive, another owner holds
             its exclusive maintenance claim, or `holder_run_id` does not hold it or names a
             plain store; the call records no run.
         ArchiveConversionError: The conversion raises `FileExistsError`, `ValueError`,
-            `ImportError` or `CalendarArchiveError`; for a product, the call first tries to
-            record the run as failed.
+            `ImportError` or `CalendarArchiveError`, or the zip writer raises `RuntimeError`
+            or `OSError`; for a product, the call first tries to record the run as failed.
         ArchiveRecordError: The call writes the archive, then fails to record the run.
     """
     if archive_format not in _ARCHIVE_FORMATS:
         raise ValueError(f"archive_format must be 'zip' or 'tensogram', not {archive_format!r}")
     if archive_format == "zip" and (group or start_date or end_date or variables):
         raise ValueError("Zip archive does not support group, start_date, end_date, or variables")
+    if archive_format == "tensogram" and (keys is not None or marker is not None):
+        raise ValueError("Tensogram archive does not support keys or marker")
+    # Only a caller that names a subset or a marker passes them on.
+    zip_selection: dict[str, Any] = {}
+    if keys is not None:
+        zip_selection["keys"] = list(keys)
+    if marker is not None:
+        zip_selection["marker"] = marker
     # Call-time imports, here and in the zip branch: callers and tests replace the
     # converters on their modules.
-    from firecube.core.tensogram.converter import CalendarArchiveError, zarr_to_tgm
+    from firecube.core.archive.tensogram.converter import CalendarArchiveError, zarr_to_tgm
 
     run_id = f"archive-create-{uuid.uuid4()}"
     product_name = session.product.product_name
@@ -428,14 +441,20 @@ def create_archive(
                 holder_run_id=holder_run_id,
             )
         scope_meta["archive_started_at"] = datetime.now(UTC).isoformat()
+        # The zip writer's own verification (RuntimeError) and a filesystem that cannot
+        # publish the file (OSError from the no-clobber hard link) are conversion failures.
+        zip_writer_errors: tuple[type[Exception], ...] = (
+            (RuntimeError, OSError) if archive_format == "zip" else ()
+        )
         try:
             if archive_format == "zip":
-                from firecube.core.zarr.zip_archive import zarr_to_zip
+                from firecube.core.archive.zip.archive import zarr_to_zip
 
                 zip_result = zarr_to_zip(
                     session,
                     archive_path,
                     overwrite=overwrite,
+                    **zip_selection,
                 )
                 result_target = zip_result.target
                 result_file_size_bytes = zip_result.file_size_bytes
@@ -455,7 +474,13 @@ def create_archive(
                 )
                 result_target = tgm_result["target"]
                 result_file_size_bytes = tgm_result["file_size_bytes"]
-        except (FileExistsError, ValueError, ImportError, CalendarArchiveError) as exc:
+        except (
+            FileExistsError,
+            ValueError,
+            ImportError,
+            CalendarArchiveError,
+            *zip_writer_errors,
+        ) as exc:
             if manager is not None:
                 _record_archive_create_failure(
                     manager=manager,
@@ -526,6 +551,14 @@ def restore_archive(
     interrupt, `KeyboardInterrupt` or `SystemExit`, records no failure: a started run
     stays started. The call always releases the claim and closes the control plane.
 
+    A zip archive whose marker says incremental is restored with its backup chain: the
+    full backup first, then each incremental backup in order. The whole backup chain is
+    checked before the claim and the run, so a refused backup chain writes nothing to
+    the target.
+
+    A zip archive's marker entry, when present, is checked before the claim and the run.
+    A marker whose mode is full, and an archive without a marker, take the zip restore.
+
     Args:
         session: The storage session bound to the target product.
         archive: The archive reference the run records.
@@ -546,13 +579,33 @@ def restore_archive(
             failed, once each.
         ArchiveConversionError: The restore raises `FileExistsError`, `ImportError` or
             `ValueError`, or produces no output; the call first tries to record the run as failed.
+        BackupChainError: A zip marker is unreadable or malformed, the backup chain of an
+            incremental backup is broken, or a local target holds a symlink on a key's path;
+            the call refuses it before the claim and records no run. A backup chain check
+            that fails inside the run raises it after the call records the run failed.
     """
     if archive_format not in _ARCHIVE_FORMATS:
         raise ValueError(f"archive_format must be 'zip' or 'tensogram', not {archive_format!r}")
     is_zip = archive_format == "zip"
     # Call-time imports: callers and tests replace these converters on their modules.
-    from firecube.core.tensogram.restore import tgm_to_zarr
-    from firecube.core.zarr.zip_archive import zip_to_zarr
+    from firecube.core.archive.tensogram.restore import tgm_to_zarr
+    from firecube.core.archive.zip.archive import zip_to_zarr
+    from firecube.core.archive.zip.backup_chain import (
+        admit_marker,
+        refuse_symlinked_target,
+        resolve_backup_chain,
+        restore_backup_chain,
+    )
+    from firecube.core.archive.zip.marker import MODE_INCREMENTAL
+
+    # A present marker is checked before the claim and the run, and an incremental backup
+    # with its whole backup chain and the target's key paths, so a refusal writes nothing
+    # to the target, not even a run record. An invalid marker never reads as a full backup.
+    marker = admit_marker(archive_path) if is_zip else None
+    backup_chain = None
+    if marker is not None and marker["mode"] == MODE_INCREMENTAL:
+        backup_chain = resolve_backup_chain(archive_path)
+        refuse_symlinked_target(backup_chain, session)
 
     # Archive restore is recorded as a first-class WAL run, so the audit trail
     # shows when a product was restored from an archive, what the source archive
@@ -655,7 +708,15 @@ def restore_archive(
             raise
 
         try:
-            if is_zip:
+            if backup_chain is not None:
+                result = restore_backup_chain(
+                    backup_chain,
+                    target_uri_str,
+                    session=session,
+                    overwrite=overwrite,
+                    keep_run_id=restore_run_id,
+                )
+            elif is_zip:
                 result = zip_to_zarr(
                     restore_source,
                     target_uri_str,

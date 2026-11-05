@@ -20,10 +20,10 @@ import numpy as np
 import pytest
 import xarray as xr
 
+from firecube.core.archive.tensogram.converter import zarr_to_tgm
+from firecube.core.archive.tensogram.restore import tgm_to_zarr
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
-from firecube.core.tensogram.converter import zarr_to_tgm
-from firecube.core.tensogram.restore import tgm_to_zarr
 from firecube.core.uris import local_path_from_target
 from tests.helpers.storage import make_test_session
 

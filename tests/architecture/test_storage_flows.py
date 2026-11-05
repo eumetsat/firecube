@@ -225,7 +225,7 @@ def test_archive_controlplane_uses_resolved_product_identity(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from firecube.core.tensogram import converter
+    from firecube.core.archive.tensogram import converter
 
     target = "s3://bucket/data/2026/product.zarr"
     session = _session_for_uri(target)
@@ -391,7 +391,7 @@ def test_bt2_poison_ingest_write_flow(tmp_path: Path, driver: Literal["fsspec", 
 def test_bt2_poison_archive_create(tmp_path: Path, driver: Literal["fsspec", "obstore"]) -> None:
     from tests.integration._bt_helpers import bt2_poison
 
-    from firecube.core.tensogram.converter import zarr_to_tgm
+    from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
     # Build a real (small) zarr source product OUTSIDE the poison context with
     # the default fsspec writer, so the archive create flow has a genuine store.
@@ -421,8 +421,8 @@ def test_bt2_poison_archive_create(tmp_path: Path, driver: Literal["fsspec", "ob
 def test_bt2_poison_archive_restore(tmp_path: Path, driver: Literal["fsspec", "obstore"]) -> None:
     from tests.integration._bt_helpers import bt2_poison
 
-    from firecube.core.tensogram.converter import zarr_to_tgm
-    from firecube.core.tensogram.restore import tgm_to_zarr
+    from firecube.core.archive.tensogram.converter import zarr_to_tgm
+    from firecube.core.archive.tensogram.restore import tgm_to_zarr
 
     # Stage 1: build source zarr and create archive WITHOUT poison so the
     # restore-only behavior is exercised inside bt2_poison.
@@ -470,7 +470,7 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
     import zarr
     from tests.integration._bt_helpers import bt2_poison
 
-    from firecube.core.zarr.zip_archive import zarr_to_zip, zip_to_zarr
+    from firecube.core.archive.zip.archive import zarr_to_zip, zip_to_zarr
 
     root = tmp_path / "products"
     root.mkdir()
@@ -487,7 +487,7 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
         raise RuntimeError("zip restore opened a raw LocalStore, not the session driver")
 
     monkeypatch.setattr(
-        "firecube.core.zarr.zip_archive.LocalStore", _raw_local_store, raising=False
+        "firecube.core.archive.zip.archive.LocalStore", _raw_local_store, raising=False
     )
     with bt2_poison():
         zip_to_zarr(str(archive), str(target), session=session)  # type: ignore[call-arg]
@@ -496,6 +496,8 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
         return {f.relative_to(p).as_posix() for f in p.rglob("*") if f.is_file()}
 
     assert keys(target) == {k for k in keys(source) if not k.startswith(".firecube/claims/")}
+    differing = [k for k in keys(target) if (target / k).read_bytes() != (source / k).read_bytes()]
+    assert differing == [], f"restored bytes differ from the source for {differing}"
     restored = zarr.open_group(str(target), mode="r")
     arrays = dict(zarr.open_group(str(source), mode="r").members(max_depth=None))
     assert len(arrays) >= 4  # counts, t, nest/deep/inner, nest/deep/x
@@ -504,12 +506,81 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
             np.testing.assert_array_equal(restored[name][...], node[...])  # type: ignore[index]
 
 
+@pytest.mark.parametrize("driver", _DRIVERS)
+def test_incremental_backup_chain_restore_equals_the_second_release_inventory(
+    tmp_path: Path, driver
+) -> None:
+    import hashlib
+    import json
+    import shutil
+
+    import zarr
+
+    from firecube.ingestor.runtime.archive import restore_archive
+    from firecube.ingestor.runtime.migrate import adopt_product
+    from firecube.ingestor.runtime.release import create_release_for_product
+
+    root = tmp_path / "products"
+    root.mkdir()
+    source = root / "p.zarr"
+    _write_counts_zarr(source)
+    zarr.open_group(str(source), mode="a").create_array("gone", data=np.arange(3.0))
+    group = zarr.open_group(str(source), mode="a")
+    group.create_array("grow", data=np.arange(3.0))  # rank 1 now, rank 2 in the second release
+    group.create_array("shrink", data=np.ones((3, 2)))  # rank 2 now, rank 1 in the second
+    session = _build_local_archive_session(str(source), root, driver)[1]
+    adopt_product(session=session)
+    archives = [tmp_path / "a1.zip", tmp_path / "a2.zip"]
+    create_release_for_product(
+        session=session, version="1.0", archive=StorageUri.from_local_path(archives[0])
+    )
+    shutil.rmtree(source / "gone")
+    (source / "counts" / "c" / "0").write_bytes(b"changed chunk")
+    zarr.open_group(str(source), mode="a").create_array("new", data=np.arange(3.0))
+    shutil.rmtree(source / "grow")  # chunk object grow/c/0 becomes the directory grow/c/0/
+    shutil.rmtree(source / "shrink")  # and the directory shrink/c/0/ becomes the object shrink/c/0
+    group = zarr.open_group(str(source), mode="a")
+    group.create_array("grow", data=np.ones((3, 2)))
+    group.create_array("shrink", data=np.arange(3.0))
+    second = create_release_for_product(
+        session=session, version="1.1", archive=StorageUri.from_local_path(archives[1])
+    ).release
+    assert second.retention is not None and second.retention["mode"] == "incremental"
+    inventory = json.loads(
+        (
+            source / f".firecube/releases/inventories/{second.retention['inventory']}.json"
+        ).read_text()
+    )
+    target = tmp_path / "restored.zarr"
+    restore_session = _build_local_archive_session(str(target), tmp_path, driver)[1]
+    restore_archive(
+        session=restore_session,
+        archive=archives[1].as_uri(),
+        archive_path=str(archives[1]),
+        archive_format="zip",
+        target=str(target),
+    )
+
+    def digests(p: Path) -> dict[str, str]:
+        skipped = (".firecube/claims/", ".firecube/runs/archive-restore-")
+        return {
+            f.relative_to(p).as_posix(): f"sha256:{hashlib.sha256(f.read_bytes()).hexdigest()}"
+            for f in p.rglob("*")
+            if f.is_file() and not f.relative_to(p).as_posix().startswith(skipped)
+        }
+
+    expected = {o["key"]: o["digest"] for o in inventory["objects"]}
+    assert "gone/zarr.json" not in expected and "new/zarr.json" in expected
+    assert {"grow/c/0/0", "shrink/c/0"} <= set(expected)
+    assert digests(target) == expected
+
+
 @pytest.mark.parametrize("entry", ["zip_to_zarr", "tgm_to_zarr"])
 def test_restore_refuses_a_target_that_is_not_the_session_product(tmp_path: Path, entry) -> None:
+    from firecube.core.archive.tensogram.converter import zarr_to_tgm
+    from firecube.core.archive.tensogram.restore import tgm_to_zarr
+    from firecube.core.archive.zip.archive import zarr_to_zip, zip_to_zarr
     from firecube.core.errors import ConfigurationError
-    from firecube.core.tensogram.converter import zarr_to_tgm
-    from firecube.core.tensogram.restore import tgm_to_zarr
-    from firecube.core.zarr.zip_archive import zarr_to_zip, zip_to_zarr
 
     stores = {n: tmp_path / n / "product.zarr" for n in ("a", "b")}
     for name in stores:

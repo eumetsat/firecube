@@ -87,8 +87,86 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   - A migration step that sets `to_release` creates that release in the same
     run.
   - Both commands set the root attribute `firecube_release`.
+- `firecube release create --archive <file URI>` retains the chunk bytes of a
+  release in a local zip archive (issue 135).
+  - The backup is full when the current release retains no zip archive or
+    `--archive-full` is set. Otherwise it is an incremental backup against the
+    previous release. An incremental backup holds the new and changed objects,
+    every Zarr metadata document and the list of deleted keys.
+  - `--archive-full` writes a full backup when an incremental backup is
+    possible. It needs `--archive`.
+  - The record of the release gains the optional key `retention`. For a zip
+    backup it holds `mode`, `previous_release`, `chain_length` and
+    `deleted_key_count`. A record without it reads as before.
+  - If a file exists at the archive path, the command refuses before it writes.
+    After an interruption, delete the file before you run the command again.
+  - The backups of a release form a backup chain. The oldest full backup carries
+    the durability of the chain. Keep every backup of the chain.
+- `firecube release create --retain-versions` records the S3 version id of every
+  object instead of copying bytes. It needs a versioned S3 bucket and the
+  `fsspec` storage driver. It refuses the `obstore` driver, an unversioned or
+  suspended bucket, and an object without a version id. It cannot be combined
+  with `--archive`. A lifecycle rule that expires versions destroys the retained
+  bytes.
+- `firecube release verify` checks what a release retains. A zip release reports
+  whether its archive is present, missing or changed, and whether its backup
+  chain is intact. The text output prints `backup chain: intact` or
+  `backup chain: broken at <version>`. The JSON output has the key
+  `backup_chain`. A `--retain-versions` release reports the bucket versioning,
+  the lifecycle and the listed versions. `--sample N` checks N random versions
+  instead of all. The command exits 1 when an archive is missing or changed, the
+  backup chain is broken, a version is lost or a bucket setting changed.
+- `firecube archive restore` restores an incremental backup. It follows the
+  markers down to the full backup, checks every backup before it writes, and
+  applies the backup chain oldest first. A broken backup chain writes nothing
+  and records no run. If a write fails in the middle of the chain, the target
+  stays partly restored. Release creation refuses an incremental backup that
+  deletes a key whose name holds a control character, such as a newline,
+  because restore cannot restore it. Pass `--archive-full` instead.
+- `firecube release create --archive` refuses a local product that holds a file
+  the storage driver does not list. The `obstore` driver does not list a name
+  that ends in `#<digits>`, such as `payload#12`. Rename such a file. The
+  `fsspec` driver already refused it.
+- A zip archive can hold the reserved root entry `firecube-archive.json`, the
+  marker of a backup. The marker has the keys `version`, `mode` (`full` or
+  `incremental`), `previous_release`, `previous_backup_uri`,
+  `previous_backup_digest`, `inventory`, `metadata_manifest` and `deleted_keys`.
+  `firecube archive info` prints the mode, the version, the previous release and
+  the number of deleted keys. Restore never writes the marker into the product.
+  `archive validate` does not count it as a product key.
+- The storage capability `ObjectVersions` lists the versions and delete markers
+  of a versioned S3 bucket. The `fsspec` driver reports it on S3 only.
+- Each retained release writes an inventory manifest under
+  `.firecube/releases/inventories/`. It lists every object of the product with
+  its size and digest, or its S3 version. The inventory is exact only while no
+  writer runs, so stop the other writers before you create the release.
 
 ### Changed
+
+- `firecube release create --archive` now completes the inventory and the
+  archive before it records the release and makes it current. A failed archive
+  leaves no new release. A release without `--archive` creates neither. With
+  `--retain-versions` it writes an inventory and no archive.
+- `firecube archive validate` on a zip archive now applies the marker checks of
+  restore. It reports INVALID for a marker that restore refuses, such as
+  `{"mode":"garbage"}`.
+- `firecube archive info` on a zip archive prints the marker, when the archive
+  has one. The `--format json` output of a zip archive gains the key `marker`,
+  which is `null` without a marker.
+- `firecube release show`, `release list` and `release create` print the
+  `retention` object in the `--format json` output. It is `null` for a release
+  that retains nothing.
+- `firecube release create` and `release show` print a `Retention:` line in
+  text for every release. It reads `Retention:    none` for a release that
+  retains nothing.
+- `firecube archive create --archive-format zip` without `--overwrite` now
+  publishes through a hard link, so a lost race cannot replace an archive that
+  appeared meanwhile. A filesystem that has no hard links, such as some FUSE
+  mounts, makes the command fail. Use `--overwrite` there.
+
+- The zip archive code now lives in the package `firecube.core.archive.zip`. The
+  tensogram code moved to `firecube.core.archive.tensogram`. These modules are
+  internal, so no public import changes.
 
 - `firecube_last_modifier` and `firecube_release` are now reserved root
   attributes, so a plugin that declares either name as a root group attribute
@@ -114,6 +192,13 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Fixed
 
+- The `fsspec` storage driver listed a local file whose name holds `#`, `?`, a
+  tab or a newline under a wrong key, or raised `ValueError`. The listing now
+  returns the literal name. Commands that list a local product, such as zip
+  archive creation and metadata snapshots, no longer fail on such a name.
+- `firecube archive restore` of a backup chain now applies the deleted keys of
+  each incremental backup before its objects and deletes the empty directories
+  they leave. A Zarr array whose rank changed between two releases restores.
 - `firecube chunks compact status` now reports the number of records in the
   cache. Before, it always reported 0. The hidden alias
   `firecube chunks snapshots status` had the same fault in 0.1.8.

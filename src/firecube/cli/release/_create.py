@@ -19,6 +19,7 @@ from __future__ import annotations
 import click
 
 from firecube.cli._errors import render
+from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.cli.release._common import (
     echo_json,
     echo_progress,
@@ -42,6 +43,10 @@ Examples:
   # add a note and print the new release as JSON
   firecube release create 1.1.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --note "units fixed" -f json
 
+\b
+  # retain the chunk bytes in a zip archive (a full backup first, incremental backups after)
+  firecube release create 1.2.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --archive file:///data/archives/MY_PRODUCT-1.2.0.zip
+
 See also: firecube release list, firecube release verify, firecube snapshot list
 """,
 )
@@ -52,6 +57,35 @@ See also: firecube release list, firecube release verify, firecube snapshot list
     "note",
     default=None,
     help="Free text kept in the release record.",
+)
+@click.option(
+    "--archive",
+    "archive",
+    default=None,
+    metavar="URI",
+    help=(
+        "Retain the product's objects in a zip archive at this file:// URI. The archive "
+        "is a full backup when the current release retains no zip archive, else an "
+        "incremental backup of what changed since the current release. Nothing may "
+        "exist at the path."
+    ),
+)
+@click.option(
+    "--archive-full",
+    "archive_full",
+    is_flag=True,
+    default=False,
+    help="Write a full backup even when an incremental backup is possible. Requires --archive.",
+)
+@click.option(
+    "--retain-versions",
+    "retain_versions",
+    is_flag=True,
+    default=False,
+    help=(
+        "Record the version id of every object instead of copying bytes. Needs a "
+        "versioned s3 bucket and the fsspec driver. Exclusive with --archive."
+    ),
 )
 @click.pass_context
 def create(
@@ -64,6 +98,9 @@ def create(
     storage_anonymous: bool | None,
     output_format: str,
     note: str | None,
+    archive: str | None,
+    archive_full: bool,
+    retain_versions: bool,
 ) -> None:
     """name the current metadata of a product as a release
 
@@ -73,7 +110,24 @@ def create(
     create resumes. a version whose store changed since is refused. a store
     without a control plane is refused: use migrate adopt first. with --format
     json the progress lines go to stderr.
+
+    --archive also retains the chunk bytes of the release in a local zip
+    archive, a full or an incremental backup; --retain-versions retains them
+    as the object versions of a versioned s3 bucket. an interrupted create
+    that wrote an archive is
+    refused on rerun until the file is removed.
     """
+    if archive_full and archive is None:
+        raise click.UsageError("--archive-full requires --archive.")
+    if archive is not None and retain_versions:
+        raise click.UsageError("--archive and --retain-versions are mutually exclusive.")
+    archive_uri = None
+    if archive is not None:
+        archive_uri = parse_and_validate_uri(archive, param_hint="--archive")
+        if archive_uri.is_remote():
+            raise click.UsageError(
+                "Invalid value for '--archive': a release archive is a local file:// URI."
+            )
     session = open_session(
         ctx,
         command="release create",
@@ -92,6 +146,9 @@ def create(
             note=note,
             report=echo_progress if json_out else click.echo,
             warn=echo_warning,
+            archive=archive_uri,
+            archive_full=archive_full,
+            retain_versions=retain_versions,
         )
     except FirecubeError as exc:
         raise click.ClickException(render(exc)) from exc

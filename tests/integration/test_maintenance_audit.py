@@ -35,6 +35,7 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from firecube.core.archive.tensogram.converter import zarr_to_tgm
 from firecube.core.controlplane import ChunkInfo, ChunkManager
 from firecube.core.controlplane.types import (
     EVENT_MAINTENANCE_COMPLETED,
@@ -45,7 +46,6 @@ from firecube.core.controlplane.types import (
 )
 from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
 from firecube.core.storage.uri import StorageUri
-from firecube.core.tensogram.converter import zarr_to_tgm
 from firecube.ingestor.runtime import archive as lib
 from tests.helpers.storage import make_test_binding, make_test_session
 
@@ -354,7 +354,7 @@ def test_archive_create_keeps_archive_error_when_record_setup_fails(tmp_path, mo
             raise RuntimeError("record boom")
         return original(self)
 
-    monkeypatch.setattr("firecube.core.zarr.zip_archive.zarr_to_zip", _zarr_to_zip)
+    monkeypatch.setattr("firecube.core.archive.zip.archive.zarr_to_zip", _zarr_to_zip)
     monkeypatch.setattr(StorageSession, "control_plane", _control_plane)
     result = CliRunner().invoke(cli, _zip_create_args(tmp_path), env=_local_env(tmp_path))
     assert result.exit_code != 0

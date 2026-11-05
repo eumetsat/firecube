@@ -17,6 +17,7 @@
 Plugins should import from this module rather than accessing core internals directly.
 """
 
+from firecube.core.archive.tensogram._compat import require_tensogram
 from firecube.core.batch_registry import BatchResourceRegistry
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane import RunInfo, describe_control_plane
@@ -79,7 +80,6 @@ from firecube.core.slot_index import (
     iso_to_epoch_s,
     normalize_epoch_iso,
 )
-from firecube.core.tensogram._compat import require_tensogram
 from firecube.core.uris import (
     infer_target_protocol,
     is_remote_target,

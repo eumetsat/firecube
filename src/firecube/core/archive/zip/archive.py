@@ -15,17 +15,18 @@
 """Pack an existing Zarr product into a single-file zip archive.
 
 The archive is readable with ``zarr.storage.ZipStore``. It is written exactly
-once: built under a temporary name, closed, verified, then renamed into place.
+once: built under a temporary name, closed, verified, then published under its
+name. A publication without overwrite never replaces an archive that appeared meanwhile.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import shutil
 import uuid
 import warnings
 import zipfile
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -35,13 +36,14 @@ import zarr
 from zarr.buffer import default_buffer_prototype
 from zarr.storage import MemoryStore
 
-from firecube.core.controlplane.types import (
-    CLAIMS_DIRNAME,
-    CONTROL_DIRNAME,
-    RUNS_DIRNAME,
-    SCHEMA_FILENAME,
+from firecube.core.archive._common import clear_target
+from firecube.core.archive.zip.marker import (
+    MARKER_ENTRY,
+    MODE_INCREMENTAL,
+    marker_problem,
+    read_zip_marker,
 )
-from firecube.core.errors import ConfigurationError
+from firecube.core.controlplane.types import CLAIMS_DIRNAME, CONTROL_DIRNAME
 from firecube.core.filesystem.store_factory import create_zip_store
 from firecube.core.storage.session import StorageSession
 from firecube.core.uris import is_remote_target, local_path_from_target, require_target_is_product
@@ -69,9 +71,14 @@ class ZipArchiveResult:
 
 
 def zarr_to_zip(
-    session: StorageSession, target: str, *, overwrite: bool = False
+    session: StorageSession,
+    target: str,
+    *,
+    overwrite: bool = False,
+    keys: Iterable[str] | None = None,
+    marker: Mapping[str, Any] | None = None,
 ) -> ZipArchiveResult:
-    """Copy every key of the session's product into a local zip archive.
+    """Copy the keys of the session's product into a local zip archive.
 
     Control-plane files are included, except claim files. An existing archive
     is replaced only after the new one has been written and verified.
@@ -80,14 +87,20 @@ def zarr_to_zip(
         session: Storage session bound to the source product.
         target: Local path or ``file://`` URI of the archive to create.
         overwrite: Replace an existing archive at ``target``.
+        keys: Product keys to archive; None archives every key.
+        marker: Written as canonical JSON at the root entry ``firecube-archive.json``.
+            The entry is not counted in ``keys_written``.
 
     Returns:
         A summary of the written archive.
 
     Raises:
         ValueError: If ``target`` is remote, is a directory, lies inside the
-            source store, or the source has no Zarr v3 root metadata.
-        FileExistsError: If ``target`` exists and ``overwrite`` is False.
+            source store, the source has no Zarr v3 root metadata, the product
+            holds the reserved marker entry, or ``keys`` names a key the product
+            lacks or the reserved marker entry.
+        FileExistsError: If ``target`` exists, or another writer publishes it first, and
+            ``overwrite`` is False. The new archive is then discarded.
         RuntimeError: If the written archive fails verification.
     """
     if is_remote_target(target):
@@ -112,7 +125,16 @@ def zarr_to_zip(
     }
     if "zarr.json" not in sources:
         raise ValueError(f"No Zarr v3 root metadata found at {source_uri.to_str()}")
-    keys = sorted(sources)
+    if keys is None:
+        selected = sorted(sources)
+        if MARKER_ENTRY in selected:
+            raise ValueError(f"Keys not in the product or reserved for the archive: {MARKER_ENTRY}")
+    else:
+        selected = sorted(set(keys))
+        if unknown := [k for k in selected if k not in sources or k == MARKER_ENTRY]:
+            raise ValueError(
+                f"Keys not in the product or reserved for the archive: {', '.join(unknown[:5])}"
+            )
 
     target_path.parent.mkdir(parents=True, exist_ok=True)
     partial_path = target_path.with_name(f"{target_path.name}.{uuid.uuid4().hex}.partial")
@@ -120,13 +142,28 @@ def zarr_to_zip(
         handle = create_zip_store(target=str(partial_path), mode="w")
         make_buffer = default_buffer_prototype().buffer.from_bytes
         try:
-            for key in keys:
+            for key in selected:
                 with session.open(sources[key], "rb") as src:
                     sync(handle.store.set(key, make_buffer(src.read())))
+            if marker is not None:
+                payload = json.dumps(
+                    dict(marker), sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                ).encode()
+                sync(handle.store.set(MARKER_ENTRY, make_buffer(payload)))
         finally:
             handle.store.close()
-        _verify(str(partial_path), expected_keys=keys)
-        os.replace(partial_path, target_path)
+        _verify(str(partial_path), expected_keys=selected, has_marker=marker is not None)
+        if overwrite:
+            os.replace(partial_path, target_path)
+        else:
+            # The existence check above reserves nothing: another writer may publish the
+            # same path meanwhile. A hard link publishes the verified file whole and raises
+            # FileExistsError when the target exists, so a lost race clobbers nothing.
+            try:
+                os.link(partial_path, target_path)
+            except FileExistsError as exc:
+                raise FileExistsError(f"Target file already exists: {target}") from exc
+            partial_path.unlink()
     except BaseException:
         partial_path.unlink(missing_ok=True)
         raise
@@ -134,7 +171,7 @@ def zarr_to_zip(
     return ZipArchiveResult(
         source=source_uri.to_str(),
         target=str(target_path),
-        keys_written=len(keys),
+        keys_written=len(selected),
         file_size_bytes=target_path.stat().st_size,
     )
 
@@ -150,60 +187,9 @@ def _prepare_target(target_path: Path, *, overwrite: bool, keep_run_id: str | No
             f"Target Zarr already exists: {target_path}. Use overwrite=True to replace it."
         )
     if target_path.is_dir():
-        _clear_target(target_path, keep_run_id=keep_run_id)
+        clear_target(target_path, keep_run_id=keep_run_id)
     else:
         target_path.unlink()
-
-
-def _clear_target(target_path: Path, *, keep_run_id: str | None) -> None:
-    """Empty a restore target directory but keep the restore's own control-plane state.
-
-    The kept entries are ``.firecube/claims/``, ``.firecube/schema.json`` and, when
-    ``keep_run_id`` is given, ``.firecube/runs/<keep_run_id>/``.
-
-    Raises:
-        ConfigurationError: If the target, a kept entry or a directory holding one
-            is a symlink; nothing is removed.
-    """
-    control = target_path / CONTROL_DIRNAME
-    kept = {control / CLAIMS_DIRNAME, control / SCHEMA_FILENAME}
-    if keep_run_id is not None:
-        kept.add(control / RUNS_DIRNAME / keep_run_id)
-    _refuse_symlinked_kept_paths(target_path, kept)
-    _remove_all_except(target_path, kept)
-
-
-def _refuse_symlinked_kept_paths(target_path: Path, kept: set[Path]) -> None:
-    """Raise ConfigurationError when a kept path or a directory above it is a symlink.
-
-    The check stops at the target. Clearing walks into those directories, so a symlink would
-    lead it outside the target.
-    """
-    for path in sorted(kept):
-        for node in (path, *path.parents):
-            if node.is_symlink():
-                raise ConfigurationError(
-                    f"Restore target {target_path} holds a symlink at {node}; refusing to "
-                    "clear it, because the restore would follow it outside the target"
-                )
-            if node == target_path:
-                break
-
-
-def _remove_all_except(directory: Path, kept: set[Path]) -> None:
-    """Remove every entry under ``directory`` except the paths in ``kept`` and their ancestors.
-
-    A symlink is unlinked, never followed.
-    """
-    for entry in directory.iterdir():
-        if entry in kept:
-            continue
-        if entry.is_symlink() or not entry.is_dir():
-            entry.unlink()
-        elif any(entry in path.parents for path in kept):
-            _remove_all_except(entry, kept)
-        else:
-            shutil.rmtree(entry)
 
 
 def _refuse_unsafe_entries(names: list[str], archive: str) -> None:
@@ -314,7 +300,8 @@ def zip_to_zarr(
             overwrite finds a symlink at the target or on a kept path.
         FileNotFoundError: If ``archive`` is not a file.
         ValueError: If the archive is corrupt, has no root metadata, holds
-            invalid Zarr metadata, or holds an entry name outside the target.
+            invalid Zarr metadata or a marker that is not a JSON object, or
+            holds an entry name outside the target.
         FileExistsError: If ``target`` holds a Zarr store and ``overwrite`` is False.
     """
     require_target_is_product(target, session.product.product_uri)
@@ -328,9 +315,15 @@ def zip_to_zarr(
         _refuse_unsafe_entries(names, archive)
         if (corrupt := zf.testzip()) is not None:
             raise ValueError(f"Corrupt entry {corrupt!r} in archive: {archive}")
-        # claims are never archived, but never restore a stale claim either
-        keys = sorted(k for k in names if not k.endswith("/") and not k.startswith(_CLAIMS_PREFIX))
-        if "zarr.json" not in keys:
+        # claims are never archived, but never restore a stale claim either; the marker
+        # is the archive's own entry, never a product key
+        keys = sorted(
+            k
+            for k in names
+            if not k.endswith("/") and not k.startswith(_CLAIMS_PREFIX) and k != MARKER_ENTRY
+        )
+        is_incremental = _is_incremental_backup(read_zip_marker(str(archive_path)))
+        if "zarr.json" not in keys and not is_incremental:
             raise ValueError(f"No Zarr v3 root metadata found in archive: {archive}")
         _refuse_invalid_metadata(zf, keys, archive)
 
@@ -341,8 +334,13 @@ def zip_to_zarr(
         for key in keys:
             session.put_bytes(product_uri.join(key), zf.read(key))
 
-    # verify: the restored store opens and lists the same groups and arrays
-    members = _walk_live(session.zarr.create_store(product_uri, mode="r").zarr_kwargs())
+    # verify: the restored store opens and lists the same groups and arrays; an incremental
+    # backup without a root document has no hierarchy of its own to open
+    members = (
+        _walk_live(session.zarr.create_store(product_uri, mode="r").zarr_kwargs())
+        if "zarr.json" in keys
+        else []
+    )
 
     groups = [name for name, node in members if isinstance(node, zarr.Group)]
     arrays = {name: node for name, node in members if isinstance(node, zarr.Array)}
@@ -374,11 +372,14 @@ def zip_info(archive: str) -> dict:
     with zipfile.ZipFile(path) as zf:
         keys = zf.namelist()
     has_controlplane = any(k.startswith(f"{CONTROL_DIRNAME}/") for k in keys)
+    marker = read_zip_marker(path)
 
     store = create_zip_store(target=str(path), mode="r").store
     try:
         group_vars: dict[str, dict] = {"": {}}  # "" is the root group
-        for name, node in _walk_live({"store": store}):
+        # an incremental backup may hold no root document, so it has no hierarchy to walk
+        members = _walk_live({"store": store}) if "zarr.json" in keys else []
+        for name, node in members:
             if isinstance(node, zarr.Group):
                 group_vars.setdefault(name, {})
                 continue
@@ -400,6 +401,7 @@ def zip_info(archive: str) -> dict:
         "entries": len(keys),
         "groups": sorted(group_vars),
         "has_controlplane": has_controlplane,
+        "marker": marker,
         "group_details": [{"group": g, "variables": group_vars[g]} for g in sorted(group_vars)],
     }
 
@@ -442,6 +444,7 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     """Return the problems found in a zarr zip archive; an empty list means valid.
 
     quick: check the zip directory and Zarr metadata only, skip the CRC check of every entry.
+    A marker must pass the checks a backup chain restore applies to it.
     """
     path = Path(archive.removeprefix("file://"))
     if not path.is_file():
@@ -456,9 +459,21 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     except zipfile.BadZipFile as exc:
         return [f"not a zip file: {exc}"]
 
+    try:
+        marker = read_zip_marker(str(path))
+    except ValueError as exc:
+        issues.append(str(exc))
+        marker = None
+    if marker is not None and (problem := marker_problem(marker)) is not None:
+        issues.append(f"Entry {MARKER_ENTRY!r} is not a valid archive marker: {problem}")
+    is_incremental = _is_incremental_backup(marker)
+
     if "zarr.json" not in keys:
-        issues.append("no Zarr v3 root metadata (zarr.json)")
-        return issues
+        if not is_incremental:
+            issues.append("no Zarr v3 root metadata (zarr.json)")
+            return issues
+        # an incremental backup may hold no root document; its entries are checked alone
+        return [*issues, *_incremental_backup_metadata_issues(path)]
 
     store = create_zip_store(target=str(path), mode="r").store
     try:
@@ -475,6 +490,22 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     return issues
 
 
+def _is_incremental_backup(marker: Mapping[str, Any] | None) -> bool:
+    """Return True when the marker declares an incremental backup."""
+    return marker is not None and marker.get("mode") == MODE_INCREMENTAL
+
+
+def _incremental_backup_metadata_issues(path: Path) -> list[str]:
+    """Return the issue of the first invalid ``zarr.json`` entry of an incremental backup."""
+    with zipfile.ZipFile(path) as zf:
+        keys = [k for k in zf.namelist() if k != MARKER_ENTRY and not k.endswith("/")]
+        try:
+            _refuse_invalid_metadata(zf, keys, str(path))
+        except ValueError as exc:
+            return [str(exc)]
+    return []
+
+
 def _dimension_names(array: zarr.Array) -> list[str]:
     """Return the dimension names of a Zarr v3 array, empty when unnamed."""
     names = getattr(array.metadata, "dimension_names", None) or ()
@@ -488,12 +519,16 @@ def _codec_name(codec: object) -> str:
     return str(config.get("name", type(codec).__name__))
 
 
-def _verify(path: str, *, expected_keys: list[str]) -> None:
-    """Check a freshly written archive: valid, and holding exactly the expected keys."""
+def _verify(path: str, *, expected_keys: list[str], has_marker: bool = False) -> None:
+    """Check a freshly written archive: valid, and holding exactly the expected keys.
+
+    The marker entry, when ``has_marker`` is true, is expected beside the product keys.
+    """
+    expected = sorted([*expected_keys, MARKER_ENTRY]) if has_marker else expected_keys
     issues = validate_zip(path)
     if not any(i.startswith("not a zip file") for i in issues):
         with zipfile.ZipFile(path) as zf:
-            if sorted(zf.namelist()) != expected_keys:
+            if sorted(zf.namelist()) != expected:
                 issues.append("entries differ from the keys written")
     if issues:
         raise RuntimeError(f"Zip archive verification failed for {path}: {'; '.join(issues)}")

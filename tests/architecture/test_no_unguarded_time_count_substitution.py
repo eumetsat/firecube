@@ -52,6 +52,7 @@ from pathlib import Path
 
 SCAN_DIRS: list[Path] = [
     Path("src/firecube/core/zarr"),
+    Path("src/firecube/core/archive/zip"),
     Path("src/firecube/ingestor/runtime"),
     Path("src/firecube/ingestor/templates"),
     Path("src/firecube/cli"),

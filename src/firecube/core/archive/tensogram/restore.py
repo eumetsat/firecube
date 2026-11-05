@@ -28,6 +28,7 @@ from typing import Any, cast
 import xarray as xr
 from zarr.errors import ZarrUserWarning
 
+from firecube.core.archive._common import clear_target
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane.types import CONTROL_DIRNAME
 from firecube.core.product.identity import ProductIdentity
@@ -40,7 +41,6 @@ from firecube.core.uris import (
     parse_target,
     require_target_is_product,
 )
-from firecube.core.zarr.zip_archive import _clear_target
 
 from ._compat import require_tensogram
 from .controlplane_codec import deserialize_controlplane, restore_controlplane
@@ -91,7 +91,7 @@ def _prepare_target(target: str, *, overwrite: bool, keep_run_id: str | None) ->
         )
 
     if local_target_path.is_dir():
-        _clear_target(local_target_path, keep_run_id=keep_run_id)
+        clear_target(local_target_path, keep_run_id=keep_run_id)
     else:
         local_target_path.unlink()
 

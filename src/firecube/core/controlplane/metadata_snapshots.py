@@ -29,24 +29,28 @@ facade calls the I/O functions here.
 
 from __future__ import annotations
 
-import contextlib
-import hashlib
 import json
-import logging
 import posixpath
-import re
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, Literal, cast
+from typing import Any, Final, Literal
 
+from firecube.core.controlplane._content_addressed import (
+    HEX_ID,
+    create,
+    publish,
+    read_verified,
+    require_id,
+    sha256_hex,
+)
 from firecube.core.controlplane.types import (
     CONTROL_DIRNAME,
     METADATA_DIRNAME,
     canonical_json_bytes,
 )
 from firecube.core.errors import ControlPlaneCorruptionError, ManifestError
-from firecube.core.filesystem.protocol import AtomicPublish, StorageFilesystemFull
+from firecube.core.filesystem.protocol import StorageFilesystemFull
 from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.metadata_documents import (
     ABSENT,
@@ -56,8 +60,6 @@ from firecube.core.zarr.metadata_documents import (
     enumerate_metadata_documents,
     parse_node_document,
 )
-
-log = logging.getLogger(__name__)
 
 SnapshotConsistency = Literal["observation", "coherent"]
 """How a snapshot was taken: ``observation`` on a live store, ``coherent`` under the exclusive claim."""
@@ -74,7 +76,6 @@ RECORDS_DIRNAME: Final = "records"
 REFS_DIRNAME: Final = "refs"
 LATEST_REF_FILENAME: Final = "latest.json"
 
-_HEX_ID: Final = re.compile(r"[0-9a-f]{64}")
 _DIGEST_PREFIX: Final = f"{BLOB_ALGORITHM}:"
 _CONSISTENCIES: Final = frozenset({CONSISTENCY_OBSERVATION, CONSISTENCY_COHERENT})
 _CONTROL_KINDS: Final = frozenset(
@@ -211,16 +212,6 @@ def metadata_root(product_root: StorageUri) -> StorageUri:
     return product_root.join(CONTROL_DIRNAME, METADATA_DIRNAME)
 
 
-def _sha256_hex(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _require_id(value: str, *, what: str) -> str:
-    if not isinstance(value, str) or not _HEX_ID.fullmatch(value):
-        raise ManifestError(f"{value!r} is not a {what} id: expected 64 lowercase hex digits")
-    return value
-
-
 def _blob_uri(root: StorageUri, blob_id: str) -> StorageUri:
     return root.join(BLOBS_DIRNAME, BLOB_ALGORITHM, blob_id[:2], blob_id)
 
@@ -235,46 +226,6 @@ def _record_uri(root: StorageUri, snapshot_id: str) -> StorageUri:
 
 def _latest_uri(root: StorageUri) -> StorageUri:
     return root.join(REFS_DIRNAME, LATEST_REF_FILENAME)
-
-
-def _makedirs(fs: StorageFilesystemFull, uri: StorageUri) -> None:
-    try:
-        fs.makedirs(uri, exist_ok=True)
-    except Exception:
-        # The write that follows reports a real failure.
-        log.debug("makedirs failed for %s (non-fatal)", uri)
-
-
-def _create(fs: StorageFilesystemFull, uri: StorageUri, data: bytes) -> None:
-    """Create *uri* with *data* once; an existing object holds the same content-addressed bytes."""
-    _makedirs(fs, uri.parent())
-    with contextlib.suppress(FileExistsError):
-        fs.atomic_writer.write_atomic(uri, data)
-
-
-def _publish(fs: StorageFilesystemFull, uri: StorageUri, data: bytes) -> None:
-    """Replace *uri* so a concurrent reader sees the old or the new bytes whole."""
-    _makedirs(fs, uri.parent())
-    if AtomicPublish not in fs.capabilities():
-        fs.atomic_writer.replace_atomic(uri, data)
-        return
-
-    def write(target: StorageUri) -> None:
-        with fs.open(target, "wb") as handle:
-            handle.write(data)
-
-    cast(AtomicPublish, fs).publish_atomic(uri, write)
-
-
-def _read_verified(fs: StorageFilesystemFull, uri: StorageUri, expected_hex: str) -> bytes:
-    """Read *uri* and refuse bytes whose sha256 is not *expected_hex*."""
-    data = fs.read_bytes(uri)
-    actual = _sha256_hex(data)
-    if actual != expected_hex:
-        raise ControlPlaneCorruptionError(
-            f"{uri.to_str()} holds bytes with sha256 {actual}, not {expected_hex}"
-        )
-    return data
 
 
 def _load_json(data: bytes, uri: StorageUri) -> dict[str, Any]:
@@ -294,17 +245,17 @@ def _load_json(data: bytes, uri: StorageUri) -> dict[str, Any]:
 
 def write_blob(fs: StorageFilesystemFull, root: StorageUri, data: bytes) -> str:
     """Store *data* as a blob unless it exists, and return its sha256 hex."""
-    blob_id = _sha256_hex(data)
-    _create(fs, _blob_uri(root, blob_id), data)
+    blob_id = sha256_hex(data)
+    create(fs, _blob_uri(root, blob_id), data)
     return blob_id
 
 
 def read_blob(fs: StorageFilesystemFull, root: StorageUri, blob_id: str) -> bytes:
     """Return the bytes of a blob, refusing a missing blob or bytes that do not match its id."""
-    blob_id = _require_id(blob_id, what="blob")
+    blob_id = require_id(blob_id, what="blob")
     uri = _blob_uri(root, blob_id)
     try:
-        return _read_verified(fs, uri, blob_id)
+        return read_verified(fs, uri, blob_id)
     except FileNotFoundError as exc:
         raise ControlPlaneCorruptionError(f"metadata blob {uri.to_str()} is missing") from exc
 
@@ -364,7 +315,7 @@ def _read_latest_id(fs: StorageFilesystemFull, root: StorageUri) -> str | None:
     except FileNotFoundError:
         return None
     snapshot_id = _load_json(data, uri).get("snapshot")
-    if not isinstance(snapshot_id, str) or not _HEX_ID.fullmatch(snapshot_id):
+    if not isinstance(snapshot_id, str) or not HEX_ID.fullmatch(snapshot_id):
         raise ControlPlaneCorruptionError(f"{uri.to_str()} names no snapshot id")
     return snapshot_id
 
@@ -399,13 +350,13 @@ def take_snapshot(
     root = metadata_root(product_root)
     parent = _read_latest_id(fs, root)
     manifest_raw = manifest_bytes(build_manifest(documents))
-    manifest_id = _sha256_hex(manifest_raw)
+    manifest_id = sha256_hex(manifest_raw)
     manifest_uri = _manifest_uri(root, manifest_id)
     # A manifest is written after all its blobs and nothing deletes a blob.
     if not fs.exists(manifest_uri):
         for raw in {document.digest: document.raw for document in documents}.values():
             write_blob(fs, root, raw)
-        _create(fs, manifest_uri, manifest_raw)
+        create(fs, manifest_uri, manifest_raw)
 
     payload: dict[str, Any] = {
         "schema_version": SNAPSHOT_SCHEMA_VERSION,
@@ -418,10 +369,10 @@ def take_snapshot(
         "scope": {"included_kinds": list(_INCLUDED_KINDS)},
     }
     record_raw = canonical_json_bytes(payload)
-    snapshot_id = _sha256_hex(record_raw)
-    _create(fs, _record_uri(root, snapshot_id), record_raw)
+    snapshot_id = sha256_hex(record_raw)
+    create(fs, _record_uri(root, snapshot_id), record_raw)
     latest = {"schema_version": SNAPSHOT_SCHEMA_VERSION, "snapshot": snapshot_id}
-    _publish(fs, _latest_uri(root), canonical_json_bytes(latest))
+    publish(fs, _latest_uri(root), canonical_json_bytes(latest))
     return _record_from_payload(snapshot_id, payload, _record_uri(root, snapshot_id))
 
 
@@ -436,8 +387,8 @@ def _record_from_payload(
             raise ValueError(f"consistency {consistency!r}")
         return SnapshotRecord(
             snapshot_id=snapshot_id,
-            parent=None if parent is None else _require_id(parent, what="snapshot"),
-            manifest=_require_id(payload["manifest"], what="manifest"),
+            parent=None if parent is None else require_id(parent, what="snapshot"),
+            manifest=require_id(payload["manifest"], what="manifest"),
             run_id=None if run_id is None else str(run_id),
             trigger=str(payload["trigger"]),
             taken_at=float(payload["taken_at"]),
@@ -457,7 +408,7 @@ def resolve_snapshot_id(fs: StorageFilesystemFull, root: StorageUri, snapshot_id
         ManifestError: The id is malformed, or ``latest`` is asked of a product with no snapshot.
     """
     if snapshot_id != LATEST:
-        return _require_id(snapshot_id, what="snapshot")
+        return require_id(snapshot_id, what="snapshot")
     latest_id = _read_latest_id(fs, root)
     if latest_id is None:
         raise ManifestError(f"no metadata snapshot exists under {root.to_str()}")
@@ -474,7 +425,7 @@ def read_record(fs: StorageFilesystemFull, root: StorageUri, snapshot_id: str) -
     snapshot_id = resolve_snapshot_id(fs, root, snapshot_id)
     uri = _record_uri(root, snapshot_id)
     try:
-        data = _read_verified(fs, uri, snapshot_id)
+        data = read_verified(fs, uri, snapshot_id)
     except FileNotFoundError as exc:
         raise ManifestError(f"no metadata snapshot {snapshot_id} under {root.to_str()}") from exc
     return _record_from_payload(snapshot_id, _load_json(data, uri), uri)
@@ -485,7 +436,7 @@ def _read_manifest(
 ) -> tuple[ManifestEntry, ...]:
     uri = _manifest_uri(root, manifest_id)
     try:
-        content = _load_json(_read_verified(fs, uri, manifest_id), uri)
+        content = _load_json(read_verified(fs, uri, manifest_id), uri)
     except FileNotFoundError as exc:
         raise ControlPlaneCorruptionError(f"metadata manifest {uri.to_str()} is missing") from exc
     try:
@@ -518,7 +469,7 @@ def list_records(fs: StorageFilesystemFull, root: StorageUri) -> list[SnapshotRe
         name = uri.path.rstrip("/").rpartition("/")[2]
         stem, _, suffix = name.rpartition(".")
         # Anything else is an interrupted local write's temporary.
-        if suffix == "json" and _HEX_ID.fullmatch(stem):
+        if suffix == "json" and HEX_ID.fullmatch(stem):
             records.append(read_record(fs, root, stem))
     return sorted(records, key=lambda record: (record.taken_at, record.snapshot_id))
 

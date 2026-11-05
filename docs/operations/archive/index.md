@@ -44,4 +44,5 @@ described in [Configuration Reference](../../reference/config.md).
 - **[Create Archives](create.md)** — create a `.tgm` or `.zip` archive
 - **[Inspect And Validate Archives](inspect.md)** — inspect metadata or verify archive integrity
 - **[Restore Archives](restore.md)** — restore a `.tgm` or `.zip` file to Zarr
+- **[Read A Release With Xarray](read-a-release-with-xarray.md)** — open the data of a release from its `.zip` archive
 - **[Tensogram Output Format](../../concepts/output-formats/archive.md)** — format overview

@@ -55,6 +55,7 @@ from firecube.core.controlplane.types import (
     ClearSweepResult,
     DeletionPlan,
     IndexEnsuredEvent,
+    Inventory,
     ResolvedIndexRecord,
     RunInfo,
     SlotIndexModelRecord,
@@ -2525,11 +2526,13 @@ class ChunkManager:
         snapshot_id: str,
         run_id: str,
         note: str | None = None,
+        retention: Mapping[str, Any] | None = None,
     ) -> StoredRelease:
         """Write the record of release `version` once, naming a coherent snapshot; publish no ref.
 
         `run_id` must hold the exclusive maintenance claim. The record lists the runs
         started after the current release and the latest `run_started` producer.
+        `retention`, when given, is stored as the record's `retention` object.
 
         Raises:
             ManifestError: `run_id` does not hold the claim, the snapshot is missing or
@@ -2577,6 +2580,7 @@ class ChunkManager:
             else releases.PRODUCER_RECORDED,
             note=note,
             created_by_run=run_id,
+            retention=retention,
         )
         releases.create_record(fs, root, release)
         return release
@@ -2678,6 +2682,44 @@ class ChunkManager:
                 for document in self.enumerate_metadata_documents(product)
             ),
         )
+
+    def take_digest_inventory(self, product: str) -> Inventory:
+        """List every object of the product with its size and sha256 digest; write nothing.
+
+        `.firecube/claims/` and writer temporaries are left out. The listing is
+        not atomic, so the inventory is a coherent cut only while no other writer runs.
+
+        Raises:
+            ManifestError: A listed object is missing, lies outside the product, or has a
+                key the inventory cannot record literally.
+        """
+        from firecube.core.controlplane import inventories
+
+        fs, product_root = self._metadata_store(product)
+        return inventories.build_digest_inventory(fs, product_root)
+
+    def write_inventory(self, product: str, inventory: Inventory) -> str:
+        """Create `.firecube/releases/inventories/<id>.json` once and return the id, its sha256 hex.
+
+        Raises:
+            ControlPlaneCorruptionError: A file with that id holds other bytes; it is kept.
+        """
+        from firecube.core.controlplane import inventories
+
+        fs, root = self._releases_store(product)
+        return inventories.write_inventory(fs, root, inventory)
+
+    def read_inventory(self, product: str, inventory_id: str) -> Inventory:
+        """Return the inventory whose sha256 hex is `inventory_id`, after checking its bytes.
+
+        Raises:
+            ManifestError: `inventory_id` is malformed or names no inventory.
+            ControlPlaneCorruptionError: The file's bytes do not match the id, or it does not parse.
+        """
+        from firecube.core.controlplane import inventories
+
+        fs, root = self._releases_store(product)
+        return inventories.read_inventory(fs, root, inventory_id)
 
 
 def _abandon_operation(product_uri: str, run_id: str) -> Operation:

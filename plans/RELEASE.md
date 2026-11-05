@@ -27,6 +27,10 @@ Current contract versions:
 - Legacy chunk manifest contract: `v1` (migration-only)
 - Tensogram control-plane payload schema: `v1`
 - Tensogram archive layout: `v1`
+- Metadata snapshot manifests, records and ref: `v1`
+- Release records and the release ref: `v1`
+- Migration journal: `v1`
+- Inventory manifests: `v1`
 
 ## Git Tags
 

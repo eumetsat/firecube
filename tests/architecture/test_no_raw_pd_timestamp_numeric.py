@@ -42,6 +42,7 @@ import pytest
 SCAN_DIRS: list[Path] = [
     Path("src/firecube/ingestor/runtime"),
     Path("src/firecube/core/zarr"),
+    Path("src/firecube/core/archive/zip"),
 ]
 
 PERMANENT_ALLOWLIST: frozenset[str] = frozenset(

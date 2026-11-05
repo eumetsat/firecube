@@ -157,6 +157,7 @@ def restore(
         )
     )
 
+    from firecube.core.archive.zip.backup_chain import BackupChainError
     from firecube.ingestor.runtime.archive import (
         ArchiveClaimError,
         ArchiveConversionError,
@@ -174,7 +175,7 @@ def restore(
             report=echo_rendered,
             warn=functools.partial(echo_rendered, err=True),
         )
-    except (ArchiveClaimError, ArchiveConversionError) as exc:
+    except (ArchiveClaimError, ArchiveConversionError, BackupChainError) as exc:
         raise click.ClickException(render(exc)) from exc
 
     result = restored.summary

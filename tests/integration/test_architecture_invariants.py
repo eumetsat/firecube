@@ -360,9 +360,9 @@ def test_archive_create_restore_honors_endpoint_and_credentials(tmp_path: Path) 
     """
     import xarray as xr
 
-    from firecube.core.tensogram.controlplane_codec import restore_controlplane
-    from firecube.core.tensogram.converter import zarr_to_tgm
-    from firecube.core.tensogram.restore import tgm_to_zarr
+    from firecube.core.archive.tensogram.controlplane_codec import restore_controlplane
+    from firecube.core.archive.tensogram.converter import zarr_to_tgm
+    from firecube.core.archive.tensogram.restore import tgm_to_zarr
 
     storage_config = StorageConfig(
         storage_type="s3",
