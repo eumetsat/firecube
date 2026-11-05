@@ -1,8 +1,9 @@
 # Maintenance Operations
 
 Use maintenance operations to change the metadata of a finished Zarr product
-and to keep a record of each state you hand over. They never read or write a
-chunk.
+and to keep a record of each state you hand over. They do not write a chunk.
+Two options of `release create` read chunk objects: `--archive` reads them to
+archive them, and `--retain-versions` lists their versions.
 
 The `firecube snapshot` commands work on any Zarr v2 or v3 store. A real
 `migrate run` and `release create` need a control plane. A store that Firecube
@@ -44,7 +45,7 @@ If a crash leaves the claim in place, follow
 |---|---|
 | `firecube snapshot` | Capture the metadata documents of a product and compare two captures. |
 | `firecube migrate` | Give a foreign store a control plane, and change attributes in the metadata documents with a recorded, repeatable step. |
-| `firecube release` | Name one state of the metadata, and detect later whether it changed. |
+| `firecube release` | Name one state of the metadata, and detect later whether it changed. Optionally keep the chunk bytes of the state in a zip archive, or as object versions on S3. |
 
 Every command except `firecube migrate list` needs `--target` and
 `--product-name`.

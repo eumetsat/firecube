@@ -9,7 +9,7 @@ is the package Firecube creates from an existing Zarr product.
 
 <figure markdown="span">
   ![A Zarr product is packaged into Tensogram data messages plus a final ChunkManager message, then restored back to Zarr.](../../assets/images/firecube-tensogram-flow.svg){ width="820" }
-  <figcaption markdown="span">Firecube packages selected Zarr data into `.tgm` messages and stores ChunkManager records as the final message, so restore keeps the cube lifecycle inspectable.</figcaption>
+  <figcaption markdown="span">Firecube packages selected Zarr data into `.tgm` messages and stores ChunkManager records as the final message. A restore recreates the spans and the runs that own them.</figcaption>
 </figure>
 
 ## Tensogram And Zarr
@@ -18,9 +18,12 @@ Zarr is the normal layout for incremental writes and partial reads. Tensogram
 is the portable representation: it packages selected Zarr data into messages
 inside one file. Restoring the file recreates a Zarr product.
 
-When Firecube packages one of its Zarr products, it also includes the associated
-ChunkManager records. A restored product therefore retains the run and
-coordination history needed by Firecube operations.
+When Firecube packages one of its Zarr products, it also includes the spans, the
+runs and the claims of the product. A restore replays the spans and the runs that
+own them. It does not restore the claims, the metadata snapshots or the release
+records. A restored product has the history of what
+was written, and it has no release. To keep a release, retain it in a zip
+archive. See [Restore Archives](../../operations/archive/restore.md).
 
 ## Open With Xarray
 

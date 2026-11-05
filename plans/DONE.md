@@ -1,5 +1,104 @@
 # Done
 
+## 2026-11-04 — One `core/archive/` package and the "incremental backup" vocabulary (issue 135)
+
+**Decision.** The ZIP archive code and the Tensogram code now sit in one package, `src/firecube/core/archive/`. `zip/archive.py` and `zip/backup_chain.py` were `core/zarr/zip_archive.py` and `core/zarr/zip_chain.py`. `tensogram/` was `core/tensogram/`. The package is a namespace, with no shared interface and no re-export from an old path. The retention feature has one vocabulary. An "incremental backup" holds the objects new or changed since the previous release. A "full backup" starts a backup chain. The "previous release" replaces the "base". The code names are `BackupChainError`, `resolve_backup_chain`, `restore_backup_chain`, `ChainBackup`, `MODE_INCREMENTAL` and `MAX_CHAIN_BACKUPS`. Behaviour is unchanged except for the renamed names and text. The version retention moved to `src/firecube/ingestor/runtime/release_versions.py`.
+
+Decisions settled with the maintainer (2026-11-04):
+
+- M1. The layout is `core/archive/` with `_common.py`, `zip/{archive,backup_chain,marker}.py` and `tensogram/` moved unchanged.
+- M2. The names are `BackupChainError` and `ChainBackup`.
+- M3. The persisted names are renamed now, with no reader for the old spelling. The marker keys are `mode` (value `incremental`), `previous_release`, `previous_backup_uri`, `previous_backup_digest` and `deleted_keys`. The record retention keys are `mode` (value `incremental`), `previous_release` and `deleted_key_count`. `chain_length` is unchanged. The feature had not shipped.
+- M4. No test covers an old-marker archive, because no such archive was written.
+- M5. The version retention moves to its own module in this series.
+- M6. The test budget is 60 lines, counted from 40cce07, with signed commits, one per node, and no push.
+
+Implementation decisions (2026-11-04):
+
+- P1. The moves and the two extractions form one code node and one test-path node, committed together, so no commit leaves the suite red.
+- P2. `zip/marker.py` holds the marker constants, the exact key set, `read_zip_marker`, `marker_problem` and `deleted_key_problem`. It removes a lazy import cycle.
+- P3. `_common.py` holds `clear_target`, which the ZIP restore and the Tensogram restore share.
+- P4. The three architecture scan lists add `core/archive/zip`, so the ZIP files keep their coverage.
+- P5. The restore heading is "Restore An Incremental Backup Chain", anchor `#restore-an-incremental-backup-chain`.
+- P6. The definition sentence of the incremental backup is on the create-a-release page only. The other pages link to it.
+- P7. Progress text reads `full backup <path> holds N objects, B bytes` and `incremental backup <path> holds …`.
+- P8. Two audit findings ride along: one mapping comparison replaces a bare assert loop in `tests/integration/test_release_command.py`, and the stale `metadata_snapshots.py` entry leaves `plans/TODO.md`.
+- P9. Every old-word gate is a `git grep` over tracked `*.py` and `*.md` files.
+- P10. Docs builds of the nodes write to their own `--site-dir` under `/tmp`, so no node writes the `site/` of the repository.
+
+Open: `release.py` stays at 756 lines, over the split rule of `plans/STYLE.md` (`plans/TODO.md`). The staged-promotion "delta" keeps its word.
+
+---
+
+## 2026-11-04 — Release chunk retention: archive chain and object versions (issue 135)
+
+**Decision.** A release can retain the chunk bytes it names. `release create --archive <file uri>` writes a zip archive. The archive is full when the current release retains no zip archive or `--archive-full` is set. Otherwise it is a delta against that release. `release create --retain-versions` records the S3 version id of each object on a versioned bucket instead. Both rest on one create-only inventory manifest under `.firecube/releases/inventories/`. The work is on the branch `135-request-firecube-release-retain-and-restore-the-chunk-bytes-of-a-release`, from main b2ec92c.
+
+Decisions settled with the maintainer (2026-11-04):
+
+- D1. The archive binds through `release create --archive` and is written under the exclusive claim of the release (P9 names the run id).
+- D2. A local archive is hashed by default. Remote archives are out of scope.
+- D3. The delta zip archive is in.
+- D4. `--retain-versions` supports the fsspec driver only. The obstore driver refuses with a `Message`.
+- D5. The inventory covers every object of the product except `.firecube/claims/` and publication temporaries. A restored chain equals the inventory, not the live product. The record, the pointer and the completed run of the release arrive in the next delta.
+- D6. A delta archive carries one reserved root entry, `firecube-archive.json`. Restore and validate never write it into the product. `archive info` prints it.
+- D7. `release verify` on S3 sends one HEAD per listed version. `--sample N` samples N random versions. The output says which ran.
+- D8. The test budget is 600 lines. Each node is one signed commit.
+
+Implementation decisions (2026-11-04). The maintainer accepted P6 and P9:
+
+- P1. No automatic full archive. A delta is taken whenever the previous release has a zip retention. `--archive-full` forces a full archive. The record holds `chain_length`.
+- P2. The record holds `deleted_count`. The list of deleted keys lives in the archive marker only.
+- P3. The marker of a delta names its base version, base archive URI and base archive digest. A chain restore follows the markers and needs no product records, so it works on an empty target.
+- P4. A delta holds every object whose digest differs from the base inventory or is new, and every Zarr metadata document whatever its digest.
+- P5. The publication order is: stamps, image, snapshot, inventory, archive, record, pointer.
+- P6. A rerun never reuses an archive. It refuses a file at the `--archive` path before it takes the inventory. After the operator deletes the file, the rerun takes a fresh inventory and archive. Metadata equality is not chunk equality, so no test of an old archive could prove it matches.
+- P7. The `retention` key is optional on read and additive on the v1 record. `ReleaseRecord` gains `retention` with the default `None`.
+- P8. Every archive is written from the frozen inventory key set, never from a fresh listing.
+- P9. The archive write is its own `archive-create-<uuid4>` run. Its scope meta names the release run as `holder_run_id`. It runs inside the exclusive claim of the release.
+- P10. An object with a missing, empty or `"null"` current version id refuses `--retain-versions`. The lifecycle configuration is recorded when readable, else `"unavailable"`. `release verify` reports `lifecycle: changed` on a difference.
+
+Dropped options:
+
+- Option C, immutable release prefixes, is dropped.
+- Option D, a copy-on-write chunk manifest, is dropped.
+- Both stay out of scope. The historical read of a release as a Zarr store is deferred to v0.2.x after VirtualiZarr output (`plans/TODO.md`).
+
+Decisions made in review and visible in the code:
+
+- A rerun never reuses an archive (P6). The handoff proposed a rehash and a reuse. Plan review showed that reuse binds old bytes to a new inventory.
+- The archive publishes with no-clobber semantics (2240329). `zarr_to_zip` links the verified file into place when `overwrite` is false. The maintainer widened the scope to `zip_archive.py` for this. The cost is a failure on a filesystem without hard links (`plans/TODO.md`).
+- The chain resolves before the restore claim opens (6258fd0). `resolve_chain` refuses a missing or invalid link before any target write or run record.
+- `apply_chain` restores the base itself and not through `zip_to_zarr`. `zip_to_zarr` reopens the archive by path, so a swapped base file could replace the one the digest named.
+- A restore deletes through `StorageSession.delete_literal`. It deletes one object and expands no glob character. `StorageSession.delete` is recursive and stays unused for this.
+- The fsspec `find` defect for local names with `#`, `?`, a tab or a newline is repaired (129b656). The inventory needs a true listing.
+
+Commits:
+
+- ead5183 and 129b656: the `find` test and repair.
+- 1327243: the byte-fidelity pin.
+- 227bb7a: the marker and the key subset.
+- 4d809f8: `ObjectVersions`.
+- e4841c2: inventories.
+- d12e5cc: `retention` on the record.
+- 2240329: zip retention.
+- 0cc43e7: version retention.
+- 6258fd0: chain restore.
+- 87c448e: the CLI.
+
+Gate before merge, not done. The maintainer must run the `--retain-versions` tests once against a real RGW endpoint and record the RGW version here. The review probes of version retention ran against moto only, and moto differs from AWS for a null version and a suspended bucket.
+
+What stays open is in `plans/TODO.md`, under "Open after the release chunk retention plan":
+
+- the obstore driver and the historical read
+- the hard-link publication and the rewritten S3 keys
+- the obstore `#<digits>` listing and the partial chain restore
+- the marker handling of `archive validate` and `archive list`
+- the delta chain that creation writes and restore refuses, for a deleted key with a control character
+- the size of `release.py` and `release_retention.py`
+
+The operator barrier stays open too. The inventory is exact only while the operator keeps every writer stopped.
+
 ## 2026-11-04 — Metadata snapshots, releases and the metadata migration framework
 
 **Decision.** A migration is a plugin-declared, metadata-only `MigrationStep` that `firecube migrate run` executes. It closes the "Zarr migration framework" item of `plans/TODO.md`. The data-moving tier, such as `rename-dim`, stays out and stays open in `plans/TODO.md`. The work is part 2 of 2 of v0.1.9, on the branch `feat/maintenance-foundations`.
