@@ -34,6 +34,7 @@ from firecube.ingestor.runtime.release import (
     read_release_for_product,
     verify_release_for_product,
 )
+from firecube.ingestor.runtime.release_retention import verify_retention
 
 
 @click.command(
@@ -157,6 +158,16 @@ See also: firecube release show, firecube snapshot diff
 )
 @click.argument("version", metavar="[VERSION]", required=False)
 @release_options(tier="inspect")
+@click.option(
+    "--sample",
+    "sample",
+    type=click.IntRange(min=1),
+    default=None,
+    help=(
+        "Check this many randomly chosen object versions instead of all. Applies to a "
+        "release made with --retain-versions only."
+    ),
+)
 @click.pass_context
 def verify(
     ctx: click.Context,
@@ -167,14 +178,21 @@ def verify(
     storage_driver: str | None,
     storage_anonymous: bool | None,
     output_format: str,
+    sample: int | None,
 ) -> None:
     """compare the metadata of a product with a release
 
     VERSION names the release; without it the current release is used. exits 0
     when every metadata document equals the release snapshot byte for byte, and
-    1 on any difference, listing the changed, added and removed paths. this
-    detects metadata drift only: an edit of chunk bytes is not seen. exits 1
-    also when no such release exists.
+    1 on any difference, listing the changed, added and removed paths. an edit
+    of chunk bytes is not seen by the metadata comparison. a release that
+    retains its chunk bytes is checked too: a zip release reports whether its
+    archive is present, missing or changed and whether the chain of base
+    archives is intact; a release made with --retain-versions reports whether
+    the bucket versioning and lifecycle are unchanged and whether the listed
+    object versions still exist, all of them or --sample N. exits 1 also when
+    the archive is missing or changed, the chain is broken, a version is lost
+    or a bucket setting changed, and when no such release exists.
     """
     session = open_session(
         ctx,
@@ -188,11 +206,12 @@ def verify(
     )
     try:
         verification = verify_release_for_product(session=session, version=version)
+        check = verify_retention(session, verification.version, sample=sample)
     except FirecubeError as exc:
         raise click.ClickException(render(exc)) from exc
     if output_format == "json":
-        echo_json(verification_payload(verification))
+        echo_json(verification_payload(verification, check))
     else:
-        echo_verification(verification)
-    if not verification.matches:
+        echo_verification(verification, check)
+    if not (verification.matches and check.holds):
         ctx.exit(1)

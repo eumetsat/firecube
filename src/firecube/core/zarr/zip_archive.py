@@ -549,7 +549,7 @@ def read_zip_marker(path: str) -> Mapping[str, Any] | None:
 
     Raises:
         FileNotFoundError: If ``path`` is not a file.
-        ValueError: If the marker entry is not a JSON object.
+        ValueError: If the marker entry cannot be read or is not a JSON object.
     """
     archive_path = path.removeprefix("file://")
     if not os.path.isfile(archive_path):
@@ -557,7 +557,12 @@ def read_zip_marker(path: str) -> Mapping[str, Any] | None:
     with zipfile.ZipFile(archive_path) as zf:
         if MARKER_ENTRY not in zf.namelist():
             return None
-        raw = zf.read(MARKER_ENTRY)
+        try:
+            raw = zf.read(MARKER_ENTRY)
+        except zipfile.BadZipFile as exc:
+            raise ValueError(
+                f"Entry {MARKER_ENTRY!r} in archive {path} cannot be read: {exc}"
+            ) from exc
     try:
         marker = json.loads(raw)
     except ValueError as exc:

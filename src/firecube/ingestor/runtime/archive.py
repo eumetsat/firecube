@@ -374,8 +374,8 @@ def create_archive(
             its exclusive maintenance claim, or `holder_run_id` does not hold it or names a
             plain store; the call records no run.
         ArchiveConversionError: The conversion raises `FileExistsError`, `ValueError`,
-            `ImportError` or `CalendarArchiveError`; for a product, the call first tries to
-            record the run as failed.
+            `ImportError` or `CalendarArchiveError`, or the zip writer raises `RuntimeError`
+            or `OSError`; for a product, the call first tries to record the run as failed.
         ArchiveRecordError: The call writes the archive, then fails to record the run.
     """
     if archive_format not in _ARCHIVE_FORMATS:
@@ -441,6 +441,11 @@ def create_archive(
                 holder_run_id=holder_run_id,
             )
         scope_meta["archive_started_at"] = datetime.now(UTC).isoformat()
+        # The zip writer's own verification (RuntimeError) and a filesystem that cannot
+        # publish the file (OSError from the no-clobber hard link) are conversion failures.
+        zip_writer_errors: tuple[type[Exception], ...] = (
+            (RuntimeError, OSError) if archive_format == "zip" else ()
+        )
         try:
             if archive_format == "zip":
                 from firecube.core.zarr.zip_archive import zarr_to_zip
@@ -469,7 +474,13 @@ def create_archive(
                 )
                 result_target = tgm_result["target"]
                 result_file_size_bytes = tgm_result["file_size_bytes"]
-        except (FileExistsError, ValueError, ImportError, CalendarArchiveError) as exc:
+        except (
+            FileExistsError,
+            ValueError,
+            ImportError,
+            CalendarArchiveError,
+            *zip_writer_errors,
+        ) as exc:
             if manager is not None:
                 _record_archive_create_failure(
                     manager=manager,

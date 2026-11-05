@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import json
+import zipfile
 from typing import Any
 
 import click
@@ -46,6 +47,14 @@ def _echo_archive_info(info_dict: dict[str, Any], *, as_json: bool, format_label
     click.echo(f"Size:           {info_dict['size_bytes'] / (1024 * 1024):.2f} MB")
     if "entries" in info_dict:
         click.echo(f"Entries:        {info_dict['entries']}")
+    marker = info_dict.get("marker")
+    if marker is not None:
+        deleted = marker.get("deleted")
+        click.echo(f"Mode:           {marker.get('mode', '-')}")
+        click.echo(f"Version:        {marker.get('version', '-')}")
+        click.echo(f"Base:           {marker.get('base') or '-'}")
+        click.echo(f"Base URI:       {marker.get('base_uri') or '-'}")
+        click.echo(f"Deleted:        {len(deleted) if isinstance(deleted, list) else '-'}")
     click.echo(
         "Groups:         " + (", ".join(g or "(root)" for g in info_dict["groups"]) or "(none)")
     )
@@ -103,7 +112,10 @@ def info(ctx: click.Context, archive: str, output_format: str) -> None:
     if _is_zip_archive(archive):
         from firecube.core.zarr.zip_archive import zip_info
 
-        info_dict = zip_info(local_path)
+        try:
+            info_dict = zip_info(local_path)
+        except (ValueError, zipfile.BadZipFile) as exc:
+            raise click.ClickException(str(exc)) from exc
         _echo_archive_info(
             info_dict, as_json=output_format == "json", format_label=info_dict["format"]
         )
