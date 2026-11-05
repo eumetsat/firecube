@@ -15,9 +15,10 @@
 """Create and verify named releases of a product as recorded maintenance runs.
 
 `create_release_for_product` stamps the release on the root group, takes a coherent
-snapshot, writes the release record and makes it current, under the product's
-exclusive maintenance claim. `release_in_run` does the same inside a migration's
-claim and run. `verify_release_for_product` compares the live metadata with a release.
+snapshot, optionally retains the product's objects in a local zip archive, writes the
+release record and makes it current, under the product's exclusive maintenance claim.
+`release_in_run` does the same inside a migration's claim and run, without an archive.
+`verify_release_for_product` compares the live metadata with a release.
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ from firecube.core.controlplane.types import (
     RELEASE_ATTR,
     canonical_json_bytes,
 )
-from firecube.core.errors import FirecubeError, Message
+from firecube.core.errors import FirecubeError, Message, Param
 from firecube.core.zarr.metadata_documents import ABSENT
 from firecube.ingestor.contracts.migration import AttributePatch, ReleaseRecord
 
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
     from firecube.core.controlplane.manager import ChunkManager
     from firecube.core.controlplane.releases import ReleaseVerification, StoredRelease
     from firecube.core.storage.session import StorageSession
+    from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.metadata_documents import MetadataDocument
 
 _RUN_PREFIX: Final = "release-"
@@ -189,15 +191,22 @@ def _checkpoints(
     take_snapshot: Callable[[], str],
     stamp: Callable[[], None] | None,
     report: Callable[[str], None],
+    retain: Callable[[str], Mapping[str, Any]] | None = None,
+    archive: StorageUri | None = None,
 ) -> tuple[StoredRelease, ReleaseOutcome]:
-    """Finish a release from its first missing checkpoint: stamp, snapshot, record, then ref.
+    """Finish a release from its first missing checkpoint: stamp, snapshot, retention, record, ref.
 
-    An existing record whose snapshot matches the live documents is kept, and only a
-    pending ref is published. `take_snapshot` runs only when no record exists.
+    It keeps an existing record whose snapshot matches the live documents and that
+    retains `archive`, when given, and then publishes only a pending ref.
+    `take_snapshot` and `retain` run only when no record exists; `retain` takes the
+    snapshot id and returns the record's retention object.
     """
     existing = manager.find_release(product, version)
     if existing is not None:
         _require_match(manager, product, existing)
+        if archive is not None:
+            # Another run may have recorded the version between admission and the claim.
+            _require_recorded_archive(existing, archive)
         current = manager.current_release(product)
         if current is not None and current.version == version:
             return existing, OUTCOME_ALREADY_CURRENT
@@ -207,8 +216,14 @@ def _checkpoints(
     if stamp is not None:
         stamp()
     snapshot_id = take_snapshot()
+    retention = None if retain is None else retain(snapshot_id)
     stored = manager.create_release(
-        product, version=version, snapshot_id=snapshot_id, run_id=run_id, note=note
+        product,
+        version=version,
+        snapshot_id=snapshot_id,
+        run_id=run_id,
+        note=note,
+        retention=retention,
     )
     report(f"recorded release {version!r} at snapshot {snapshot_id}")
     manager.publish_current_release(product, version, run_id=run_id)
@@ -333,6 +348,51 @@ def _close(manager: ChunkManager, warn: Callable[[str], None]) -> None:
         warn(Message("Warning: control plane not closed: {error}", error=_error_text(exc)))
 
 
+def _admit_archive(version: str, archive: StorageUri | None, archive_full: bool) -> str | None:
+    """Return the local path of the release archive, or `None` without one.
+
+    Raises:
+        ReleaseRefusedError: `archive_full` is set without `archive`, or `archive` is
+            not a `file://` URI.
+    """
+    if archive is None:
+        if archive_full:
+            raise ReleaseRefusedError(
+                Message(
+                    "{archive_full} needs {archive}: it chooses the kind of the archive to write.",
+                    archive_full=Param("archive_full"),
+                    archive=Param("archive"),
+                ),
+                version=version,
+            )
+        return None
+    from firecube.ingestor.runtime.release_retention import require_local_archive
+
+    return require_local_archive(archive, version=version)
+
+
+def _require_recorded_archive(existing: StoredRelease, archive: StorageUri) -> None:
+    """Refuse an archive that the existing record of the version does not retain.
+
+    Raises:
+        ReleaseRefusedError: The record retains nothing, or another archive.
+    """
+    recorded = None if existing.retention is None else existing.retention.get("uri")
+    if recorded == archive.to_str():
+        return
+    raise ReleaseRefusedError(
+        Message(
+            "Release {version!r} exists and retains {recorded}, not the archive {archive_uri} "
+            "given as {archive}. A record is never rewritten, so choose another version.",
+            version=existing.version,
+            recorded="no archive" if recorded is None else recorded,
+            archive_uri=archive.to_str(),
+            archive=Param("archive"),
+        ),
+        version=existing.version,
+    )
+
+
 def create_release_for_product(
     *,
     session: StorageSession,
@@ -340,15 +400,22 @@ def create_release_for_product(
     note: str | None = None,
     report: Callable[[str], None] = _ignore_line,
     warn: Callable[[str], None] = _ignore_line,
+    archive: StorageUri | None = None,
+    archive_full: bool = False,
 ) -> ReleaseCreateResult:
     """Create release `version` of the session's product as one recorded maintenance run.
 
     Under the exclusive maintenance claim, the run writes `firecube_release` and
     `firecube_last_modifier` on the root group, the root consolidated image last. It
-    then takes a coherent snapshot, writes the release record and publishes
-    `refs/current.json`. A rerun resumes after the last checkpoint reached. A
-    version names one state: an existing record whose snapshot differs from the live
-    metadata is refused.
+    then takes a coherent snapshot. With `archive`, it writes the digest inventory and
+    a zip archive of the product's objects. It then writes the release record and
+    publishes `refs/current.json`. A rerun resumes after the last checkpoint reached.
+    A version names one state: an existing record whose snapshot differs from the
+    live metadata is refused.
+
+    The archive is full when the current release retains no zip archive or
+    `archive_full` is set. Otherwise it is a delta: the objects new or changed since
+    that release, every metadata document, and the deleted keys in its marker.
 
     Args:
         session: The storage session bound to the product.
@@ -356,6 +423,8 @@ def create_release_for_product(
         note: Free text kept in the record.
         report: Receives progress lines.
         warn: Receives each bookkeeping warning line, "Warning: " included.
+        archive: The `file://` URI of the zip archive to write; nothing may exist there.
+        archive_full: Write a full archive even when a delta is possible.
 
     Returns:
         The outcome, the run and the release record.
@@ -365,15 +434,19 @@ def create_release_for_product(
         UnicodeEncodeError: `version` or `note` cannot be encoded as UTF-8.
         ReleaseVersionUnstorableError: A storage driver cannot write, list or read the
             record of `version`. Nothing is written.
-        ReleaseRefusedError: The store has no control plane, or a migration that did
-            not complete stamped `version`.
+        ReleaseRefusedError: The store has no control plane, a migration that did not
+            complete stamped `version`, `archive` is not local, something exists at it,
+            `archive_full` comes without it, an existing record of `version` retains
+            another archive, or the archived bytes differ from the inventory.
         ReleaseConflictError: A record of `version` exists, and the live metadata differs
             from its snapshot.
         ClaimConflictError: Another owner holds the exclusive maintenance claim.
         ExclusiveMaintenanceRefusedError: Other claims or unfinished runs exist.
         MetadataStateError: A document changed while the run wrote.
+        ArchiveConversionError: The archive could not be written; the run is recorded failed.
     """
     _check_version(version, note)
+    archive_path = _admit_archive(version, archive, archive_full)
     manager = session.control_plane()
     product = session.product.product_name
     try:
@@ -386,9 +459,16 @@ def create_release_for_product(
                 version=version,
             )
         existing = manager.find_release(product, version)
+        if existing is None and archive_path is not None:
+            from firecube.ingestor.runtime.release_retention import refuse_existing_archive
+
+            # Refused before any claim, run or inventory; the step checks again under the claim.
+            refuse_existing_archive(archive_path, version=version)
         if existing is not None:
             # Read-only refusal or no-op before any claim or run.
             _require_match(manager, product, existing)
+            if archive is not None:
+                _require_recorded_archive(existing, archive)
             current = manager.current_release(product)
             if current is not None and current.version == version:
                 report(f"release {version!r} is current already")
@@ -410,6 +490,8 @@ def create_release_for_product(
                 run_id=run_id,
                 report=report,
                 warn=warn,
+                archive=archive,
+                archive_full=archive_full,
             )
         finally:
             try:
@@ -436,6 +518,8 @@ def _run(
     run_id: str,
     report: Callable[[str], None],
     warn: Callable[[str], None],
+    archive: StorageUri | None,
+    archive_full: bool,
 ) -> ReleaseCreateResult:
     """Record the run, finish the release from its checkpoints, and record the outcome."""
     scope_meta: dict[str, Any] = {
@@ -443,6 +527,22 @@ def _run(
         "version": version,
         "note": note,
     }
+    retain: Callable[[str], Mapping[str, Any]] | None = None
+    if archive is not None:
+        from firecube.ingestor.runtime.release_retention import zip_retention
+
+        scope_meta.update(archive=archive.to_str(), archive_full=archive_full)
+        retain = zip_retention(
+            session=session,
+            manager=manager,
+            product=product,
+            version=version,
+            run_id=run_id,
+            archive=archive,
+            archive_full=archive_full,
+            report=report,
+            warn=warn,
+        )
     started = False
     try:
         manager.record_maintenance_started(
@@ -479,6 +579,8 @@ def _run(
             take_snapshot=take_snapshot,
             stamp=stamp,
             report=report,
+            retain=retain,
+            archive=archive,
         )
         scope_meta.update(
             outcome=outcome,

@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import contextlib
 import uuid
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -334,6 +334,8 @@ def create_archive(
     allow_inf: bool = True,
     warn: Callable[[str], None] = _ignore_line,
     holder_run_id: str | None = None,
+    keys: Iterable[str] | None = None,
+    marker: Mapping[str, Any] | None = None,
 ) -> ArchiveCreateResult:
     """Write the session's store to a local .zip or .tgm archive.
 
@@ -358,13 +360,16 @@ def create_archive(
         warn: Receives each bookkeeping warning line, "Warning: " included.
         holder_run_id: The run that holds the product's exclusive maintenance claim. Pass
             it to archive under that claim; the run record names it. A plain store refuses it.
+        keys: The product keys a zip archive holds; `None` archives every key.
+        marker: The JSON object a zip archive holds at its reserved marker entry.
 
     Returns:
         The written archive, its size, the recorded run id and the tensogram summary.
 
     Raises:
-        ValueError: `archive_format` is unknown, or a zip archive gets a group, a
-            variable list or a date; the call reads and writes nothing.
+        ValueError: `archive_format` is unknown, a zip archive gets a group, a
+            variable list or a date, or a tensogram archive gets `keys` or `marker`;
+            the call reads and writes nothing.
         ArchiveClaimError: The product's claims refuse the archive, another owner holds
             its exclusive maintenance claim, or `holder_run_id` does not hold it or names a
             plain store; the call records no run.
@@ -377,6 +382,14 @@ def create_archive(
         raise ValueError(f"archive_format must be 'zip' or 'tensogram', not {archive_format!r}")
     if archive_format == "zip" and (group or start_date or end_date or variables):
         raise ValueError("Zip archive does not support group, start_date, end_date, or variables")
+    if archive_format == "tensogram" and (keys is not None or marker is not None):
+        raise ValueError("Tensogram archive does not support keys or marker")
+    # Only a caller that names a subset or a marker passes them on.
+    zip_selection: dict[str, Any] = {}
+    if keys is not None:
+        zip_selection["keys"] = list(keys)
+    if marker is not None:
+        zip_selection["marker"] = marker
     # Call-time imports, here and in the zip branch: callers and tests replace the
     # converters on their modules.
     from firecube.core.tensogram.converter import CalendarArchiveError, zarr_to_tgm
@@ -436,6 +449,7 @@ def create_archive(
                     session,
                     archive_path,
                     overwrite=overwrite,
+                    **zip_selection,
                 )
                 result_target = zip_result.target
                 result_file_size_bytes = zip_result.file_size_bytes

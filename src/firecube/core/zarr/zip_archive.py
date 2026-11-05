@@ -15,7 +15,8 @@
 """Pack an existing Zarr product into a single-file zip archive.
 
 The archive is readable with ``zarr.storage.ZipStore``. It is written exactly
-once: built under a temporary name, closed, verified, then renamed into place.
+once: built under a temporary name, closed, verified, then published under its
+name. A publication without overwrite never replaces an archive that appeared meanwhile.
 """
 
 from __future__ import annotations
@@ -101,7 +102,8 @@ def zarr_to_zip(
             source store, the source has no Zarr v3 root metadata, the product
             holds the reserved marker entry, or ``keys`` names a key the product
             lacks or the reserved marker entry.
-        FileExistsError: If ``target`` exists and ``overwrite`` is False.
+        FileExistsError: If ``target`` exists, or another writer publishes it first, and
+            ``overwrite`` is False. The new archive is then discarded.
         RuntimeError: If the written archive fails verification.
     """
     if is_remote_target(target):
@@ -154,7 +156,17 @@ def zarr_to_zip(
         finally:
             handle.store.close()
         _verify(str(partial_path), expected_keys=selected, has_marker=marker is not None)
-        os.replace(partial_path, target_path)
+        if overwrite:
+            os.replace(partial_path, target_path)
+        else:
+            # The existence check above reserves nothing: another writer may publish the
+            # same path meanwhile. A hard link publishes the verified file whole and raises
+            # FileExistsError when the target exists, so a lost race clobbers nothing.
+            try:
+                os.link(partial_path, target_path)
+            except FileExistsError as exc:
+                raise FileExistsError(f"Target file already exists: {target}") from exc
+            partial_path.unlink()
     except BaseException:
         partial_path.unlink(missing_ok=True)
         raise
