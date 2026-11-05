@@ -33,6 +33,8 @@ from firecube.core.filesystem.ops import (
 )
 from firecube.core.filesystem.protocol import (
     Multipart,
+    ObjectVersion,
+    ObjectVersions,
     RangedRead,
     Signer,
     StorageFilesystem,
@@ -42,6 +44,8 @@ from firecube.core.filesystem.protocol import (
 __all__ = [
     "FsspecFilesystem",
     "Multipart",
+    "ObjectVersion",
+    "ObjectVersions",
     "ObstoreFilesystem",
     "RangedRead",
     "Signer",

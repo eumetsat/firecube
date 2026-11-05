@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import contextlib
+import datetime
 import errno
 import logging
 import os
@@ -29,11 +30,18 @@ from firecube.core.filesystem.protocol import (
     AtomicWriter,
     Multipart,
     MultipartUploader,
+    ObjectVersion,
+    ObjectVersions,
 )
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.uri import StorageUri
 
 log = logging.getLogger(__name__)
+
+# S3 returns at most 1000 entries per ListObjectVersions page.
+LIST_VERSIONS_PAGE_SIZE = 1000
+
+_BUCKET_VERSIONING_STATES = {"Enabled": "enabled", "Suspended": "suspended"}
 
 
 def _is_listed_publication_temp(entry: Any) -> bool:
@@ -64,6 +72,58 @@ def _is_precondition_failed(exc: BaseException) -> bool:
                 return True
         current = current.__cause__ or current.__context__
     return False
+
+
+def _error_responses(exc: BaseException) -> list[dict[str, Any]]:
+    """Return the botocore response dicts in the cause chain of ``exc``, outermost first."""
+    responses: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        response = getattr(current, "response", None)
+        if isinstance(response, dict):
+            responses.append(response)
+        current = current.__cause__ or current.__context__
+    return responses
+
+
+def _has_error_code(exc: BaseException, code: str) -> bool:
+    """Return True when a botocore response in the cause chain of ``exc`` carries ``code``."""
+    return any(response.get("Error", {}).get("Code") == code for response in _error_responses(exc))
+
+
+def _delete_marker_headers(exc: BaseException) -> dict[str, Any] | None:
+    """Return the headers of the first error response in the cause chain of ``exc`` that marks a delete marker."""
+    for response in _error_responses(exc):
+        headers = response.get("ResponseMetadata", {}).get("HTTPHeaders", {})
+        if str(headers.get("x-amz-delete-marker", "")).lower() == "true":
+            return headers
+    return None
+
+
+def _json_ready(value: Any) -> Any:
+    """Return ``value`` with every datetime written as an ISO 8601 string."""
+    if isinstance(value, dict):
+        return {str(key): _json_ready(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, datetime.date):
+        return value.isoformat()
+    return value
+
+
+def _listed_version(entry: dict[str, Any], *, is_delete_marker: bool) -> ObjectVersion:
+    """Build an `ObjectVersion` from one ``Versions`` or ``DeleteMarkers`` entry of a listing."""
+    size = entry.get("Size")
+    return ObjectVersion(
+        key=entry["Key"],
+        version_id=entry.get("VersionId"),
+        is_latest=entry.get("IsLatest"),
+        is_delete_marker=is_delete_marker,
+        size=None if is_delete_marker or size is None else int(size),
+        etag=None if is_delete_marker else entry.get("ETag"),
+    )
 
 
 class FsspecAtomicWriter:
@@ -310,6 +370,137 @@ class FsspecFilesystem:
     def publish_atomic(self, dst_uri: StorageUri, write: Callable[[StorageUri], None]) -> None:
         publication.publish_atomic(dst_uri, write)
 
+    def bucket_versioning(self, uri: StorageUri) -> str:
+        """Return ``"enabled"``, ``"suspended"`` or ``"absent"`` for the bucket of ``uri``.
+
+        Raises:
+            ValueError: The binding or ``uri`` is not s3, or the store reports an unknown state.
+        """
+        bucket, _key = self._s3_bucket_and_key(uri)
+        response = self._fs.call_s3("get_bucket_versioning", Bucket=bucket)
+        status = response.get("Status")
+        if not status:
+            return "absent"
+        if status not in _BUCKET_VERSIONING_STATES:
+            raise ValueError(f"bucket {bucket!r} reports unknown versioning status {status!r}")
+        return _BUCKET_VERSIONING_STATES[status]
+
+    def list_versions(self, prefix_uri: StorageUri) -> list[ObjectVersion]:
+        """List every version and delete marker below ``prefix_uri``, page by page.
+
+        Entries keep the store's order within a page, versions before delete markers.
+
+        Raises:
+            ValueError: The binding or ``prefix_uri`` is not s3.
+            OSError: A truncated page names no next markers, or repeats earlier ones.
+        """
+        bucket, key = self._s3_bucket_and_key(prefix_uri)
+        params: dict[str, Any] = {
+            "Bucket": bucket,
+            "Prefix": f"{key}/" if key else "",
+            "MaxKeys": LIST_VERSIONS_PAGE_SIZE,
+        }
+        entries: list[ObjectVersion] = []
+        seen_markers: set[tuple[str, str]] = set()
+        while True:
+            page = self._fs.call_s3("list_object_versions", **params)
+            entries.extend(
+                _listed_version(entry, is_delete_marker=False) for entry in page.get("Versions", [])
+            )
+            entries.extend(
+                _listed_version(entry, is_delete_marker=True)
+                for entry in page.get("DeleteMarkers", [])
+            )
+            if not page.get("IsTruncated"):
+                return entries
+            key_marker = page.get("NextKeyMarker")
+            version_marker = page.get("NextVersionIdMarker")
+            if not key_marker or not version_marker:
+                raise OSError(
+                    f"version listing of s3://{bucket}/{params['Prefix']} is truncated "
+                    "without a next key and version marker; the listing is incomplete"
+                )
+            if (key_marker, version_marker) in seen_markers:
+                raise OSError(
+                    f"version listing of s3://{bucket}/{params['Prefix']} repeats the markers "
+                    f"{key_marker!r}, {version_marker!r}; the listing is incomplete"
+                )
+            seen_markers.add((key_marker, version_marker))
+            params["KeyMarker"] = key_marker
+            params["VersionIdMarker"] = version_marker
+
+    def head_version(self, uri: StorageUri, version_id: str) -> ObjectVersion | None:
+        """Return version ``version_id`` of the object at ``uri``, or None when the store has none.
+
+        Raises:
+            ValueError: The binding or ``uri`` is not s3, or ``uri`` names no object.
+            OSError: The store answers for a version other than ``version_id``.
+        """
+        bucket, key = self._s3_bucket_and_key(uri)
+        if not key:
+            raise ValueError(f"{uri} names a bucket, not an object")
+        try:
+            response = self._fs.call_s3("head_object", Bucket=bucket, Key=key, VersionId=version_id)
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            headers = _delete_marker_headers(exc)
+            if headers is None:
+                raise
+            answered = headers.get("x-amz-version-id")
+            if answered != version_id:
+                raise OSError(
+                    f"s3://{bucket}/{key}: the store answered for delete marker {answered!r} "
+                    f"when asked for {version_id!r}"
+                ) from exc
+            return ObjectVersion(
+                key=key,
+                version_id=version_id,
+                is_latest=None,
+                is_delete_marker=True,
+                size=None,
+                etag=None,
+            )
+        answered = response.get("VersionId")
+        if answered != version_id:
+            raise OSError(
+                f"s3://{bucket}/{key}: the store answered for version {answered!r} "
+                f"when asked for {version_id!r}"
+            )
+        size = response.get("ContentLength")
+        return ObjectVersion(
+            key=key,
+            version_id=version_id,
+            is_latest=None,
+            is_delete_marker=bool(response.get("DeleteMarker", False)),
+            size=None if size is None else int(size),
+            etag=response.get("ETag"),
+        )
+
+    def lifecycle(self, uri: StorageUri) -> dict[str, Any] | None:
+        """Return ``{"Rules": [...]}`` for the bucket of ``uri``, ``{}`` without rules, None if denied.
+
+        Raises:
+            ValueError: The binding or ``uri`` is not s3.
+        """
+        bucket, _key = self._s3_bucket_and_key(uri)
+        try:
+            response = self._fs.call_s3("get_bucket_lifecycle_configuration", Bucket=bucket)
+        except PermissionError:
+            return None
+        except FileNotFoundError as exc:
+            if _has_error_code(exc, "NoSuchLifecycleConfiguration"):
+                return {}
+            raise
+        return {"Rules": _json_ready(response.get("Rules", []))}
+
+    def _s3_bucket_and_key(self, uri: StorageUri) -> tuple[str, str]:
+        """Return the bucket and the object key of ``uri`` for an s3-bound filesystem."""
+        if self._binding.identity.product_uri.protocol != "s3" or uri.protocol != "s3":
+            raise ValueError(f"object versions need an s3 binding and an s3 URI, got {uri}")
+        assert uri.authority is not None
+        return uri.authority, uri.path.strip("/")
+
     @property
     def atomic_writer(self) -> AtomicWriter:
         return self._atomic_writer
@@ -326,7 +517,13 @@ class FsspecFilesystem:
         return self._multipart_uploader
 
     def capabilities(self) -> set[type]:
-        return {Multipart, AtomicPublish}
+        capabilities: set[type] = {Multipart, AtomicPublish}
+        # The docs macro asks an instance that has no binding for the driver's own
+        # capabilities; such an instance serves no product, so it adds none.
+        binding = getattr(self, "_binding", None)
+        if binding is not None and binding.identity.product_uri.protocol == "s3":
+            capabilities.add(ObjectVersions)
+        return capabilities
 
     @classmethod
     def from_binding(cls, binding: StorageBinding) -> FsspecFilesystem:
