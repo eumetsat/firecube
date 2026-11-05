@@ -12,25 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Retain the objects of a release in a local zip archive, and verify what a release retains.
+"""Retain the objects of a release, and verify what a release retains.
 
 `zip_retention` builds the step a release run calls after its snapshot. The step
 writes the digest inventory, then a full or delta archive of the inventoried keys,
-and returns the record's `retention` object. `verify_retention` checks a release's
-archive and the chain of base archives below it. Archive files are local and read
-directly, outside the product's storage session.
+and returns the record's `retention` object. `versions_retention` builds the step
+for an S3 product on a versioned bucket: it records the version id of every
+object instead of copying bytes. `verify_retention` checks a release's archive and
+the chain of base archives below it, or the listed object versions. Archive files
+are local and read directly, outside the product's storage session.
 """
 
 from __future__ import annotations
 
 import hashlib
 import os
+import random
 import zipfile
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import IO, TYPE_CHECKING, Any, Final, Literal
+from typing import IO, TYPE_CHECKING, Any, Final, Literal, cast
 
-from firecube.core.errors import ControlPlaneCorruptionError, Message, Param
+from firecube.core.controlplane.inventories import excluded_from_inventory
+from firecube.core.controlplane.types import (
+    INVENTORY_KIND_S3_VERSIONS,
+    LIFECYCLE_UNAVAILABLE,
+    Inventory,
+    InventoryObject,
+    canonical_json_bytes,
+)
+from firecube.core.errors import ControlPlaneCorruptionError, ManifestError, Message, Param
+from firecube.core.filesystem.protocol import ObjectVersion, ObjectVersions
+from firecube.core.filesystem.publication import is_publication_temp
 from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.runtime.release import ReleaseRefusedError
 
@@ -40,12 +53,19 @@ if TYPE_CHECKING:
     from firecube.core.storage.session import StorageSession
 
 RETENTION_KIND_ZIP: Final = "zip"
+RETENTION_KIND_VERSIONS: Final = INVENTORY_KIND_S3_VERSIONS
 MODE_FULL: Final = "full"
 MODE_DELTA: Final = "delta"
 ArchiveState = Literal["present", "missing", "changed"]
 """Whether a release's archive file exists and still has the recorded digest."""
 ChainState = Literal["intact", "broken"]
 """Whether every base archive below a delta archive exists and has its recorded digest."""
+RecordedState = Literal["unchanged", "changed"]
+"""Whether a bucket setting still equals the value the release recorded."""
+InventoryState = Literal["intact", "lost"]
+"""Whether every checked listed object version still exists."""
+CheckedScope = Literal["all", "sample"]
+"""Whether every listed object version was checked, or a random sample."""
 
 # The Zarr v3 and v2 metadata documents; a delta archive holds each one whatever its digest.
 _METADATA_DOCUMENTS: Final = frozenset({"zarr.json", ".zgroup", ".zarray", ".zattrs", ".zmetadata"})
@@ -59,14 +79,25 @@ class RetentionVerification:
 
     Attributes:
         version: The release version.
-        kind: `"zip"`, or `None` when the release retains nothing.
+        kind: `"zip"`, `"s3-versions"`, or `None` when the release retains nothing.
         archive: `"present"`, `"missing"` or `"changed"` for the release's own archive,
-            or `None` when it retains nothing.
+            or `None` when it retains no zip archive.
         chain: `"intact"` when every base archive below this one is present and
-            unchanged, `"broken"` otherwise, or `None` when it retains nothing. A full
-            archive has no base, so its chain is intact.
+            unchanged, `"broken"` otherwise, or `None` when it retains no zip archive. A
+            full archive has no base, so its chain is intact.
         broken_at: The version of the first link, newest first, whose record or archive
             fails, or `None`.
+        retention: For `"s3-versions"`, `"changed"` when the bucket's versioning state
+            differs from the recorded one, else `"unchanged"`; otherwise `None`.
+        lifecycle: For `"s3-versions"`, `"changed"` when the bucket's lifecycle
+            configuration differs from the recorded one, else `"unchanged"`; otherwise `None`.
+        inventory: For `"s3-versions"`, `"lost"` when a checked version is gone or no
+            longer an object, else `"intact"`; otherwise `None`.
+        lost: The number of checked versions that are lost, or `None`.
+        lost_keys: The keys of the lost versions, sorted.
+        checked: `"all"` when every listed version was checked, `"sample"` when a random
+            sample was; `None` for a release without version retention.
+        checked_count: The number of versions checked, or `None`.
     """
 
     version: str
@@ -74,11 +105,26 @@ class RetentionVerification:
     archive: ArchiveState | None = None
     chain: ChainState | None = None
     broken_at: str | None = None
+    retention: RecordedState | None = None
+    lifecycle: RecordedState | None = None
+    inventory: InventoryState | None = None
+    lost: int | None = None
+    lost_keys: tuple[str, ...] = ()
+    checked: CheckedScope | None = None
+    checked_count: int | None = None
 
     @property
     def holds(self) -> bool:
-        """Whether nothing is retained, or the archive is present and its chain intact."""
-        return self.kind is None or (self.archive == "present" and self.chain == "intact")
+        """Whether nothing is retained, or what the release retains is intact."""
+        if self.kind is None:
+            return True
+        if self.kind == RETENTION_KIND_VERSIONS:
+            return (
+                self.retention == "unchanged"
+                and self.lifecycle == "unchanged"
+                and self.inventory == "intact"
+            )
+        return self.archive == "present" and self.chain == "intact"
 
 
 def require_local_archive(archive: StorageUri, *, version: str) -> str:
@@ -310,6 +356,265 @@ def zip_retention(
     return retain
 
 
+def _versioned_filesystem(session: StorageSession, *, version: str) -> ObjectVersions:
+    """Return the session's filesystem when it reports `ObjectVersions`.
+
+    Raises:
+        ReleaseRefusedError: The driver does not report it: the product is not on s3 or
+            the driver is not fsspec.
+    """
+    fs = session.fs()
+    if ObjectVersions not in fs.capabilities():
+        raise ReleaseRefusedError(
+            Message(
+                "{retain_versions} needs an s3 product on the fsspec storage driver, and "
+                "the driver {driver} on {product_uri} does not list object versions.",
+                retain_versions=Param("retain_versions"),
+                driver=session.driver.driver,
+                product_uri=session.product.product_uri.to_str(),
+            ),
+            version=version,
+        )
+    return cast(ObjectVersions, fs)
+
+
+def _no_usable_id(entry: ObjectVersion) -> bool:
+    return entry.version_id is None or entry.version_id in {"", "null"}
+
+
+def _version_inventory(session: StorageSession, *, version: str) -> Inventory:
+    """List the versions below the product and return the inventory of its current objects.
+
+    The listing is not atomic on any backend, so the inventory is coherent only
+    while the operator keeps every writer of the product stopped. The release
+    holds the exclusive maintenance claim, which excludes firecube's own writers
+    and nothing else.
+
+    A key counts when its entry with `is_latest` is an object. A key whose latest
+    entry is a delete marker is recorded as a delete marker, not an object. A key
+    with only older entries has no latest entry and is not listed: it was deleted
+    at the cut.
+
+    Raises:
+        ReleaseRefusedError: The driver reports no object versions, the bucket's
+            versioning is not enabled, the store does not say which entry is
+            latest, or a current object has no usable version id.
+        ManifestError: A key cannot be recorded literally.
+    """
+    fs = _versioned_filesystem(session, version=version)
+    product_root = session.product.product_uri
+    state = fs.bucket_versioning(product_root)
+    if state != "enabled":
+        raise ReleaseRefusedError(
+            Message(
+                "The bucket of {product_uri} has versioning {state}. {retain_versions} needs "
+                "it enabled: an object written without it has no version id to record.",
+                product_uri=product_root.to_str(),
+                state=state,
+                retain_versions=Param("retain_versions"),
+            ),
+            version=version,
+        )
+    lifecycle = fs.lifecycle(product_root)
+    entries = fs.list_versions(product_root)
+    if any(entry.is_latest is None for entry in entries):
+        raise ReleaseRefusedError(
+            Message(
+                "The version listing of {product_uri} does not say which version of each "
+                "key is current, so no inventory is taken.",
+                product_uri=product_root.to_str(),
+            ),
+            version=version,
+        )
+    prefix = f"{product_root.path.strip('/')}/" if product_root.path.strip("/") else ""
+    latest: dict[str, ObjectVersion] = {}
+    for entry in entries:
+        if not entry.is_latest:
+            continue
+        if not entry.key.startswith(prefix):
+            raise ManifestError(
+                f"the version listing of {product_root.to_str()} returned {entry.key!r}, "
+                "which is not an object of the product"
+            )
+        key = entry.key[len(prefix) :]
+        if any(segment in {"", ".", ".."} for segment in key.split("/")):
+            raise ManifestError(
+                Message(
+                    "The key {key!r} of {product_uri} has an empty, '.' or '..' segment, so it "
+                    "cannot be recorded literally and no inventory is taken. Rename the object.",
+                    key=entry.key,
+                    product_uri=product_root.to_str(),
+                )
+            )
+        if is_publication_temp(key):
+            continue
+        if key in latest:
+            raise ReleaseRefusedError(
+                Message(
+                    "The version listing of {product_uri} marks two versions of {key!r} as "
+                    "current, so no inventory is taken.",
+                    product_uri=product_root.to_str(),
+                    key=key,
+                ),
+                version=version,
+            )
+        if not excluded_from_inventory(product_root, key):
+            latest[key] = entry
+    unusable = sorted(
+        key
+        for key, entry in latest.items()
+        if (_no_usable_id(entry) if not entry.is_delete_marker else not entry.version_id)
+    )
+    if unusable and latest[unusable[0]].is_delete_marker:
+        raise ReleaseRefusedError(
+            Message(
+                "The version listing of {product_uri} returned a delete marker for {key!r} "
+                "with no version id, so no inventory is taken. Run again; if the store keeps "
+                "answering so, it is not reporting delete markers correctly.",
+                product_uri=product_root.to_str(),
+                key=unusable[0],
+            ),
+            version=version,
+        )
+    if unusable:
+        raise ReleaseRefusedError(
+            Message(
+                "{count} current objects of {product_uri} have no usable version id, the "
+                "first is {key!r}: they were written before versioning was enabled. Copy "
+                "each over itself to give it one, then run again.",
+                count=len(unusable),
+                product_uri=product_root.to_str(),
+                key=unusable[0],
+            ),
+            version=version,
+        )
+    objects = tuple(
+        InventoryObject(
+            key=key,
+            size=0 if entry.is_delete_marker else entry.size or 0,
+            version_id=entry.version_id,
+            etag=entry.etag,
+            delete_marker=entry.is_delete_marker,
+        )
+        for key, entry in sorted(latest.items())
+    )
+    return Inventory(
+        kind=INVENTORY_KIND_S3_VERSIONS,
+        objects=objects,
+        bucket_versioning=state,
+        lifecycle=LIFECYCLE_UNAVAILABLE if lifecycle is None else lifecycle,
+    )
+
+
+def preflight_version_retention(session: StorageSession, *, version: str) -> None:
+    """Refuse a release whose product cannot retain object versions; write nothing.
+
+    The release run takes its cut again under the claim, so this only moves the
+    refusals ahead of the stamp and the snapshot.
+
+    Raises:
+        ReleaseRefusedError: See `_version_inventory`.
+        ManifestError: A key cannot be recorded literally.
+    """
+    _version_inventory(session, version=version)
+
+
+def versions_retention(
+    *,
+    session: StorageSession,
+    manager: ChunkManager,
+    product: str,
+    version: str,
+    run_id: str,
+    report: Callable[[str], None],
+) -> Callable[[str], dict[str, Any]]:
+    """Return the step that retains release `version` as the version ids of its objects.
+
+    The step takes the snapshot id. It lists the versions of the product, writes
+    the `s3-versions` inventory of the current objects and delete markers, and
+    returns the record's `retention` object. It copies no bytes. The inventory is
+    coherent only under the operator stop of every other writer.
+
+    Raises:
+        ReleaseRefusedError: See `_version_inventory`.
+    """
+
+    def retain(_snapshot_id: str) -> dict[str, Any]:
+        inventory = _version_inventory(session, version=version)
+        inventory_id = manager.write_inventory(product, inventory)
+        count = sum(1 for item in inventory.objects if not item.delete_marker)
+        markers = len(inventory.objects) - count
+        report(
+            f"inventory {inventory_id} lists {count} object versions and {markers} delete markers"
+        )
+        return {
+            "kind": RETENTION_KIND_VERSIONS,
+            "inventory": inventory_id,
+            "bucket_versioning": inventory.bucket_versioning,
+            "object_count": count,
+            "created_by_run": run_id,
+        }
+
+    return retain
+
+
+def _lifecycle_changed(recorded: Any, current: Mapping[str, Any] | None) -> bool:
+    now = LIFECYCLE_UNAVAILABLE if current is None else dict(current)
+    then = LIFECYCLE_UNAVAILABLE if recorded is None else recorded
+    if isinstance(now, str) or isinstance(then, str):
+        return now != then
+    return canonical_json_bytes(dict(then)) != canonical_json_bytes(now)
+
+
+def _verify_versions(
+    session: StorageSession,
+    manager: ChunkManager,
+    release: StoredRelease,
+    sample: int | None,
+) -> RetentionVerification:
+    """Check the bucket settings and the listed versions of a version-retaining release."""
+    product = session.product.product_name
+    inventory = manager.read_inventory(product, _retention_text(release, "inventory"))
+    fs = _versioned_filesystem(session, version=release.version)
+    product_root = session.product.product_uri
+    retention = (
+        "unchanged"
+        if fs.bucket_versioning(product_root) == _retention_text(release, "bucket_versioning")
+        else "changed"
+    )
+    lifecycle = (
+        "changed"
+        if _lifecycle_changed(inventory.lifecycle, fs.lifecycle(product_root))
+        else "unchanged"
+    )
+    listed = [item for item in inventory.objects if not item.delete_marker]
+    if sample is None or sample >= len(listed):
+        targets, checked = listed, "all"
+    else:
+        targets, checked = random.sample(listed, sample), "sample"
+    lost: list[str] = []
+    for item in targets:
+        assert item.version_id is not None  # an s3-versions inventory entry always has one
+        try:
+            found = fs.head_version(product_root.join(item.key), item.version_id)
+        except OSError:
+            lost.append(item.key)
+            continue
+        if found is None or found.is_delete_marker or found.size != item.size:
+            lost.append(item.key)
+    return RetentionVerification(
+        version=release.version,
+        kind=RETENTION_KIND_VERSIONS,
+        retention=retention,
+        lifecycle=lifecycle,
+        inventory="lost" if lost else "intact",
+        lost=len(lost),
+        lost_keys=tuple(sorted(lost)),
+        checked=checked,
+        checked_count=len(targets),
+    )
+
+
 def _archive_state(release: StoredRelease) -> ArchiveState:
     """Return whether the archive a release records exists and has the recorded digest.
 
@@ -365,21 +670,31 @@ def _first_broken_base(manager: ChunkManager, product: str, release: StoredRelea
         link = base
 
 
-def verify_retention(session: StorageSession, version: str | None = None) -> RetentionVerification:
-    """Check the archive of a release and the chain of base archives below it.
+def verify_retention(
+    session: StorageSession, version: str | None = None, *, sample: int | None = None
+) -> RetentionVerification:
+    """Check what a release retains: its archive chain, or its listed object versions.
 
-    The call hashes each local archive file whole, reads the records only, writes
-    nothing and takes no claim.
+    For a zip release the call hashes each local archive file whole. For a
+    version-retaining release it re-reads the bucket's versioning and lifecycle and
+    sends one HEAD per listed object version, or per version of a random sample. A
+    HEAD that fails counts as a lost version. The call writes nothing and takes no claim.
 
     Args:
         session: The storage session bound to the product.
         version: The release to check; `None` names the current release.
+        sample: Check this many randomly chosen versions instead of all; a zip release
+            ignores it.
 
     Raises:
+        ValueError: `sample` is less than 1.
         ReleaseNotFoundError: No such release, or no current release.
+        ReleaseRefusedError: The release retains object versions and the driver lists none.
         ControlPlaneCorruptionError: The release's retention object is malformed or of
             an unknown kind.
     """
+    if sample is not None and sample < 1:
+        raise ValueError(f"sample must be at least 1, not {sample}")
     manager = session.control_plane()
     product = session.product.product_name
     try:
@@ -387,6 +702,8 @@ def verify_retention(session: StorageSession, version: str | None = None) -> Ret
         if release.retention is None:
             return RetentionVerification(version=release.version, kind=None)
         kind = release.retention.get("kind")
+        if kind == RETENTION_KIND_VERSIONS:
+            return _verify_versions(session, manager, release, sample)
         if kind != RETENTION_KIND_ZIP:
             raise ControlPlaneCorruptionError(
                 f"release {release.version!r} names retention kind {kind!r}, which is not known"

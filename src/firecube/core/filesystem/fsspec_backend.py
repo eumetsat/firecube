@@ -377,7 +377,7 @@ class FsspecFilesystem:
             ValueError: The binding or ``uri`` is not s3, or the store reports an unknown state.
         """
         bucket, _key = self._s3_bucket_and_key(uri)
-        response = self._fs.call_s3("get_bucket_versioning", Bucket=bucket)
+        response = self._call_versions_api("get_bucket_versioning", Bucket=bucket)
         status = response.get("Status")
         if not status:
             return "absent"
@@ -403,7 +403,7 @@ class FsspecFilesystem:
         entries: list[ObjectVersion] = []
         seen_markers: set[tuple[str, str]] = set()
         while True:
-            page = self._fs.call_s3("list_object_versions", **params)
+            page = self._call_versions_api("list_object_versions", **params)
             entries.extend(
                 _listed_version(entry, is_delete_marker=False) for entry in page.get("Versions", [])
             )
@@ -434,13 +434,15 @@ class FsspecFilesystem:
 
         Raises:
             ValueError: The binding or ``uri`` is not s3, or ``uri`` names no object.
-            OSError: The store answers for a version other than ``version_id``.
+            OSError: The store answers for a version other than ``version_id``, or the request fails.
         """
         bucket, key = self._s3_bucket_and_key(uri)
         if not key:
             raise ValueError(f"{uri} names a bucket, not an object")
         try:
-            response = self._fs.call_s3("head_object", Bucket=bucket, Key=key, VersionId=version_id)
+            response = self._call_versions_api(
+                "head_object", Bucket=bucket, Key=key, VersionId=version_id
+            )
         except FileNotFoundError:
             return None
         except OSError as exc:
@@ -485,7 +487,7 @@ class FsspecFilesystem:
         """
         bucket, _key = self._s3_bucket_and_key(uri)
         try:
-            response = self._fs.call_s3("get_bucket_lifecycle_configuration", Bucket=bucket)
+            response = self._call_versions_api("get_bucket_lifecycle_configuration", Bucket=bucket)
         except PermissionError:
             return None
         except FileNotFoundError as exc:
@@ -493,6 +495,19 @@ class FsspecFilesystem:
                 return {}
             raise
         return {"Rules": _json_ready(response.get("Rules", []))}
+
+    def _call_versions_api(self, method: str, **params: Any) -> dict[str, Any]:
+        """Call an S3 API method; report a botocore transport failure as ``OSError``.
+
+        s3fs leaves non-HTTP botocore exceptions unchanged, so a refused connection
+        or a timeout would otherwise escape as a type callers do not catch.
+        """
+        from botocore.exceptions import BotoCoreError
+
+        try:
+            return self._fs.call_s3(method, **params)
+        except BotoCoreError as exc:
+            raise OSError(f"s3 {method} failed: {exc}") from exc
 
     def _s3_bucket_and_key(self, uri: StorageUri) -> tuple[str, str]:
         """Return the bucket and the object key of ``uri`` for an s3-bound filesystem."""
