@@ -20,6 +20,7 @@ import logging
 import os
 import tempfile
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from firecube.core.filesystem import publication
@@ -239,7 +240,7 @@ class FsspecFilesystem:
 
     def _from_path(self, path: str) -> StorageUri:
         if self._binding.identity.product_uri.protocol == "file":
-            return StorageUri.parse(f"file://{path}")
+            return StorageUri.from_local_path(Path("/" + path.lstrip("/")))
         authority = self._binding.identity.product_uri.authority
         assert authority is not None
         object_path = str(path)
