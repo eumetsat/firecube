@@ -24,9 +24,9 @@ from typing import Any
 import numpy as np
 import xarray as xr
 
-from firecube.core.tensogram._compat import require_tensogram
-from firecube.core.tensogram.converter import _find_time_dim
-from firecube.core.tensogram.metadata import (
+from firecube.core.archive.tensogram._compat import require_tensogram
+from firecube.core.archive.tensogram.converter import _find_time_dim
+from firecube.core.archive.tensogram.metadata import (
     dataset_to_global_meta,
     prepare_array_for_encoding,
     variable_to_base_entry,

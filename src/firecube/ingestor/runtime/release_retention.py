@@ -228,7 +228,7 @@ def _require_inventory_bytes(
         ReleaseRefusedError: An entry is missing, extra, or holds other bytes than the
             inventory recorded; the archive file is kept.
     """
-    from firecube.core.zarr.zip_archive import MARKER_ENTRY
+    from firecube.core.archive.zip.marker import MARKER_ENTRY
 
     def refuse(key: str) -> ReleaseRefusedError:
         return ReleaseRefusedError(
@@ -261,7 +261,7 @@ def _refuse_unrestorable_deletes(deleted: list[str], base: str, *, version: str)
     Raises:
         ReleaseRefusedError: A deleted key fails the restore's admission; nothing is archived.
     """
-    from firecube.core.zarr.zip_chain import deleted_key_problem
+    from firecube.core.archive.zip.marker import deleted_key_problem
 
     refused = [(key, problem) for key in deleted if (problem := deleted_key_problem(key))]
     if not refused:

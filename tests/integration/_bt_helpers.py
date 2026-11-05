@@ -45,9 +45,9 @@ BT2_APPROVED_MODULES = frozenset(
         "firecube.core.zarr.scrub",
         "firecube.core.zarr.state",
         "firecube.core.zarr.multires",
-        "firecube.core.tensogram.converter",
-        "firecube.core.tensogram.metadata",
-        "firecube.core.tensogram.restore",
+        "firecube.core.archive.tensogram.converter",
+        "firecube.core.archive.tensogram.metadata",
+        "firecube.core.archive.tensogram.restore",
     }
 )
 

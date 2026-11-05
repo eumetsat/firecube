@@ -53,7 +53,7 @@ def _install_fake_tensogram(monkeypatch: pytest.MonkeyPatch, seen: dict[str, str
     )
 
     monkeypatch.setattr(
-        "firecube.core.tensogram._compat.require_tensogram",
+        "firecube.core.archive.tensogram._compat.require_tensogram",
         lambda _caller: None,
     )
     monkeypatch.setitem(sys.modules, "tensogram", fake_module)

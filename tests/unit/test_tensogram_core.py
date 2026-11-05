@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for firecube.core.tensogram — metadata, converter, restore, compat."""
+"""Unit tests for firecube.core.archive.tensogram — metadata, converter, restore, compat."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class TestDatasetToGlobalMeta:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.metadata import dataset_to_global_meta
+        from firecube.core.archive.tensogram.metadata import dataset_to_global_meta
 
         ds = xr.Dataset({"FWI": (["t"], np.array([1.0, 2.0]))})
         meta = dataset_to_global_meta(ds, source_uri="s3://test/product.zarr", compression="blosc2")
@@ -54,7 +54,7 @@ class TestVariableToDescriptor:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.metadata import variable_to_descriptor
+        from firecube.core.archive.tensogram.metadata import variable_to_descriptor
 
         var = xr.Variable(["time", "lat"], np.ones((3, 4), dtype="float32"))
         desc = variable_to_descriptor("FWI", var, compression="blosc2")
@@ -68,7 +68,7 @@ class TestVariableToDescriptor:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.metadata import variable_to_descriptor
+        from firecube.core.archive.tensogram.metadata import variable_to_descriptor
 
         var = xr.Variable(["time"], np.array(["2024-01-01", "2024-01-02"], dtype="datetime64"))
         desc = variable_to_descriptor("timestamp", var, compression="none")
@@ -83,7 +83,7 @@ class TestVariableToBaseEntry:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.metadata import variable_to_base_entry
+        from firecube.core.archive.tensogram.metadata import variable_to_base_entry
 
         var = xr.Variable(["time", "lat"], np.ones((3, 4), dtype="float32"))
         entry = variable_to_base_entry("FWI", var)
@@ -93,7 +93,7 @@ class TestVariableToBaseEntry:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.metadata import variable_to_base_entry
+        from firecube.core.archive.tensogram.metadata import variable_to_base_entry
 
         coord = xr.Variable(["lat"], np.linspace(-90, 90, 8, dtype="float32"))
         entry = variable_to_base_entry("lat", coord)
@@ -108,7 +108,7 @@ class TestZarrToTgm:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "test.zarr")
         tgt = str(tmp_path / "test.tgm")
@@ -127,14 +127,14 @@ class TestZarrToTgm:
     def test_archives_live_variable_size_under_a_stale_snapshot(self, tmp_path, snapshot):
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         path = _store_with_stale_snapshot(tmp_path, snapshot)
         zarr_to_tgm(str(path), str(tmp_path / "o.tgm"), group="G", storage_config=_LOCAL)
         assert xr.open_dataset(str(tmp_path / "o.tgm"), engine="tensogram")["v"].size == 6
 
     def test_archives_a_group_created_after_the_root_snapshot(self, tmp_path):
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         path = str(tmp_path / "s.zarr")
         zarr.open_group(path, mode="w", zarr_format=3).create_group("old")
@@ -146,8 +146,8 @@ class TestZarrToTgm:
     def test_archive_lists_groups_variables_and_coordinates_in_name_order(self, tmp_path, subtests):
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
-        from firecube.core.tensogram.inspection import open_tgm_listing, tgm_info
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.inspection import open_tgm_listing, tgm_info
 
         src, tgt = str(tmp_path / "s.zarr"), str(tmp_path / "o.tgm")
         names = ["temp", "alpha", "wind", "cloud", "rain"]
@@ -173,7 +173,7 @@ class TestZarrToTgm:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "test.zarr")
         tgt = str(tmp_path / "test.tgm")
@@ -188,7 +188,7 @@ class TestZarrToTgm:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "test.zarr")
         tgt = str(tmp_path / "test.tgm")
@@ -203,7 +203,7 @@ class TestZarrToTgm:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "notime.zarr")
         tgt = str(tmp_path / "notime.tgm")
@@ -217,7 +217,7 @@ class TestZarrToTgm:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "time.zarr")
         tgt = str(tmp_path / "time.tgm")
@@ -236,7 +236,7 @@ class TestZarrToTgm:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "nan.zarr")
         tgt = str(tmp_path / "nan.tgm")
@@ -250,7 +250,7 @@ class TestZarrToTgm:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "nan.zarr")
         tgt = str(tmp_path / "nan.tgm")
@@ -264,7 +264,7 @@ class TestZarrToTgm:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "skip.zarr")
         tgt = str(tmp_path / "skip.tgm")
@@ -282,7 +282,7 @@ class TestZarrToTgm:
     def test_refuses_a_360_day_time_coordinate_instead_of_dropping_it(self, tmp_path):
         import xarray as xr
 
-        from firecube.core.tensogram.converter import CalendarArchiveError, zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import CalendarArchiveError, zarr_to_tgm
 
         src = str(tmp_path / "cal.zarr")
         times = xr.date_range(
@@ -299,7 +299,7 @@ class TestZarrToTgm:
     def test_repro_tgm_nat_fill(self, tmp_path):
         import tensogram
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src, tgt = str(tmp_path / "nat.zarr"), str(tmp_path / "nat.tgm")
         group = zarr.open_group(src, mode="w", zarr_format=3)
@@ -321,7 +321,7 @@ class TestZarrToTgm:
     def test_repro_tgm_no_partial_file(self, tmp_path):
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src, tgt = str(tmp_path / "notime.zarr"), tmp_path / "notime.tgm"
         xr.Dataset({"X": (["y", "x"], np.ones((3, 4)))}).to_zarr(src)
@@ -340,8 +340,8 @@ class TestTgmToZarr:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
-        from firecube.core.tensogram.restore import tgm_to_zarr
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.restore import tgm_to_zarr
 
         src = str(tmp_path / "orig.zarr")
         tgm = str(tmp_path / "arch.tgm")
@@ -364,8 +364,8 @@ class TestTgmToZarr:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.converter import zarr_to_tgm
-        from firecube.core.tensogram.restore import tgm_to_zarr
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.restore import tgm_to_zarr
 
         src = str(tmp_path / "orig.zarr")
         tgm = str(tmp_path / "arch.tgm")
@@ -400,7 +400,7 @@ class TestRequireTensogram:
 
     def test_raises_when_not_installed(self, monkeypatch):
         """require_tensogram raises ImportError with install guidance when tensogram absent."""
-        from firecube.core.tensogram import _compat
+        from firecube.core.archive.tensogram import _compat
 
         monkeypatch.setattr(_compat, "HAS_TENSOGRAM", False)
         with pytest.raises(ImportError, match="pip install 'firecube\\[tensogram\\]'"):
@@ -411,7 +411,7 @@ def _archive(tmp_path, *, controlplane=False):
     import numpy as np
     import xarray as xr
 
-    from firecube.core.tensogram.converter import zarr_to_tgm
+    from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
     src = tmp_path / "src.zarr"
     xr.Dataset({"FWI": (["t"], np.ones(3, dtype="float32"))}).to_zarr(str(src))
@@ -425,7 +425,7 @@ class TestTgmInspection:
     @pytest.mark.integration
     @pytest.mark.parametrize("controlplane", [True, False])
     def test_info_reports_variables_and_controlplane_presence(self, tmp_path, controlplane):
-        from firecube.core.tensogram.inspection import tgm_info
+        from firecube.core.archive.tensogram.inspection import tgm_info
 
         path = _archive(tmp_path, controlplane=controlplane)
         info = tgm_info(path, operation="firecube archive info")
@@ -439,7 +439,7 @@ class TestTgmInspection:
     def test_info_refuses_unsupported_version_naming_the_path(self, tmp_path):
         import tensogram
 
-        from firecube.core.tensogram.inspection import TensogramArchiveError, tgm_info
+        from firecube.core.archive.tensogram.inspection import TensogramArchiveError, tgm_info
 
         path = str(tmp_path / "old.tgm")
         with tensogram.TensogramFile.create(path) as f:  # pyright: ignore[reportAttributeAccessIssue]
@@ -450,7 +450,7 @@ class TestTgmInspection:
 
     @pytest.mark.integration
     def test_listing_yields_controlplane_and_data_messages_with_objects(self, tmp_path):
-        from firecube.core.tensogram.inspection import open_tgm_listing
+        from firecube.core.archive.tensogram.inspection import open_tgm_listing
 
         path = _archive(tmp_path, controlplane=True)
         with open_tgm_listing(path, operation="firecube archive list") as listing:
@@ -463,7 +463,7 @@ class TestTgmInspection:
 
     @pytest.mark.integration
     def test_validate_flags_a_truncated_archive_but_not_an_intact_one(self, tmp_path):
-        from firecube.core.tensogram.inspection import validate_tgm
+        from firecube.core.archive.tensogram.inspection import validate_tgm
 
         path = _archive(tmp_path, controlplane=True)
         intact = validate_tgm(path, operation="firecube archive validate")
@@ -476,7 +476,7 @@ class TestTgmInspection:
     def test_repro_tgm_validate_no_messages(self, tmp_path):
         import tensogram
 
-        from firecube.core.tensogram.inspection import validate_tgm
+        from firecube.core.archive.tensogram.inspection import validate_tgm
 
         path = str(tmp_path / "empty.tgm")
         with tensogram.TensogramFile.create(path):  # pyright: ignore[reportAttributeAccessIssue]
@@ -490,7 +490,7 @@ class TestTgmInspection:
     @pytest.mark.unit
     @pytest.mark.parametrize("name", ["tgm_info", "open_tgm_listing", "validate_tgm"])
     def test_missing_extras_names_the_operation(self, monkeypatch, name):
-        from firecube.core.tensogram import _compat, inspection
+        from firecube.core.archive.tensogram import _compat, inspection
 
         monkeypatch.setattr(_compat, "HAS_TENSOGRAM", False)
         call = getattr(inspection, name)
@@ -505,12 +505,12 @@ class TestSchemaHelpers:
     """Tests for archive schema constants and helpers."""
 
     def test_archive_version_is_v1(self):
-        from firecube.core.tensogram.schema import ARCHIVE_VERSION
+        from firecube.core.archive.tensogram.schema import ARCHIVE_VERSION
 
         assert ARCHIVE_VERSION == "v1"
 
     def test_make_data_meta_has_required_keys(self):
-        from firecube.core.tensogram.schema import make_data_meta
+        from firecube.core.archive.tensogram.schema import make_data_meta
 
         meta = make_data_meta(
             "F024",
@@ -525,7 +525,7 @@ class TestSchemaHelpers:
         assert meta["firecube"]["compression"] == "zstd"
 
     def test_make_controlplane_meta_has_required_keys(self):
-        from firecube.core.tensogram.schema import make_controlplane_meta
+        from firecube.core.archive.tensogram.schema import make_controlplane_meta
 
         meta = make_controlplane_meta("my_product")
         assert meta["firecube"]["role"] == "controlplane"
@@ -560,7 +560,7 @@ class TestExtractZarrArrayMetadata:
 
     @pytest.mark.parametrize(("snap", "grp"), [("root", None), ("G", "G")])
     def test_reads_live_chunks_and_fill_value_under_a_stale_snapshot(self, tmp_path, snap, grp):
-        from firecube.core.tensogram.metadata import extract_zarr_array_metadata
+        from firecube.core.archive.tensogram.metadata import extract_zarr_array_metadata
 
         path = _store_with_stale_snapshot(tmp_path, snap, group=grp is not None, reencode=True)
         meta = extract_zarr_array_metadata(str(path), grp, storage_config=_LOCAL)
@@ -569,8 +569,8 @@ class TestExtractZarrArrayMetadata:
     def test_extracts_chunk_shapes(self, tmp_path):
         import zarr
 
+        from firecube.core.archive.tensogram.metadata import extract_zarr_array_metadata
         from firecube.core.config import StorageConfig
-        from firecube.core.tensogram.metadata import extract_zarr_array_metadata
 
         store = zarr.open_group(str(tmp_path / "test.zarr"), mode="w")
         g = store.create_group("G")
@@ -587,8 +587,8 @@ class TestExtractZarrArrayMetadata:
     def test_handles_no_compressor(self, tmp_path):
         import zarr
 
+        from firecube.core.archive.tensogram.metadata import extract_zarr_array_metadata
         from firecube.core.config import StorageConfig
-        from firecube.core.tensogram.metadata import extract_zarr_array_metadata
 
         store = zarr.open_group(str(tmp_path / "nocomp.zarr"), mode="w")
         store.create_array("raw", shape=(10,), chunks=(5,), dtype="float32", compressor=None)
@@ -605,7 +605,7 @@ class TestExtractZarrArrayMetadata:
         import numpy as np
         import xarray as xr
 
-        from firecube.core.tensogram.metadata import variable_to_base_entry
+        from firecube.core.archive.tensogram.metadata import variable_to_base_entry
 
         var = xr.Variable(["x", "y"], np.zeros((5, 3)))
         zarr_m = {"chunks": (5, 3), "compressor": {"id": "zstd", "level": 3}, "fill_value": 0.0}
@@ -623,7 +623,7 @@ class TestControlplaneCodec:
 
         import numpy as np
 
-        from firecube.core.tensogram.controlplane_codec import deserialize_controlplane
+        from firecube.core.archive.tensogram.controlplane_codec import deserialize_controlplane
 
         state = {
             "schema_version": "v1",
@@ -647,7 +647,7 @@ class TestControlplaneCodec:
 
         import numpy as np
 
-        from firecube.core.tensogram.controlplane_codec import deserialize_controlplane
+        from firecube.core.archive.tensogram.controlplane_codec import deserialize_controlplane
 
         state = {"schema_version": "v1", "product": "P", "spans": [], "runs": [], "claims": []}
         arr = np.frombuffer(json.dumps(state).encode(), dtype=np.uint8).copy()
@@ -660,6 +660,6 @@ class TestReconstructCompressor:
     """Tests for _reconstruct_compressor in restore.py."""
 
     def test_none_config_returns_none(self):
-        from firecube.core.tensogram.restore import _reconstruct_compressor
+        from firecube.core.archive.tensogram.restore import _reconstruct_compressor
 
         assert _reconstruct_compressor(None) is None

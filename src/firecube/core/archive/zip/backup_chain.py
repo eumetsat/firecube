@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import re
 import stat
 import zipfile
 from collections.abc import Mapping, Sequence
@@ -38,42 +37,30 @@ from typing import IO, TYPE_CHECKING, Any, BinaryIO, Final
 
 import zarr
 
-from firecube.core.controlplane.types import CLAIMS_DIRNAME, CONTROL_DIRNAME
-from firecube.core.errors import FirecubeError, Message
-from firecube.core.storage.uri import StorageUri
-from firecube.core.uris import local_path_from_target, require_target_is_product
-from firecube.core.zarr.zip_archive import (
-    MARKER_ENTRY,
+from firecube.core.archive.zip.archive import (
     _dimension_names,
     _prepare_target,
     _refuse_invalid_metadata,
     _refuse_unsafe_entries,
     _walk_live,
+)
+from firecube.core.archive.zip.marker import (
+    MARKER_ENTRY,
+    MODE_FULL,
+    marker_problem,
     read_zip_marker,
 )
+from firecube.core.controlplane.types import CLAIMS_DIRNAME, CONTROL_DIRNAME
+from firecube.core.errors import FirecubeError, Message
+from firecube.core.storage.uri import StorageUri
+from firecube.core.uris import local_path_from_target, require_target_is_product
 
 if TYPE_CHECKING:
     from firecube.core.storage.session import StorageSession
 
-MODE_FULL: Final = "full"
-MODE_DELTA: Final = "delta"
 MAX_CHAIN_LINKS: Final = 10_000
 """The most archives a chain may hold; a longer one is refused as broken."""
 
-_MARKER_KEYS: Final = frozenset(
-    {
-        "version",
-        "mode",
-        "base",
-        "base_uri",
-        "base_digest",
-        "inventory",
-        "metadata_manifest",
-        "deleted",
-    }
-)
-_HEX_ID: Final = re.compile(r"[0-9a-f]{64}")
-_DIGEST: Final = re.compile(r"sha256:[0-9a-f]{64}")
 _CLAIMS_PREFIX: Final = f"{CONTROL_DIRNAME}/{CLAIMS_DIRNAME}/"
 _CONTROL_PREFIX: Final = f"{CONTROL_DIRNAME}/"
 _READ_BLOCK: Final = 1 << 20
@@ -145,72 +132,6 @@ def _stream_digest(stream: IO[bytes]) -> str:
 def _file_digest(path: Path) -> str:
     with path.open("rb") as stream:
         return _stream_digest(stream)
-
-
-def deleted_key_problem(key: object) -> str | None:
-    """Return why `key` cannot be a deleted key of a delta marker, or `None` when it can.
-
-    A chain restore refuses a marker that lists such a key, so a release never writes one.
-    """
-    if not isinstance(key, str):
-        return "is not a string"
-    if not key:
-        return "is empty"
-    if key.startswith("/"):
-        return "is absolute"
-    if "\\" in key:
-        return "holds a backslash"
-    if any(ord(char) < 0x20 or ord(char) == 0x7F for char in key):
-        return "holds a control character"
-    if any(segment in ("", ".", "..") for segment in key.split("/")):
-        return "has an empty, '.' or '..' segment"
-    if key.startswith(_CLAIMS_PREFIX):
-        return "names a claim file"
-    if key == MARKER_ENTRY:
-        return "names the archive marker"
-    return None
-
-
-def marker_problem(marker: Mapping[str, Any]) -> str | None:
-    """Return why `marker` is not a valid archive marker, or `None` when it is.
-
-    A chain restore and `validate_zip` both apply this check.
-    """
-    if set(marker) != _MARKER_KEYS:
-        missing = sorted(_MARKER_KEYS.difference(marker))
-        extra = sorted(set(marker).difference(_MARKER_KEYS))
-        return f"its keys differ from the eight a marker holds (missing {missing}, extra {extra})"
-    version, mode = marker["version"], marker["mode"]
-    if not isinstance(version, str) or not version:
-        return "its version is not a non-empty string"
-    if mode not in (MODE_FULL, MODE_DELTA):
-        return f"its mode is {mode!r}, not 'full' or 'delta'"
-    for name in ("inventory", "metadata_manifest"):
-        value = marker[name]
-        if not isinstance(value, str) or not _HEX_ID.fullmatch(value):
-            return f"its {name} is not a 64-digit lowercase hex id"
-    deleted = marker["deleted"]
-    if not isinstance(deleted, list):
-        return "its deleted entry is not a list"
-    if mode == MODE_FULL:
-        if any(marker[name] is not None for name in ("base", "base_uri", "base_digest")):
-            return "it is full but names a base"
-        if deleted:
-            return "it is full but lists deleted keys"
-        return None
-    base, base_uri, base_digest = marker["base"], marker["base_uri"], marker["base_digest"]
-    if not isinstance(base, str) or not base:
-        return "it is a delta whose base is not a non-empty string"
-    if not isinstance(base_uri, str) or not base_uri:
-        return "it is a delta whose base_uri is not a non-empty string"
-    if not isinstance(base_digest, str) or not _DIGEST.fullmatch(base_digest):
-        return "it is a delta whose base_digest is not a sha256:<hex> digest"
-    for key in deleted:
-        if (problem := deleted_key_problem(key)) is not None:
-            return f"its deleted key {key!r} {problem}"
-    if len(set(deleted)) != len(deleted):
-        return "it lists a deleted key twice"
-    return None
 
 
 def _checked_marker(path: Path, archive: str) -> Mapping[str, Any]:

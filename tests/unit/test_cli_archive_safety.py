@@ -108,7 +108,7 @@ def _install_fake_tensogram(monkeypatch: pytest.MonkeyPatch) -> None:
         SimpleNamespace(TensogramFile=_FakeTensogramFile),
     )
 
-    import firecube.core.tensogram._compat as compat
+    import firecube.core.archive.tensogram._compat as compat
 
     monkeypatch.setattr(compat, "HAS_TENSOGRAM", True)
 
@@ -431,7 +431,7 @@ def test_symlinked_ancestor_in_the_target_is_refused_and_the_outside_survives(tm
 
 
 def test_base_swapped_after_the_chain_was_resolved_lands_no_unchecked_object(tmp_path, monkeypatch):
-    import firecube.core.zarr.zip_chain as zip_chain
+    import firecube.core.archive.zip.backup_chain as zip_chain
 
     full, delta = _release_chain(tmp_path)
     resolve = zip_chain.resolve_chain

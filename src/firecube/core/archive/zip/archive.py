@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import uuid
 import warnings
 import zipfile
@@ -37,13 +36,9 @@ import zarr
 from zarr.buffer import default_buffer_prototype
 from zarr.storage import MemoryStore
 
-from firecube.core.controlplane.types import (
-    CLAIMS_DIRNAME,
-    CONTROL_DIRNAME,
-    RUNS_DIRNAME,
-    SCHEMA_FILENAME,
-)
-from firecube.core.errors import ConfigurationError
+from firecube.core.archive._common import clear_target
+from firecube.core.archive.zip.marker import MARKER_ENTRY, marker_problem, read_zip_marker
+from firecube.core.controlplane.types import CLAIMS_DIRNAME, CONTROL_DIRNAME
 from firecube.core.filesystem.store_factory import create_zip_store
 from firecube.core.storage.session import StorageSession
 from firecube.core.uris import is_remote_target, local_path_from_target, require_target_is_product
@@ -51,9 +46,6 @@ from firecube.core.zarr._zarr_compat import sync
 
 _CLAIMS_PREFIX = f"{CONTROL_DIRNAME}/{CLAIMS_DIRNAME}/"
 _CONTROL_PREFIX = f"{CONTROL_DIRNAME}/"
-
-MARKER_ENTRY = "firecube-archive.json"
-"""Reserved root entry that describes the archive; it is never a product key."""
 
 
 @dataclass(frozen=True)
@@ -190,60 +182,9 @@ def _prepare_target(target_path: Path, *, overwrite: bool, keep_run_id: str | No
             f"Target Zarr already exists: {target_path}. Use overwrite=True to replace it."
         )
     if target_path.is_dir():
-        _clear_target(target_path, keep_run_id=keep_run_id)
+        clear_target(target_path, keep_run_id=keep_run_id)
     else:
         target_path.unlink()
-
-
-def _clear_target(target_path: Path, *, keep_run_id: str | None) -> None:
-    """Empty a restore target directory but keep the restore's own control-plane state.
-
-    The kept entries are ``.firecube/claims/``, ``.firecube/schema.json`` and, when
-    ``keep_run_id`` is given, ``.firecube/runs/<keep_run_id>/``.
-
-    Raises:
-        ConfigurationError: If the target, a kept entry or a directory holding one
-            is a symlink; nothing is removed.
-    """
-    control = target_path / CONTROL_DIRNAME
-    kept = {control / CLAIMS_DIRNAME, control / SCHEMA_FILENAME}
-    if keep_run_id is not None:
-        kept.add(control / RUNS_DIRNAME / keep_run_id)
-    _refuse_symlinked_kept_paths(target_path, kept)
-    _remove_all_except(target_path, kept)
-
-
-def _refuse_symlinked_kept_paths(target_path: Path, kept: set[Path]) -> None:
-    """Raise ConfigurationError when a kept path or a directory above it is a symlink.
-
-    The check stops at the target. Clearing walks into those directories, so a symlink would
-    lead it outside the target.
-    """
-    for path in sorted(kept):
-        for node in (path, *path.parents):
-            if node.is_symlink():
-                raise ConfigurationError(
-                    f"Restore target {target_path} holds a symlink at {node}; refusing to "
-                    "clear it, because the restore would follow it outside the target"
-                )
-            if node == target_path:
-                break
-
-
-def _remove_all_except(directory: Path, kept: set[Path]) -> None:
-    """Remove every entry under ``directory`` except the paths in ``kept`` and their ancestors.
-
-    A symlink is unlinked, never followed.
-    """
-    for entry in directory.iterdir():
-        if entry in kept:
-            continue
-        if entry.is_symlink() or not entry.is_dir():
-            entry.unlink()
-        elif any(entry in path.parents for path in kept):
-            _remove_all_except(entry, kept)
-        else:
-            shutil.rmtree(entry)
 
 
 def _refuse_unsafe_entries(names: list[str], archive: str) -> None:
@@ -500,8 +441,6 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     quick: check the zip directory and Zarr metadata only, skip the CRC check of every entry.
     A marker must pass the checks a chain restore applies to it.
     """
-    from firecube.core.zarr.zip_chain import marker_problem  # zip_chain imports this module
-
     path = Path(archive.removeprefix("file://"))
     if not path.is_file():
         raise FileNotFoundError(f"Archive not found: {archive}")
@@ -544,37 +483,6 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     finally:
         store.close()
     return issues
-
-
-def read_zip_marker(path: str) -> Mapping[str, Any] | None:
-    """Return the parsed ``firecube-archive.json`` marker of a zip archive, or None.
-
-    Args:
-        path: Local path or ``file://`` URI of the archive.
-
-    Raises:
-        FileNotFoundError: If ``path`` is not a file.
-        ValueError: If the marker entry cannot be read or is not a JSON object.
-    """
-    archive_path = path.removeprefix("file://")
-    if not os.path.isfile(archive_path):
-        raise FileNotFoundError(f"Archive not found: {path}")
-    with zipfile.ZipFile(archive_path) as zf:
-        if MARKER_ENTRY not in zf.namelist():
-            return None
-        try:
-            raw = zf.read(MARKER_ENTRY)
-        except zipfile.BadZipFile as exc:
-            raise ValueError(
-                f"Entry {MARKER_ENTRY!r} in archive {path} cannot be read: {exc}"
-            ) from exc
-    try:
-        marker = json.loads(raw)
-    except ValueError as exc:
-        raise ValueError(f"Entry {MARKER_ENTRY!r} in archive {path} is not valid JSON") from exc
-    if not isinstance(marker, dict):
-        raise ValueError(f"Entry {MARKER_ENTRY!r} in archive {path} is not a JSON object")
-    return marker
 
 
 def _is_delta(marker: Mapping[str, Any] | None) -> bool:

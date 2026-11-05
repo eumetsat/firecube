@@ -225,7 +225,7 @@ def test_archive_controlplane_uses_resolved_product_identity(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from firecube.core.tensogram import converter
+    from firecube.core.archive.tensogram import converter
 
     target = "s3://bucket/data/2026/product.zarr"
     session = _session_for_uri(target)
@@ -391,7 +391,7 @@ def test_bt2_poison_ingest_write_flow(tmp_path: Path, driver: Literal["fsspec", 
 def test_bt2_poison_archive_create(tmp_path: Path, driver: Literal["fsspec", "obstore"]) -> None:
     from tests.integration._bt_helpers import bt2_poison
 
-    from firecube.core.tensogram.converter import zarr_to_tgm
+    from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
     # Build a real (small) zarr source product OUTSIDE the poison context with
     # the default fsspec writer, so the archive create flow has a genuine store.
@@ -421,8 +421,8 @@ def test_bt2_poison_archive_create(tmp_path: Path, driver: Literal["fsspec", "ob
 def test_bt2_poison_archive_restore(tmp_path: Path, driver: Literal["fsspec", "obstore"]) -> None:
     from tests.integration._bt_helpers import bt2_poison
 
-    from firecube.core.tensogram.converter import zarr_to_tgm
-    from firecube.core.tensogram.restore import tgm_to_zarr
+    from firecube.core.archive.tensogram.converter import zarr_to_tgm
+    from firecube.core.archive.tensogram.restore import tgm_to_zarr
 
     # Stage 1: build source zarr and create archive WITHOUT poison so the
     # restore-only behavior is exercised inside bt2_poison.
@@ -470,7 +470,7 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
     import zarr
     from tests.integration._bt_helpers import bt2_poison
 
-    from firecube.core.zarr.zip_archive import zarr_to_zip, zip_to_zarr
+    from firecube.core.archive.zip.archive import zarr_to_zip, zip_to_zarr
 
     root = tmp_path / "products"
     root.mkdir()
@@ -487,7 +487,7 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
         raise RuntimeError("zip restore opened a raw LocalStore, not the session driver")
 
     monkeypatch.setattr(
-        "firecube.core.zarr.zip_archive.LocalStore", _raw_local_store, raising=False
+        "firecube.core.archive.zip.archive.LocalStore", _raw_local_store, raising=False
     )
     with bt2_poison():
         zip_to_zarr(str(archive), str(target), session=session)  # type: ignore[call-arg]
@@ -575,10 +575,10 @@ def test_delta_chain_restore_equals_the_second_release_inventory(tmp_path: Path,
 
 @pytest.mark.parametrize("entry", ["zip_to_zarr", "tgm_to_zarr"])
 def test_restore_refuses_a_target_that_is_not_the_session_product(tmp_path: Path, entry) -> None:
+    from firecube.core.archive.tensogram.converter import zarr_to_tgm
+    from firecube.core.archive.tensogram.restore import tgm_to_zarr
+    from firecube.core.archive.zip.archive import zarr_to_zip, zip_to_zarr
     from firecube.core.errors import ConfigurationError
-    from firecube.core.tensogram.converter import zarr_to_tgm
-    from firecube.core.tensogram.restore import tgm_to_zarr
-    from firecube.core.zarr.zip_archive import zarr_to_zip, zip_to_zarr
 
     stores = {n: tmp_path / n / "product.zarr" for n in ("a", "b")}
     for name in stores:

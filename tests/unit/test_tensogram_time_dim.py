@@ -19,7 +19,7 @@ from typing import Any
 import numpy as np
 import xarray as xr
 
-from firecube.core.tensogram.converter import _find_time_dim
+from firecube.core.archive.tensogram.converter import _find_time_dim
 
 
 def _ds_with_dims(*dim_names: str) -> xr.Dataset:

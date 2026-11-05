@@ -32,7 +32,7 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.tensogram.converter import zarr_to_tgm
+from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
 
 def _local_env(tmp_path: str) -> dict[str, str]:
@@ -411,7 +411,9 @@ def test_remote_grouped_restore_refreshes_existing_root_snapshot(tmp_path):
     ds.rename(FWI="OLD").to_zarr(rest, group="g1", mode="a")  # root snapshot lists g1/OLD
     tgm = (tmp_path / "a.tgm").as_uri()
     _archive_cli(tmp_path, "create", "--source", src.as_uri(), "--archive", tgm, "--group", "g1")
-    with mock.patch("firecube.core.tensogram.restore.is_remote_target", lambda target: True):
+    with mock.patch(
+        "firecube.core.archive.tensogram.restore.is_remote_target", lambda target: True
+    ):
         _archive_cli(tmp_path, "restore", "--archive", tgm, "--target", rest.as_uri())
 
     listed = json.loads((rest / "zarr.json").read_text())["consolidated_metadata"]["metadata"]
@@ -429,7 +431,7 @@ def test_archive_without_controlplane_warns_and_succeeds(
 ):
     import zarr
 
-    caplog.set_level(logging.WARNING, logger="firecube.core.tensogram.converter")
+    caplog.set_level(logging.WARNING, logger="firecube.core.archive.tensogram.converter")
     src = str(tmp_path / "nocp.zarr")
     src_uri = f"file://{src}"
     store = zarr.open_group(src, mode="w")
@@ -545,7 +547,7 @@ def test_repro_tgm_root_label(tmp_path):
 
 @pytest.mark.integration
 def test_repro_tgm_explicit_root_restore_keeps_control_plane(tmp_path):
-    from firecube.core.tensogram.restore import tgm_to_zarr
+    from firecube.core.archive.tensogram.restore import tgm_to_zarr
 
     src, tgm, rest = tmp_path / "src.zarr", tmp_path / "root.tgm", tmp_path / "rest.zarr"
     _make_test_dataset().to_zarr(src)

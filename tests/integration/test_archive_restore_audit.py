@@ -31,9 +31,9 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from firecube.core.archive.tensogram.converter import zarr_to_tgm
 from firecube.core.controlplane import ChunkManager
 from firecube.core.storage.uri import StorageUri
-from firecube.core.tensogram.converter import zarr_to_tgm
 from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.integration

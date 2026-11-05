@@ -157,7 +157,7 @@ def restore(
         )
     )
 
-    from firecube.core.zarr.zip_chain import ArchiveChainError
+    from firecube.core.archive.zip.backup_chain import ArchiveChainError
     from firecube.ingestor.runtime.archive import (
         ArchiveClaimError,
         ArchiveConversionError,

@@ -28,8 +28,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
+from firecube.core.archive.tensogram.metadata import extract_zarr_array_metadata
 from firecube.core.config import StorageConfig
-from firecube.core.tensogram.metadata import extract_zarr_array_metadata
 from tests.helpers.rows import table_row
 from tests.helpers.storage import assert_no_fsspec_bypass, make_test_session
 
@@ -66,7 +66,7 @@ def test_driver_parity_zarr_to_tgm_no_bypass(subtests: Any, tmp_path: Path) -> N
         assert meta["val"]["dtype"] == "float32"
 
     with table_row(subtests, "zarr_to_tgm_no_bypass", tmp_path) as (workdir, _):
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = workdir / "test.zarr"
         tgt = workdir / "test.tgm"

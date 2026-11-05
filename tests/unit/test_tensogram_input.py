@@ -59,7 +59,7 @@ class TestDiscoverTgmFiles:
 
 class TestTensogramXarrayBackend:
     def test_opens_firecube_produced_tgm(self, tmp_path):
-        from firecube.core.tensogram.converter import zarr_to_tgm
+        from firecube.core.archive.tensogram.converter import zarr_to_tgm
 
         src = str(tmp_path / "test.zarr")
         tgm = str(tmp_path / "test.tgm")

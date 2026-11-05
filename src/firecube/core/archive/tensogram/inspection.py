@@ -24,13 +24,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-from firecube.core.errors import FirecubeError
-from firecube.core.tensogram import _compat
-from firecube.core.tensogram.schema import (
+from firecube.core.archive.tensogram import _compat
+from firecube.core.archive.tensogram.schema import (
     ARCHIVE_VERSION,
     KEY_ARCHIVE_VERSION,
     ROLE_CONTROLPLANE,
 )
+from firecube.core.errors import FirecubeError
 
 
 class TensogramArchiveError(FirecubeError):

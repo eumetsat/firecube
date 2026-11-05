@@ -392,7 +392,7 @@ def create_archive(
         zip_selection["marker"] = marker
     # Call-time imports, here and in the zip branch: callers and tests replace the
     # converters on their modules.
-    from firecube.core.tensogram.converter import CalendarArchiveError, zarr_to_tgm
+    from firecube.core.archive.tensogram.converter import CalendarArchiveError, zarr_to_tgm
 
     run_id = f"archive-create-{uuid.uuid4()}"
     product_name = session.product.product_name
@@ -448,7 +448,7 @@ def create_archive(
         )
         try:
             if archive_format == "zip":
-                from firecube.core.zarr.zip_archive import zarr_to_zip
+                from firecube.core.archive.zip.archive import zarr_to_zip
 
                 zip_result = zarr_to_zip(
                     session,
@@ -587,15 +587,15 @@ def restore_archive(
         raise ValueError(f"archive_format must be 'zip' or 'tensogram', not {archive_format!r}")
     is_zip = archive_format == "zip"
     # Call-time imports: callers and tests replace these converters on their modules.
-    from firecube.core.tensogram.restore import tgm_to_zarr
-    from firecube.core.zarr.zip_archive import zip_to_zarr
-    from firecube.core.zarr.zip_chain import (
-        MODE_DELTA,
+    from firecube.core.archive.tensogram.restore import tgm_to_zarr
+    from firecube.core.archive.zip.archive import zip_to_zarr
+    from firecube.core.archive.zip.backup_chain import (
         admit_marker,
         apply_chain,
         refuse_symlinked_target,
         resolve_chain,
     )
+    from firecube.core.archive.zip.marker import MODE_DELTA
 
     # A present marker is checked before the claim and the run, and a delta archive with
     # its whole chain and the target's key paths, so a refusal writes nothing to the
