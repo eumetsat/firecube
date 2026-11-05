@@ -461,9 +461,9 @@ def create_release_for_product(
     A version names one state: an existing record whose snapshot differs from the
     live metadata is refused.
 
-    The archive is full when the current release retains no zip archive or
-    `archive_full` is set. Otherwise it is a delta: the objects new or changed since
-    that release, every metadata document, and the deleted keys in its marker.
+    The archive is a full backup when the current release retains no zip archive or
+    `archive_full` is set. Otherwise it is an incremental backup: the objects new or
+    changed since that release, every metadata document, and the deleted keys in its marker.
 
     Args:
         session: The storage session bound to the product.
@@ -472,7 +472,7 @@ def create_release_for_product(
         report: Receives progress lines.
         warn: Receives each bookkeeping warning line, "Warning: " included.
         archive: The `file://` URI of the zip archive to write; nothing may exist there.
-        archive_full: Write a full archive even when a delta is possible.
+        archive_full: Write a full backup even when an incremental backup is possible.
         retain_versions: Record the version ids of the product's objects. The product
             must be on s3 with the fsspec driver and a bucket with versioning enabled,
             and every current object needs a version id. Exclusive with `archive`. The

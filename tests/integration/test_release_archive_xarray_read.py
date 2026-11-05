@@ -40,7 +40,7 @@ def _v(spec: str, **kwargs) -> np.ndarray:
 @pytest.mark.integration
 @pytest.mark.filterwarnings("ignore:Object at")
 @pytest.mark.filterwarnings("ignore:Consolidated metadata is currently not part")
-def test_release_archives_read_back_through_xarray_zip_chain(tmp_path, subtests) -> None:
+def test_release_archives_read_back_through_xarray_backup_chain(tmp_path, subtests) -> None:
     product = tmp_path / "P.zarr"
     first = np.arange(8, dtype="float64").reshape(2, 4)
     second = first.copy()
@@ -49,28 +49,30 @@ def test_release_archives_read_back_through_xarray_zip_chain(tmp_path, subtests)
         product, zarr_format=3, consolidated=False, encoding={"v": {"chunks": (1, 4)}}
     )
     target = ["--target", product.as_uri(), "--product-name", "P"]
-    full, delta = tmp_path / "P-1.0.0.zip", tmp_path / "P-1.1.0.zip"
+    full, incremental = tmp_path / "P-1.0.0.zip", tmp_path / "P-1.1.0.zip"
     _cli("migrate", "adopt", *target)
     _cli("release", "create", "1.0.0", *target, "--archive", full.as_uri())
     zarr.open_array(product / "v", mode="r+")[1, :] = 100.0
-    _cli("release", "create", "1.1.0", *target, "--archive", delta.as_uri())
+    _cli("release", "create", "1.1.0", *target, "--archive", incremental.as_uri())
     chain = {"group": "/", "consolidated": False, "zarr_format": 3}
 
     with subtests.test("full archive opens through zip:: and holds the values at the cut"):
         np.testing.assert_array_equal(_v(f"zip::{full}", **chain), first)
-    with subtests.test("delta chain restores to the newest values, full archive keeps the old"):
+    with subtests.test(
+        "incremental backup chain restores to the newest values, full archive keeps the old"
+    ):
         restored = tmp_path / "restored.zarr"
-        _cli("archive", "restore", "--archive", delta.as_uri(), "--target", restored.as_uri())
+        _cli("archive", "restore", "--archive", incremental.as_uri(), "--target", restored.as_uri())
         np.testing.assert_array_equal(_v(str(restored), consolidated=False), second)
         np.testing.assert_array_equal(_v(f"zip::{full}", **chain), first)
     with (
-        subtests.test("delta archive omits the unchanged chunk that the full archive holds"),
+        subtests.test("incremental backup omits the unchanged chunk that the full archive holds"),
         zipfile.ZipFile(full) as zf_full,
-        zipfile.ZipFile(delta) as zf_delta,
+        zipfile.ZipFile(incremental) as zf_incremental,
     ):
         assert "v/c/0/0" in zf_full.namelist()
-        assert "v/c/0/0" not in zf_delta.namelist()
-        assert "v/c/1/0" in zf_delta.namelist()
+        assert "v/c/0/0" not in zf_incremental.namelist()
+        assert "v/c/1/0" in zf_incremental.namelist()
     with subtests.test("consolidated product: archive opens with consolidated=True"):
         values = np.arange(4, dtype="float64")
         cons = tmp_path / "C.zarr"

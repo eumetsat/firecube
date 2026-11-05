@@ -15,6 +15,6 @@
 """ZIP archives of a Zarr product.
 
 `archive` packs, restores and inspects one archive. `marker` reads and checks the
-`firecube-archive.json` marker. `backup_chain` restores a chain of archives. The
-package imports nothing.
+`firecube-archive.json` marker. `backup_chain` restores a backup chain, a full backup
+and the incremental backups above it. The package imports nothing.
 """

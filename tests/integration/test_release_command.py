@@ -13,8 +13,8 @@
 # limitations under the License.
 
 """``firecube snapshot`` and ``release`` on Zarr v2 and v3 stores: snapshot diffs, release
-producers, resume, version escaping, zip-archive retention (full, delta, verify, chain) and
-object-version retention on a versioned bucket served by moto (marked ``s3``)."""
+producers, resume, version escaping, zip-archive retention (full, incremental, verify, backup chain)
+and object-version retention on a versioned bucket served by moto (marked ``s3``)."""
 
 from __future__ import annotations
 
@@ -233,7 +233,7 @@ def test_release_archive_holds_every_object_and_verify_reports_it_present(tmp_pa
         "kind": "zip",
         "holds": True,
         "archive": "present",
-        "chain": "intact",
+        "backup_chain": "intact",
     }
 
 
@@ -276,7 +276,7 @@ def test_interrupted_release_archive_is_refused_on_rerun_and_rebuilt_from_one_ru
     _cli(store, "release", "verify")
 
 
-def test_archive_full_on_a_later_release_writes_a_full_archive_not_a_delta(tmp_path):
+def test_archive_full_on_a_later_release_writes_a_full_archive_not_an_incremental_backup(tmp_path):
     store = _store(tmp_path, 3)
     _archived(store, "1.0", tmp_path / "one.zip")
     second = _archived(store, "2.0", tmp_path / "two.zip", "--archive-full")
@@ -286,14 +286,16 @@ def test_archive_full_on_a_later_release_writes_a_full_archive_not_a_delta(tmp_p
     )
 
 
-def test_second_release_archive_is_a_delta_of_changed_objects_and_metadata_documents(tmp_path):
+def test_second_release_archive_is_an_incremental_backup_of_changed_objects_and_metadata_documents(
+    tmp_path,
+):
     store = _store(tmp_path, 3)
     _archived(store, "1.0", tmp_path / "one.zip")
     (store / "temp/c/0/0").write_bytes(b"re-ingested chunk")  # the one object that changes
     (store / "temp/c/1").mkdir()
     (store / "temp/c/1/0").write_bytes(b"new chunk")  # the one object that is added
     second = _archived(store, "2.0", tmp_path / "two.zip")
-    assert (second["retention"]["mode"], second["retention"]["chain_length"]) == ("delta", 2)
+    assert (second["retention"]["mode"], second["retention"]["chain_length"]) == ("incremental", 2)
     entries = _entries(tmp_path / "two.zip")
     marker = json.loads(zipfile.ZipFile(tmp_path / "two.zip").read("firecube-archive.json"))
     del entries["firecube-archive.json"]
@@ -308,16 +310,18 @@ def test_second_release_archive_is_a_delta_of_changed_objects_and_metadata_docum
     # Unchanged objects are absent by name: the schema and the first adopt run.
     assert ".firecube/schema.json" not in entries
     assert not [k for k in entries if k.startswith(".firecube/runs/adopt-")]
-    for name in product:  # each entry against the live bytes read from disk
-        live = "sha256:" + hashlib.sha256((store / name).read_bytes()).hexdigest()
-        assert entries[name] == live
-    assert (marker["mode"], marker["base"], marker["inventory"]) == (
-        "delta",
+    live = {  # each entry against the live bytes read from disk
+        name: "sha256:" + hashlib.sha256((store / name).read_bytes()).hexdigest()
+        for name in product
+    }
+    assert {name: entries[name] for name in product} == live
+    assert (marker["mode"], marker["previous_release"], marker["inventory"]) == (
+        "incremental",
         "1.0",
         second["retention"]["inventory"],
     )
-    assert marker["base_uri"] == (tmp_path / "one.zip").as_uri()
-    assert "Base:" in _cli(store, "release", "show").output
+    assert marker["previous_backup_uri"] == (tmp_path / "one.zip").as_uri()
+    assert "Previous release:" in _cli(store, "release", "show").output
 
 
 def _retention_files(store: Path) -> list[str]:
@@ -344,7 +348,7 @@ def test_obstore_release_keeps_a_hash_name_its_listing_always_showed(tmp_path, n
     assert name in _entries(tmp_path / "one.zip")
 
 
-def test_release_whose_delta_would_delete_a_newline_named_key_is_refused_with_archive_full(
+def test_release_whose_incremental_backup_would_delete_a_newline_named_key_is_refused_with_archive_full(
     tmp_path,
 ):
     store = _store(tmp_path, 3)
@@ -359,15 +363,18 @@ def test_release_whose_delta_would_delete_a_newline_named_key_is_refused_with_ar
     assert _retention_files(store) == before
 
 
-def test_release_verify_reports_a_deleted_base_archive_as_a_broken_chain(tmp_path):
+def test_release_verify_reports_a_deleted_previous_backup_as_a_broken_backup_chain(tmp_path):
     store = _store(tmp_path, 3)
     _archived(store, "1.0", tmp_path / "one.zip")
     _archived(store, "2.0", tmp_path / "two.zip")
     (tmp_path / "one.zip").unlink()
     check = json.loads(_cli(store, "release", "verify", "-f", "json", exit_code=1).stdout)
-    assert (check["retention"]["archive"], check["retention"]["chain"]) == ("present", "broken")
+    assert (check["retention"]["archive"], check["retention"]["backup_chain"]) == (
+        "present",
+        "broken",
+    )
     assert check["retention"]["broken_at"] == "1.0"
-    assert "chain: broken at 1.0" in _cli(store, "release", "verify", exit_code=1).output
+    assert "backup chain: broken at 1.0" in _cli(store, "release", "verify", exit_code=1).output
 
 
 @FORMATS

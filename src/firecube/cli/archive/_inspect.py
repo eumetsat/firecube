@@ -49,12 +49,14 @@ def _echo_archive_info(info_dict: dict[str, Any], *, as_json: bool, format_label
         click.echo(f"Entries:        {info_dict['entries']}")
     marker = info_dict.get("marker")
     if marker is not None:
-        deleted = marker.get("deleted")
+        deleted_keys = marker.get("deleted_keys")
         click.echo(f"Mode:           {marker.get('mode', '-')}")
         click.echo(f"Version:        {marker.get('version', '-')}")
-        click.echo(f"Base:           {marker.get('base') or '-'}")
-        click.echo(f"Base URI:       {marker.get('base_uri') or '-'}")
-        click.echo(f"Deleted:        {len(deleted) if isinstance(deleted, list) else '-'}")
+        click.echo(f"Previous release: {marker.get('previous_release') or '-'}")
+        click.echo(f"Previous backup URI: {marker.get('previous_backup_uri') or '-'}")
+        click.echo(
+            f"Deleted keys:   {len(deleted_keys) if isinstance(deleted_keys, list) else '-'}"
+        )
     click.echo(
         "Groups:         " + (", ".join(g or "(root)" for g in info_dict["groups"]) or "(none)")
     )

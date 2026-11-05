@@ -14,7 +14,7 @@
 
 """Read and check the `firecube-archive.json` marker of a ZIP archive.
 
-The archive module and the chain restore both import this module. It imports neither.
+The archive module and the backup chain restore both import this module. It imports neither.
 """
 
 from __future__ import annotations
@@ -32,18 +32,19 @@ MARKER_ENTRY = "firecube-archive.json"
 """Reserved root entry that describes the archive; it is never a product key."""
 
 MODE_FULL: Final = "full"
-MODE_DELTA: Final = "delta"
+MODE_INCREMENTAL: Final = "incremental"
 
+_PREVIOUS_KEYS: Final = ("previous_release", "previous_backup_uri", "previous_backup_digest")
 _MARKER_KEYS: Final = frozenset(
     {
         "version",
         "mode",
-        "base",
-        "base_uri",
-        "base_digest",
+        "previous_release",
+        "previous_backup_uri",
+        "previous_backup_digest",
         "inventory",
         "metadata_manifest",
-        "deleted",
+        "deleted_keys",
     }
 )
 _HEX_ID: Final = re.compile(r"[0-9a-f]{64}")
@@ -83,9 +84,9 @@ def read_zip_marker(path: str) -> Mapping[str, Any] | None:
 
 
 def deleted_key_problem(key: object) -> str | None:
-    """Return why `key` cannot be a deleted key of a delta marker, or `None` when it can.
+    """Return why `key` cannot be a deleted key of an incremental backup, or `None` when it can.
 
-    A chain restore refuses a marker that lists such a key, so a release never writes one.
+    A backup chain restore refuses a marker that lists such a key, so a release never writes one.
     """
     if not isinstance(key, str):
         return "is not a string"
@@ -109,7 +110,7 @@ def deleted_key_problem(key: object) -> str | None:
 def marker_problem(marker: Mapping[str, Any]) -> str | None:
     """Return why `marker` is not a valid archive marker, or `None` when it is.
 
-    A chain restore and `validate_zip` both apply this check.
+    A backup chain restore and `validate_zip` both apply this check.
     """
     if set(marker) != _MARKER_KEYS:
         missing = sorted(_MARKER_KEYS.difference(marker))
@@ -118,31 +119,35 @@ def marker_problem(marker: Mapping[str, Any]) -> str | None:
     version, mode = marker["version"], marker["mode"]
     if not isinstance(version, str) or not version:
         return "its version is not a non-empty string"
-    if mode not in (MODE_FULL, MODE_DELTA):
-        return f"its mode is {mode!r}, not 'full' or 'delta'"
+    if mode not in (MODE_FULL, MODE_INCREMENTAL):
+        return f"its mode is {mode!r}, not {MODE_FULL!r} or {MODE_INCREMENTAL!r}"
     for name in ("inventory", "metadata_manifest"):
         value = marker[name]
         if not isinstance(value, str) or not _HEX_ID.fullmatch(value):
             return f"its {name} is not a 64-digit lowercase hex id"
-    deleted = marker["deleted"]
-    if not isinstance(deleted, list):
-        return "its deleted entry is not a list"
+    deleted_keys = marker["deleted_keys"]
+    if not isinstance(deleted_keys, list):
+        return "its deleted_keys entry is not a list"
     if mode == MODE_FULL:
-        if any(marker[name] is not None for name in ("base", "base_uri", "base_digest")):
-            return "it is full but names a base"
-        if deleted:
-            return "it is full but lists deleted keys"
+        if any(marker[name] is not None for name in _PREVIOUS_KEYS):
+            return "it is a full backup but names a previous release"
+        if deleted_keys:
+            return "it is a full backup but lists deleted keys"
         return None
-    base, base_uri, base_digest = marker["base"], marker["base_uri"], marker["base_digest"]
-    if not isinstance(base, str) or not base:
-        return "it is a delta whose base is not a non-empty string"
-    if not isinstance(base_uri, str) or not base_uri:
-        return "it is a delta whose base_uri is not a non-empty string"
-    if not isinstance(base_digest, str) or not _DIGEST.fullmatch(base_digest):
-        return "it is a delta whose base_digest is not a sha256:<hex> digest"
-    for key in deleted:
+    previous_release = marker["previous_release"]
+    previous_backup_uri = marker["previous_backup_uri"]
+    previous_backup_digest = marker["previous_backup_digest"]
+    if not isinstance(previous_release, str) or not previous_release:
+        return "it is an incremental backup whose previous_release is not a non-empty string"
+    if not isinstance(previous_backup_uri, str) or not previous_backup_uri:
+        return "it is an incremental backup whose previous_backup_uri is not a non-empty string"
+    if not isinstance(previous_backup_digest, str) or not _DIGEST.fullmatch(previous_backup_digest):
+        return (
+            "it is an incremental backup whose previous_backup_digest is not a sha256:<hex> digest"
+        )
+    for key in deleted_keys:
         if (problem := deleted_key_problem(key)) is not None:
             return f"its deleted key {key!r} {problem}"
-    if len(set(deleted)) != len(deleted):
+    if len(set(deleted_keys)) != len(deleted_keys):
         return "it lists a deleted key twice"
     return None

@@ -187,11 +187,11 @@ def verify(
     1 on any difference, listing the changed, added and removed paths. an edit
     of chunk bytes is not seen by the metadata comparison. a release that
     retains its chunk bytes is checked too: a zip release reports whether its
-    archive is present, missing or changed and whether the chain of base
-    archives is intact; a release made with --retain-versions reports whether
-    the bucket versioning and lifecycle are unchanged and whether the listed
+    archive is present, missing or changed and whether the backup chain below
+    it is intact; a release made with --retain-versions reports whether the
+    bucket versioning and lifecycle are unchanged and whether the listed
     object versions still exist, all of them or --sample N. exits 1 also when
-    the archive is missing or changed, the chain is broken, a version is lost
+    the archive is missing or changed, the backup chain is broken, a version is lost
     or a bucket setting changed, and when no such release exists.
     """
     session = open_session(

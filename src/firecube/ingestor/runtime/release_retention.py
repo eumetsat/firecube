@@ -15,12 +15,12 @@
 """Retain the objects of a release, and verify what a release retains.
 
 `zip_retention` builds the step a release run calls after its snapshot. The step
-writes the digest inventory, then a full or delta archive of the inventoried keys,
-and returns the record's `retention` object. `versions_retention` builds the step
-for an S3 product on a versioned bucket: it records the version id of every
-object instead of copying bytes. `verify_retention` checks a release's archive and
-the chain of base archives below it, or the listed object versions. Archive files
-are local and read directly, outside the product's storage session.
+writes the digest inventory, then a full or incremental backup of the inventoried
+keys, and returns the record's `retention` object. `versions_retention` builds the
+step for an S3 product on a versioned bucket: it records the version id of every
+object instead of copying bytes. `verify_retention` checks a release's backup and
+the backup chain below it, or the listed object versions. Backup files are local
+ZIP archives and read directly, outside the product's storage session.
 """
 
 from __future__ import annotations
@@ -33,6 +33,12 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Final, Literal, cast
 
+from firecube.core.archive.zip.marker import (
+    MARKER_ENTRY,
+    MODE_FULL,
+    MODE_INCREMENTAL,
+    deleted_key_problem,
+)
 from firecube.core.controlplane.inventories import excluded_from_inventory
 from firecube.core.controlplane.types import (
     INVENTORY_KIND_S3_VERSIONS,
@@ -54,12 +60,10 @@ if TYPE_CHECKING:
 
 RETENTION_KIND_ZIP: Final = "zip"
 RETENTION_KIND_VERSIONS: Final = INVENTORY_KIND_S3_VERSIONS
-MODE_FULL: Final = "full"
-MODE_DELTA: Final = "delta"
 ArchiveState = Literal["present", "missing", "changed"]
 """Whether a release's archive file exists and still has the recorded digest."""
-ChainState = Literal["intact", "broken"]
-"""Whether every base archive below a delta archive exists and has its recorded digest."""
+BackupChainState = Literal["intact", "broken"]
+"""Whether every previous backup below an incremental backup exists and has its digest."""
 RecordedState = Literal["unchanged", "changed"]
 """Whether a bucket setting still equals the value the release recorded."""
 InventoryState = Literal["intact", "lost"]
@@ -67,7 +71,7 @@ InventoryState = Literal["intact", "lost"]
 CheckedScope = Literal["all", "sample"]
 """Whether every listed object version was checked, or a random sample."""
 
-# The Zarr v3 and v2 metadata documents; a delta archive holds each one whatever its digest.
+# The Zarr v3 and v2 metadata documents; an incremental backup holds each one whatever its digest.
 _METADATA_DOCUMENTS: Final = frozenset({"zarr.json", ".zgroup", ".zarray", ".zattrs", ".zmetadata"})
 _DIGEST_PREFIX: Final = "sha256:"
 _READ_BLOCK: Final = 1 << 20
@@ -75,18 +79,18 @@ _READ_BLOCK: Final = 1 << 20
 
 @dataclass(frozen=True)
 class RetentionVerification:
-    """What a release retains, and whether its archives still hold it.
+    """What a release retains, and whether its backups still hold it.
 
     Attributes:
         version: The release version.
         kind: `"zip"`, `"s3-versions"`, or `None` when the release retains nothing.
         archive: `"present"`, `"missing"` or `"changed"` for the release's own archive,
             or `None` when it retains no zip archive.
-        chain: `"intact"` when every base archive below this one is present and
-            unchanged, `"broken"` otherwise, or `None` when it retains no zip archive. A
-            full archive has no base, so its chain is intact.
-        broken_at: The version of the first link, newest first, whose record or archive
-            fails, or `None`.
+        backup_chain: `"intact"` when every previous backup below this one is present
+            and unchanged, `"broken"` otherwise, or `None` when it retains no zip
+            archive. A full backup has no previous backup, so its backup chain is intact.
+        broken_at: The version of the first release, newest first, whose record or
+            backup fails, or `None`.
         retention: For `"s3-versions"`, `"changed"` when the bucket's versioning state
             differs from the recorded one, else `"unchanged"`; otherwise `None`.
         lifecycle: For `"s3-versions"`, `"changed"` when the bucket's lifecycle
@@ -103,7 +107,7 @@ class RetentionVerification:
     version: str
     kind: str | None
     archive: ArchiveState | None = None
-    chain: ChainState | None = None
+    backup_chain: BackupChainState | None = None
     broken_at: str | None = None
     retention: RecordedState | None = None
     lifecycle: RecordedState | None = None
@@ -124,7 +128,7 @@ class RetentionVerification:
                 and self.lifecycle == "unchanged"
                 and self.inventory == "intact"
             )
-        return self.archive == "present" and self.chain == "intact"
+        return self.archive == "present" and self.backup_chain == "intact"
 
 
 def require_local_archive(archive: StorageUri, *, version: str) -> str:
@@ -210,11 +214,12 @@ def _is_metadata_document(key: str) -> bool:
     return key.rpartition("/")[2] in _METADATA_DOCUMENTS
 
 
-def _chain_length(base: StoredRelease) -> int:
-    length = None if base.retention is None else base.retention.get("chain_length")
+def _chain_length(previous_release: StoredRelease) -> int:
+    retention = previous_release.retention
+    length = None if retention is None else retention.get("chain_length")
     if isinstance(length, bool) or not isinstance(length, int) or length < 1:
         raise ControlPlaneCorruptionError(
-            f"the retention of release {base.version!r} has no valid chain_length"
+            f"the retention of release {previous_release.version!r} has no valid chain_length"
         )
     return length
 
@@ -228,7 +233,6 @@ def _require_inventory_bytes(
         ReleaseRefusedError: An entry is missing, extra, or holds other bytes than the
             inventory recorded; the archive file is kept.
     """
-    from firecube.core.archive.zip.marker import MARKER_ENTRY
 
     def refuse(key: str) -> ReleaseRefusedError:
         return ReleaseRefusedError(
@@ -255,25 +259,25 @@ def _require_inventory_bytes(
                 raise refuse(name)
 
 
-def _refuse_unrestorable_deletes(deleted: list[str], base: str, *, version: str) -> None:
-    """Refuse a delta whose marker would list a deleted key that a chain restore refuses.
+def _refuse_unrestorable_deletes(
+    deleted_keys: list[str], previous_release: str, *, version: str
+) -> None:
+    """Refuse an incremental backup whose marker lists a deleted key a restore refuses.
 
     Raises:
         ReleaseRefusedError: A deleted key fails the restore's admission; nothing is archived.
     """
-    from firecube.core.archive.zip.marker import deleted_key_problem
-
-    refused = [(key, problem) for key in deleted if (problem := deleted_key_problem(key))]
+    refused = [(key, problem) for key in deleted_keys if (problem := deleted_key_problem(key))]
     if not refused:
         return
     key, problem = refused[0]
     raise ReleaseRefusedError(
         Message(
-            "The key {key!r} was deleted since release {base!r} and {problem}, so it cannot be "
-            "restored from an archive chain and no delta archive lists it. Deleted keys "
-            "refused: {count}. Write a full archive with {archive_full} instead.",
+            "The key {key!r} was deleted since release {previous_release!r} and {problem}, so "
+            "it cannot be restored from a backup chain and no incremental backup lists it. "
+            "Deleted keys refused: {count}. Write a full backup with {archive_full} instead.",
             key=key,
-            base=base,
+            previous_release=previous_release,
             problem=problem,
             count=len(refused),
             archive_full=Param("archive_full"),
@@ -297,12 +301,13 @@ def zip_retention(
     """Return the step that retains release `version` in a zip archive at `archive`.
 
     The step takes the snapshot id. It refuses an existing file at the archive path,
-    then takes the digest inventory. It refuses a delta that deletes a key a chain
-    restore refuses, and otherwise writes the inventory. It archives every inventoried key when
-    the current release retains no zip archive or `archive_full` is set. Otherwise it
-    archives the keys that are new or changed since that release's inventory, plus
-    every metadata document. The archive is written as its own run, with `run_id` as
-    the holder of the exclusive claim. Each entry is checked against the inventory.
+    then takes the digest inventory. It refuses an incremental backup that deletes a key
+    a backup chain restore refuses, and otherwise writes the inventory. It writes a full
+    backup of every inventoried key when the current release retains no zip archive or
+    `archive_full` is set. Otherwise it writes an incremental backup of the keys that are
+    new or changed since that release's inventory, plus every metadata document. The
+    archive is written as its own run, with `run_id` as the holder of the exclusive
+    claim. Each entry is checked against the inventory.
 
     Returns:
         The step; it returns the record's `retention` object.
@@ -316,8 +321,8 @@ def zip_retention(
         from firecube.ingestor.runtime.archive import create_archive
 
         refuse_existing_archive(archive_path, version=version)
-        previous = manager.current_release(product)
-        base = previous if not archive_full and _is_zip_retention(previous) else None
+        current = manager.current_release(product)
+        previous = current if not archive_full and _is_zip_retention(current) else None
         inventory = manager.take_digest_inventory(product)
         digests = {item.key: str(item.digest) for item in inventory.objects}
         if "zarr.json" not in digests:
@@ -329,31 +334,35 @@ def zip_retention(
                 ),
                 version=version,
             )
-        if base is None:
+        if previous is None:
             keys = sorted(digests)
-            deleted: list[str] = []
+            deleted_keys: list[str] = []
         else:
-            base_inventory = manager.read_inventory(product, _retention_text(base, "inventory"))
-            base_digests = {item.key: item.digest for item in base_inventory.objects}
+            previous_inventory = manager.read_inventory(
+                product, _retention_text(previous, "inventory")
+            )
+            previous_digests = {item.key: item.digest for item in previous_inventory.objects}
             keys = sorted(
                 key
                 for key, digest in digests.items()
-                if base_digests.get(key) != digest or _is_metadata_document(key)
+                if previous_digests.get(key) != digest or _is_metadata_document(key)
             )
-            deleted = sorted(set(base_digests).difference(digests))
-            _refuse_unrestorable_deletes(deleted, base.version, version=version)
+            deleted_keys = sorted(set(previous_digests).difference(digests))
+            _refuse_unrestorable_deletes(deleted_keys, previous.version, version=version)
         inventory_id = manager.write_inventory(product, inventory)
         report(f"inventory {inventory_id} lists {len(digests)} objects")
-        mode = MODE_FULL if base is None else MODE_DELTA
+        mode = MODE_FULL if previous is None else MODE_INCREMENTAL
         marker: dict[str, Any] = {
             "version": version,
             "mode": mode,
-            "base": None if base is None else base.version,
-            "base_uri": None if base is None else _retention_text(base, "uri"),
-            "base_digest": None if base is None else _retention_text(base, "digest"),
+            "previous_release": None if previous is None else previous.version,
+            "previous_backup_uri": None if previous is None else _retention_text(previous, "uri"),
+            "previous_backup_digest": (
+                None if previous is None else _retention_text(previous, "digest")
+            ),
             "inventory": inventory_id,
             "metadata_manifest": manager.read_snapshot(product, snapshot_id).record.manifest,
-            "deleted": deleted,
+            "deleted_keys": deleted_keys,
         }
         created = create_archive(
             session=session,
@@ -367,7 +376,7 @@ def zip_retention(
         )
         _require_inventory_bytes(archive_path, digests, keys, version=version)
         size, digest = _file_digest(archive_path)
-        report(f"{mode} archive {archive_path} holds {len(keys)} objects, {size} bytes")
+        report(f"{mode} backup {archive_path} holds {len(keys)} objects, {size} bytes")
         return {
             "kind": RETENTION_KIND_ZIP,
             "uri": archive.to_str(),
@@ -375,9 +384,9 @@ def zip_retention(
             "size_bytes": size,
             "digest": digest,
             "mode": mode,
-            "base": marker["base"],
-            "chain_length": 1 if base is None else _chain_length(base) + 1,
-            "deleted_count": len(deleted),
+            "previous_release": marker["previous_release"],
+            "chain_length": 1 if previous is None else _chain_length(previous) + 1,
+            "deleted_key_count": len(deleted_keys),
             "inventory": inventory_id,
             "created_by_run": created.run_id,
         }
@@ -669,40 +678,47 @@ def _archive_state(release: StoredRelease) -> ArchiveState:
     return "present" if digest == expected else "changed"
 
 
-def _first_broken_base(manager: ChunkManager, product: str, release: StoredRelease) -> str | None:
-    """Follow the bases of a delta release through the records; return the first broken link.
+def _first_broken_previous_backup(
+    manager: ChunkManager, product: str, release: StoredRelease
+) -> str | None:
+    """Follow the previous releases of an incremental backup; return the first broken one.
 
-    A link is broken when its record is missing, retains no zip archive, repeats an
-    earlier link, has an unknown mode, or its archive is missing or changed.
+    A release is broken when its record is missing, retains no zip archive, repeats an
+    earlier release, has an unknown mode, or its backup is missing or changed.
     """
     seen = {release.version}
-    link = release
+    backup_release = release
     while True:
-        mode = None if link.retention is None else link.retention.get("mode")
+        retention = backup_release.retention
+        mode = None if retention is None else retention.get("mode")
         if mode == MODE_FULL:
             return None
-        if mode != MODE_DELTA:
-            return link.version
+        if mode != MODE_INCREMENTAL:
+            return backup_release.version
         try:
-            base_version = _retention_text(link, "base")
+            previous_release_version = _retention_text(backup_release, "previous_release")
         except ControlPlaneCorruptionError:
-            return link.version
-        base = None if base_version in seen else manager.find_release(product, base_version)
-        if base is None or not _is_zip_retention(base):
-            return base_version
+            return backup_release.version
+        previous_release = (
+            None
+            if previous_release_version in seen
+            else manager.find_release(product, previous_release_version)
+        )
+        if previous_release is None or not _is_zip_retention(previous_release):
+            return previous_release_version
         try:
-            if _archive_state(base) != "present":
-                return base_version
+            if _archive_state(previous_release) != "present":
+                return previous_release_version
         except ControlPlaneCorruptionError:
-            return base_version
-        seen.add(base_version)
-        link = base
+            return previous_release_version
+        seen.add(previous_release_version)
+        backup_release = previous_release
 
 
 def verify_retention(
     session: StorageSession, version: str | None = None, *, sample: int | None = None
 ) -> RetentionVerification:
-    """Check what a release retains: its archive chain, or its listed object versions.
+    """Check what a release retains: its backup chain, or its listed object versions.
 
     For a zip release the call hashes each local archive file whole. For a
     version-retaining release it re-reads the bucket's versioning and lifecycle and
@@ -738,12 +754,12 @@ def verify_retention(
                 f"release {release.version!r} names retention kind {kind!r}, which is not known"
             )
         archive = _archive_state(release)
-        broken_at = _first_broken_base(manager, product, release)
+        broken_at = _first_broken_previous_backup(manager, product, release)
         return RetentionVerification(
             version=release.version,
             kind=kind,
             archive=archive,
-            chain="intact" if broken_at is None else "broken",
+            backup_chain="intact" if broken_at is None else "broken",
             broken_at=broken_at,
         )
     finally:

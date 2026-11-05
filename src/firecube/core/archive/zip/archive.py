@@ -37,7 +37,12 @@ from zarr.buffer import default_buffer_prototype
 from zarr.storage import MemoryStore
 
 from firecube.core.archive._common import clear_target
-from firecube.core.archive.zip.marker import MARKER_ENTRY, marker_problem, read_zip_marker
+from firecube.core.archive.zip.marker import (
+    MARKER_ENTRY,
+    MODE_INCREMENTAL,
+    marker_problem,
+    read_zip_marker,
+)
 from firecube.core.controlplane.types import CLAIMS_DIRNAME, CONTROL_DIRNAME
 from firecube.core.filesystem.store_factory import create_zip_store
 from firecube.core.storage.session import StorageSession
@@ -317,8 +322,8 @@ def zip_to_zarr(
             for k in names
             if not k.endswith("/") and not k.startswith(_CLAIMS_PREFIX) and k != MARKER_ENTRY
         )
-        is_delta = _is_delta(read_zip_marker(str(archive_path)))
-        if "zarr.json" not in keys and not is_delta:
+        is_incremental = _is_incremental_backup(read_zip_marker(str(archive_path)))
+        if "zarr.json" not in keys and not is_incremental:
             raise ValueError(f"No Zarr v3 root metadata found in archive: {archive}")
         _refuse_invalid_metadata(zf, keys, archive)
 
@@ -329,8 +334,8 @@ def zip_to_zarr(
         for key in keys:
             session.put_bytes(product_uri.join(key), zf.read(key))
 
-    # verify: the restored store opens and lists the same groups and arrays; a delta
-    # without a root document has no hierarchy of its own to open
+    # verify: the restored store opens and lists the same groups and arrays; an incremental
+    # backup without a root document has no hierarchy of its own to open
     members = (
         _walk_live(session.zarr.create_store(product_uri, mode="r").zarr_kwargs())
         if "zarr.json" in keys
@@ -372,7 +377,7 @@ def zip_info(archive: str) -> dict:
     store = create_zip_store(target=str(path), mode="r").store
     try:
         group_vars: dict[str, dict] = {"": {}}  # "" is the root group
-        # a delta archive may hold no root document, so it has no hierarchy to walk
+        # an incremental backup may hold no root document, so it has no hierarchy to walk
         members = _walk_live({"store": store}) if "zarr.json" in keys else []
         for name, node in members:
             if isinstance(node, zarr.Group):
@@ -439,7 +444,7 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     """Return the problems found in a zarr zip archive; an empty list means valid.
 
     quick: check the zip directory and Zarr metadata only, skip the CRC check of every entry.
-    A marker must pass the checks a chain restore applies to it.
+    A marker must pass the checks a backup chain restore applies to it.
     """
     path = Path(archive.removeprefix("file://"))
     if not path.is_file():
@@ -461,14 +466,14 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
         marker = None
     if marker is not None and (problem := marker_problem(marker)) is not None:
         issues.append(f"Entry {MARKER_ENTRY!r} is not a valid archive marker: {problem}")
-    is_delta = _is_delta(marker)
+    is_incremental = _is_incremental_backup(marker)
 
     if "zarr.json" not in keys:
-        if not is_delta:
+        if not is_incremental:
             issues.append("no Zarr v3 root metadata (zarr.json)")
             return issues
-        # a delta archive may hold no root document; its entries are checked alone
-        return [*issues, *_delta_metadata_issues(path)]
+        # an incremental backup may hold no root document; its entries are checked alone
+        return [*issues, *_incremental_backup_metadata_issues(path)]
 
     store = create_zip_store(target=str(path), mode="r").store
     try:
@@ -485,13 +490,13 @@ def validate_zip(archive: str, *, quick: bool = False) -> list[str]:
     return issues
 
 
-def _is_delta(marker: Mapping[str, Any] | None) -> bool:
-    """Return True when the marker declares a delta archive."""
-    return marker is not None and marker.get("mode") == "delta"
+def _is_incremental_backup(marker: Mapping[str, Any] | None) -> bool:
+    """Return True when the marker declares an incremental backup."""
+    return marker is not None and marker.get("mode") == MODE_INCREMENTAL
 
 
-def _delta_metadata_issues(path: Path) -> list[str]:
-    """Return the issue of the first invalid ``zarr.json`` entry of a delta archive, if any."""
+def _incremental_backup_metadata_issues(path: Path) -> list[str]:
+    """Return the issue of the first invalid ``zarr.json`` entry of an incremental backup."""
     with zipfile.ZipFile(path) as zf:
         keys = [k for k in zf.namelist() if k != MARKER_ENTRY and not k.endswith("/")]
         try:

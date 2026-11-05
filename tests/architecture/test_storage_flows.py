@@ -507,7 +507,9 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
 
 
 @pytest.mark.parametrize("driver", _DRIVERS)
-def test_delta_chain_restore_equals_the_second_release_inventory(tmp_path: Path, driver) -> None:
+def test_incremental_backup_chain_restore_equals_the_second_release_inventory(
+    tmp_path: Path, driver
+) -> None:
     import hashlib
     import json
     import shutil
@@ -543,7 +545,7 @@ def test_delta_chain_restore_equals_the_second_release_inventory(tmp_path: Path,
     second = create_release_for_product(
         session=session, version="1.1", archive=StorageUri.from_local_path(archives[1])
     ).release
-    assert second.retention is not None and second.retention["mode"] == "delta"
+    assert second.retention is not None and second.retention["mode"] == "incremental"
     inventory = json.loads(
         (
             source / f".firecube/releases/inventories/{second.retention['inventory']}.json"

@@ -44,7 +44,7 @@ Examples:
   firecube release create 1.1.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --note "units fixed" -f json
 
 \b
-  # retain the chunk bytes in a zip archive (full the first time, a delta after)
+  # retain the chunk bytes in a zip archive (a full backup first, incremental backups after)
   firecube release create 1.2.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --archive file:///data/archives/MY_PRODUCT-1.2.0.zip
 
 See also: firecube release list, firecube release verify, firecube snapshot list
@@ -64,9 +64,10 @@ See also: firecube release list, firecube release verify, firecube snapshot list
     default=None,
     metavar="URI",
     help=(
-        "Retain the product's objects in a zip archive at this file:// URI. The first "
-        "release writes a full archive and each later one a delta against the previous "
-        "release's archive. Nothing may exist at the path."
+        "Retain the product's objects in a zip archive at this file:// URI. The archive "
+        "is a full backup when the current release retains no zip archive, else an "
+        "incremental backup of what changed since the current release. Nothing may "
+        "exist at the path."
     ),
 )
 @click.option(
@@ -74,7 +75,7 @@ See also: firecube release list, firecube release verify, firecube snapshot list
     "archive_full",
     is_flag=True,
     default=False,
-    help="Write a full archive even when a delta is possible. Requires --archive.",
+    help="Write a full backup even when an incremental backup is possible. Requires --archive.",
 )
 @click.option(
     "--retain-versions",
@@ -111,8 +112,9 @@ def create(
     json the progress lines go to stderr.
 
     --archive also retains the chunk bytes of the release in a local zip
-    archive; --retain-versions retains them as the object versions of a
-    versioned s3 bucket. an interrupted create that wrote an archive is
+    archive, a full or an incremental backup; --retain-versions retains them
+    as the object versions of a versioned s3 bucket. an interrupted create
+    that wrote an archive is
     refused on rerun until the file is removed.
     """
     if archive_full and archive is None:

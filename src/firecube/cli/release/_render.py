@@ -34,9 +34,9 @@ _RETENTION_FIELDS = (
     ("kind", "Kind"),
     ("uri", "Archive"),
     ("mode", "Mode"),
-    ("base", "Base"),
+    ("previous_release", "Previous release"),
     ("chain_length", "Chain length"),
-    ("deleted_count", "Deleted"),
+    ("deleted_key_count", "Deleted keys"),
     ("size_bytes", "Size (bytes)"),
     ("digest", "Digest"),
     ("bucket_versioning", "Bucket versioning"),
@@ -108,7 +108,7 @@ def retention_check_payload(check: RetentionVerification) -> dict[str, Any]:
     payload: dict[str, Any] = {"kind": check.kind, "holds": check.holds}
     for name in (
         "archive",
-        "chain",
+        "backup_chain",
         "broken_at",
         "retention",
         "lifecycle",
@@ -208,15 +208,15 @@ def echo_verification(verification: ReleaseVerification, check: RetentionVerific
 
 
 def _echo_retention_check(check: RetentionVerification) -> None:
-    """Print the archive and chain lines of a zip release, or the version lines of an s3 one."""
+    """Print the archive and backup chain lines of a zip release, or the version lines of s3."""
     if check.kind is None:
         return
     if check.archive is not None:
         click.echo(f"archive: {check.archive}")
-        if check.chain == "broken":
-            click.echo(f"chain: broken at {check.broken_at}")
+        if check.backup_chain == "broken":
+            click.echo(f"backup chain: broken at {check.broken_at}")
         else:
-            click.echo(f"chain: {check.chain}")
+            click.echo(f"backup chain: {check.backup_chain}")
         return
     click.echo(f"retention: {check.retention}")
     click.echo(f"lifecycle: {check.lifecycle}")
