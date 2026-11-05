@@ -37,19 +37,31 @@ class ContractEntry:
     required_storage_flags: list[str]
     smart_default_eligible: bool
     expected_failures: list[tuple[list[str], str]] = field(default_factory=list)
+    extra_options: list[str] = field(default_factory=list)
 
 
 def _maintenance(
-    group: str, leaf: str, tier: TierLiteral, role: str | None = "product-input"
+    group: str,
+    leaf: str,
+    tier: TierLiteral,
+    role: str | None = "product-input",
+    *,
+    extra_roles: Mapping[str, str] | None = None,
+    extra_options: tuple[str, ...] = (),
 ) -> tuple[tuple[str, ...], ContractEntry]:
-    """Contract row of a snapshot, migrate or release leaf; ``role`` None means no URI."""
+    """Contract row of a snapshot, migrate or release leaf; ``role`` None means no URI.
+
+    ``extra_roles`` adds URI options beside ``--target``; ``extra_options`` lists
+    non-URI options the help must show.
+    """
     path = (group, leaf)
     return path, ContractEntry(
         path=path,
         tier=tier,
-        uri_roles={} if role is None else {"--target": role},
+        uri_roles={**({} if role is None else {"--target": role}), **(extra_roles or {})},
         required_storage_flags=["--product-name"] if tier == "write" else [],
         smart_default_eligible=False,
+        extra_options=list(extra_options),
     )
 
 
@@ -439,10 +451,17 @@ CLI_COMMAND_CONTRACTS: Mapping[tuple[str, ...], ContractEntry] = {
             _maintenance("migrate", "list", "config-scoped", None),
             _maintenance("migrate", "status", "control-plane"),
             _maintenance("migrate", "adopt", "write", "product-input-output"),
-            _maintenance("release", "create", "write", "product-input-output"),
+            _maintenance(
+                "release",
+                "create",
+                "write",
+                "product-input-output",
+                extra_roles={"--archive": "artifact-output"},
+                extra_options=("--archive-full", "--retain-versions"),
+            ),
             _maintenance("release", "list", "control-plane"),
             _maintenance("release", "show", "control-plane"),
-            _maintenance("release", "verify", "control-plane"),
+            _maintenance("release", "verify", "control-plane", extra_options=("--sample",)),
         ]
     ),
 }

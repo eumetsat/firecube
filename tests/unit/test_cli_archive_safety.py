@@ -22,6 +22,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+import xarray as xr
 import zarr
 from click.testing import CliRunner
 
@@ -307,3 +308,128 @@ def test_create_without_overwrite_requires_no_confirmation(tmp_path, monkeypatch
     )
     assert "OverwriteWithoutConfirmation" not in r.output
     assert "yes-i-really-mean-it" not in r.output.lower()
+
+
+def _release_chain(base):
+    """Full archive of release 1.0 and the delta of 1.1, which deletes `gone/*` and `a*b`."""
+    store = base / "p.zarr"
+    xr.Dataset({"temp": (("x",), np.arange(3.0))}).to_zarr(store, zarr_format=3)
+    zarr.open_group(str(store), mode="a").create_array("gone", data=np.arange(3.0))
+    (store / "a*b").write_text("star")
+    (store / "aXb").write_text("sibling")
+    full, delta = base / "a1.zip", base / "a2.zip"
+    where = ["--target", store.as_uri(), "--product-name", "p.zarr"]
+
+    def run(*args):
+        assert CliRunner().invoke(cli, [*args, *where]).exit_code == 0
+
+    run("migrate", "adopt")
+    run("release", "create", "1.0", "--archive", full.as_uri())
+    shutil.rmtree(store / "gone")
+    (store / "a*b").unlink()
+    run("release", "create", "1.1", "--archive", delta.as_uri())
+    return full, delta
+
+
+def _rewrite(src, dst, edit=None, extra=()):
+    """Copy zip `src` to `dst`, passing the parsed marker through `edit`, adding `extra` entries."""
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w") as zout:
+        for info in zin.infolist():
+            data = zin.read(info)
+            if edit and info.filename == "firecube-archive.json":
+                data = edit(json.loads(data))
+                data = data if isinstance(data, bytes) else json.dumps(data).encode()
+            zout.writestr(info.filename, data)
+        for name in extra:
+            zout.writestr(name, b"unchecked")
+
+
+def _tree(root):
+    return {
+        p.relative_to(root).as_posix(): p.read_bytes() if p.is_file() else None
+        for p in root.rglob("*")
+    }
+
+
+def _restore(archive, target, *flags):
+    args = ["archive", "restore", "--archive", archive.as_uri(), "--target", target.as_uri()]
+    return CliRunner().invoke(cli, [*args, *flags, *_LOCAL_STORAGE_FLAGS])
+
+
+_BAD_MARKERS = {
+    "mode-missing": (lambda m: {k: v for k, v in m.items() if k != "mode"}, "keys differ"),
+    "mode-misspelled": (lambda m: {**m, "mode": "dleta"}, "dleta"),
+    "marker-not-json": (lambda m: b"{not json", "not valid JSON"),
+    "deleted-parent": (lambda m: {**m, "deleted": ["../x"]}, "'..'"),
+    "deleted-claim": (lambda m: {**m, "deleted": [".firecube/claims/a"]}, "claim file"),
+}
+
+
+@pytest.mark.parametrize("case", [*_BAD_MARKERS, "base-missing", "base-changed"])
+def test_refused_chain_restore_changes_nothing_not_even_a_run_record(tmp_path, case):
+    full, delta = _release_chain(tmp_path)
+    if case == "base-missing":
+        full.unlink()
+    elif case == "base-changed":
+        _rewrite(full, tmp_path / "swap.zip", extra=("added",))
+        (tmp_path / "swap.zip").replace(full)
+    else:
+        _rewrite(delta, tmp_path / "bad.zip", edit=_BAD_MARKERS[case][0])
+        delta = tmp_path / "bad.zip"
+    reason = {"base-missing": "does not exist", "base-changed": "digest"}.get(case)
+    target = tmp_path / "t.zarr"
+    zarr.open_group(str(target), mode="w").create_array("keep", data=np.arange(3.0))
+    (target / ".firecube").mkdir()
+    (target / ".firecube" / "schema.json").write_text('{"kept": true}')
+    before = _tree(target)
+    r = _restore(delta, target, "--overwrite", "--yes-i-really-mean-it")
+    assert r.exit_code != 0 and (reason or _BAD_MARKERS[case][1]) in r.output, r.output
+    assert _tree(target) == before
+
+
+def test_delta_deleting_a_glob_named_key_keeps_its_sibling(tmp_path):
+    r = _restore(_release_chain(tmp_path)[1], tmp_path / "t.zarr")
+    assert r.exit_code == 0, r.output
+    assert (tmp_path / "t.zarr" / "aXb").read_text() == "sibling"
+    assert not (tmp_path / "t.zarr" / "a*b").exists()
+
+
+def test_delta_restore_fails_when_a_key_delete_fails(tmp_path, monkeypatch):
+    from firecube.core.storage.session import StorageSession
+
+    def refuse(self, uri):
+        raise OSError("delete refused")
+
+    monkeypatch.setattr(StorageSession, "delete_literal", refuse)
+    r = _restore(_release_chain(tmp_path)[1], tmp_path / "t.zarr")
+    assert r.exit_code != 0 and "delete refused" in r.output + str(r.exception), r.output
+
+
+@pytest.mark.parametrize("linked", ["temp", "gone"], ids=["put", "delete"])
+def test_symlinked_ancestor_in_the_target_is_refused_and_the_outside_survives(tmp_path, linked):
+    delta = _release_chain(tmp_path)[1]
+    (tmp_path / "outside").mkdir()
+    (tmp_path / "outside" / "0").write_text("precious")
+    (tmp_path / "t.zarr").mkdir()
+    (tmp_path / "t.zarr" / linked).symlink_to(tmp_path / "outside")
+    r = _restore(delta, tmp_path / "t.zarr")
+    assert r.exit_code != 0 and "symlink" in r.output, r.output
+    assert _tree(tmp_path / "outside") == {"0": b"precious"}
+
+
+def test_base_swapped_after_the_chain_was_resolved_lands_no_unchecked_object(tmp_path, monkeypatch):
+    import firecube.core.zarr.zip_chain as zip_chain
+
+    full, delta = _release_chain(tmp_path)
+    resolve = zip_chain.resolve_chain
+
+    def resolve_then_swap(path):
+        links = resolve(path)
+        _rewrite(full, tmp_path / "swap.zip", extra=("evil.txt",))
+        (tmp_path / "swap.zip").replace(full)
+        return links
+
+    monkeypatch.setattr(zip_chain, "resolve_chain", resolve_then_swap)
+    r = _restore(delta, tmp_path / "t.zarr")
+    assert r.exit_code != 0 and "digest" in r.output, r.output
+    assert [k for k in _tree(tmp_path / "t.zarr") if not k.startswith(".firecube")] == []

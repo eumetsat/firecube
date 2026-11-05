@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""``firecube snapshot`` and ``release`` on Zarr v2 and v3 stores; new, no module covers them."""
+"""``firecube snapshot`` and ``release`` on Zarr v2 and v3 stores: snapshot diffs, release
+producers, resume, version escaping, zip-archive retention (full, delta, verify, chain) and
+object-version retention on a versioned bucket served by moto (marked ``s3``)."""
 
 from __future__ import annotations
 
 import hashlib
 import json
+import zipfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
@@ -29,7 +33,9 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
+from firecube.core.filesystem import fsspec_backend
 from tests.helpers.storage import make_test_session
+from tests.integration._staged_helpers import s3_env
 
 pytestmark = [pytest.mark.integration, pytest.mark.contract]
 
@@ -187,3 +193,382 @@ def test_version_the_storage_cannot_hold_is_refused_before_anything_is_written(t
     before = _hashes(store)
     _cli(store, "release", "create", version, exit_code=1)
     assert _hashes(store) == before
+
+
+def _archived(store: Path, version: str, archive: Path, *flags: str) -> dict[str, Any]:
+    return _json(store, "release", "create", version, "--archive", archive.as_uri(), *flags)[
+        "release"
+    ]
+
+
+def _inventory(store: Path, release: dict[str, Any]) -> dict[str, str]:
+    path = store / ".firecube/releases/inventories" / f"{release['retention']['inventory']}.json"
+    return {o["key"]: o["digest"] for o in json.loads(path.read_text())["objects"]}
+
+
+def _entries(archive: Path) -> dict[str, str]:
+    with zipfile.ZipFile(archive) as zf:
+        return {n: "sha256:" + hashlib.sha256(zf.read(n)).hexdigest() for n in zf.namelist()}
+
+
+def _rewrite_zip(archive: Path, name: str) -> None:
+    with zipfile.ZipFile(archive) as zf:
+        members = [(i, zf.read(i)) for i in zf.infolist()]
+    with zipfile.ZipFile(archive, "w") as zf:
+        for info, data in members:
+            zf.writestr(info, data + b"x" if info.filename == name else data)
+
+
+def test_release_archive_holds_every_object_and_verify_reports_it_present(tmp_path):
+    store = _store(tmp_path, 3)
+    archive = tmp_path / "full.zip"
+    release = _archived(store, "1.0", archive)
+    assert release["retention"]["mode"] == "full"
+    inventory = _inventory(store, release)
+    assert {"zarr.json", "temp/c/0/0"} <= set(inventory)
+    entries = _entries(archive)
+    assert entries.pop("firecube-archive.json")  # the reserved marker is the one extra entry
+    assert entries == inventory
+    assert _json(store, "release", "verify")["retention"] == {
+        "kind": "zip",
+        "holds": True,
+        "archive": "present",
+        "chain": "intact",
+    }
+
+
+def test_release_verify_reports_a_rewritten_archive_as_changed(tmp_path):
+    store = _store(tmp_path, 3)
+    archive = tmp_path / "full.zip"
+    _archived(store, "1.0", archive)
+    _rewrite_zip(archive, "temp/c/0/0")  # marker kept, valid CRC, one entry's bytes differ
+    out = _cli(store, "release", "verify", exit_code=1).output
+    assert "archive: changed" in out
+
+
+def test_interrupted_release_archive_is_refused_on_rerun_and_rebuilt_from_one_run(
+    tmp_path, monkeypatch
+):
+    store = _store(tmp_path, 3)
+    archive = tmp_path / "full.zip"
+    args = ("release", "create", "1.0", "--archive", archive.as_uri())
+    monkeypatch.setattr(ChunkManager, "create_release", Mock(side_effect=RuntimeError("injected")))
+    _cli(store, *args, exit_code=1)
+    monkeypatch.undo()
+    assert archive.is_file()  # the failure came after the archive write
+
+    def tree() -> dict[str, bytes]:  # the whole product, refs included, claims excluded
+        return {
+            p.relative_to(store).as_posix(): p.read_bytes()
+            for p in sorted(store.rglob("*"))
+            if p.is_file() and ".firecube/claims" not in p.as_posix()
+        }
+
+    before, kept = tree(), archive.read_bytes()
+    assert str(archive) in _cli(store, *args, exit_code=1).output
+    assert tree() == before
+    assert archive.read_bytes() == kept
+    archive.unlink()
+    release = _json(store, *args, "-f", "json")["release"]
+    entries = _entries(archive)
+    entries.pop("firecube-archive.json")
+    assert entries == _inventory(store, release)
+    _cli(store, "release", "verify")
+
+
+def test_archive_full_on_a_later_release_writes_a_full_archive_not_a_delta(tmp_path):
+    store = _store(tmp_path, 3)
+    _archived(store, "1.0", tmp_path / "one.zip")
+    second = _archived(store, "2.0", tmp_path / "two.zip", "--archive-full")
+    assert (second["retention"]["mode"], second["retention"]["chain_length"]) == ("full", 1)
+    assert set(_entries(tmp_path / "two.zip")) - {"firecube-archive.json"} == set(
+        _inventory(store, second)
+    )
+
+
+def test_second_release_archive_is_a_delta_of_changed_objects_and_metadata_documents(tmp_path):
+    store = _store(tmp_path, 3)
+    _archived(store, "1.0", tmp_path / "one.zip")
+    (store / "temp/c/0/0").write_bytes(b"re-ingested chunk")  # the one object that changes
+    (store / "temp/c/1").mkdir()
+    (store / "temp/c/1/0").write_bytes(b"new chunk")  # the one object that is added
+    second = _archived(store, "2.0", tmp_path / "two.zip")
+    assert (second["retention"]["mode"], second["retention"]["chain_length"]) == ("delta", 2)
+    entries = _entries(tmp_path / "two.zip")
+    marker = json.loads(zipfile.ZipFile(tmp_path / "two.zip").read("firecube-archive.json"))
+    del entries["firecube-archive.json"]
+    # The fixture is a Zarr v3 store: its metadata documents are these two files, named by hand.
+    product = {k for k in entries if not k.startswith(".firecube/")}
+    assert product == {"zarr.json", "temp/zarr.json", "temp/c/0/0", "temp/c/1/0"}
+    # Control-plane objects of this fixture. The release records and pointer are new; the
+    # run directories, snapshot blobs and inventory carry generated ids, so by directory.
+    control = {k for k in entries if k.startswith(".firecube/")}
+    assert {".firecube/releases/1.0.json", ".firecube/releases/refs/current.json"} <= control
+    assert {k.split("/")[1] for k in control} <= {"metadata", "releases", "runs"}
+    # Unchanged objects are absent by name: the schema and the first adopt run.
+    assert ".firecube/schema.json" not in entries
+    assert not [k for k in entries if k.startswith(".firecube/runs/adopt-")]
+    for name in product:  # each entry against the live bytes read from disk
+        live = "sha256:" + hashlib.sha256((store / name).read_bytes()).hexdigest()
+        assert entries[name] == live
+    assert (marker["mode"], marker["base"], marker["inventory"]) == (
+        "delta",
+        "1.0",
+        second["retention"]["inventory"],
+    )
+    assert marker["base_uri"] == (tmp_path / "one.zip").as_uri()
+    assert "Base:" in _cli(store, "release", "show").output
+
+
+def test_release_verify_reports_a_deleted_base_archive_as_a_broken_chain(tmp_path):
+    store = _store(tmp_path, 3)
+    _archived(store, "1.0", tmp_path / "one.zip")
+    _archived(store, "2.0", tmp_path / "two.zip")
+    (tmp_path / "one.zip").unlink()
+    check = json.loads(_cli(store, "release", "verify", "-f", "json", exit_code=1).stdout)
+    assert (check["retention"]["archive"], check["retention"]["chain"]) == ("present", "broken")
+    assert check["retention"]["broken_at"] == "1.0"
+    assert "chain: broken at 1.0" in _cli(store, "release", "verify", exit_code=1).output
+
+
+@FORMATS
+def test_release_record_without_retention_still_shows_and_verifies(tmp_path, fmt):
+    store = _store(tmp_path, fmt)
+    _cli(store, "release", "create", "1.0")
+    record = next(p for p in (store / ".firecube/releases").glob("*.json"))
+    assert "retention" not in json.loads(record.read_text())  # a record as v1 wrote it
+    assert _json(store, "release", "show").get("retention") is None
+    assert _json(store, "release", "verify")["matches"] is True
+    assert _json(store, "release", "list")["current"] == "1.0"
+
+
+_BUCKET = "retain-bucket"
+_ROOT = b'{"zarr_format":3,"node_type":"group","attributes":{}}'
+_S3 = pytest.mark.s3
+
+
+@pytest.fixture(scope="module")
+def moto_endpoint() -> Iterator[str]:
+    from moto.server import ThreadedMotoServer  # S3 lane only: the default lane needs no moto
+
+    server = ThreadedMotoServer(port=0)
+    server.start()
+    host, port = server.get_host_and_port()
+    try:
+        yield f"http://{host}:{port}"
+    finally:
+        server.stop()
+
+
+@pytest.fixture
+def s3_client(moto_endpoint: str) -> Iterator[Any]:
+    """An unversioned bucket; teardown deletes every version and delete marker first."""
+    import boto3
+
+    keys = {"aws_access_key_id": "testing", "aws_secret_access_key": "testing"}
+    client = boto3.client("s3", endpoint_url=moto_endpoint, region_name="us-east-1", **keys)
+    client.create_bucket(Bucket=_BUCKET)
+    try:
+        yield client
+    finally:  # moto cannot drop a suspended bucket's delete markers, so re-enable versioning
+        client.put_bucket_versioning(Bucket=_BUCKET, VersioningConfiguration={"Status": "Enabled"})
+        resource: Any = boto3.resource("s3", endpoint_url=moto_endpoint, **keys)
+        resource.Bucket(_BUCKET).object_versions.delete()
+        client.delete_bucket(Bucket=_BUCKET)
+
+
+@pytest.fixture
+def versioned(s3_client: Any) -> Any:
+    s3_client.put_bucket_versioning(Bucket=_BUCKET, VersioningConfiguration={"Status": "Enabled"})
+    return s3_client
+
+
+def _s3_cli(client: Any, *args: str, exit_code: int = 0):
+    target = ["--target", f"s3://{_BUCKET}/p.zarr", "--product-name", "p.zarr"]
+    env = s3_env(
+        client.meta.endpoint_url, access_key="testing", secret_key="testing", region="us-east-1"
+    )
+    out = CliRunner().invoke(cli, [*args, *target], env=env)
+    assert out.exit_code == exit_code, out.output
+    return out
+
+
+def _put(client: Any, key: str, body: bytes = b"x") -> str:
+    return client.put_object(Bucket=_BUCKET, Key=f"p.zarr/{key}", Body=body)["VersionId"]
+
+
+def _adopted(client: Any) -> None:
+    client.put_object(Bucket=_BUCKET, Key="p.zarr/zarr.json", Body=_ROOT)
+    _s3_cli(client, "migrate", "adopt")
+
+
+def _tree(client: Any) -> set[tuple[str, str, bool]]:
+    """Every (key, version id, is delete marker) of the bucket, read with boto3."""
+    pages = client.get_paginator("list_object_versions").paginate(Bucket=_BUCKET)
+    return {
+        (e["Key"], e["VersionId"], kind == "DeleteMarkers")
+        for page in pages
+        for kind in ("Versions", "DeleteMarkers")
+        for e in page.get(kind, [])
+    }
+
+
+_TMP = ".firecube-publish-0123456789abcdef.tmp"  # a literal publication-temporary key name
+
+
+def _latest(client: Any) -> dict[str, tuple[str, bool]]:
+    """(version id, is delete marker) of the latest entry of every key under the product."""
+    pages = client.get_paginator("list_object_versions").paginate(Bucket=_BUCKET, Prefix="p.zarr/")
+    return {
+        e["Key"].removeprefix("p.zarr/"): (e["VersionId"], kind == "DeleteMarkers")
+        for page in pages
+        for kind in ("Versions", "DeleteMarkers")
+        for e in page.get(kind, [])
+        if e["IsLatest"]
+    }
+
+
+@pytest.fixture
+def retained(versioned: Any, monkeypatch) -> tuple[dict[str, tuple[str, bool]], str]:
+    """The expected inventory (read with boto3 as `write_inventory` is entered, exclusions written
+    out) and a superseded id; listing pages of 4. Two literal publication-temporary keys sit in
+    the bucket."""
+    monkeypatch.setattr(fsspec_backend, "LIST_VERSIONS_PAGE_SIZE", 4)
+    cut: dict[str, tuple[str, bool]] = {}
+    real = ChunkManager.write_inventory
+
+    def spy(self: ChunkManager, product: str, inventory: Any) -> str:
+        cut.update(
+            {
+                k: v
+                for k, v in _latest(versioned).items()
+                if not k.startswith(".firecube/claims/") and not k.endswith(_TMP)
+            }
+        )
+        return real(self, product, inventory)
+
+    monkeypatch.setattr(ChunkManager, "write_inventory", spy)
+    _adopted(versioned)
+    superseded = _put(versioned, "c/0", b"one")
+    _put(versioned, "c/0", b"two")
+    _put(versioned, "c/1", b"soon gone")
+    versioned.delete_object(Bucket=_BUCKET, Key="p.zarr/c/1")
+    _put(versioned, "c/2", b"three")
+    _put(versioned, _TMP)
+    _put(versioned, f"c/{_TMP}")
+    _s3_cli(versioned, "release", "create", "1.0", "--retain-versions")
+    monkeypatch.setattr(ChunkManager, "write_inventory", real)
+    return cut, superseded
+
+
+@pytest.fixture
+def head_calls(monkeypatch) -> tuple[list[tuple[str, str]], set[str]]:
+    """Every (key, VersionId) HEAD sent by the real aiobotocore client; keys in the set fail as a
+    dead socket (EndpointConnectionError). Request it after `retained`: creation HEADs too."""
+    from aiobotocore.client import AioBaseClient
+    from botocore.exceptions import EndpointConnectionError
+
+    calls: list[tuple[str, str]] = []
+    failing: set[str] = set()
+    real = AioBaseClient._make_api_call
+
+    async def make_api_call(self: Any, operation: str, params: dict[str, Any]) -> Any:
+        if operation == "HeadObject" and "VersionId" in params:
+            calls.append((params["Key"], params["VersionId"]))
+            if params["Key"] in failing:
+                raise EndpointConnectionError(endpoint_url="http://unreachable")
+        return await real(self, operation, params)
+
+    monkeypatch.setattr(AioBaseClient, "_make_api_call", make_api_call)
+    return calls, failing
+
+
+@_S3
+def test_retain_versions_records_the_latest_version_of_each_key_and_a_deleted_key_as_marker(
+    versioned, retained
+):
+    cut, superseded = retained
+    release = json.loads(_s3_cli(versioned, "release", "show", "-f", "json").stdout)
+    key = f"p.zarr/.firecube/releases/inventories/{release['retention']['inventory']}.json"
+    objects = json.loads(versioned.get_object(Bucket=_BUCKET, Key=key)["Body"].read())["objects"]
+    recorded = {o["key"]: (o["version_id"], bool(o.get("delete_marker"))) for o in objects}
+    # `cut` is the bucket's latest entry of every key, read with boto3 as the inventory was handed
+    # to `write_inventory`, minus claims and publication temporaries. The whole mapping is compared.
+    assert recorded == cut
+    assert {".firecube/metadata/refs/latest.json", "zarr.json"} <= cut.keys()
+    assert any(k.startswith(".firecube/runs/release-") for k in cut)
+    assert superseded not in {vid for vid, _ in recorded.values()}
+    assert release["retention"]["object_count"] == sum(not dm for _, dm in cut.values())
+
+
+@_S3
+def test_verify_reports_every_retained_version_intact_and_all_checked(versioned, retained):
+    out = _s3_cli(versioned, "release", "verify").output
+    assert {"retention: unchanged", "inventory: intact", "checked: all"} <= set(out.splitlines())
+
+
+@_S3
+def test_verify_reports_a_deleted_retained_version_as_lost_and_exits_1(versioned, retained):
+    versioned.delete_object(Bucket=_BUCKET, Key="p.zarr/c/2", VersionId=retained[0]["c/2"][0])
+    out = _s3_cli(versioned, "release", "verify", exit_code=1).output
+    assert {"inventory: lost 1", "  lost: c/2"} <= set(out.splitlines())
+
+
+@_S3
+def test_verify_reports_a_transport_failure_as_lost_and_still_checks_every_other_version(
+    versioned, retained, head_calls
+):
+    calls, failing = head_calls
+    failing.add("p.zarr/c/0")
+    out = _s3_cli(versioned, "release", "verify", exit_code=1).output
+    assert {"inventory: lost 1", "  lost: c/0"} <= set(out.splitlines())
+    listed = {(f"p.zarr/{k}", vid) for k, (vid, marker) in retained[0].items() if not marker}
+    assert len(listed) > 3 and listed <= set(calls)
+
+
+@_S3
+def test_verify_reports_suspended_bucket_versioning_as_retention_changed(versioned, retained):
+    versioned.put_bucket_versioning(Bucket=_BUCKET, VersioningConfiguration={"Status": "Suspended"})
+    assert "retention: changed" in _s3_cli(versioned, "release", "verify", exit_code=1).output
+
+
+@_S3
+def test_verify_sample_checks_the_number_of_versions_asked_for(versioned, retained, head_calls):
+    out = _s3_cli(versioned, "release", "verify", "--sample", "1").output
+    assert {"inventory: intact", "checked: sample 1"} <= set(out.splitlines())
+    assert len(head_calls[0]) == 1  # one HEAD, not the whole inventory
+
+
+@_S3
+@pytest.mark.parametrize(
+    ("case", "text", "exit_code"),
+    [
+        ("unversioned", "has versioning absent", 1),
+        ("null-version", "version id", 1),
+        ("obstore", "fsspec", 1),
+        ("archive", "mutually exclusive", 2),
+    ],
+)
+def test_retain_versions_refusal_leaves_every_version_and_marker_untouched(
+    s3_client, tmp_path, case, text, exit_code
+):
+    on = {"Bucket": _BUCKET, "VersioningConfiguration": {"Status": "Enabled"}}
+    if case == "null-version":
+        _adopted(s3_client)  # written before versioning is enabled: version id "null"
+    if case != "unversioned":
+        s3_client.put_bucket_versioning(**on)
+    if case != "null-version":
+        _adopted(s3_client)
+    flags = {"obstore": ["--storage-driver", "obstore"], "archive": ["--archive", "file:///a.zip"]}
+    before = _tree(s3_client)
+    out = _s3_cli(
+        s3_client,
+        "release",
+        "create",
+        "1.0",
+        "--retain-versions",
+        *flags.get(case, []),
+        exit_code=exit_code,
+    )
+    assert text in out.output
+    assert _tree(s3_client) == before

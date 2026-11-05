@@ -506,6 +506,64 @@ def test_zip_restore_writes_through_the_session(tmp_path: Path, monkeypatch, dri
             np.testing.assert_array_equal(restored[name][...], node[...])  # type: ignore[index]
 
 
+@pytest.mark.parametrize("driver", _DRIVERS)
+def test_delta_chain_restore_equals_the_second_release_inventory(tmp_path: Path, driver) -> None:
+    import hashlib
+    import json
+    import shutil
+
+    import zarr
+
+    from firecube.ingestor.runtime.archive import restore_archive
+    from firecube.ingestor.runtime.migrate import adopt_product
+    from firecube.ingestor.runtime.release import create_release_for_product
+
+    root = tmp_path / "products"
+    root.mkdir()
+    source = root / "p.zarr"
+    _write_counts_zarr(source)
+    zarr.open_group(str(source), mode="a").create_array("gone", data=np.arange(3.0))
+    session = _build_local_archive_session(str(source), root, driver)[1]
+    adopt_product(session=session)
+    archives = [tmp_path / "a1.zip", tmp_path / "a2.zip"]
+    create_release_for_product(
+        session=session, version="1.0", archive=StorageUri.from_local_path(archives[0])
+    )
+    shutil.rmtree(source / "gone")
+    (source / "counts" / "c" / "0").write_bytes(b"changed chunk")
+    zarr.open_group(str(source), mode="a").create_array("new", data=np.arange(3.0))
+    second = create_release_for_product(
+        session=session, version="1.1", archive=StorageUri.from_local_path(archives[1])
+    ).release
+    assert second.retention is not None and second.retention["mode"] == "delta"
+    inventory = json.loads(
+        (
+            source / f".firecube/releases/inventories/{second.retention['inventory']}.json"
+        ).read_text()
+    )
+    target = tmp_path / "restored.zarr"
+    restore_session = _build_local_archive_session(str(target), tmp_path, driver)[1]
+    restore_archive(
+        session=restore_session,
+        archive=archives[1].as_uri(),
+        archive_path=str(archives[1]),
+        archive_format="zip",
+        target=str(target),
+    )
+
+    def digests(p: Path) -> dict[str, str]:
+        skipped = (".firecube/claims/", ".firecube/runs/archive-restore-")
+        return {
+            f.relative_to(p).as_posix(): f"sha256:{hashlib.sha256(f.read_bytes()).hexdigest()}"
+            for f in p.rglob("*")
+            if f.is_file() and not f.relative_to(p).as_posix().startswith(skipped)
+        }
+
+    expected = {o["key"]: o["digest"] for o in inventory["objects"]}
+    assert "gone/zarr.json" not in expected and "new/zarr.json" in expected
+    assert digests(target) == expected
+
+
 @pytest.mark.parametrize("entry", ["zip_to_zarr", "tgm_to_zarr"])
 def test_restore_refuses_a_target_that_is_not_the_session_product(tmp_path: Path, entry) -> None:
     from firecube.core.errors import ConfigurationError
