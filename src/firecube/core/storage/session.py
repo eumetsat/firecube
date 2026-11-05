@@ -174,6 +174,18 @@ class StorageSession:
     def delete(self, uri: StorageUri) -> None:
         cast(Any, self.fs()).rm(uri, recursive=True)
 
+    def delete_literal(self, uri: StorageUri) -> None:
+        """Delete exactly the one object at ``uri``, its key taken literally.
+
+        Glob characters in the key are never expanded, and nothing below ``uri`` is removed.
+        Whether a missing object raises depends on the store: a local store raises, S3 does not.
+
+        Raises:
+            StorageError: The driver offers no single-object delete; nothing is deleted.
+            Exception: The driver's error for this key, raised as the driver raises it.
+        """
+        _literal_delete(self.fs(), operation="delete")(uri)
+
     def info(self, uri: StorageUri) -> dict[str, Any]:
         return cast(Any, self.fs()).info(uri)
 
@@ -617,14 +629,15 @@ def _refuse_unsafe_plan(
         )
 
 
-def _literal_delete(fs: Any) -> Callable[[StorageUri], None]:
+def _literal_delete(fs: Any, *, operation: str = "promotion") -> Callable[[StorageUri], None]:
     """Return the driver's checked delete of exactly one object, key taken literally.
 
     The protocol's ``rm`` is not that: fsspec's ``rm`` expands glob characters
     (``*``, ``?``, ``[``, all legal in a zarr key) and s3fs sends a
     DeleteObjects batch whose per-key errors it ignores. fsspec's ``rm_file``
     (s3fs: one DeleteObject, errors raised; local: ``os.remove``) and obstore's
-    ``delete`` take the key literally and raise on failure.
+    ``delete`` take the key literally and raise on failure. ``operation`` names
+    the caller in the refusal.
 
     Raises:
         StorageError: The driver offers no such delete.
@@ -643,7 +656,7 @@ def _literal_delete(fs: Any) -> Callable[[StorageUri], None]:
         resolve = raw._resolve_path
         return lambda target: store.delete(resolve(target))
     raise StorageError(
-        f"promotion cannot delete through {type(raw).__name__}: no single-object delete"
+        f"{operation} cannot delete through {type(raw).__name__}: no single-object delete"
     )
 
 

@@ -540,6 +540,13 @@ def restore_archive(
     interrupt, `KeyboardInterrupt` or `SystemExit`, records no failure: a started run
     stays started. The call always releases the claim and closes the control plane.
 
+    A zip archive whose marker says delta is restored with its chain: the full base
+    first, then each delta in order. The whole chain is checked before the claim and
+    the run, so a refused chain writes nothing to the target.
+
+    A zip archive's marker entry, when present, is checked before the claim and the run.
+    A marker whose mode is full, and an archive without a marker, take the zip restore.
+
     Args:
         session: The storage session bound to the target product.
         archive: The archive reference the run records.
@@ -560,6 +567,10 @@ def restore_archive(
             failed, once each.
         ArchiveConversionError: The restore raises `FileExistsError`, `ImportError` or
             `ValueError`, or produces no output; the call first tries to record the run as failed.
+        ArchiveChainError: A zip marker is unreadable or malformed, the chain of a delta
+            archive is broken, or a local target holds a symlink on a key's path; the call
+            refuses it before the claim and records no run. A chain check that fails inside
+            the run raises it after the call records the run failed.
     """
     if archive_format not in _ARCHIVE_FORMATS:
         raise ValueError(f"archive_format must be 'zip' or 'tensogram', not {archive_format!r}")
@@ -567,6 +578,22 @@ def restore_archive(
     # Call-time imports: callers and tests replace these converters on their modules.
     from firecube.core.tensogram.restore import tgm_to_zarr
     from firecube.core.zarr.zip_archive import zip_to_zarr
+    from firecube.core.zarr.zip_chain import (
+        MODE_DELTA,
+        admit_marker,
+        apply_chain,
+        refuse_symlinked_target,
+        resolve_chain,
+    )
+
+    # A present marker is checked before the claim and the run, and a delta archive with
+    # its whole chain and the target's key paths, so a refusal writes nothing to the
+    # target, not even a run record. An invalid marker never reads as a full archive.
+    marker = admit_marker(archive_path) if is_zip else None
+    chain = None
+    if marker is not None and marker["mode"] == MODE_DELTA:
+        chain = resolve_chain(archive_path)
+        refuse_symlinked_target(chain, session)
 
     # Archive restore is recorded as a first-class WAL run, so the audit trail
     # shows when a product was restored from an archive, what the source archive
@@ -669,7 +696,15 @@ def restore_archive(
             raise
 
         try:
-            if is_zip:
+            if chain is not None:
+                result = apply_chain(
+                    chain,
+                    target_uri_str,
+                    session=session,
+                    overwrite=overwrite,
+                    keep_run_id=restore_run_id,
+                )
+            elif is_zip:
                 result = zip_to_zarr(
                     restore_source,
                     target_uri_str,
