@@ -362,7 +362,7 @@ class _StagedFillDirectZarr(DirectZarrIngestor):
             name="values",
             shape=(_FILL_SLOTS, 2, 2),
             dtype="float32",
-            chunks=(2, 2, 2),
+            chunks=_FILL_RUN.get("chunks", (2, 2, 2)),
             shards=_FILL_RUN["shards"],
             fill_value=0.0,
             expected_time_count=_FILL_SLOTS,
@@ -400,7 +400,13 @@ def _staged_fill_plugin() -> Iterator[None]:
     _loader.AVAILABLE_INGESTORS.update(original_registry)
 
 
-def _fill_ingest(target: Path, driver: str, write_mode: str, values: dict[int, float]) -> None:
+def _fill_ingest(
+    target: Path,
+    driver: str,
+    write_mode: str,
+    values: dict[int, float],
+    options: tuple[str, ...] = (),
+) -> None:
     _FILL_RUN["values"] = values
     args = [
         "ingest",
@@ -420,6 +426,8 @@ def _fill_ingest(target: Path, driver: str, write_mode: str, values: dict[int, f
         "--option",
         "no_progress=true",
     ]
+    for option in options:
+        args += ["--option", option]
     if write_mode == "staged":
         args += ["--option", "force_reingest=true"]
     result = CliRunner().invoke(cli, args)
@@ -539,3 +547,37 @@ def test_direct_zarr_staged_promotion_deletes_units_rewritten_to_fill(
     ]
     for key in keep:
         assert after.get(key) == before[key], f"{key} was rewritten by promotion"
+
+
+@pytest.mark.parametrize("keep_empty", [False, True], ids=["drop-empty", "keep-empty"])
+@pytest.mark.usefixtures("_staged_fill_plugin")
+def test_staged_unit_write_buffer_promotes_same_target_as_unbuffered(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, keep_empty: bool
+) -> None:
+    """The unit write buffer changes no byte a staged run promotes.
+
+    One-slot units, so every region write is a whole unit the buffer publishes.
+    Run 2 turns units 0 and 1 all fill: the target drops those objects unless
+    the handle keeps empty chunks, with the buffer on exactly as with it off.
+    """
+    monkeypatch.setitem(_FILL_RUN, "chunks", (1, 2, 2))
+    _FILL_RUN.update(group="data", shards=None)
+    run1 = {s: 10.0 + s for s in range(_FILL_SLOTS)}
+    run2 = {0: 0.0, 1: 0.0, 2: 22.0}
+    trees: dict[str, dict[str, bytes]] = {}
+    for name, buffer in (("off", "false"), ("on", "true")):
+        options = (f"zarr_unit_write_buffer={buffer}", f"zarr_write_empty_chunks={keep_empty}")
+        target = tmp_path / name / "t.zarr"
+        _fill_ingest(target, "fsspec", "direct", run1, options)
+        _fill_ingest(target, "fsspec", "staged", run2, options)
+        trees[name] = {
+            p.relative_to(target).as_posix(): p.read_bytes()
+            for p in sorted(target.rglob("*"))
+            if p.is_file() and ".firecube" not in p.parts
+        }
+
+    assert trees["on"] == trees["off"]
+    values = zarr.open_array(str(tmp_path / "on" / "t.zarr"), path="data/values", mode="r")
+    assert np.asarray(values[:, 0, 0]).tolist() == [0.0, 0.0, 22.0, 13.0, 14.0, 15.0, 16.0, 17.0]
+    rewritten = {k for k in trees["on"] if k.startswith(("data/values/c/0/", "data/values/c/1/"))}
+    assert rewritten == ({"data/values/c/0/0/0", "data/values/c/1/0/0"} if keep_empty else set())

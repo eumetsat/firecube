@@ -28,9 +28,10 @@ from __future__ import annotations
 import contextlib
 import errno
 import json
+import os
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -393,3 +394,134 @@ def test_partial_read_harness_catches_a_truncating_writer(tmp_path: Any) -> None
         "harness saw no torn read from a truncating writer, so it cannot prove "
         "replace_atomic is atomic"
     )
+
+
+@contextlib.contextmanager
+def _writer_paused(
+    monkeypatch: pytest.MonkeyPatch,
+    seam: str,
+    target: Path,
+    method: str,
+) -> Iterator[None]:
+    """Run ``FsspecAtomicWriter.<method>(target)`` in a thread, paused at *seam*.
+
+    ``created`` pauses right after the first file the writer creates in the
+    destination directory (the in-flight temporary, still empty). ``published``
+    pauses just before the writer links or renames onto *target* (temporary
+    complete). Both seams are implementation-neutral: they do not depend on how
+    the temporary is named or made. Only the writer thread is paused.
+    """
+    reached, release = threading.Event(), threading.Event()
+    directory = str(target.parent)
+    real_open, real_link, real_replace = os.open, os.link, os.replace
+
+    def pause() -> None:
+        if threading.current_thread().name != "paused-writer" or reached.is_set():
+            return
+        reached.set()
+        assert release.wait(timeout=10), "test never released the paused writer"
+
+    def open_(path: Any, *args: Any, **kwargs: Any) -> int:
+        fd = real_open(path, *args, **kwargs)
+        if os.path.dirname(os.fspath(path)) == directory:
+            pause()
+        return fd
+
+    def link(src: Any, dst: Any, *args: Any, **kwargs: Any) -> None:
+        if os.fspath(dst) == str(target):
+            pause()
+        real_link(src, dst, *args, **kwargs)
+
+    def replace(src: Any, dst: Any, *args: Any, **kwargs: Any) -> None:
+        if os.fspath(dst) == str(target):
+            pause()
+        real_replace(src, dst, *args, **kwargs)
+
+    if seam == "created":
+        monkeypatch.setattr(os, "open", open_)
+    else:
+        monkeypatch.setattr(os, "link", link)
+        monkeypatch.setattr(os, "replace", replace)
+
+    writer = _local_writer()
+    errors: list[BaseException] = []
+
+    def run() -> None:
+        try:
+            getattr(writer, method)(_local_uri(target), b'{"owner":"peer"}')
+        except BaseException as exc:
+            errors.append(exc)
+
+    thread = threading.Thread(target=run, name="paused-writer", daemon=True)
+    thread.start()
+    try:
+        assert reached.wait(timeout=10), f"writer never reached the {seam!r} seam"
+        yield
+    finally:
+        release.set()
+        thread.join(timeout=10)
+    assert errors == []
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("seam", ["created", "published"])
+@pytest.mark.parametrize("method", ["write_atomic", "replace_atomic"])
+def test_in_flight_atomic_write_is_not_listed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, method: str, seam: str
+) -> None:
+    """A listing taken while a peer writes returns real files only.
+
+    The in-flight temporary is empty right after it is created. A claim listing
+    that opens it raises ``ControlPlaneCorruptionError`` ("Corrupt claim file"),
+    so ``ls`` and ``find`` must never return it, whatever the writer names it.
+    """
+    from firecube.core.filesystem import FsspecFilesystem
+    from tests.helpers.storage import make_test_binding
+
+    directory = tmp_path / "product.zarr" / ".firecube" / "claims"
+    directory.mkdir(parents=True)
+    (directory / "existing.json").write_text("{}", encoding="utf-8")
+    target = directory / "current.json"
+    expected = ["existing.json"]
+    if method == "replace_atomic":
+        target.write_text("{}", encoding="utf-8")
+        expected = ["current.json", "existing.json"]
+    fs = FsspecFilesystem(make_test_binding(tmp_path))
+    dir_uri = StorageUri.from_local_path(directory)
+
+    with _writer_paused(monkeypatch, seam, target, method):
+        listed = sorted(Path(str(entry)).name for entry in fs.ls(dir_uri))
+        found = sorted(Path(uri.path).name for uri in fs.find(dir_uri))
+
+    assert listed == expected
+    assert found == expected
+
+
+@pytest.mark.integration
+def test_list_claims_survives_an_in_flight_claims_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``list_claims`` returns the held claims while a peer is mid-write in ``claims/``."""
+    from firecube.core.controlplane import ChunkManager
+    from firecube.core.controlplane.types import WriteDomain
+    from tests.helpers.storage import make_test_binding
+
+    product = "product.zarr"
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    manager = ChunkManager(
+        binding=make_test_binding(tmp_path, product=product), workspace=workspace
+    )
+    domain = WriteDomain(product=product, category="zarr_region", name="held")
+    peer = tmp_path / product / ".firecube" / "claims" / "peer.json"
+    owners: list[str] = []
+    try:
+        with (
+            manager.acquire_claim(product=product, domain=domain, owner_id="holder"),
+            _writer_paused(monkeypatch, "created", peer, "write_atomic"),
+        ):
+            owners = [claim.owner_id for claim in manager.list_claims(product=product)]
+    finally:
+        manager.close()
+
+    assert owners == ["holder"]

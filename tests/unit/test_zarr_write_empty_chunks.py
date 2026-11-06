@@ -24,16 +24,26 @@ import numpy as np
 import pytest
 import zarr
 from click.testing import CliRunner
+from zarr.buffer import default_buffer_prototype
+from zarr.codecs import BloscCodec, GzipCodec
 from zarr.core.sync import sync
 from zarr.storage import LocalStore, MemoryStore
 
 from firecube.cli.main import cli
+from firecube.core.zarr.guard.chunk_geometry import unit_bounds
 from firecube.core.zarr.guard.guarded_write import (
     WriteFootprint,
+    guarded_publish,
     guarded_write,
     hold_array,
     unit_store_key,
 )
+from firecube.core.zarr.guard.unit_buffer import (
+    UnitWriteBuffer,
+    describe_array,
+    has_lossless_codecs,
+)
+from firecube.core.zarr.guard.unit_ownership import stored_write_unit
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 from firecube.ingestor.runtime.zarr.write_context import ZarrWriteContext
 from firecube.ingestor.templates.config import ZarrTemplateConfig
@@ -486,3 +496,300 @@ def test_keeping_empty_chunks_still_reports_units_the_write_did_not_reach(
     assert result.tracked is True
     assert result.absent == absent
     assert result.absent == tuple(unit for unit in result.units if not _stored(arr, unit))
+
+
+UNIT0, EDGE = ((0, 4),), ((4, 7),)
+
+
+def _publish(arr: Any, box: Any, payload: bytes | None, **kwargs: Any) -> Any:
+    """Import `guarded_publish` per call, so a missing function fails each test alone."""
+    from firecube.core.zarr.guard.guarded_write import guarded_publish
+
+    return guarded_publish(arr, WriteFootprint("data/v", box), payload, store="t", **kwargs)
+
+
+def _seven(store: Any, value: float | None = None, box: Any = ((0, 7),)) -> Any:
+    layout = {"shape": (7,), "dtype": "f4", "fill_value": 0.0, "zarr_format": 3, **SHARDED}
+    zarr.create_array(store, name="data/v", **layout)
+    arr = zarr.open_array(store, path="data/v", mode="r+")
+    if value is not None:
+        footprint = WriteFootprint("data/v", box)
+        guarded_write(arr, footprint, slice(*box[0]), value, store="t", write_empty_chunks=True)
+    return arr
+
+
+def _object(arr: Any, unit: tuple[int, ...]) -> bytes:
+    return sync(arr.store.get(unit_store_key(arr, unit), default_buffer_prototype())).to_bytes()
+
+
+@pytest.mark.parametrize(("unit", "box"), [((0,), UNIT0), ((1,), EDGE)], ids=["sharded", "edge"])
+def test_published_bytes_equal_the_object_guarded_write_stores(unit: Any, box: Any) -> None:
+    written = _seven(MemoryStore(), 3.0, box)
+    arr = _seven(MemoryStore())
+
+    _publish(arr, box, _object(written, unit), write_empty_chunks=False)
+
+    assert _object(arr, unit) == _object(written, unit)
+
+
+@pytest.mark.parametrize("stored", [True, False], ids=["existing-object", "never-stored"])
+def test_publishing_none_removes_the_object_and_reports_the_unit_absent(stored: bool) -> None:
+    arr = _seven(MemoryStore(), 1.0 if stored else None)
+    result = _publish(arr, UNIT0, None, write_empty_chunks=False, track_units=True)
+    assert (result.absent, result.tracked) == (((0,),), True)
+    assert (_stored(arr, (0,)), _stored(arr, (1,))) == (False, stored)
+
+
+@pytest.mark.parametrize(("keep", "tracked"), [(False, True), (True, False)])
+def test_publish_tracks_a_set_unit_as_present_without_probing(keep: bool, tracked: bool) -> None:
+    store = _ExistsCountingStore()
+    payload = _object(_seven(MemoryStore(), 3.0, UNIT0), (0,))
+    arr = _seven(store)
+    result = _publish(arr, UNIT0, payload, write_empty_chunks=keep, track_units=True)
+    assert store.exists_calls == 0
+    assert (result.tracked, result.absent, _stored(arr, (0,))) == (tracked, (), True)
+
+
+@pytest.mark.parametrize(
+    ("box", "grown"),
+    [(((0, 2),), False), (((0, 8),), False), (((4, 8),), False), (EDGE, True)],
+    ids=["part-of-unit", "two-units", "unclipped-edge", "array-grew-after-read"],
+)
+def test_publish_refuses_a_footprint_that_is_not_one_clipped_unit(box: Any, grown: bool) -> None:
+    store = MemoryStore()
+    arr = _seven(store, 1.0)
+    reopen = lambda: zarr.open_array(store, path="data/v", mode="r+")  # noqa: E731
+    if grown:
+        reopen().resize((8,))
+    before = dict(store._store_dict)
+
+    with pytest.raises(
+        ValueError, match=r"footprint box .* (is not unit|touches \d+ stored units|does not fit)"
+    ):
+        _publish(arr, box, None, **({"reopen": reopen} if grown else {}))
+
+    assert store._store_dict == before
+
+
+def test_publish_runs_on_result_while_the_unit_lock_is_held() -> None:
+    arr = _seven(MemoryStore())
+    events: list[str] = []
+    attempting = threading.Event()
+
+    def rival_write() -> None:
+        attempting.set()
+        guarded_write(arr, WriteFootprint("data/v", UNIT0), slice(0, 4), 1.0, store="t")
+        events.append("rival write done")
+
+    rival = threading.Thread(target=rival_write, daemon=True)
+
+    def on_result(_result: Any) -> None:
+        rival.start()
+        assert attempting.wait(timeout=10)
+        rival.join(timeout=0.3)
+        assert rival.is_alive(), "a write to the same unit ran inside on_result"
+        events.append("on_result returned")
+
+    _publish(arr, UNIT0, None, on_result=on_result)
+    rival.join(timeout=10)
+
+    assert events == ["on_result returned", "rival write done"]
+
+
+@pytest.mark.parametrize(("keep", "stored"), [(False, False), (True, True)])
+def test_publishing_all_fill_bytes_stores_them_only_when_empty_chunks_are_kept(
+    keep: bool, stored: bool
+) -> None:
+    payload = _object(_seven(MemoryStore(), 0.0, UNIT0), (0,))
+    arr = _seven(MemoryStore(), 1.0)
+    _publish(arr, UNIT0, payload, write_empty_chunks=keep)
+    assert _stored(arr, (0,)) is stored
+
+
+# UnitWriteBuffer, fed by a sink a second feeder would build over the same two writers.
+
+NB = np.uint32(0x7FC00001).view("f4")  # a NaN whose bits are not numpy's canonical NaN
+U0, U1 = "data/v/c/0/0/0", "data/v/c/0/1/0"
+# fmt: off
+BASE: dict[str, Any] = {"shape": (1, 8, 4), "chunks": (1, 2, 2), "shards": (1, 4, 4), "fill": 0.0,
+                        "keep": False, "init": None, "pieces": [], "ops": {}, "absent": None, "events": None}
+
+
+class _LogStore(MemoryStore):
+    """A MemoryStore that logs its sets and deletes as (operation, key)."""
+    def __init__(self) -> None:
+        super().__init__()
+        self.log: list[tuple[str, str]] = []
+    async def set(self, key: str, value: Any, byte_range: Any = None) -> None:
+        self.log.append(("set", key))
+        await super().set(key, value, byte_range)
+    async def delete(self, key: str) -> None:
+        self.log.append(("delete", key))
+        await super().delete(key)
+
+
+class _Sink:
+    """Whole units go through guarded_publish, boxes through guarded_write."""
+    def __init__(self, arrays: dict[str, Any], keep: bool = False) -> None:
+        self.arrays, self.keep, self.absent, self.events = arrays, keep, [], []
+        self.kw = {"store": "t", "write_empty_chunks": keep, "track_units": True,
+                   "on_result": lambda r: self.absent.extend(r.absent)}
+    def describe(self, key: str) -> Any:
+        return describe_array(self.arrays[key], self.keep)
+    def publish(self, key: str, unit: Any, payload: bytes | None) -> None:
+        arr = self.arrays[key]
+        box = unit_bounds(unit, stored_write_unit(arr)[0], arr.shape)
+        self.events.append(("publish", key, unit))
+        guarded_publish(arr, WriteFootprint(f"data/{key}", box), payload, **self.kw)
+    def write_box(self, key: str, box: Any, data: Any) -> None:
+        sel = tuple(slice(*b) for b in box)
+        self.events.append(("box", key, box))
+        guarded_write(self.arrays[key], WriteFootprint(f"data/{key}", box), sel, data, **self.kw)
+
+
+def _cube(store: Any, name: str = "v", **r: Any) -> Any:
+    r = {**BASE, **r}
+    arr = zarr.create_array(store, name=f"data/{name}", shape=r["shape"], dtype="f4", zarr_format=3,
+                            chunks=r["chunks"], shards=r["shards"], fill_value=r["fill"])
+    if r["init"] is not None:
+        whole = WriteFootprint(f"data/{name}", tuple((0, n) for n in r["shape"]))
+        guarded_write(arr, whole, ..., np.full(r["shape"], r["init"], "f4"), store="t", write_empty_chunks=True)
+    return arr
+def _cells(box: Any, value: Any) -> Any:
+    shape = tuple(b - a for a, b in box)
+    return (np.arange(np.prod(shape)) + 1).reshape(shape).astype("f4") if value == "iota" else np.full(shape, value, "f4")
+def _piece(rows: tuple[int, int], value: Any, cols: tuple[int, int] = (0, 4)) -> Any:
+    return ((0, 1), rows, cols), value
+def _box(rows: tuple[int, int], cols: tuple[int, int] = (0, 4)) -> Any:
+    return "box", "v", ((0, 1), rows, cols)
+def _objects(arr: Any) -> dict[str, bytes]:
+    return {k: v.to_bytes() for k, v in arr.store._store_dict.items() if not k.endswith("zarr.json")}
+
+
+_R5 = {"shape": (1, 2, 4, 6, 4), "chunks": (1, 1, 2, 2, 2), "shards": (1, 1, 2, 4, 2)}
+_CLIP = {"shape": (1, 3, 3), "shards": None, "fill": NB, "pieces": [_piece((0, 3), np.nan, (0, 2)), _piece((0, 3), 1.0, (2, 3))]}
+_NAN = {"fill": np.nan, "init": 5.0}
+_ALL0 = [_piece((0, 4), 0.0)]
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        pytest.param({"pieces": [_piece((0, 2), 1.0), _piece((2, 4), 2.0)], "ops": {U0: ["set"]}}, id="complete-sharded-unit-from-axis-1-pieces"),
+        pytest.param({"shape": (1, 6, 4), "pieces": [_piece((4, 5), 1.0), _piece((5, 6), 2.0)], "ops": {U1: ["set"]}}, id="clipped-edge-unit"),
+        pytest.param({"init": 5.0, "pieces": _ALL0, "ops": {U0: ["delete"]}, "absent": [(0, 0, 0)]}, id="all-fill-unit-deletes-existing-object"),
+        pytest.param({"pieces": _ALL0, "ops": {U0: []}, "absent": [(0, 0, 0)]}, id="all-fill-unit-without-object-writes-nothing"),
+        pytest.param({"keep": True, "pieces": _ALL0, "ops": {U0: ["set"]}, "absent": []}, id="all-fill-unit-is-stored-when-empty-chunks-are-kept"),
+        pytest.param({"fill": None, "init": 5.0, "pieces": _ALL0, "ops": {U0: ["delete"]}, "absent": [(0, 0, 0)]}, id="fill-none-follows-zarr-default"),
+        pytest.param({"init": 5.0, "pieces": [_piece((0, 2), 1.0), _piece((3, 4), 2.0)]}, id="unit-missing-a-piece-goes-out-at-close"),
+        pytest.param({"pieces": [_piece((0, 3), 1.0), _piece((2, 4), 2.0), _piece((0, 4), 3.0)],
+                      "events": [("put", 0), ("put", 1), _box((0, 3)), _box((2, 4)), ("put", 2), _box((0, 4))]},
+                     id="overlap-flushes-at-once-and-taints-the-unit"),
+        pytest.param({"shape": (1, 4, 8), "init": 5.0, "pieces": [_piece((0, 2), 1.0, (2, 6)), _piece((2, 3), 2.0, (2, 6))],
+                      "events": [("put", 0), ("put", 1), _box((0, 2), (2, 4)), _box((0, 2), (4, 6)), _box((2, 3), (2, 4)), _box((2, 3), (4, 6))]},
+                     id="band-spanning-two-units-on-axis-2-missing-a-piece-flushes-in-arrival-order"),
+        pytest.param({**_R5, "pieces": [(((0, 1), (0, 1), (0, 2), (1, 6), (0, 2)), "iota"), (((0, 1), (0, 2), (1, 4), (2, 5), (0, 2)), "iota")]}, id="rank-5-overlapping-pieces-spanning-units-on-axis-3"),
+        pytest.param({**_NAN, "pieces": [_piece((0, 1), NB, (0, 2))]}, id="noncanonical-nan-piece-against-nan-fill-partial-flush"),
+        pytest.param({**_NAN, "pieces": [_piece((0, 1), NB), _piece((1, 4), 1.0)]}, id="noncanonical-nan-piece-against-nan-fill-complete-publish"),
+        pytest.param(_CLIP, id="noncanonical-declared-fill-clipped-edge-unsharded"),
+        pytest.param({**_CLIP, "shards": (1, 4, 4)}, id="noncanonical-declared-fill-clipped-edge-sharded"),
+    ],
+)
+def test_buffered_pieces_store_what_plain_guarded_writes_store(row: dict[str, Any]) -> None:
+    r = {**BASE, **row}
+    store, ref = _LogStore(), _cube(MemoryStore(), **r)
+    arr = _cube(store, **r)
+    store.log.clear()
+    sink = _Sink({"v": arr}, r["keep"])
+    buffer = UnitWriteBuffer(sink)
+    for i, (box, value) in enumerate(r["pieces"]):
+        sink.events.append(("put", i))
+        cells, plain = _cells(box, value), WriteFootprint("data/v", box)
+        guarded_write(ref, plain, tuple(slice(*b) for b in box), cells, store="t", write_empty_chunks=r["keep"])
+        buffer.put("v", box, cells, None)
+    buffer.close()
+
+    assert _objects(arr) == _objects(ref)
+    assert np.asarray(arr[...]).tobytes() == np.asarray(ref[...]).tobytes()
+    for key, ops in r["ops"].items():
+        assert [op for op, logged in store.log if logged == key] == ops
+    if r["absent"] is not None:
+        assert sink.absent == r["absent"]
+    if r["events"] is not None:
+        assert sink.events == r["events"]
+
+
+def test_token_is_reported_once_after_its_units_reached_the_destination_and_never_when_discarded() -> None:
+    sink = _Sink({"v": _cube(MemoryStore()), "w": _cube(MemoryStore(), "w")})
+    buffer = UnitWriteBuffer(sink, on_landed=lambda token: sink.events.append(("landed", token)))
+    for key, rows, token in [("v", (2, 6), "spans"), ("v", (0, 2), "first"), ("v", (6, 8), "last"),
+                             ("w", (0, 2), "flushed"), ("w", (0, 2), "closed")]:
+        box = _piece(rows, 1.0)[0]
+        buffer.put(key, box, _cells(box, 1.0), token)
+        if token == "flushed":
+            buffer.flush("w")
+    buffer.close()
+    discarded: list[object] = []
+    box = _piece((0, 2), 1.0)[0]
+    UnitWriteBuffer(_Sink({"v": _cube(MemoryStore())}), on_landed=discarded.append).put(
+        "v", box, _cells(box, 1.0), "never"
+    )
+
+    wbox = ("box", "w", ((0, 1), (0, 2), (0, 4)))
+    assert (sink.events, discarded) == ([
+        ("publish", "v", (0, 0, 0)), ("landed", "first"), ("publish", "v", (0, 1, 0)),
+        ("landed", "spans"), ("landed", "last"), wbox, ("landed", "flushed"), wbox, ("landed", "closed"),
+    ], [])
+
+
+def test_flush_of_one_array_leaves_the_open_units_of_other_arrays_open() -> None:
+    a, b = _cube(MemoryStore(), "a"), _cube(MemoryStore(), "b")
+    buffer, box = UnitWriteBuffer(_Sink({"a": a, "b": b})), _piece((0, 2), 1.0)[0]
+    for key in "ab":
+        buffer.put(key, box, _cells(box, 1.0), None)
+
+    buffer.flush("a")
+    assert (bool(_objects(a)), _objects(b)) == (True, {})
+    buffer.close()
+
+    assert bool(_objects(b)) is True
+
+
+@pytest.mark.parametrize("codec", [BloscCodec(), GzipCodec()])
+def test_codec_outside_the_lossless_list_is_refused_before_a_piece_is_held(codec: Any) -> None:
+    kwargs: dict[str, Any] = {"shape": (4,), "dtype": "f4", "chunks": (2,), "zarr_format": 3}
+    plain = zarr.create_array(MemoryStore(), name="data/v", **kwargs)
+    arr = zarr.create_array(MemoryStore(), name="data/v", compressors=codec, **kwargs)
+    assert (has_lossless_codecs(plain.metadata), has_lossless_codecs(arr.metadata)) == (True, False)
+
+    with pytest.raises(ValueError, match="lossless"):
+        UnitWriteBuffer(_Sink({"v": arr})).put("v", ((0, 2),), np.ones(2, "f4"), None)
+
+
+def test_piece_of_another_shape_than_its_box_is_refused_and_nothing_is_held() -> None:
+    store, landed = _LogStore(), []
+    arr = _cube(store)
+    store.log.clear()
+    buffer = UnitWriteBuffer(_Sink({"v": arr}), on_landed=landed.append)
+
+    with pytest.raises(ValueError, match="shape"):
+        buffer.put("v", ((0, 1), (0, 2), (0, 4)), np.ones((1, 3, 4), "f4"), "token")
+    buffer.close()
+
+    assert (store.log, landed) == ([], [])
+
+
+def test_publish_inside_a_hold_of_its_array_completes_and_stores_the_unit() -> None:
+    payload = _object(_seven(MemoryStore(), 3.0, UNIT0), (0,))
+    arr = _seven(MemoryStore())
+    done = threading.Event()
+
+    def transaction() -> None:
+        with hold_array("t", "data/v"):
+            _publish(arr, UNIT0, payload, write_empty_chunks=False)
+        done.set()
+
+    threading.Thread(target=transaction, daemon=True).start()
+
+    assert done.wait(timeout=10), "a publish inside hold_array waited on its own hold"
+    assert _object(arr, (0,)) == payload

@@ -24,8 +24,9 @@ import numpy as np
 import pytest
 import zarr
 import zarr.core.array as zarr_array
+from zarr.buffer import default_buffer_prototype
 from zarr.core.sync import sync
-from zarr.storage import LocalStore
+from zarr.storage import LocalStore, MemoryStore
 
 from firecube.core.errors import SchemaDriftError
 from firecube.core.zarr._sealing_markers import ATTR_PREALLOCATED
@@ -495,20 +496,26 @@ class TestOnWrite:
         writer.ensure_group("grp/img", shape=(2, 2, 2), dtype=np.float32, fill_value=0.0)
         writer.ensure_group("grp/vec", shape=(2,), dtype=np.float32, fill_value=0.0)
         writer.ensure_group("grp/lat", shape=(2,), dtype=np.float64, fill_value=0.0)
+        writer.ensure_group(
+            "grp/pub", shape=(2, 2, 2), dtype=np.float32, fill_value=0.0, chunks=(1, 2, 2)
+        )
         ts = np.datetime64("2024-01-01T00:00:00", "s")
 
         writer.write_region("grp", "img", 0, slice(0, 2), np.ones((2, 2), dtype=np.float32))
+        description = writer.describe_array("grp", "pub")
+        writer.publish_unit("grp", "pub", (1, 0, 0), None, description=description)
         writer.write_1d("grp", "vec", 1, np.asarray(5.0, dtype=np.float32))
         writer.write_static("grp", "lat", np.array([1.5, 2.5]))
         writer.write_timestamp("grp", ts_index=0, timestamp_val=ts)
 
         assert [(r.footprint.array_path, r.footprint.box) for r in seen] == [
             ("grp/img", ((0, 1), (0, 2), (0, 2))),
+            ("grp/pub", ((1, 2), (0, 2), (0, 2))),
             ("grp/vec", ((1, 2),)),
             ("grp/lat", ((0, 2),)),
             ("grp/timestamp", ((0, 1),)),
         ]
-        assert [r.tracked for r in seen] == [False] * 4
+        assert [r.tracked for r in seen] == [False] * 5
         assert all(r.units for r in seen)
         root = writer._open_root()
         np.testing.assert_array_equal(root["grp/vec"][...], [0.0, 5.0])
@@ -868,3 +875,94 @@ class TestWriteTimestampEncoded:
         assert "grp/timestamp" in message
         assert _UNITS in message
         assert int(arr[0]) == _INT64_FILL
+
+
+_K = {"dtype": np.float32, "fill_value": np.nan, "chunks": (4, 4, 4)}
+
+
+@pytest.mark.parametrize(
+    ("described", "noop_attrs", "refused"),
+    [
+        pytest.param("stale", False, True, id="before-growth"),
+        pytest.param("stale", True, True, id="before-growth-set_group_attrs-between"),
+        pytest.param("other", False, True, id="other-stored-unit-grid"),
+        pytest.param("data", False, False, id="after-growth"),
+    ],
+)
+def test_publish_unit_judges_its_description_against_the_grown_array(
+    store_path, described, noop_attrs, refused
+):
+    w = RegionZarrWriter(store_path)
+    w.ensure_group("grp/data", shape=(9, 4, 4), **_K)
+    w.ensure_group("grp/other", shape=(12, 4, 4), **{**_K, "chunks": (4, 8, 4)})
+    w.write_region("grp", "data", 0, slice(None), np.ones((4, 4), np.float32))  # warms the handle
+    stale = w.describe_array("grp", "data")
+    grower = RegionZarrWriter(store_path)
+    grower.ensure_group("grp/data", shape=(12, 4, 4), allow_grow=True, **_K)
+    slots = np.arange(8, 12, dtype=np.float32)[:, None, None] * np.ones((4, 4, 4), np.float32)
+    grower.write_box("grp", "data", ((8, 12), (0, 4), (0, 4)), slots)
+    if noop_attrs:
+        w.set_group_attrs("grp", {})
+    description = stale if described == "stale" else w.describe_array("grp", described)
+    store = MemoryStore()
+    zarr.create_array(store, shape=(4, 4, 4), **_K)[...] = slots + 100
+    unit = sync(store.get("c/0/0/0", default_buffer_prototype()))
+    assert unit is not None
+    payload = unit.to_bytes()
+
+    with pytest.raises(ValueError) if refused else contextlib.nullcontext():
+        w.publish_unit("grp", "data", (2, 0, 0), payload, description=description)
+
+    expected = [8.0, 9.0, 10.0, 11.0] if refused else [108.0, 109.0, 110.0, 111.0]
+    assert np.asarray(_on_disk(store_path, "grp/data"))[8:12, 0, 0].tolist() == expected
+
+
+def _record(monkeypatch, method, wanted):
+    """Keys of the `LocalStore.<method>` calls whose key satisfies *wanted*."""
+    keys, original = [], getattr(LocalStore, method)
+
+    async def recording(self, key, *args, **kw):
+        keys.extend(k for k in (key,) if wanted(k))
+        return await original(self, key, *args, **kw)
+
+    monkeypatch.setattr(LocalStore, method, recording)
+    return keys
+
+
+def test_fixed_extent_publish_unit_reads_no_metadata_after_its_description(store_path, monkeypatch):
+    RegionZarrWriter(store_path).ensure_group("grp/data", shape=(9, 4, 4), **_K)
+    w = RegionZarrWriter(store_path, fixed_extent=True)
+    description = w.describe_array("grp", "data")
+    reads = _record(monkeypatch, "get", lambda key: key.endswith("zarr.json"))
+
+    for unit in ((0, 0, 0), (1, 0, 0), (2, 0, 0)):
+        w.publish_unit("grp", "data", unit, None, description=description)
+
+    assert reads == []
+
+
+@pytest.mark.parametrize(
+    ("box", "data_shape", "stored_units"),
+    [
+        pytest.param(((0, 1), (0, 4), (0, 4)), (1, 4, 4), [(0, 0, 0)], id="inside-one-unit"),
+        pytest.param(((0, 1), (1, 3), (2, 6)), (1, 2, 4), [(0, 0, 0), (0, 0, 1)], id="two-units"),
+        pytest.param(((0, 1), (0, 4), (0, 4)), (1, 4, 3), [], id="other-shape-refused"),
+    ],
+)
+def test_write_box_changes_only_the_cells_and_units_of_its_box(
+    store_path, monkeypatch, box, data_shape, stored_units
+):
+    w = RegionZarrWriter(store_path)
+    w.ensure_group("grp/data", shape=(1, 4, 8), **{**_K, "chunks": (1, 4, 4)})
+    w.write_region("grp", "data", 0, slice(None), np.ones((4, 8), dtype=np.float32))
+    sets = _record(monkeypatch, "set", lambda key: True)
+    refusal = pytest.raises(ValueError, match="does not match")
+    with contextlib.nullcontext() if stored_units else refusal:
+        w.write_box("grp", "data", box, np.full(data_shape, 7.0, dtype=np.float32))
+
+    expected = np.ones((1, 4, 8), dtype=np.float32)
+    if stored_units:
+        expected[tuple(slice(start, stop) for start, stop in box)] = 7.0
+    stored = _on_disk(store_path, "grp/data")
+    np.testing.assert_array_equal(stored[...], expected)
+    assert sorted(sets) == sorted(unit_store_key(stored, unit) for unit in stored_units)

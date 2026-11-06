@@ -90,7 +90,24 @@ def test_zarr_region_write_concurrency_accepts_positive() -> None:
     assert cfg.zarr_region_write_concurrency == 4
 
 
-def test_show_options_lists_zarr_region_write_concurrency() -> None:
+@pytest.mark.contract
+def test_zarr_unit_write_buffer_defaults_off_and_parses_true() -> None:
+    assert ZarrTemplateConfig().zarr_unit_write_buffer is False
+    assert (
+        ZarrTemplateConfig.from_options({"zarr_unit_write_buffer": "true"}).zarr_unit_write_buffer
+        is True
+    )
+
+
+@pytest.mark.contract
+def test_zarr_unit_write_buffer_refused_with_region_concurrency_above_one() -> None:
+    with pytest.raises(ConfigurationError, match="zarr_unit_write_buffer") as exc_info:
+        ZarrTemplateConfig(zarr_unit_write_buffer=True, zarr_region_write_concurrency=2)
+    assert "zarr_region_write_concurrency" in str(exc_info.value)
+
+
+@pytest.mark.contract
+def test_show_options_lists_zarr_region_write_concurrency_and_unit_write_buffer() -> None:
     class _ZarrConcurrencyProbe(BaseIngestor):
         PRODUCT_NAME = "zarr_concurrency_probe"
         name = "zarr_concurrency_probe"
@@ -106,3 +123,4 @@ def test_show_options_lists_zarr_region_write_concurrency() -> None:
 
     assert "Template Options" in desc
     assert "zarr_region_write_concurrency" in desc["Template Options"]
+    assert "zarr_unit_write_buffer" in desc["Template Options"]
