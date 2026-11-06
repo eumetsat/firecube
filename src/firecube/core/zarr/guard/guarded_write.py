@@ -25,6 +25,11 @@ and can report which units hold no object afterwards. A tracked write goes
 through a recording store that notes every key the write sets or deletes. A
 unit the write did not reach gets one existence check after the write.
 
+`guarded_publish` is the other payload write. It replaces the object of one
+whole stored unit with bytes the caller encoded, or removes it, under the same
+lock. It applies the fill rule itself and reports the same `WriteResult`. A DirectZarr payload reaches its
+store through these two functions only.
+
 Metadata (``zarr.json``: shape, attributes, markers) is a separate resource and
 is not written here. The locks are in-process only.
 """
@@ -39,11 +44,12 @@ from operator import index as operator_index
 from typing import Any
 
 import numpy as np
-from zarr.storage import StorePath, WrapperStore
+from zarr.buffer import default_buffer_prototype
+from zarr.storage import MemoryStore, StorePath, WrapperStore
 
 from firecube.core.zarr._zarr_compat import sync
 from firecube.core.zarr.guard._unit_locks import _UNIT_LOCKS, canonical_array_path
-from firecube.core.zarr.guard.chunk_geometry import Bounds, units_touched
+from firecube.core.zarr.guard.chunk_geometry import Bounds, unit_bounds, units_touched
 from firecube.core.zarr.guard.unit_ownership import WriteFootprint, stored_write_unit
 
 Unit = tuple[int, ...]
@@ -62,10 +68,11 @@ class WriteResult:
         absent: Touched units holding no object after the write, when tracking
             was asked for. Kept empty chunks rule out deletion, not absence: a
             stepped selection or a box wider than the selection leaves units
-            unwritten. Empty without a check only when the handle keeps empty
-            chunks and the selection assigns every cell of the box.
+            unwritten. Untracked and empty when the handle keeps empty chunks
+            and the selection assigns every cell of the box.
         tracked: Whether ``absent`` was determined, from the write's own sets
-            and deletes and one existence check per unit it did not reach.
+            and deletes and one existence check per unit it did not reach. A
+            publish reaches its one unit, so it never checks.
     """
 
     footprint: WriteFootprint
@@ -384,6 +391,176 @@ def _reopened(
     return fresh
 
 
+def guarded_publish(
+    arr: Any,
+    footprint: WriteFootprint,
+    payload: bytes | None,
+    *,
+    store: str,
+    write_empty_chunks: bool | None = None,
+    hold: ArrayHold | None = None,
+    track_units: bool = False,
+    on_result: Callable[[WriteResult], None] | None = None,
+    reopen: Callable[[], Any] | None = None,
+) -> WriteResult:
+    """Replace the stored object of one whole unit with ``payload``, under that unit's lock.
+
+    The caller owns every cell of the unit. The object is replaced, never
+    merged, so a cell the payload does not carry is lost. The lock is
+    `guarded_write`'s: the unit's lock, or this thread's `hold_array` hold.
+
+    Encode the payload with the array's codecs and the ``write_empty_chunks``
+    setting this call applies, as a write of the whole unit does. The call
+    applies the fill rule itself. When empty chunks are not kept, it decodes
+    the payload under the lock. A unit whose cells all equal the fill value
+    then holds no object, whatever the payload. A payload that does not
+    decode raises what its codecs raise, and nothing is written. When empty
+    chunks are kept, nothing is decoded.
+
+    Args:
+        arr: The array whose stored layout the lock is taken for. Without
+            ``reopen`` the publish goes through it, so open it with its
+            current shape; with ``reopen`` its shape may be stale.
+        footprint: The one stored unit replaced, clipped to the shape of the
+            handle written; any other box is refused.
+        payload: The encoded object, or ``None`` for no object: an existing
+            object is deleted, and nothing is written when there is none.
+        store: Store identity the locks are keyed by (``_store_identity``).
+        write_empty_chunks: Applied to this publish only; ``None`` keeps the
+            setting the handle written was opened with.
+        hold: The `hold_array` hold of this array; optional, as this thread's
+            hold is found without it.
+        track_units: Report ``absent`` from what the call did: a set leaves
+            the unit present, a delete or no object leaves it absent. No
+            existence check follows the write. Skipped when the handle keeps
+            empty chunks, as in `guarded_write`.
+        on_result: Called with the result after the write, before the lock
+            is given up, as in `guarded_write`. It must not take a stored-unit
+            lock or wait for another writer. What it raises propagates.
+        reopen: Returns the handle the publish goes through, read again after
+            the lock is taken, so another writer's growth is seen. What it
+            raises propagates, and nothing is written.
+
+    Returns:
+        The footprint and the one unit, with its absence when tracked.
+
+    Raises:
+        ValueError: The footprint names another array, is not one whole
+            stored unit clipped to the handle's shape, or ``hold`` is not
+            this thread's hold of the array, or the reopened handle has
+            another path or stored unit than ``arr``. Nothing is written.
+    """
+    layout = stored_write_unit(arr)
+    unit = _published_unit(footprint, layout[0])
+    whole = tuple(slice(start, stop) for start, stop in footprint.box)
+    if reopen is None:
+        _require_whole_unit(arr, footprint, unit, whole)
+    held = current_hold(store, footprint.array_path)
+    if hold is not None and hold != held:
+        raise ValueError(
+            f"whole-array lock of {hold.array_path!r} on {hold.store!r} is not held by this "
+            f"thread for {footprint.array_path!r} on {store!r}"
+        )
+    locks = (
+        contextlib.nullcontext()
+        if held is not None
+        else _UNIT_LOCKS.hold([(store, footprint.array_path, unit)])
+    )
+    with locks:
+        target = arr
+        if reopen is not None:
+            target = _reopened(reopen, arr, layout, footprint, whole)
+            _require_whole_unit(target, footprint, unit, whole)
+        configured = array_with_write_empty_chunks(target, write_empty_chunks)
+        keeps_empty = bool(configured.config.write_empty_chunks)
+        if (
+            payload is not None
+            and not keeps_empty
+            and _payload_is_all_fill(configured, unit, whole, payload)
+        ):
+            payload = None
+        present = _replace_unit_object(configured, unit, payload)
+        tracked = track_units and not keeps_empty
+        result = WriteResult(
+            footprint=footprint,
+            units=(unit,),
+            absent=(unit,) if tracked and not present else (),
+            tracked=tracked,
+        )
+        if on_result is not None:
+            on_result(result)
+        return result
+
+
+def _published_unit(footprint: WriteFootprint, unit_shape: Sequence[int]) -> Unit:
+    """Return the one stored unit ``footprint`` touches, refusing a box that touches another."""
+    if len(footprint.box) != len(unit_shape):
+        raise ValueError(
+            f"footprint box {footprint.box} of {footprint.array_path!r} has rank "
+            f"{len(footprint.box)}; its stored unit {tuple(unit_shape)} has rank {len(unit_shape)}"
+        )
+    touched = units_touched(footprint.box, unit_shape)
+    if len(touched) != 1:
+        raise ValueError(
+            f"footprint box {footprint.box} of {footprint.array_path!r} touches "
+            f"{len(touched)} stored units of shape {tuple(unit_shape)}; a publish replaces one"
+        )
+    return touched[0]
+
+
+def _require_whole_unit(
+    arr: Any, footprint: WriteFootprint, unit: Unit, whole: tuple[slice, ...]
+) -> None:
+    """Refuse a footprint that is not ``unit`` clipped to the shape of ``arr``."""
+    _require_footprint_fits(arr, footprint, whole)
+    shape = tuple(int(n) for n in arr.shape)
+    expected = unit_bounds(unit, stored_write_unit(arr)[0], shape)
+    if footprint.box != expected:
+        raise ValueError(
+            f"footprint box {footprint.box} of {footprint.array_path!r} is not unit {unit} "
+            f"clipped to the shape {shape}, {expected}"
+        )
+
+
+def _payload_is_all_fill(arr: Any, unit: Unit, whole: tuple[slice, ...], payload: bytes) -> bool:
+    """Decode ``payload`` as the object of ``unit`` and judge it by Zarr's own fill test.
+
+    The bytes go into a private in-memory store, read through a handle with
+    ``arr``'s metadata, path and config. Zarr's ``all_equal`` then decides, as
+    it does for each chunk before it writes: ``NaN`` equals a ``NaN`` fill,
+    and a zero fill is compared by bit pattern.
+    """
+    inner = arr.async_array
+    scratch = MemoryStore()
+    sync(
+        scratch.set(
+            unit_store_key(arr, unit), default_buffer_prototype().buffer.from_bytes(payload)
+        )
+    )
+    handle = type(arr)(
+        type(inner)(
+            metadata=inner.metadata,
+            store_path=StorePath(scratch, inner.store_path.path),
+            config=inner.config,
+        )
+    )
+    cells = np.asarray(handle[whole])
+    return bool(
+        default_buffer_prototype().nd_buffer.from_numpy_array(cells).all_equal(arr.fill_value)
+    )
+
+
+def _replace_unit_object(arr: Any, unit: Unit, payload: bytes | None) -> bool:
+    """Set or remove the object of ``unit``; return whether the unit holds one afterwards."""
+    key = unit_store_key(arr, unit)
+    if payload is not None:
+        sync(arr.store.set(key, default_buffer_prototype().buffer.from_bytes(payload)))
+        return True
+    if _unit_exists(arr, unit):
+        sync(arr.store.delete(key))
+    return False
+
+
 def _write_tracked(
     arr: Any,
     footprint: WriteFootprint,
@@ -485,6 +662,7 @@ __all__ = [
     "WriteResult",
     "array_with_write_empty_chunks",
     "current_hold",
+    "guarded_publish",
     "guarded_write",
     "hold_array",
     "selection_box",

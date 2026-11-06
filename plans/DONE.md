@@ -1,5 +1,18 @@
 # Done
 
+## 2026-11-05 — Atomic writer temporaries no longer appear in listings
+
+**Decision.** `FsspecAtomicWriter.write_atomic` and `replace_atomic` stage a local write under the reserved publication temporary name from `publication.publication_temp_name()` (`.firecube-publish-*.tmp`). The file is created exclusive with mode 0600, as `mkstemp` created it. The fix sits at the `AtomicWriter` seam in the driver and not in the control plane. There is one reserved temporary family.
+
+- Cause. The writer staged under `.firecube-atomic-*.tmp`. The `ls` and `find` of the fsspec driver left out only the publication name. A concurrent `list_claims` read the 0-byte temporary in `.firecube/claims/` and raised `ControlPlaneCorruptionError` ("not valid JSON", char 0). A concurrent-preallocate race test failed once under machine load with this error (found 2026-10-18).
+- Why the driver. Every reader of every listing meets the same temporary. A filter in `claims.py` would protect one reader and leave the others open. The earlier `AtomicWriter` entries set the same precedent.
+- Why one family. A second reserved name needs a second filter in both drivers. The listings already leave out the publication name.
+- Evidence (ran). `test_in_flight_atomic_write_is_not_listed[...]` and `test_list_claims_survives_an_in_flight_claims_write` in `tests/unit/test_fsspec_atomic_writer.py` fail on the unfixed code and pass after the fix. The first pauses the writer between creating and filling the temporary, then lists the directory.
+- Performance (measured). Creating, closing and unlinking a file took 9.7 us per operation with `mkstemp` and 8.9 us with `uuid4` and `os.open`. The run had 20,000 operations on a local `/tmp`. It did not include `fsync`.
+- What stays open. Two entries in `plans/TODO.md` record it. A `.firecube-atomic-*.tmp` left by a killed writer of an older version in `.firecube/claims/` still makes `list_claims` raise. The claim heartbeat still truncates the live claim file in place, so a concurrent read can see a partial claim.
+
+---
+
 ## 2026-11-04 — One `core/archive/` package and the "incremental backup" vocabulary (issue 135)
 
 **Decision.** The ZIP archive code and the Tensogram code now sit in one package, `src/firecube/core/archive/`. `zip/archive.py` and `zip/backup_chain.py` were `core/zarr/zip_archive.py` and `core/zarr/zip_chain.py`. `tensogram/` was `core/tensogram/`. The package is a namespace, with no shared interface and no re-export from an old path. The retention feature has one vocabulary. An "incremental backup" holds the objects new or changed since the previous release. A "full backup" starts a backup chain. The "previous release" replaces the "base". The code names are `BackupChainError`, `resolve_backup_chain`, `restore_backup_chain`, `ChainBackup`, `MODE_INCREMENTAL` and `MAX_CHAIN_BACKUPS`. Behaviour is unchanged except for the renamed names and text. The version retention moved to `src/firecube/ingestor/runtime/release_versions.py`.
@@ -144,6 +157,27 @@ The operator barrier stays open too. The inventory is exact only while the opera
 - Holder rules. With `holder_run_id`, the listing lets through only the exclusive claim that the holder owns. A holder without that claim is refused, also when the claim vanishes after the operation's own claim is acquired. `archive create` given `holder_run_id` on a store that is not a product is refused. Archive restore by the holder stays refused.
 - Not reproduced. The symlink loop of `enumerate_metadata_documents` does not hang. The fsspec local driver types a symlinked directory `other`, and obstore raises an error. No fix was made. A probe on 2026-11-03 against both drivers showed this.
 - Kept open (`plans/TODO.md`). A compact pointer with an empty `snapshot_meta_path` still reports `records: 0`. Six more items stay open. They are the `ensure_slot_index_model` check, the irregular-axis preallocate claim, the abandoned live run, the `Malformed URI` plan and the docs sentence on abandoning a stale run. The sixth is the two consolidated-root writers, which go to the B1+B3 plan.
+
+---
+
+## 2026-11-02 — Unit write buffer, step 1: a shared buffer, DirectZarr as its first feeder
+
+**Decision.** `UnitWriteBuffer` in the guard layer assembles stored units from pieces of array writes and publishes each complete unit once. The DirectZarr serial region path is its first feeder. The template field `zarr_unit_write_buffer` turns it on. The field is off by default, and a store is byte-identical with the field on or off. Step 2 is recorded in `plans/TODO.md` and not built.
+
+- Where it lives. The buffer is `src/firecube/core/zarr/guard/unit_buffer.py`. The guard package gives every writer one way to read-merge-write a stored unit, and `core/` may not import `ingestor/`. A GenericZarr adapter and the DirectZarr feeder can both import the guard layer. A module beside `region_writer.py` was the runner-up. A module in `ingestor/runtime/zarr/` was rejected, because `core/` cannot import it.
+- The first feeder. `_buffered_regions.py` beside `indexed_region.py` holds the DirectZarr rules: eligibility, the box, the reshaping of data, the flush triggers and coverage. `indexed_region.py` gains a hook only, because it is over 1300 lines.
+- The sink. `UnitSink` is a Protocol with three operations: describe an array, publish one unit as encoded bytes or no object, and write data into exactly a box. `_WriterSink` in `_buffered_regions.py` implements it. It forwards to `RegionZarrWriter.describe_array`, `publish_unit` and `write_box`. A GenericZarr adapter would implement it over `guarded_publish` and `guarded_write`. The buffer touches no store except its own in-memory scratch.
+- Lossless codecs only. The list is `bytes`, `zstd`, `crc32c` and `sharding_indexed` with `bytes` and `crc32c` index codecs. These are the codecs the byte-identity experiments exercised. Any other codec keeps the array on the old path.
+- Scratch-array encoding. Each unit gets an in-memory zarr array built from the metadata of the destination, without attributes, with the shape of the clipped unit. The buffer reads the object back from the scratch store. Zarr builds the shard index, the order of inner chunks and the edge padding. A hand-built shard can be valid and differ in bytes.
+- Completeness by volume. A unit is complete when its supplied volume equals its clipped volume and no piece overlapped. The buffer never inspects scratch content. An overlap flushes the units it touches and taints them. A tainted unit takes box writes until the buffer closes.
+- Publish keyed to the encoded description. `publish_unit` takes the footprint from the `ArrayDescription` that the payload was encoded against, never from the cache of the writer. `guarded_publish` refuses a footprint that is not the unit clipped to the array read under the lock. A non-fixed writer therefore refuses a payload encoded before growth changed the clip of its unit. Growth outside the unit succeeds and keeps the other cells. A `fixed_extent` writer publishes through stale metadata and can remove cells that growth added, so it keeps its no-growth precondition.
+- Non-canonical NaN. Zarr drops a chunk whose cells all pass its fill test. For a NaN fill, a cell with other NaN bits passes that test, so clearing scratch cells could change stored bits. If a piece could cause this, the buffer flushes the open units and writes the piece as boxes.
+- Opt-in. The field is off by default. Config validation refuses it with `zarr_region_write_concurrency` above 1. The buffer is not thread-safe, and the feeder makes one buffer per slot.
+- Publish of no object. A unit that ends with no object is reported to `on_result`, whether an object existed or not. The staged session therefore sees every unit that the ledger proves written.
+- Result of the real-data measurement. One FCI FDHSI full-disk slot, serial direct run, `zarr_unit_write_buffer` on. Bytes written fell from 9,013,593,372 (median of seven runs of unchanged main) to 1,860,880,019, a factor of 4.84. The store hashes were identical (measured, one slot). Three further runs wrote 1,860,880,058, 1,860,880,050 and 1,860,880,050 bytes. The synthetic matrix of 12 cases (direct and staged, `write_empty_chunks` false and true) matched byte for byte with the field on and off (ran).
+- What stays open. `plans/TODO.md` ("Unit write buffer, step 2") keeps the conditions before the buffer becomes a default. It also keeps three review notes on `publish_unit`, on `fixed_extent` writers and on the one-time description of an array.
+
+---
 
 ## 2026-11-01 — CF-packed GenericZarr appends (issue #114)
 

@@ -24,15 +24,21 @@ the slot-2 intent MUST fail
 
 from __future__ import annotations
 
+import functools
+from collections import Counter
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
 import zarr
+from zarr.codecs import BloscCodec
+from zarr.storage import LocalStore
 
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import WriteDomain
+from firecube.ingestor.runtime.coverage import CoverageTracker
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 from firecube.ingestor.templates.direct_zarr import WriteIntent
 from tests.helpers.storage import make_test_binding
@@ -185,3 +191,128 @@ def test_indexed_region_per_slot_claims_appear_in_control_plane(tmp_path: Path) 
     np.testing.assert_array_equal(arr[2], slot2_data)
     fill_block = np.full((_Y, _X), _FILL, dtype=np.float32)
     np.testing.assert_array_equal(arr[1], fill_block)
+
+
+class _CountingStore(LocalStore):
+    def __init__(self, root: Path, sets: Counter[str], *, read_only: bool) -> None:
+        super().__init__(root, read_only=read_only)
+        self._sets = sets
+
+    async def set(self, key: str, value: Any) -> None:
+        self._sets[key] += 1
+        await super().set(key, value)
+
+
+# Row: (arrays name to (shape, inner chunk, shard), intents (array, ts, y0, y1[, channel[, how]])
+# with how "region", "1d" or "list" (a payload the box does not take), options). Field on: every
+# object set once, or with option "same" as often as with the field off.
+_S3 = ((2, 4, 6), (1, 2, 6), (1, 4, 6))
+_TWO = [("a", 0, 0, 2), ("a", 0, 2, 4)]
+_A3 = {"a": _S3}
+# fmt: off
+_ROWS = {
+    "rank3-two-arrays-interleaved": ({"a": _S3, "b": _S3}, [("a", 0, 0, 2), ("b", 0, 0, 2), ("a", 0, 2, 4), ("b", 0, 2, 4)], {}),
+    "rank4-channel-clipped-edge-shard": ({"a": ((2, 5, 4, 3), (1, 2, 4, 1), (1, 4, 4, 1))}, [("a", 0, y0, y1, c) for c in range(3) for y0, y1 in ((0, 2), (2, 4), (4, 5))], {}),
+    "rank4-no-channel-units-two-channels-wide": ({"a": ((2, 4, 4, 4), (1, 2, 4, 2), (1, 4, 4, 2))}, _TWO, {}),
+    "rank5-member-per-piece": ({"a": ((2, 4, 3, 2, 2), (1, 1, 3, 2, 2), (1, 2, 3, 2, 2))}, [("a", 0, m, m + 1) for m in range(4)], {}),
+    "root-group": (_A3, _TWO, {"group": "/"}),
+    "slot-window": (_A3, [("a", 1, 0, 2), ("a", 1, 2, 4)], {"kwargs": {"slot_range": (0, 2), "slot_group": _GROUP}}),
+    "tracked-units": (_A3, [("a", t, y, y + 2) for t in (0, 1) for y in (0, 2)], {"results": True}),
+    "codec-outside-lossless-list": ({"a": ((2, 4, 6), (1, 2, 6), None)}, _TWO, {"same": 1, "gzip": 1}),
+    "negative-ts-index": (_A3, [("a", -1, 0, 2), ("a", -1, 2, 4)], {"same": 1}),
+    "1d-write-between-pieces": (_A3, [("a", 0, 0, 2), ("a", 0, 0, 0, None, "1d"), ("a", 0, 2, 4)], {"same": 1}),
+    "payload-only-write-region-takes": (_A3, [("a", 0, 0, 2, None, "list"), ("a", 0, 2, 4)], {"same": 1}),
+}
+# fmt: on
+
+
+def _run_row(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, row: tuple, buffer_on: bool) -> dict:
+    arrays, specs, opts = row
+    group, target = opts.get("group", _GROUP), tmp_path / f"buffer-{buffer_on}.zarr"
+    root = zarr.open_group(str(target), mode="a", zarr_format=3)
+    holder = root if group == "/" else root.require_group(group)
+    codecs: dict[str, Any] = {"compressors": BloscCodec()} if "gzip" in opts else {}
+    for name, (shape, chunks, shards) in arrays.items():
+        holder.create_array(
+            name, shape=shape, dtype="f4", fill_value=_FILL, chunks=chunks, shards=shards, **codecs
+        )
+    sets, resolved, results = Counter(), Counter(), []
+    monkeypatch.setattr(
+        IndexedRegionStrategy,
+        "_session_store",
+        lambda self, *, mode: _CountingStore(target, sets, read_only=mode == "r"),
+    )
+
+    def payload(i: int, shape: tuple, how: str) -> Any:
+        resolved[i] += 1
+        values = 100.0 * (i + 1) + np.arange(np.prod(shape), dtype="f4").reshape(shape)
+        return values.tolist() if how == "list" else values
+
+    intents = []
+    for i, (name, ts, y0, y1, *rest) in enumerate(specs):
+        ch, how = rest + [None, "region"][len(rest) :]
+        shape = arrays[name][0]
+        dims = shape[1:] if how == "1d" else (y1 - y0, *shape[2 : 3 if ch is not None else None])
+        data = functools.partial(payload, i, dims, how)
+        kind = "1d" if how == "1d" else "region"
+        intents.append(WriteIntent(group, name, ts, data, kind, slice(y0, y1), ch))
+    out = IndexedRegionStrategy(store_uri=str(target)).write_groups(
+        group_to_intents={group: intents},
+        zarr_unit_write_buffer=buffer_on,
+        track_units="results" in opts,
+        on_write=results.append if "results" in opts else None,
+        **opts.get("kwargs", {}),
+    )
+    assert set(resolved.values()) == {1}, "a payload was resolved more than once"
+    files = {
+        p.relative_to(target).as_posix(): p.read_bytes()
+        for p in sorted(target.rglob("*"))
+        if p.is_file() and ".firecube" not in p.parts
+    }
+    return {"files": files, "sets": sets, "results": results, "coverage": out["coverage"]}
+
+
+@pytest.mark.parametrize("name", list(_ROWS))
+def test_unit_write_buffer_writes_the_same_objects_and_bytes_as_unbuffered(
+    name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    opts = _ROWS[name][2]
+    off, on = (_run_row(tmp_path, monkeypatch, _ROWS[name], buffer_on=b) for b in (False, True))
+    assert on["files"] == off["files"]
+    assert on["coverage"] == off["coverage"]
+    if opts.get("same"):
+        assert on["sets"] == off["sets"], "an ineligible row changed how often objects are set"
+    else:
+        keys = {k for k in on["files"] if not k.endswith("zarr.json")}
+        assert keys and dict(on["sets"]) == dict.fromkeys(keys, 1)
+    if opts.get("results"):
+        got = [(r.footprint.array_path, r.units, r.absent, r.tracked) for r in on["results"]]
+        assert got == [("F024/a", ((t, 0, 0),), (), True) for t in (0, 1)]
+
+
+@pytest.mark.parametrize("buffer_on", [False, True], ids=["off", "on"])
+def test_payload_raising_in_a_slot_covers_no_piece_that_was_not_written(
+    buffer_on: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "product.zarr"
+    group = zarr.open_group(str(target), mode="a", zarr_format=3).require_group(_GROUP)
+    shape, chunks, shards = _S3
+    group.create_array("a", shape=shape, dtype="f4", fill_value=_FILL, chunks=chunks, shards=shards)
+
+    covered: list[Any] = []
+    record = CoverageTracker.record_write
+    monkeypatch.setattr(
+        CoverageTracker,
+        "record_write",
+        lambda self, **kw: [covered.append((kw["arrays"], kw["ts_index"])), record(self, **kw)][1],
+    )
+    ok = WriteIntent(_GROUP, "a", 0, np.full((2, 6), 5, "f4"), y_slice=slice(0, 2))
+    bad = WriteIntent(_GROUP, "a", 0, functools.partial(int, "payload failed"), y_slice=slice(2, 4))
+
+    with pytest.raises(ValueError, match="payload failed"):
+        IndexedRegionStrategy(store_uri=str(target)).write_groups(
+            group_to_intents={_GROUP: [ok, bad]}, zarr_unit_write_buffer=buffer_on
+        )
+
+    stored = np.asarray(zarr.open_array(str(target / _GROUP / "a"), mode="r")[0, :2])
+    assert not covered or (stored == 5).all(), f"covered {covered} but its cells were not written"

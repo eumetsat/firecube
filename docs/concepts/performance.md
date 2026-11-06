@@ -61,12 +61,22 @@ Start with these checks:
 - choose compression from the bottleneck: disable it when CPU is the bottleneck,
   enable it when upload size is the bottleneck;
 - prefer `dask_scheduler=synchronous` when pipeline workers are already active,
-  so dask does not add another competing thread pool.
+  so dask does not add another competing thread pool;
+- set `zarr_unit_write_buffer=true` when a sharded layout on S3 rewrites a whole
+  shard for every piece written into it. It applies to `DirectZarrIngestor`
+  region writes of rank 3 or more with [the supported
+  codecs](output-formats/zarr/unit-write-buffer.md#limits). It needs
+  `zarr_region_write_concurrency` at 1 (the default) and uses more memory per
+  process.
 
 For the Zarr product model, see [Zarr](output-formats/zarr/index.md). For
 the same-group concurrency model, see
 [How Parallel Zarr Writes Stay Safe](output-formats/zarr/parallel-writes.md). To execute that
-model, use [Run Parallel Zarr Writes](../operations/parallel-zarr-writes.md).
+model, use [Run Parallel Zarr Writes](../operations/parallel-zarr-writes.md). For
+the unit write buffer, see
+[How The Unit Write Buffer Works](output-formats/zarr/unit-write-buffer.md), its
+measured effect in [Benchmarks](benchmarks.md#unit-write-buffer-sharded-s3) and
+the notebook [Unit Write Buffer](../showcase/unit-write-buffer.ipynb).
 
 ## Parquet Tuning
 
@@ -140,6 +150,9 @@ compression. Reduce the shape of in-flight work first:
 - avoid unnecessary compression when CPU and memory are tight;
 - use a fixed workspace path with enough disk when staged writes are enabled.
 
+The unit write buffer raises the memory of each process. See
+[If Zarr Writes Are Slow](#if-zarr-writes-are-slow) before you enable it.
+
 Do not tune memory by guessing. Run a smaller source window and scale one setting
 at a time.
 
@@ -154,6 +167,17 @@ For a large gridded Zarr product on S3 with scratch space:
 --option pipeline_batch_size=10 \
 --option upload_workers=4
 ```
+
+For a sharded `DirectZarrIngestor` product on S3, written by several processes:
+
+```bash
+--write-mode direct \
+--option zarr_unit_write_buffer=true \
+--option zarr_region_write_concurrency=1
+```
+
+Measured in direct write mode only. Memory per process rises; see
+[Unit Write Buffer, Sharded S3](benchmarks.md#unit-write-buffer-sharded-s3).
 
 For CPU-heavy source parsing:
 

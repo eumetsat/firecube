@@ -48,7 +48,7 @@ array data/timestamp: created (regular coord materialization)
   "status": "ok",
   "plugin": "direct_zarr_capable_test_plugin",
   "product": "direct_zarr_capable_test_product",
-  "target": "file:///tmp/opencode/scribe-live/chunk-demo/demo.zarr",
+  "target": "file:///data/chunk-demo/demo.zarr",
   "groups": {
     "data": 1000
   }

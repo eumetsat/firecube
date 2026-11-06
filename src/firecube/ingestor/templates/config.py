@@ -24,7 +24,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, TypeVar, cast, get_type_hints
 
-from firecube.core.errors import CommandName, ConfigurationError, Message, PluginOption
+from firecube.core.errors import CommandName, ConfigurationError, Message, Param, PluginOption
 from firecube.ingestor.config.engine import config_keys
 
 T = TypeVar("T", bound="TemplateConfig")
@@ -178,6 +178,16 @@ def validate_zarr_template_config(cfg: dict[str, Any]) -> None:
         shard_shape=cfg.get("zarr_shard_shape"),
     )
 
+    if cfg.get("zarr_unit_write_buffer", False) and cfg.get("zarr_region_write_concurrency", 1) > 1:
+        raise ConfigurationError(
+            Message(
+                "{buffer} cannot be combined with {concurrency} above 1. "
+                "Set {concurrency} to 1 or leave {buffer} off.",
+                buffer=Param("zarr_unit_write_buffer"),
+                concurrency=Param("zarr_region_write_concurrency"),
+            )
+        )
+
 
 def validate_zarr_writer_dict(cfg: dict[str, Any]) -> None:
     """Validate an internal Zarr writer-dict (bare ``compression``/``sharding`` keys)."""
@@ -315,6 +325,16 @@ class ZarrTemplateConfig(TemplateConfig):
         zarr_region_write_concurrency: Region write concurrency used by Zarr.
         zarr_write_empty_chunks: Pass through Zarr's array write-empty-chunks
             policy for scoped write phases. Defaults to ``False``.
+        zarr_unit_write_buffer: Publish each complete stored unit once instead
+            of once per region piece. The serial region-write path encodes the
+            pieces of a unit into one scratch buffer and writes the complete
+            unit; a unit that is not supplied completely is written piece by
+            piece. It applies to sharded or chunked DirectZarr region writes of
+            rank 3 or more, on units one slot deep (and one channel wide when a
+            rank-4 write names a channel), with lossless codecs.
+            Other writes are unchanged, and the store is byte-identical with
+            the option on or off. It cannot be combined with
+            ``zarr_region_write_concurrency`` above 1. Defaults to ``False``.
         dask_scheduler: Optional Dask scheduler override.
         dask_write_threads: Optional write-thread count for Dask-backed writes.
     """
@@ -329,6 +349,7 @@ class ZarrTemplateConfig(TemplateConfig):
     zarr_async_concurrency: int = 10
     zarr_region_write_concurrency: int = 1
     zarr_write_empty_chunks: bool = False
+    zarr_unit_write_buffer: bool = False
     dask_scheduler: str | None = None
     dask_write_threads: int = 0
 

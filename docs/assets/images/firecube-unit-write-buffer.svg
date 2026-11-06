@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" role="img" aria-labelledby="title desc">
+  <title id="title">Writes into one stored unit with and without the unit write buffer</title>
+  <desc id="desc">Without the buffer, each of three pieces makes Firecube read the stored unit, merge the piece and upload the whole unit. With the buffer, Firecube collects the three pieces in memory and uploads the complete unit once.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#3b4652"/>
+    </marker>
+    <style>
+      .label{font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;fill:#1f2933}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:14px;fill:#3b4652}
+      .hint{font-family:Arial,Helvetica,sans-serif;font-size:12px;fill:#5a6673}
+      .pieceA{fill:#dbeafe;stroke:#4f8bd6;stroke-width:2}
+      .pieceB{fill:#dcfce7;stroke:#2f9d65;stroke-width:2}
+      .pieceC{fill:#ffedd5;stroke:#ff7043;stroke-width:2}
+      .store{fill:#fbfbfd;stroke:#6b7280;stroke-width:2}
+      .mem{fill:#f7fbff;stroke:#4f8bd6;stroke-width:2;stroke-dasharray:6 4}
+      .line{stroke:#3b4652;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+      .divider{stroke:#b9c0ca;stroke-width:2;stroke-dasharray:6 4}
+    </style>
+  </defs>
+
+  <text x="230" y="36" text-anchor="middle" class="label">Without the buffer</text>
+  <rect x="30" y="64" width="90" height="40" rx="8" class="pieceA"/>
+  <text x="75" y="89" text-anchor="middle" class="small">piece 1</text>
+  <rect x="30" y="164" width="90" height="40" rx="8" class="pieceB"/>
+  <text x="75" y="189" text-anchor="middle" class="small">piece 2</text>
+  <rect x="30" y="264" width="90" height="40" rx="8" class="pieceC"/>
+  <text x="75" y="289" text-anchor="middle" class="small">piece 3</text>
+
+  <path class="line" d="M120 84 H300"/>
+  <path class="line" d="M120 184 H300"/>
+  <path class="line" d="M120 284 H300"/>
+  <text x="210" y="74" text-anchor="middle" class="hint">read, merge, upload</text>
+  <text x="210" y="174" text-anchor="middle" class="hint">read, merge, upload</text>
+  <text x="210" y="274" text-anchor="middle" class="hint">read, merge, upload</text>
+
+  <rect x="300" y="54" width="150" height="260" rx="10" class="store"/>
+  <text x="375" y="84" text-anchor="middle" class="small">stored unit</text>
+  <text x="375" y="104" text-anchor="middle" class="hint">in the object store</text>
+  <text x="375" y="190" text-anchor="middle" class="small">replaced 3 times</text>
+
+  <line x1="490" y1="30" x2="490" y2="370" class="divider"/>
+
+  <text x="730" y="36" text-anchor="middle" class="label">With the buffer</text>
+  <rect x="520" y="64" width="90" height="40" rx="8" class="pieceA"/>
+  <text x="565" y="89" text-anchor="middle" class="small">piece 1</text>
+  <rect x="520" y="164" width="90" height="40" rx="8" class="pieceB"/>
+  <text x="565" y="189" text-anchor="middle" class="small">piece 2</text>
+  <rect x="520" y="264" width="90" height="40" rx="8" class="pieceC"/>
+  <text x="565" y="289" text-anchor="middle" class="small">piece 3</text>
+
+  <path class="line" d="M610 84 H660"/>
+  <path class="line" d="M610 184 H660"/>
+  <path class="line" d="M610 284 H660"/>
+  <rect x="660" y="54" width="130" height="260" rx="10" class="mem"/>
+  <text x="725" y="84" text-anchor="middle" class="small">memory</text>
+  <text x="725" y="104" text-anchor="middle" class="hint">collect and encode</text>
+  <rect x="680" y="140" width="90" height="26" class="pieceA"/>
+  <rect x="680" y="172" width="90" height="26" class="pieceB"/>
+  <rect x="680" y="204" width="90" height="26" class="pieceC"/>
+  <text x="725" y="262" text-anchor="middle" class="hint">complete unit</text>
+
+  <path class="line" d="M790 184 H830"/>
+  <text x="810" y="166" text-anchor="middle" class="hint">upload</text>
+  <text x="810" y="206" text-anchor="middle" class="hint">once</text>
+  <rect x="830" y="54" width="110" height="260" rx="10" class="store"/>
+  <text x="885" y="84" text-anchor="middle" class="small">stored unit</text>
+  <text x="885" y="190" text-anchor="middle" class="small">written 1 time</text>
+
+  <text x="480" y="370" text-anchor="middle" class="hint">The stored unit is a shard when the array is sharded, else a chunk. The final store is the same in both cases.</text>
+</svg>

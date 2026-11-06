@@ -36,6 +36,7 @@ import struct
 import threading
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Protocol, cast, runtime_checkable
 
@@ -59,13 +60,14 @@ from firecube.core.zarr._fill import _array_is_all_fill, _fill_value_is_missing
 from firecube.core.zarr._reserved_attrs import _FILL_VALUE_ATTR, assert_attrs_safe
 from firecube.core.zarr._sealing_markers import ATTR_COORD_MANAGED
 from firecube.core.zarr.guard._unit_locks import _store_identity
-from firecube.core.zarr.guard.chunk_geometry import Bounds
+from firecube.core.zarr.guard.chunk_geometry import Bounds, unit_bounds
 from firecube.core.zarr.guard.engine_owned import preallocate_operation
 from firecube.core.zarr.guard.guarded_write import (
     ArrayHold,
     WriteFootprint,
     WriteResult,
     current_hold,
+    guarded_publish,
     guarded_write,
     hold_array,
 )
@@ -76,7 +78,9 @@ from firecube.core.zarr.guard.metadata_authority import (
     set_attributes,
 )
 from firecube.core.zarr.guard.metadata_authority import ensure_group as _authorized_ensure_group
-from firecube.core.zarr.guard.unit_ownership import _axis_index
+from firecube.core.zarr.guard.unit_buffer import ArrayDescription
+from firecube.core.zarr.guard.unit_buffer import describe_array as _describe_handle
+from firecube.core.zarr.guard.unit_ownership import _axis_index, stored_write_unit
 
 log = logging.getLogger("firecube.core.zarr.region_writer")
 
@@ -95,6 +99,88 @@ def _raise_time_capacity_error(
         f"ts_index={ts_index} is out of bounds. Preallocate timestamped arrays "
         "with ZarrArraySpec.expected_time_count before writing."
     )
+
+
+def region_box(
+    shape: Sequence[int],
+    slot: int,
+    y_slice: slice,
+    channel_index: int | None = None,
+) -> Bounds:
+    """Return the cells `RegionZarrWriter.write_region` writes, as half-open bounds per axis.
+
+    The box holds the one slot on axis 0 and the rows of *y_slice* on axis 1.
+    Axis 2 and every later axis are whole. On a rank-4 array, *channel_index*
+    narrows axis 3 to that channel; a rank-3 array ignores it.
+
+    A stepped *y_slice* covers every row of its range, the skipped rows
+    included. A row selector that is not a slice covers every row.
+
+    Args:
+        shape: Shape of the array written, rank 3 or more.
+        slot: Slot on axis 0, already normalised. The extent of axis 0 is not
+            checked against it.
+        y_slice: Rows selected on axis 1.
+        channel_index: Channel on axis 3 of a rank-4 array; negative counts
+            from the end.
+
+    Returns:
+        One ``(start, stop)`` pair per axis of *shape*.
+
+    Raises:
+        ValueError: *shape* has rank below 3, *slot* is negative,
+            *channel_index* is given for rank above 4, or *y_slice* has a
+            zero step.
+        TypeError: *slot* or a bound of *y_slice* is not an integer.
+        IndexError: *channel_index* lies outside axis 3.
+
+    Examples:
+        >>> region_box((4, 6, 5), 2, slice(1, 3))
+        ((2, 3), (1, 3), (0, 5))
+        >>> region_box((4, 6, 5, 3), 0, slice(None), channel_index=-1)
+        ((0, 1), (0, 6), (0, 5), (2, 3))
+    """
+    extents = tuple(int(n) for n in shape)
+    if len(extents) < 3:
+        raise ValueError(f"region_box needs rank 3 or more; got shape {extents}")
+    if channel_index is not None and len(extents) > 4:
+        raise ValueError(f"channel_index is only supported for rank-4 arrays; got shape {extents}")
+    slot = operator.index(slot)
+    if slot < 0:
+        raise ValueError(f"slot {slot} is negative; normalise it against axis 0 first")
+    y_len = extents[1]
+    # Any other row selector: lock every row (never fewer than written).
+    start, stop, step = y_slice.indices(y_len) if isinstance(y_slice, slice) else (0, y_len, 1)
+    rows = (start, max(start, stop)) if step > 0 else (max(stop + 1, 0), start + 1)
+    bounds: list[tuple[int, int]] = [(slot, slot + 1), rows, (0, extents[2])]
+    if len(extents) == 4:
+        if channel_index is None:
+            bounds.append((0, extents[3]))
+        else:
+            # Normalised as zarr does (-1 is the last), so two spellings take one lock.
+            channel = _axis_index(channel_index, extents[3])
+            bounds.append((channel, channel + 1))
+    elif len(extents) > 4:
+        bounds.extend((0, n) for n in extents[3:])
+    return tuple(bounds)
+
+
+def _require_same_layout(arr: Any, description: ArrayDescription, array_path: str) -> None:
+    """Refuse a description whose stored unit or metadata differ from ``arr`` beyond shape.
+
+    Shape and attributes are left out: growth is judged under the unit lock,
+    and attributes do not change an encoded object.
+    """
+    unit_shape, _ = stored_write_unit(arr)
+    described = {
+        k: v for k, v in description.metadata.to_dict().items() if k not in ("shape", "attributes")
+    }
+    current = {k: v for k, v in arr.metadata.to_dict().items() if k not in ("shape", "attributes")}
+    if tuple(description.unit_shape) != unit_shape or described != current:
+        raise ValueError(
+            f"description of {array_path} no longer matches the array: stored unit "
+            f"{tuple(description.unit_shape)} against {unit_shape}, or other metadata changed"
+        )
 
 
 def _fill_values_equal(existing: Any, spec: Any) -> bool:
@@ -432,16 +518,21 @@ class RegionZarrWriter:
             writes to one unit arrive in the order of the writes. It must not
             take a stored-unit lock or wait for another writer.
         track_units: Report in each `WriteResult` which touched units hold no
-            object after the write and which the write deleted (two
-            ``exists`` calls per unit). Requires ``on_write``.
+            object afterwards (``absent``, with ``tracked`` set). A write
+            reads absence from its own sets and deletes. It checks a unit
+            with neither once with ``exists``; a publish checks none. A
+            handle that keeps empty chunks reports nothing for a publish, or
+            for a write that sets every cell of its box. Requires
+            ``on_write``.
         authority: The authority every ``zarr.json`` change of this writer is
             made under (`firecube.core.zarr.guard.metadata_authority`), the root
             group's creation included. ``None`` means a ``PROCESS_LOCAL``
             authority over the writer's whole store: the threads of this
             process are excluded per node, other processes are not. Only an
             authority over the whole store can create a missing root group.
-        fixed_extent: Make `write_region` write through one handle per array,
-            read once, so its writes read no metadata. Set it only when no
+        fixed_extent: Make `write_region`, `write_box`, `publish_unit` and
+            `describe_array` use one handle per array, read once, so their
+            writes read no metadata. Set it only when no
             array this writer writes changes shape while the writer is alive.
             This writer's own metadata changes still drop the handles. Growth
             by another writer goes unseen, and a write may then erase cells
@@ -1071,10 +1162,10 @@ class RegionZarrWriter:
                 f"channel_index is only supported for rank-4 arrays; "
                 f"{array_path} has rank {arr.ndim}"
             )
-        y_len = int(arr.shape[1])
-        # Any other row selector: lock every row (never fewer than written).
-        start, stop, step = y_slice.indices(y_len) if isinstance(y_slice, slice) else (0, y_len, 1)
-        rows = (start, max(start, stop)) if step > 0 else (max(stop + 1, 0), start + 1)
+        if isinstance(y_slice, slice):
+            # A slice with a zero step or a bound that is not an integer is
+            # refused here, before the slot is read, as region_box would refuse it.
+            y_slice.indices(int(arr.shape[1]))
         # Integer selections normalised as zarr does (-1 is the last), so two
         # spellings of one cell take one lock.
         slot = (
@@ -1082,15 +1173,7 @@ class RegionZarrWriter:
             if self._fixed_extent
             else self._slot_before_locks(array_path, ts_index)
         )
-        bounds: list[tuple[int, int]] = [(slot, slot + 1), rows, (0, int(arr.shape[2]))]
-        if arr.ndim == 4:
-            if channel_index is None:
-                bounds.append((0, int(arr.shape[3])))
-            else:
-                channel = _axis_index(channel_index, int(arr.shape[3]))
-                bounds.append((channel, channel + 1))
-        elif arr.ndim > 4:
-            bounds.extend((0, int(n)) for n in arr.shape[3:])
+        bounds = region_box(arr.shape, slot, y_slice, channel_index)
         # Write the normalised indices the locks were taken for.
         selection: tuple[Any, ...] = (slot, y_slice, slice(None))
         if arr.ndim == 4:
@@ -1100,11 +1183,168 @@ class RegionZarrWriter:
         self._write_payload(
             arr,
             array_path,
-            tuple(bounds),
+            bounds,
             selection,
             data,
             reopen=None if self._fixed_extent else self._reopen_at(array_path, slot),
         )
+
+    def describe_array(self, group: str, array_name: str) -> ArrayDescription:
+        """Describe the array `write_box` and `publish_unit` write, for encoding its units.
+
+        With ``fixed_extent`` the description comes from this writer's cached
+        handle. Otherwise it comes from the array read now, and another
+        writer may grow the array afterwards. Pass the description to
+        `publish_unit` with each payload encoded against it.
+
+        Args:
+            group: Data group path; ``/`` is the root group.
+            array_name: Array name inside *group*.
+
+        Returns:
+            Shape, stored unit, metadata without attributes, and the
+            ``write_empty_chunks`` setting this writer's payload writes apply.
+        """
+        array_path = f"{group}/{array_name}"
+        arr = (
+            self._cached_array(array_path)
+            if self._fixed_extent
+            else self._opened_root()[array_path]
+        )
+        description = _describe_handle(arr, self._write_empty_chunks)
+        # A copy without attributes shares no mutable dict with the cached handle.
+        return replace(description, metadata=description.metadata.update_attributes({}))
+
+    def write_box(
+        self,
+        group: str,
+        array_name: str,
+        box: Bounds,
+        data: np.ndarray,
+    ) -> None:
+        """Write *data* into exactly the cells of *box*, through `guarded_write`.
+
+        Unlike `write_region`, a box may cover part of any axis. The box is
+        also the footprint the unit locks are taken for and the `WriteResult`
+        reports. ``on_write`` and ``track_units`` apply as in `write_region`.
+        With ``fixed_extent`` the write goes through the cached handle.
+        Otherwise it goes through the array read again under the unit locks.
+
+        Args:
+            group: Data group path; ``/`` is the root group.
+            array_name: Target array name inside *group*.
+            box: Half-open ``(start, stop)`` per axis of the array, with
+                ``0 <= start <= stop``.
+            data: Payload whose shape is the box's shape.
+
+        Raises:
+            TypeError: A bound is not an integer.
+            ValueError: *data* does not have the box's shape, a bound is
+                negative or a stop lies before its start, or the box does not
+                fit the array written. Nothing is written.
+        """
+        array_path = f"{group}/{array_name}"
+        footprint = WriteFootprint(array_path, box)
+        payload = np.asarray(data)
+        box_shape = tuple(stop - start for start, stop in footprint.box)
+        if payload.shape != box_shape:
+            raise ValueError(
+                f"write_box payload shape {payload.shape} does not match the shape {box_shape} "
+                f"of box {footprint.box} for {array_path}"
+            )
+        selection = tuple(slice(start, stop) for start, stop in footprint.box)
+        self._write_payload(
+            self._cached_array(array_path),
+            array_path,
+            footprint.box,
+            selection,
+            payload,
+            reopen=None if self._fixed_extent else self._reader(array_path),
+        )
+
+    def publish_unit(
+        self,
+        group: str,
+        array_name: str,
+        unit: Sequence[int],
+        payload: bytes | None,
+        *,
+        description: ArrayDescription,
+    ) -> None:
+        """Replace the stored object of one whole unit with *payload*, through `guarded_publish`.
+
+        The caller owns every cell of the unit and encodes *payload* against
+        *description*. Store, ``write_empty_chunks``, ``on_write`` and
+        ``track_units`` are this writer's, as in `write_region`.
+
+        The unit is clipped to the shape of *description*, never to a cached
+        handle. With ``fixed_extent`` the publish goes through the cached
+        handle, which must hold that clip. Otherwise it goes through the array
+        read again under the unit's lock. A clip that differs there is
+        refused, so a payload encoded before the array grew never erases
+        cells the growth added.
+
+        Args:
+            group: Data group path; ``/`` is the root group.
+            array_name: Target array name inside *group*.
+            unit: Index of the unit in the array's grid of stored units
+                (shards when sharded, else chunks).
+            payload: The encoded object, or ``None`` for no object.
+            description: The `describe_array` result *payload* was encoded
+                against.
+
+        Raises:
+            TypeError: An index of *unit* is not an integer.
+            ValueError: *unit* has another rank than *description*, a
+                negative index, or no cell inside its shape. *description*
+                differs from the array in anything but shape and attributes.
+                The unit's clip differs under the lock. Nothing is written.
+        """
+        array_path = f"{group}/{array_name}"
+        arr = self._cached_array(array_path)
+        _require_same_layout(arr, description, array_path)
+        index = tuple(operator.index(i) for i in unit)
+        shape, unit_shape = description.shape, description.unit_shape
+        if len(index) != len(shape) or not all(
+            i >= 0 and i * size < extent
+            for i, size, extent in zip(index, unit_shape, shape, strict=True)
+        ):
+            raise ValueError(
+                f"unit {index} is not a stored unit of {array_path} as described: "
+                f"shape {shape}, stored unit {unit_shape}"
+            )
+        footprint = WriteFootprint(array_path, unit_bounds(index, unit_shape, shape))
+        store = self._store_key()
+        with self._time_coord_hold(store, footprint):
+            guarded_publish(
+                arr,
+                footprint,
+                payload,
+                store=store,
+                write_empty_chunks=self._write_empty_chunks,
+                track_units=self._track_units,
+                on_result=self._on_write,
+                reopen=None if self._fixed_extent else self._reader(array_path),
+            )
+
+    def _reader(self, array_path: str) -> Callable[[], Any]:
+        """Return a reader of ``array_path`` from the root, for ``reopen`` of a guarded write."""
+        return lambda: self._opened_root()[array_path]
+
+    def _time_coord_hold(
+        self, store: str, footprint: WriteFootprint
+    ) -> AbstractContextManager[Any]:
+        """Hold the whole time coordinate unless this thread holds it already.
+
+        A time coordinate reaching a payload write has no marker, so
+        ``write_timestamp`` may create or grow it. Every write to it takes the
+        whole-array lock. Any other array returns a null context.
+        """
+        if current_hold(store, footprint.array_path) is None and (
+            footprint.array_path.rsplit("/", 1)[-1] == self._time_coord_name
+        ):
+            return hold_array(store, footprint.array_path)
+        return contextlib.nullcontext()
 
     def _hold_array(self, array_path: str) -> AbstractContextManager[ArrayHold]:
         """Hold this process's lock on the whole array at ``array_path`` (`hold_array`)."""
@@ -1136,12 +1376,7 @@ class RegionZarrWriter:
         """
         store = self._store_key()
         footprint = WriteFootprint(array_path, bounds)
-        hold: AbstractContextManager[Any] = contextlib.nullcontext()
-        if current_hold(store, footprint.array_path) is None and (
-            footprint.array_path.rsplit("/", 1)[-1] == self._time_coord_name
-        ):
-            hold = hold_array(store, footprint.array_path)
-        with hold:
+        with self._time_coord_hold(store, footprint):
             guarded_write(
                 arr,
                 footprint,

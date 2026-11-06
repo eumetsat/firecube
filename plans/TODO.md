@@ -239,9 +239,10 @@ Internal contributor material: this section is a maintenance inventory for peopl
     - Placement and layering: operator CLI strings below `cli/` and Click in core, plan 3 (done 2026-10-20, `plans/DONE.md`); `_literal_delete` in `src/firecube/core/storage/session.py` reaching into both drivers' private fields (already recorded on 2026-10-15; it belongs in `core/filesystem/` as a capability), recorded, not scheduled; the claim retry and convergence loop existing three times (`ensure_resolved_index`, `ensure_slot_index_model`, `_setup_global_zarr_schema`), recorded, not scheduled; unit store keys encoded four ways: `unit_store_key` in `core/zarr/guard/guarded_write.py`, `_unit_object_key` in `core/zarr/guard/unit_ownership.py`, `_write_unit_store_key` in `ingestor/runtime/zarr/staged_metadata.py`, and the key built by hand in `_delete_span_by_chunk_keys` in `core/controlplane/deletion.py`. `_unit_object_key` named `'/c/0'` for an array at the store root, where the store holds `'c/0'`; it now guards a root array (2026-10-20). No caller can pass a root array, because the store root of a product is always a group. Merging the four is recorded, not scheduled. The other duplicated homes of the placement review (no symbol located, the review's list was not re-read), recorded, not scheduled.
     - Records written before the decision: GenericZarr append stamping state early, and consolidation deleting before the rename, see above; restore with overwrite deleting the target before it validates the archive, closed by plan 1 (2026-10-18, with the `.tgm` residual as an open entry below); multi-span deletion changing payload before its records, so a later span's refusal leaves changed data under `active` spans (`delete_spans` in `deletion.py`), recorded, not scheduled; the engine swallowing span-recorder failures as hook failures and recording the run complete with no spans (`_handle_completed_batch` in `engine.py`, which logs an `on_batch_success` hook failure and keeps the batch as success; the span recording itself is `_record_active_spans` in `src/firecube/ingestor/runtime/recording.py`), recorded, not scheduled; maintenance recorded `complete` despite collected errors (`_record_maintenance_completed`, called at the end of `execute_deletion` and of `delete_spans` in `deletion.py`), recorded, not scheduled.
     - Identity encoded in strings: obstore `_absolute_key`, span keys and the undecoded pod group, see above; an array named `<coord>.consolidating` deleted by consolidation (`_resolve_time_dim_for_group` and `_consolidate_group_time_coord` in `src/firecube/core/zarr/coord_consolidation.py`), fsspec folding `a//b` into `a/b` on S3 (no symbol located), a serial run id shaped like a pod id getting an invented range (`parse_pod_run_id_slot` in `repo_utils.py` is the parser; the place that invents the range was not located), groups `g` and `g/` sharing a path but not a claim (no symbol located), run id `outer/inner` invisible to `list_runs` (`ManifestProjection.list_runs` in `_projection.py`), the delete `--pattern` glob not escaping `.` (`ManifestRepository._matches_pattern` in `core/controlplane/repo.py`), credential fingerprints colliding on `|` (`Credentials.fingerprint` in `core/credentials.py`), an ingest run taking the reserved id `time-coord-consolidation` (`TIME_COORD_CONSOLIDATION_RUN_ID` in `types.py`), validation splitting at the first `/c/` of the absolute path (`_extract_indices_from_key` in `core/zarr/validation.py`), and catalog names colliding (`g/a` against `g_a`; `default_catalog_source_name` and `_normalize_source_suffix` in `core/intake.py`), each recorded, not scheduled; WAL segment ordering past 99999, see above.
-- **Two test failures found while doing the CLI-boundary work (found 2026-10-18; open, not fixed). The first fails on the clean branch; the second is a load-sensitive candidate with no clean-base reproduction.**
+- **One test failure found while doing the CLI-boundary work (found 2026-10-18, open, not fixed). It fails on the clean branch. The second failure of that find was closed on 2026-11-05 (`plans/DONE.md`).**
     - `tests/integration/test_slots_auto_input_data.py::test_slots_auto_uses_input_data` fails alone on the clean branch with `JSONDecodeError: Extra data` (ran). The test parses `CliRunner` `result.output`, which mixes stderr, and `init_observability` binds the log handler to the first runner's stderr once per process (`src/firecube/core/observability/logging.py:112`; read). Under `pytest -n auto` it passes or fails with the scheduling.
-    - `tests/integration/test_concurrent_preallocate_race.py::test_two_concurrent_preallocates_with_slot_group_env_share_a_single_claim_and_never_overlap` failed once under machine load with `ControlPlaneCorruptionError` on a `.firecube-atomic-*.tmp` claim file and passed twice alone on the same tree (ran). Cause not examined.
+- **A `.firecube-atomic-*.tmp` file left in `.firecube/claims/` by a killed writer of an older version (found 2026-11-05, open, not fixed).** The fsspec atomic writer now stages under the reserved `.firecube-publish-*.tmp` name, which the listings leave out. The listings still return the old name. `list_claims` reads the 0-byte file and raises `ControlPlaneCorruptionError`. The operator must delete the file by hand. Decision: the listings leave it in until the maintainer decides how to treat leftovers.
+- **The claim heartbeat truncates the live claim file in place (found 2026-11-05, open, not fixed).** The heartbeat thread of the claim handle in `src/firecube/core/controlplane/claims.py` rewrites the claim with `fs.open(claim_path, "w")` (read). On a local target that call truncates the file before it writes. A concurrent `list_claims` or claim read can see a 0-byte or partial claim and raise `ControlPlaneCorruptionError`. This is not reproduced.
 
 ---
 
@@ -417,7 +418,7 @@ Internal contributor material. Two plugin smoke tests wrote a cube at the store 
 
 ### GenericZarr on the guarded write layer (2026-10-14)
 
-**Status**: FUTURE; follows the DirectZarr write session. `guarded_write`, `metadata_authority` and `promotion_plan` exist in `src/firecube/core/zarr/`, and DirectZarr uses them; `GenericZarrIngestor` uses none of the three.
+**Status**: FUTURE. It follows the DirectZarr write session. `guarded_write`, `metadata_authority` and `promotion_plan` exist in `src/firecube/core/zarr/guard/`, and DirectZarr uses them. `GenericZarrIngestor` uses none of the three.
 
 GenericZarr writes through xarray (`to_zarr`) in `write_dataset_to_zarr`, with a per-batch `zarr_append` claim and the ordered gate for in-process order. Zarr leaves overlapping writers to the caller, so nothing below the claim protects a stored unit or a `zarr.json`. Four parts, in this order:
 
@@ -433,6 +434,39 @@ Fold into these the GenericZarr metadata sites that bypass the metadata authorit
 - State-array creation: `ensure_timestamp_state_array` in `src/firecube/core/zarr/state.py`, reached from `ensure_existing` in `append_services.py`; it creates the array and then writes its attributes in a second metadata write.
 - The shrink in `_truncate_group` of `append_failure.py` (`repair_failed_group` resizes every append-dimension array back to the batch start; a fresh group is deleted). The authority has no shrink or delete operation, because DirectZarr never needs one; this one needs a decision on whether the authority gains it.
 - `root.attrs["receipts"]` in the `write_lock` docstring example of `GenericZarrIngestor` (`src/firecube/ingestor/templates/generic.py`): a plugin hook writes root attributes from the main thread, outside any authority. Only the example is in the repository; plugin code that follows it is not covered.
+
+---
+
+### Unit write buffer, step 2 (2026-11-02)
+
+**Status**: FUTURE. It follows step 1. Step 1 is done (`plans/DONE.md`, 2026-11-02). `UnitWriteBuffer` (`src/firecube/core/zarr/guard/unit_buffer.py`) and the DirectZarr feeder (`src/firecube/ingestor/runtime/zarr/strategies/_buffered_regions.py`) exist behind the opt-in field `zarr_unit_write_buffer`, which is off by default.
+
+Step 2 makes the buffer the default write path of both ingestors. It has two parts:
+
+- **GenericZarr as the second feeder.** Add a `DatasetRegionAdapter` (see the previous section) that implements the `UnitSink` Protocol over `guarded_publish` and `guarded_write`. The buffer stays shared. Only the feeder and the sink differ.
+- **The default.** Switch the field on only after every condition below holds.
+
+Conditions before the buffer is a default (each recorded, not scheduled):
+
+- Staged runs and slot-window runs on real data. Step 1 measured one serial direct run on one slot.
+- S3 targets.
+- Lossy codecs. The lossless list is `bytes`, `zstd`, `crc32c` and `sharding_indexed` with `bytes` and `crc32c` index codecs. Widen it only with tests for each added codec.
+- `pipeline_workers` above 1 with the buffer. The field is refused with `zarr_region_write_concurrency` above 1 today.
+- A byte cap per buffer. The buffer holds the encoded bytes of every open unit of a slot, with no limit.
+- Partly supplied units. Today a unit that is not supplied completely goes out as box writes. A look-ahead or an encoded merge could publish it once.
+- Time-deep units. The feeder takes units one slot deep only.
+- A layout copy, such as reshard or rechunk. It needs an intake of already-encoded inner chunks.
+
+The 0.2.0 virtual output needs a reference publish. A reference is a path, an offset and a length, inlined bytes or a missing entry. No object stands at the key of the unit. Two things follow:
+
+- A reference sink is a second sink behind the same buffer.
+- The reference publish is a new operation on the frame of `guarded_publish` (unit lock, footprint, `on_result`). `guarded_publish` publishes bytes or no object only.
+
+Review notes of step 1, open:
+
+- **`publish_unit` does not detect a codec or endianness change made between `describe_array` and the publish (recorded, not scheduled, read).** Under the lock it checks the layout and the clip only. A payload encoded against the old codecs would be stored under the new metadata.
+- **A `fixed_extent` writer keeps its no-growth precondition (recorded, not scheduled, read).** `publish_unit` and `write_box` go through the cached handle. Growth of the array by another process during the run is not detected.
+- **The buffer describes an array once per buffer (recorded, not scheduled, read).** Another process can grow the array during a slot. A non-fixed writer then refuses a publish when the growth changed the clip of that unit, and the batch fails. Growth outside the published unit succeeds and keeps the other cells. There is no retry.
 
 ---
 

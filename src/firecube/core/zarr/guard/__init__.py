@@ -32,6 +32,7 @@ Modules:
 - ``metadata_authority``: the only path that changes ``zarr.json``.
 - ``engine_owned``: engine-owned per-slot arrays, collection and verification.
 - ``promotion_plan``: the pure planner for a staged promotion delta.
+- ``unit_buffer``: assembles whole stored units from pieces and writes each once (not re-exported here).
 """
 
 from firecube.core.zarr.guard.chunk_geometry import (

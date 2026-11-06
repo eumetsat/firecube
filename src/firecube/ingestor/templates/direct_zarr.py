@@ -1848,6 +1848,11 @@ class DirectZarrIngestor(BaseIngestor):
                 "zarr_write_empty_chunks",
                 False,
             )
+            zarr_unit_write_buffer = getattr(
+                concurrency_template_config,
+                "zarr_unit_write_buffer",
+                False,
+            )
             with adapter.writing(str(store_uri), intents_to_write):
                 metrics = strategy.write_groups(
                     group_to_intents=group_to_intents,
@@ -1869,6 +1874,7 @@ class DirectZarrIngestor(BaseIngestor):
                         None,
                     ),
                     zarr_write_empty_chunks=zarr_write_empty_chunks,
+                    zarr_unit_write_buffer=zarr_unit_write_buffer,
                     on_write=(
                         functools.partial(session.record_write_result, store_uri=str(store_uri))
                         if session.staged
