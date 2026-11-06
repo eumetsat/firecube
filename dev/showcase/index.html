@@ -2185,6 +2185,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../concepts/output-formats/zarr/unit-write-buffer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How The Unit Write Buffer Works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
         
   
@@ -4292,6 +4320,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#unit-write-buffer-sharded-mtg-fci-l1c-to-s3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unit Write Buffer: Sharded MTG FCI L1C To S3
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4372,6 +4411,34 @@
     
   
     Slot-Based Parallelism: MTG FCI L1C
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="unit-write-buffer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unit Write Buffer: Sharded MTG FCI L1C To S3
   
 
     
@@ -5174,6 +5241,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#unit-write-buffer-sharded-mtg-fci-l1c-to-s3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unit Write Buffer: Sharded MTG FCI L1C To S3
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5252,6 +5330,22 @@ tuned parallel setup and compare your timings with recorded runs of about
 <div class="showcase-feature-image">
 <p><a href="mtg-fci-l1c-benchmarks/"><img alt="Recorded ingestion wall time falls from a median of 250.87 seconds at one process to 39.01 seconds at twelve processes for the same twelve FCI acquisitions." src="../assets/images/mtg-fci-benchmark-preview.png" /></a></p>
 <p><span class="showcase-caption">12 acquisitions · One ARM host · Local Zarr writes</span></p>
+</div>
+</div>
+<div class="showcase-feature">
+<div class="showcase-feature-copy">
+<p><span class="showcase-label">Benchmark notebook · Your own S3 bucket</span></p>
+<h2 id="unit-write-buffer-sharded-mtg-fci-l1c-to-s3">Unit Write Buffer: Sharded MTG FCI L1C To S3</h2>
+<p>Learn what the unit write buffer does, then write two hours of FCI observations to your own S3 bucket with the buffer off and on.
+Check that the two stores are identical, then compare your wall time and peak memory with the recorded runs.</p>
+<div class="showcase-actions">
+<p><a class="md-button md-button--primary" href="unit-write-buffer/">Open the notebook</a>
+<a class="md-button notebook-download" href="unit-write-buffer/unit-write-buffer.ipynb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v3h14v-3H5z"/></svg>Download notebook</a></p>
+</div>
+</div>
+<div class="showcase-feature-image">
+<p><a href="unit-write-buffer/"><img alt="Recorded wall time of 12 processes falls from a median of 364 seconds without the buffer to 91 seconds with it. The payload written to S3 falls from 94.79 GB to 7.19 GB." src="../assets/images/unit-write-buffer-preview.png" /></a></p>
+<p><span class="showcase-caption">2 hours of FCI data · 12 processes · Real S3 writes</span></p>
 </div>
 </div>
 </div>

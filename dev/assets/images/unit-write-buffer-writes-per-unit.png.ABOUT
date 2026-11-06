@@ -1,0 +1,7 @@
+name: unit-write-buffer-writes-per-unit.png
+description: Bars count the stored units of one MTG FCI L1C run. Each bar group shows how many times a stored unit was written, without and with the unit write buffer.
+copyright: Copyright 2026 EUMETSAT
+license: Apache-2.0
+license_url: https://www.apache.org/licenses/LICENSE-2.0
+date: 2026-11-05
+about_resource: unit-write-buffer-writes-per-unit.png

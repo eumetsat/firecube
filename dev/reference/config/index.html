@@ -2183,6 +2183,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../concepts/output-formats/zarr/unit-write-buffer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How The Unit Write Buffer Works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../concepts/output-formats/zarr/chunk-ownership/" class="md-nav__link">
         
   
@@ -4287,6 +4315,34 @@
     
   
     Slot-Based Parallelism: MTG FCI L1C
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/unit-write-buffer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unit Write Buffer: Sharded MTG FCI L1C To S3
   
 
     
@@ -6416,6 +6472,26 @@ explicitly in the plugin instead.</p>
               <div class="doc-md-description">
                 <p>Pass through Zarr's array write-empty-chunks
 policy for scoped write phases. Defaults to <code>False</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="firecube.ingestor.api.ZarrTemplateConfig.zarr_unit_write_buffer">zarr_unit_write_buffer</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Publish each complete stored unit once instead
+of once per region piece. The serial region-write path encodes the
+pieces of a unit into one scratch buffer and writes the complete
+unit; a unit that is not supplied completely is written piece by
+piece. It applies to sharded or chunked DirectZarr region writes of
+rank 3 or more, on units one slot deep (and one channel wide when a
+rank-4 write names a channel), with lossless codecs.
+Other writes are unchanged, and the store is byte-identical with
+the option on or off. It cannot be combined with
+<code>zarr_region_write_concurrency</code> above 1. Defaults to <code>False</code>.</p>
               </div>
             </td>
           </tr>

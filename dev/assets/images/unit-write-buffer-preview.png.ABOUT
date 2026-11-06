@@ -1,0 +1,7 @@
+name: unit-write-buffer-preview.png
+description: Wall time of 12 processes and payload written to S3 for an MTG FCI L1C run, with the unit write buffer off and on.
+copyright: Copyright 2026 EUMETSAT
+license: Apache-2.0
+license_url: https://www.apache.org/licenses/LICENSE-2.0
+date: 2026-11-05
+about_resource: unit-write-buffer-preview.png

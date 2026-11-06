@@ -1,0 +1,7 @@
+name: firecube-unit-write-buffer.svg
+description: Diagram of three pieces reaching one stored unit, without the unit write buffer (three rewrites) and with it (one write).
+copyright: Copyright 2026 EUMETSAT
+license: Apache-2.0
+license_url: https://www.apache.org/licenses/LICENSE-2.0
+date: 2026-11-05
+about_resource: firecube-unit-write-buffer.svg

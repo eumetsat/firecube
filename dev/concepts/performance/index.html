@@ -2189,6 +2189,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../output-formats/zarr/unit-write-buffer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How The Unit Write Buffer Works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../output-formats/zarr/chunk-ownership/" class="md-nav__link">
         
   
@@ -4464,6 +4492,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/unit-write-buffer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unit Write Buffer: Sharded MTG FCI L1C To S3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -5386,12 +5442,22 @@ writer concurrent.</p>
 <li>choose compression from the bottleneck: disable it when CPU is the bottleneck,
   enable it when upload size is the bottleneck;</li>
 <li>prefer <code>dask_scheduler=synchronous</code> when pipeline workers are already active,
-  so dask does not add another competing thread pool.</li>
+  so dask does not add another competing thread pool;</li>
+<li>set <code>zarr_unit_write_buffer=true</code> when a sharded layout on S3 rewrites a whole
+  shard for every piece written into it. It applies to <code>DirectZarrIngestor</code>
+  region writes of rank 3 or more with <a href="../output-formats/zarr/unit-write-buffer/#limits">the supported
+  codecs</a>. It needs
+  <code>zarr_region_write_concurrency</code> at 1 (the default) and uses more memory per
+  process.</li>
 </ul>
 <p>For the Zarr product model, see <a href="../output-formats/zarr/">Zarr</a>. For
 the same-group concurrency model, see
 <a href="../output-formats/zarr/parallel-writes/">How Parallel Zarr Writes Stay Safe</a>. To execute that
-model, use <a href="../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a>.</p>
+model, use <a href="../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a>. For
+the unit write buffer, see
+<a href="../output-formats/zarr/unit-write-buffer/">How The Unit Write Buffer Works</a>, its
+measured effect in <a href="../benchmarks/#unit-write-buffer-sharded-s3">Benchmarks</a> and
+the notebook <a href="../../showcase/unit-write-buffer/">Unit Write Buffer</a>.</p>
 <h2 id="parquet-tuning">Parquet Tuning</h2>
 <p>When Parquet writes are slow, start with the file layout. Parquet batches write
 independent files, so <code>GenericParquetIngestor</code> can benefit from pipeline workers
@@ -5447,6 +5513,8 @@ compression. Reduce the shape of in-flight work first:</p>
 <li>avoid unnecessary compression when CPU and memory are tight;</li>
 <li>use a fixed workspace path with enough disk when staged writes are enabled.</li>
 </ul>
+<p>The unit write buffer raises the memory of each process. See
+<a href="#if-zarr-writes-are-slow">If Zarr Writes Are Slow</a> before you enable it.</p>
 <p>Do not tune memory by guessing. Run a smaller source window and scale one setting
 at a time.</p>
 <h2 id="common-starting-points">Common Starting Points</h2>
@@ -5457,14 +5525,21 @@ at a time.</p>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>--option<span class="w"> </span><span class="nv">upload_workers</span><span class="o">=</span><span class="m">4</span>
 </code></pre></div>
+<p>For a sharded <code>DirectZarrIngestor</code> product on S3, written by several processes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>--option<span class="w"> </span><span class="nv">zarr_unit_write_buffer</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>--option<span class="w"> </span><span class="nv">zarr_region_write_concurrency</span><span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<p>Measured in direct write mode only. Memory per process rises; see
+<a href="../benchmarks/#unit-write-buffer-sharded-s3">Unit Write Buffer, Sharded S3</a>.</p>
 <p>For CPU-heavy source parsing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">40</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">40</span>
 </code></pre></div>
 <p>For tabular Parquet output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>--output-format<span class="w"> </span>parquet<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">50</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>--output-format<span class="w"> </span>parquet<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>--option<span class="w"> </span><span class="nv">pipeline_workers</span><span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>--option<span class="w"> </span><span class="nv">pipeline_batch_size</span><span class="o">=</span><span class="m">50</span>
 </code></pre></div>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
