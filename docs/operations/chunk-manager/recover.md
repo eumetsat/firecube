@@ -183,7 +183,13 @@ the claims again and confirm the new owner is stopped before you retry.
 
 A local product keeps the hidden file `.firecube/claims/.firecube-claims.lock`
 beside its claim records. Firecube uses it to guard each claim change. Do not
-delete it. `claims list` does not show it.
+delete it. `claims list` does not show it. Firecube does not support NFS for
+the claims of a local product.
+
+!!! warning
+    Stop every older Firecube writer of a product before a writer of this
+    version writes to it. An older writer rewrites and deletes claim records
+    without comparing them. It can overwrite or delete the claim of the new writer.
 
 On S3, a clear or a release replaces the claim record with a `released`
 record. The file stays in `.firecube/claims/`. It is harmless and needs no
@@ -294,7 +300,7 @@ command then uses the marker of its time coordinate.
 | `ClaimReleaseError`: the claim "was not released" | A heartbeat write was still in flight when the run released the claim. The record stays and goes stale. | Confirm the process has stopped. Wait until the claim is stale, then use `chunks claims clear`. |
 | `chunks claims clear` exits 1 and keeps the claim | Another writer took the claim after the command read it. | List the claims again. Confirm that the new owner is stopped, then clear the claim. |
 | Claim operations fail with `ConfigurationError` on a storage other than `file` and `s3` | The storage cannot write conditionally, so Firecube refuses to acquire, renew or read a claim record. A listing of a missing or empty claims directory still returns no claims. | Use a `file://` or `s3://` product. Do not read an empty listing on such a storage as proof that no writer is active. |
-| Claims behave wrongly after an upgrade while an older writer runs | An older version rewrites and deletes claim records without a check. | Stop or drain every writer of the product that runs the old version. Then start the new version. |
+| Claims behave wrongly after an upgrade while an older writer runs | An older version rewrites and deletes claim records without a check. | Stop every writer of the product that runs the old version. Wait until each process has exited. Then start the new version. |
 | `ProductUnderMaintenanceError`: `Product MY_PRODUCT.zarr is under exclusive maintenance by <owner> (claim MY_PRODUCT.zarr:maintenance:exclusive), so <run> is refused. Retry when that maintenance has finished.` | A maintenance run holds the exclusive claim of the product. At run start, Firecube refuses the new run and records it as failed. An index rebuild is refused before any run exists. | Wait for the maintenance run to finish. Then start the run again. If the message says the claim is stale, verify that the owner process is gone. Abandon a run only after its process has stopped. Then follow [Abandon A Stuck Run](#abandon-a-stuck-run) with the owner as `--run-id`. Or follow [Clear A Blocking Claim](#clear-a-blocking-claim) with `--domain MY_PRODUCT.zarr:maintenance:exclusive`. |
 | Run ends with `status=failed` and "later batch(es) were not attempted" | Append ingestion stopped before processing all inputs. | Fix the reported error, then [recover the failed batch](#recover-from-a-failed-batch). |
 | Rerun refused: "spans from a failed run exist" | The retry needs an explicit choice about keeping earlier work. | Follow [Recover From A Failed Batch](#recover-from-a-failed-batch) for the original write mode. |

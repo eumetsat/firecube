@@ -14,7 +14,7 @@
 
 """Claim transitions under forced interleavings, on local targets for both drivers.
 
-The ``scenario_*`` functions are shared with the S3 cases of ``test_obstore_claim_atomicity.py``.
+The ``claim_env`` tests marked shared are re-collected on S3 by ``test_obstore_claim_atomicity.py``.
 """
 
 # pyright: reportPrivateUsage=false, reportAttributeAccessIssue=false
@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import threading
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import suppress
 from pathlib import Path
 from typing import Any, cast
@@ -74,73 +74,41 @@ pytestmark = [pytest.mark.integration, pytest.mark.concurrency]
 PRODUCT = "product.zarr"
 HEARTBEAT_S = 1
 WAIT_S = 20
-READS = {"read_bytes", "read_snapshot"}
-WRITES = {"rm", "write_atomic", "replace_atomic", "create_if_absent", "compare_replace"} | {
-    "compare_delete"
-}
+WRITES = {"create_if_absent", "compare_replace", "compare_delete"}
 
 
 class Gate:
     """Holds the heartbeat thread of one owner at a write operation until the test opens it."""
 
-    def __init__(self, owner: str, *, after_open: bool = False) -> None:
-        self.owner, self.after_open, self.stuck = owner, after_open, False
+    def __init__(self, owner: str, *, after_write: bool = False) -> None:
+        self.owner, self.after_write, self.stuck = owner, after_write, False
         self.reached, self.done = threading.Event(), threading.Event()
-        self._held = threading.Lock()
-        self._held.acquire()
+        self._opened = threading.Event()
 
     def arrive(self) -> None:
         self.reached.set()
-        if not self._held.acquire(timeout=WAIT_S):
+        if not self._opened.wait(WAIT_S):
             self.stuck = True
             raise AssertionError("gate was never opened; the interleaving was not forced")
-        self._held.release()
 
     def open(self) -> None:
         self.done.clear()
-        with suppress(RuntimeError):
-            self._held.release()
-
-
-class _LandsOnClose:
-    """A file opened for writing; ``landed`` is called once it is closed."""
-
-    def __init__(self, handle: Any, landed: Callable[[], None]) -> None:
-        self._handle, self._landed = handle, landed
-
-    def __enter__(self) -> Any:
-        return self._handle.__enter__()
-
-    def __exit__(self, *exc: Any) -> Any:
-        try:
-            return self._handle.__exit__(*exc)
-        finally:
-            self._landed()
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._handle, name)
+        self._opened.set()
 
 
 class HookedFs:
-    """A driver seen at its Python operation boundary: reads, writes and the atomic writer."""
+    """A driver seen at its conditional-operation boundary: snapshot reads and compare writes."""
 
     def __init__(self, real: Any, env: ClaimEnv) -> None:
         self._real, self._env = real, env
 
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._real, name)
-        if name == "atomic_writer":
-            return HookedFs(attr, self._env)
-        if not callable(attr) or name not in READS | WRITES | {"open"}:
+        if name not in WRITES | {"read_snapshot"}:
             return attr
-
-        def call(*args: Any, **kwargs: Any) -> Any:
-            mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
-            writing = any(c in mode for c in "wax+") if name == "open" else name in WRITES
-            deferred = name == "open" and writing
-            return self._env.around(writing, lambda: attr(*args, **kwargs), deferred=deferred)
-
-        return call
+        return lambda *args, **kwargs: self._env.around(
+            name in WRITES, lambda: attr(*args, **kwargs)
+        )
 
 
 class ClaimEnv:
@@ -151,6 +119,7 @@ class ClaimEnv:
         self.fs: Any = backend.from_binding(binding)
         self.control_for = control_for
         self.gates: list[Gate] = []
+        self.handles: list[ClaimHandle] = []
         self.read_callback: Callable[[], None] | None = None
 
     def service(self, *, hb: int, stale: int) -> FilesystemClaimService:
@@ -158,19 +127,29 @@ class ClaimEnv:
             return self.control_for(product), self.control_for(product)
 
         resolve.base_uri = self.control_for("")  # type: ignore[attr-defined]
-        hooked: Any = HookedFs(self.fs, self)
-        return FilesystemClaimService(
-            fs=hooked,
+        service = FilesystemClaimService(
+            fs=cast(Any, HookedFs(self.fs, self)),
             control_root_resolver=resolve,
             heartbeat_interval_s=hb,
             stale_threshold_s=stale,
         )
+        acquire = service.acquire
+        service.acquire = lambda **kwargs: self.handles.append(h := acquire(**kwargs)) or h  # type: ignore[method-assign]
+        return service
+
+    def close(self) -> None:
+        """Open every gate, then release every handle the services of this env handed out."""
+        for gate in self.gates:
+            gate.open()
+        for handle in self.handles:
+            with suppress(Exception):
+                handle.release()
 
     def domain(self, name: str) -> WriteDomain:
         return WriteDomain(product=PRODUCT, category="zarr_region", name=name)
 
-    def hold(self, owner: str, *, after_open: bool = False) -> Gate:
-        self.gates.append(Gate(owner, after_open=after_open))
+    def hold(self, owner: str, *, after_write: bool = False) -> Gate:
+        self.gates.append(Gate(owner, after_write=after_write))
         return self.gates[-1]
 
     def after_next_read(self, callback: Callable[[], None]) -> list[int]:
@@ -179,25 +158,20 @@ class ClaimEnv:
         self.read_callback = lambda: (fired.append(1), callback())[1]
         return fired
 
-    def around(self, writing: bool, operation: Callable[[], Any], *, deferred: bool = False) -> Any:
+    def around(self, writing: bool, operation: Callable[[], Any]) -> Any:
         name = threading.current_thread().name
         gate = next(
             (g for g in self.gates if writing and name.startswith(f"firecube-claim-{g.owner}")),
             None,
         )
-        if gate and not gate.after_open:
+        if gate and not gate.after_write:
             gate.arrive()
         try:
             result = operation()
-        except BaseException:
+        finally:
             if gate:
                 gate.done.set()
-            raise
-        if gate and deferred:  # an opened file lands its bytes at close, not at open
-            result = _LandsOnClose(result, gate.done.set)
-        elif gate:
-            gate.done.set()
-        if gate and gate.after_open:
+        if gate and gate.after_write:
             gate.arrive()
         callback = self.read_callback
         if callback and not writing and not name.startswith("firecube-claim-"):
@@ -207,13 +181,14 @@ class ClaimEnv:
 
 
 @pytest.fixture(params=["fsspec", "obstore"])
-def local_env(request: pytest.FixtureRequest, tmp_path: Path) -> ClaimEnv:
+def claim_env(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[ClaimEnv]:
     binding = make_test_binding(tmp_path, product=PRODUCT, driver=request.param)
     env = ClaimEnv(
         binding, lambda product: StorageUri.from_local_path(tmp_path / product / CONTROL_DIRNAME)
     )
     env.claims_dir = tmp_path / PRODUCT / CONTROL_DIRNAME / CLAIMS_DIRNAME  # type: ignore[attr-defined]
-    return env
+    yield env
+    env.close()
 
 
 def owner_of(service: FilesystemClaimService, domain: WriteDomain) -> str | None:
@@ -221,62 +196,51 @@ def owner_of(service: FilesystemClaimService, domain: WriteDomain) -> str | None
     return None if claim is None else claim.owner_id
 
 
-def release_all(handles: list[ClaimHandle]) -> None:
-    for handle in handles:
-        with suppress(Exception):
-            handle.release()
-
-
-def scenario_heartbeat_after_removal(env: Any, *, successor: bool) -> None:
-    """A heartbeat held in flight lands after its claim was force-cleared, and maybe retaken."""
-    service = env.service(hb=HEARTBEAT_S, stale=120)
-    domain = env.domain("late-heartbeat")
-    gate = env.hold("A")
-    handles: list[ClaimHandle] = []
-    try:
-        handles.append(service.acquire(product=PRODUCT, domain=domain, owner_id="A"))
-        assert gate.reached.wait(WAIT_S), "heartbeat of A never reached its write"
-        assert service.clear_claim(product=PRODUCT, domain_id=domain.identifier, force=True)
-        if successor:
-            handles.append(service.acquire(product=PRODUCT, domain=domain, owner_id="B"))
-        gate.open()
-        assert gate.done.wait(WAIT_S), "the held write of A never returned"
-        owner = owner_of(service, domain)
-    finally:
-        gate.open()
-        release_all(handles)
+@pytest.mark.parametrize(
+    "successor",
+    [False, True],
+    ids=["cleared_claim_is_not_recreated", "late_heartbeat_keeps_successor_claim"],
+)
+def test_late_heartbeat_after_force_clear_does_not_recreate_or_overwrite_claim(
+    claim_env: ClaimEnv, successor: bool
+) -> None:
+    service = claim_env.service(hb=HEARTBEAT_S, stale=120)
+    domain = claim_env.domain("late-heartbeat")
+    gate = claim_env.hold("A")
+    service.acquire(product=PRODUCT, domain=domain, owner_id="A")
+    assert gate.reached.wait(WAIT_S), "heartbeat of A never reached its write"
+    assert service.clear_claim(product=PRODUCT, domain_id=domain.identifier, force=True)
+    if successor:
+        service.acquire(product=PRODUCT, domain=domain, owner_id="B")
+    gate.open()
+    assert gate.done.wait(WAIT_S), "the held write of A never returned"
     assert not gate.stuck
-    assert owner == ("B" if successor else None)
+    assert owner_of(service, domain) == ("B" if successor else None)
 
 
-def scenario_release_with_inflight_heartbeat(env: Any) -> None:
-    """release() runs while a heartbeat write is held. D10: it raises ClaimReleaseError and leaves
-    the record alone, or it succeeds and the held write must not bring the claim back."""
-    service = env.service(hb=HEARTBEAT_S, stale=1)
-    domain = env.domain("release-inflight")
-    gate = env.hold("A")
+def test_heartbeat_in_flight_at_release_does_not_recreate_claim(claim_env: ClaimEnv) -> None:
+    # D10: release() raises ClaimReleaseError and leaves the record alone, or it succeeds.
+    service = claim_env.service(hb=HEARTBEAT_S, stale=1)
+    domain = claim_env.domain("release-inflight")
+    gate = claim_env.hold("A")
     errors: list[Exception] = []
     handle = service.acquire(product=PRODUCT, domain=domain, owner_id="A")
-    try:
-        assert gate.reached.wait(WAIT_S), "heartbeat of A never reached its write"
+    assert gate.reached.wait(WAIT_S), "heartbeat of A never reached its write"
 
-        def release() -> None:
-            try:
-                handle.release()
-            except Exception as exc:
-                errors.append(exc)
+    def release() -> None:
+        try:
+            handle.release()
+        except Exception as exc:
+            errors.append(exc)
 
-        releaser = threading.Thread(target=release)
-        releaser.start()
-        releaser.join(timeout=WAIT_S)
-        assert not releaser.is_alive(), "release never returned"
-        held = service.read_claim_by_domain(product=PRODUCT, domain=domain.identifier)
-        gate.open()
-        assert gate.done.wait(WAIT_S), "the held write of A never returned"
-        owner = owner_of(service, domain)
-    finally:
-        gate.open()
-        release_all([handle])
+    releaser = threading.Thread(target=release)
+    releaser.start()
+    releaser.join(timeout=WAIT_S)
+    assert not releaser.is_alive(), "release never returned"
+    held = service.read_claim_by_domain(product=PRODUCT, domain=domain.identifier)
+    gate.open()
+    assert gate.done.wait(WAIT_S), "the held write of A never returned"
+    owner = owner_of(service, domain)
     assert not gate.stuck
     if errors:
         assert [type(exc).__name__ for exc in errors] == ["ClaimReleaseError"], errors
@@ -286,107 +250,61 @@ def scenario_release_with_inflight_heartbeat(env: Any) -> None:
         assert owner is None, f"release reported success, yet {owner!r} holds the claim"
 
 
-def scenario_stale_handle_release(env: Any) -> None:
-    """A handle whose claim was cleared and retaken releases late."""
-    service = env.service(hb=3600, stale=120)
-    domain = env.domain("stale-release")
-    handles = [service.acquire(product=PRODUCT, domain=domain, owner_id="A")]
-    try:
-        assert service.clear_claim(product=PRODUCT, domain_id=domain.identifier, force=True)
-        handles.append(service.acquire(product=PRODUCT, domain=domain, owner_id="B"))
-        with suppress(Exception):  # whether a lost handle's release raises is not specified
-            handles[0].release()
-        owner = owner_of(service, domain)
-    finally:
-        release_all(handles)
-    assert owner == "B"
-
-
-def scenario_successor_between_read_and_delete(env: Any, operation: str) -> None:
-    """A successor acquires after the sweep read the claim and before it deletes it."""
-    service = env.service(hb=3600, stale=0)
-    domain = env.domain("read-then-delete")
-    handles = [service.acquire(product=PRODUCT, domain=domain, owner_id="A")]
-    try:
-        listed = service.list_product_claims(product=PRODUCT)[0]
-
-        def successor() -> None:
-            service.clear_claim(product=PRODUCT, domain_id=domain.identifier, force=True)
-            handles.append(service.acquire(product=PRODUCT, domain=domain, owner_id="B"))
-
-        fired = env.after_next_read(successor)
-        if operation == "clear_claim":
-            with suppress(ClaimConflictError):
-                service.clear_claim(product=PRODUCT, domain_id=domain.identifier)
-        else:
-            outcome = service.release_claim_if_unchanged(
-                product=PRODUCT, claim=listed, stale_only=True
-            )
-            assert outcome == "changed"
-        assert fired, "no claim read happened for the hook to follow"
-        owner = owner_of(service, domain)
-    finally:
-        release_all(handles)
-    assert owner == "B"
-
-
-def test_claim_read_during_heartbeat_write_returns_the_claim(local_env: ClaimEnv) -> None:
-    service = local_env.service(hb=HEARTBEAT_S, stale=120)
-    domain = local_env.domain("heartbeat-read")
-    gate = local_env.hold("holder", after_open=True)
-    handle = service.acquire(product=PRODUCT, domain=domain, owner_id="holder")
-    try:
-        assert gate.reached.wait(WAIT_S), "heartbeat never opened the claim for writing"
-        by_domain = owner_of(service, domain)
-        listed = [claim.owner_id for claim in service.list_claims(product=PRODUCT)]
-    finally:
-        gate.open()
-        release_all([handle])
-    assert (by_domain, listed) == ("holder", ["holder"])
-
-
-def test_heartbeat_in_flight_at_release_does_not_recreate_claim(local_env: ClaimEnv) -> None:
-    scenario_release_with_inflight_heartbeat(local_env)
-
-
-@pytest.mark.parametrize(
-    "successor",
-    [
-        pytest.param(False, id="cleared_claim_is_not_recreated"),
-        pytest.param(True, id="late_heartbeat_keeps_successor_claim"),
-    ],
-)
-def test_late_heartbeat_after_force_clear_leaves_claim_state(
-    local_env: ClaimEnv, successor: bool
-) -> None:
-    scenario_heartbeat_after_removal(local_env, successor=successor)
-
-
-def test_stale_handle_release_keeps_successor_claim(local_env: ClaimEnv) -> None:
-    scenario_stale_handle_release(local_env)
+def test_stale_handle_release_keeps_successor_claim(claim_env: ClaimEnv) -> None:
+    service = claim_env.service(hb=3600, stale=120)
+    domain = claim_env.domain("stale-release")
+    stale = service.acquire(product=PRODUCT, domain=domain, owner_id="A")
+    assert service.clear_claim(product=PRODUCT, domain_id=domain.identifier, force=True)
+    service.acquire(product=PRODUCT, domain=domain, owner_id="B")
+    with suppress(Exception):  # whether a lost handle's release raises is not specified
+        stale.release()
+    assert owner_of(service, domain) == "B"
 
 
 @pytest.mark.parametrize("operation", ["clear_claim", "release_claim_if_unchanged"])
 def test_sweep_does_not_delete_successor_acquired_after_its_read(
-    local_env: ClaimEnv, operation: str
+    claim_env: ClaimEnv, operation: str
 ) -> None:
-    scenario_successor_between_read_and_delete(local_env, operation)
+    service = claim_env.service(hb=3600, stale=0)
+    domain = claim_env.domain("read-then-delete")
+    service.acquire(product=PRODUCT, domain=domain, owner_id="A")
+    listed = service.list_product_claims(product=PRODUCT)[0]
+
+    def successor() -> None:
+        service.clear_claim(product=PRODUCT, domain_id=domain.identifier, force=True)
+        service.acquire(product=PRODUCT, domain=domain, owner_id="B")
+
+    fired = claim_env.after_next_read(successor)
+    if operation == "clear_claim":
+        with suppress(ClaimConflictError):
+            service.clear_claim(product=PRODUCT, domain_id=domain.identifier)
+    else:
+        outcome = service.release_claim_if_unchanged(product=PRODUCT, claim=listed, stale_only=True)
+        assert outcome == "changed"
+    assert fired, "no claim read happened for the hook to follow"
+    assert owner_of(service, domain) == "B"
+
+
+def test_claim_read_during_heartbeat_write_returns_the_claim(claim_env: ClaimEnv) -> None:
+    service = claim_env.service(hb=HEARTBEAT_S, stale=120)
+    domain = claim_env.domain("heartbeat-read")
+    gate = claim_env.hold("holder", after_write=True)
+    service.acquire(product=PRODUCT, domain=domain, owner_id="holder")
+    assert gate.reached.wait(WAIT_S), "heartbeat never completed its write"
+    listed = [claim.owner_id for claim in service.list_claims(product=PRODUCT)]
+    assert (owner_of(service, domain), listed) == ("holder", ["holder"])
 
 
 @pytest.mark.parametrize(
     "body",
-    [
-        pytest.param(b"null", id="json_null"),
-        pytest.param(b"[]", id="json_list"),
-        pytest.param(b"{}", id="empty_object"),
-        pytest.param(b'{"owner_id":"x","last_heartbeat_at":"abc"}', id="non_numeric_heartbeat"),
-    ],
+    [b"null", b"[]", b"{}", b'{"owner_id":"x","last_heartbeat_at":"abc"}'],
+    ids=["json_null", "json_list", "empty_object", "non_numeric_heartbeat"],
 )
-def test_malformed_claim_file_raises_corruption_error(local_env: ClaimEnv, body: bytes) -> None:
-    service = local_env.service(hb=3600, stale=120)
-    domain = local_env.domain("malformed")
-    local_env.claims_dir.mkdir(parents=True)
-    (local_env.claims_dir / domain.claim_name).write_bytes(body)
+def test_malformed_claim_file_raises_corruption_error(claim_env: ClaimEnv, body: bytes) -> None:
+    service = claim_env.service(hb=3600, stale=120)
+    domain = claim_env.domain("malformed")
+    claim_env.claims_dir.mkdir(parents=True)
+    (claim_env.claims_dir / domain.claim_name).write_bytes(body)
     with pytest.raises(ControlPlaneCorruptionError):
         service.read_claim_by_domain(product=PRODUCT, domain=domain.identifier)
     with pytest.raises(ControlPlaneCorruptionError):
@@ -394,50 +312,35 @@ def test_malformed_claim_file_raises_corruption_error(local_env: ClaimEnv, body:
 
 
 def test_failing_claims_listing_raises_and_absent_directory_lists_empty(
-    local_env: ClaimEnv, monkeypatch: pytest.MonkeyPatch
+    claim_env: ClaimEnv, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    service = local_env.service(hb=3600, stale=120)
-    handle = service.acquire(product=PRODUCT, domain=local_env.domain("listed"), owner_id="A")
-    try:
-
-        def unreadable(*args: Any, **kwargs: Any) -> Any:
-            raise PermissionError("claims directory unreadable")
-
-        with monkeypatch.context() as patch:
-            patch.setattr(local_env.fs, "ls", unreadable)
-            with pytest.raises((OSError, ControlPlaneCorruptionError)):
-                service.list_claims(product=PRODUCT)
-        assert service.list_claims(product="never-claimed.zarr") == []
-    finally:
-        release_all([handle])
+    service = claim_env.service(hb=3600, stale=120)
+    service.acquire(product=PRODUCT, domain=claim_env.domain("listed"), owner_id="A")
+    assert service.list_claims(product="never-claimed.zarr") == []
+    monkeypatch.setattr(claim_env.fs, "ls", Mock(side_effect=PermissionError("unreadable")))
+    with pytest.raises((OSError, ControlPlaneCorruptionError)):
+        service.list_claims(product=PRODUCT)
 
 
 def usurp(handle: ClaimHandle, *, beat: bool = True) -> None:
     """Put a successor's incarnation in the record under ``handle``, then drive one heartbeat."""
     data, validator = handle.fs.read_snapshot(handle.claim_path)
     record = json.loads(data) | {
-        "owner_id": "successor",
-        "incarnation": "successor-incarnation",
-        "revision": "successor-revision",
+        k: f"successor-{k}" for k in ("owner_id", "incarnation", "revision")
     }
     handle.fs.compare_replace(handle.claim_path, validator, json.dumps(record).encode())
     assert not beat or (handle._beat() is False and handle.lost)
 
 
-def test_confirm_with_heartbeat_in_flight_gives_up_at_stale_threshold(local_env: ClaimEnv) -> None:
-    service = local_env.service(hb=1, stale=1)
-    gate, latch = local_env.hold("A"), ClaimLossLatch()
+def test_confirm_with_heartbeat_in_flight_gives_up_at_stale_threshold(claim_env: ClaimEnv) -> None:
+    service = claim_env.service(hb=1, stale=1)
+    gate, latch = claim_env.hold("A"), ClaimLossLatch()
     with reporting_claim_loss(latch):
-        handle = service.acquire(product=PRODUCT, domain=local_env.domain("confirm"), owner_id="A")
-    try:
-        assert gate.reached.wait(WAIT_S), "heartbeat of A never reached its write"
-        started = time.monotonic()
-        confirmed = handle.confirm()
-        elapsed = time.monotonic() - started
-    finally:
-        gate.open()
-        gate.done.wait(WAIT_S)
-        release_all([handle])
+        handle = service.acquire(product=PRODUCT, domain=claim_env.domain("confirm"), owner_id="A")
+    assert gate.reached.wait(WAIT_S), "heartbeat of A never reached its write"
+    started = time.monotonic()
+    confirmed = handle.confirm()
+    elapsed = time.monotonic() - started
     assert (confirmed, latch.is_set, handle.lost, elapsed < 5) == (False, False, False, True)
 
 
@@ -452,45 +355,39 @@ def raised_names(operation: Callable[[], Any]) -> list[str]:
 
 @pytest.mark.parametrize("kind", ["slot", "schema"])
 def test_run_loss_after_claim_release_refuses_next_direct_batch(
-    local_env: ClaimEnv, kind: str
+    claim_env: ClaimEnv, kind: str
 ) -> None:
-    service = local_env.service(hb=3600, stale=120)
-    handles: list[ClaimHandle] = []
-
-    def acquire_claim(**kwargs: Any) -> ClaimHandle:
-        handles.append(service.acquire(**kwargs))
-        return handles[-1]
-
+    service = claim_env.service(hb=3600, stale=120)
     session = ZarrWriteSession(
         product=PRODUCT,
         run_id="run-1",
         write_mode="direct",
         window=None,
         slot_group=None,
-        acquire_claim=acquire_claim,
+        acquire_claim=service.acquire,
         open_root=lambda _uri: None,
         open_final_root=lambda _ctx: None,
     )
     claim = session.slot_claim("G", 0) if kind == "slot" else session.schema_claim("G")
     with session.admit_write(), claim:
-        usurp(handles[-1])  # lost during the admitted batch; released on leaving the scope
+        usurp(
+            claim_env.handles[-1]
+        )  # lost during the admitted batch; released on leaving the scope
 
     assert "ClaimLostError" in raised_names(session.admit_write().__enter__)
 
 
 @pytest.mark.parametrize("fail_batch", [False, True], ids=["next_batch", "failed_batch"])
 def test_run_loss_in_append_run_refuses_batch_and_keeps_successor_data(
-    local_env: ClaimEnv, monkeypatch: pytest.MonkeyPatch, fail_batch: bool
+    claim_env: ClaimEnv, monkeypatch: pytest.MonkeyPatch, fail_batch: bool
 ) -> None:
-    store = local_env.claims_dir.parents[1]
-    service = local_env.service(hb=3600, stale=120)
-    handles: list[ClaimHandle] = []
+    store = claim_env.claims_dir.parents[1]
+    service = claim_env.service(hb=3600, stale=120)
     days = [np.datetime64(f"2024-01-0{day}T00:00:00", "s") for day in range(1, 8)]
 
     def claim_for_group(_group: str) -> ClaimHandle:
         domain = WriteDomain(product=PRODUCT, category="zarr_append", name="G")
-        handles.append(service.acquire(product=PRODUCT, domain=domain, owner_id="run:G"))
-        return handles[-1]
+        return service.acquire(product=PRODUCT, domain=domain, owner_id="run:G")
 
     def append(timestamps: list[Any], claim: Any = None) -> dict[str, Any]:
         def dataset(_group: str, batch: Sequence[Any]) -> xr.Dataset:
@@ -518,9 +415,9 @@ def test_run_loss_in_append_run_refuses_batch_and_keeps_successor_data(
 
     def write_then_lose(ds: xr.Dataset, **kwargs: Any) -> None:
         real_write(ds, **kwargs)
-        if handles[0].lost:
+        if claim_env.handles[0].lost:
             return
-        usurp(handles[0])  # lost inside the admitted batch that has just written
+        usurp(claim_env.handles[0])  # lost inside the admitted batch that has just written
         if fail_batch:
             group = cast(Any, zarr.open_group(str(store), mode="r+", use_consolidated=False))["G"]
             group["value"][5:] = 99.0  # the successor's values
@@ -550,9 +447,8 @@ class IndexedProbe(DirectZarrIngestor):
         return ["0", "1"]
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
-        dims = ("timestamp",)
         spec = ZarrArraySpec(
-            name="value", shape=(4,), chunks=(1,), dtype="float32", dimension_names=dims
+            name="value", shape=(4,), chunks=(1,), dtype="float32", dimension_names=("timestamp",)
         )
         return [ZarrGroupSpec(group="G", arrays=[spec])]
 
@@ -587,14 +483,10 @@ class ParquetProbe(GenericParquetIngestor):
 @pytest.mark.parametrize(
     ("case", "when"),
     [
-        ("resolved_index", "none"),
-        ("parquet_path", "none"),
-        ("resolved_index", "heartbeat"),
-        ("parquet_path", "heartbeat"),
-        ("fresh_output", "heartbeat"),
-        ("resolved_index", "release"),
-        ("parquet_path", "release"),
-        ("fresh_output", "release"),
+        (case, when)
+        for when in ("none", "heartbeat", "release")
+        for case in ("resolved_index", "parquet_path", "fresh_output")
+        if (case, when) != ("fresh_output", "none")
     ],
 )
 def test_run_loss_of_startup_or_output_claim_records_run_failed(
@@ -652,9 +544,7 @@ def test_run_loss_in_final_batch_records_run_failed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fail_batch: bool
 ) -> None:
     product = "output.zarr"
-    source = tmp_path / "source"
-    source.mkdir()
-    (source / "input.nc").touch()
+    (tmp_path / "input.nc").touch()
     manager = ChunkManager(
         binding=make_test_binding(tmp_path, product=product), workspace=tmp_path / "cm-work"
     )
@@ -675,8 +565,7 @@ def test_run_loss_in_final_batch_records_run_failed(
             raise RuntimeError("batch fails after the loss")
 
     class Ingestor(GenericZarrIngestor):
-        PRODUCT_NAME = "run_loss_final_batch"
-        name = "run_loss_final_batch"
+        PRODUCT_NAME = name = "run_loss_final_batch"
 
         def build_dataset(self, group: str, items: list[object], ctx: PluginContext) -> xr.Dataset:
             coords = {"timestamp": pd.date_range("2024-01-01", periods=2)}
@@ -687,7 +576,7 @@ def test_run_loss_in_final_batch_records_run_failed(
     monkeypatch.setattr(append_module, "write_dataset_to_zarr", write_then_lose)
     monkeypatch.setattr(append_module, "repair_failed_group", repair)
     options = {"pipeline_workers": 1, "input_filters": ["*.nc"], "write_mode": "direct"}
-    ctx = make_test_context(tmp_path, source=str(source), product=product, options=options)
+    ctx = make_test_context(tmp_path, source=str(tmp_path), product=product, options=options)
     names = raised_names(lambda: Ingestor(chunk_manager=manager).run(ctx))
 
     assert {run.status for run in manager.list_runs(product=product)} == {"failed"}

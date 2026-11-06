@@ -146,13 +146,12 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - A run that loses a write claim to another writer now stops and records
   `failed` with `ClaimLostError`. The `run_failed` record names the claim in
   `meta.lost_claim`. Inspect the group before you recover.
-- Releasing a claim raises `ClaimReleaseError` when its heartbeat write is still
-  in flight after `stale_threshold_s`. The claim goes stale. Clear it with
-  `firecube chunks claims clear` after its process has stopped.
 
 ### Changed
 
-
+- Releasing a claim now raises `ClaimReleaseError` when its heartbeat write is
+  still in flight after `stale_threshold_s`. The claim goes stale. Clear it
+  with `firecube chunks claims clear` after its process has stopped.
 - Upgrade: stop every older writer of a product before a writer of this version
   writes to it. The older version can overwrite or delete the claim of a new
   writer.

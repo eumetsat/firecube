@@ -21,43 +21,36 @@ import pytest
 
 from firecube.core.controlplane.claims import ClaimHandle, ClaimLossLatch
 from firecube.core.controlplane.types import ClaimInfo
-from firecube.core.filesystem.protocol import ConditionalWrite
+from firecube.core.filesystem.protocol import ConditionalWrite, PreconditionFailed
 from firecube.core.storage.uri import StorageUri
 
 pytestmark = pytest.mark.unit
 
 
-class _FailingFilesystem:
-    failing = True
+class _CasFilesystem:
+    """One object under compare-and-swap; while ``failing``, a renewal raises, and lands if ``lands``."""
+
+    failing, generation, stored = True, 1, b""
+
+    def __init__(self, *, lands: bool) -> None:
+        self.lands = lands
 
     def capabilities(self):
         return [ConditionalWrite]
 
     def compare_replace(self, path, validator, data) -> str:
-        _ = (path, validator, data)
+        if validator != f"v{self.generation}":
+            raise PreconditionFailed(str(path), "validator is not the stored generation")
+        if self.lands or not self.failing:
+            self.generation, self.stored = self.generation + 1, data
         if self.failing:
             raise OSError("boom")
-        return "v2"
+        return f"v{self.generation}"
 
     def read_snapshot(self, path) -> tuple[bytes, str]:
-        _ = path
-        raise OSError("boom")
-
-
-class _LostResponseFilesystem(_FailingFilesystem):
-    """The renewal lands in the store, then its response is lost."""
-
-    stored = b""
-
-    def compare_replace(self, path, validator, data):
-        if not self.failing:
-            return "v3"
-        self.stored = data
-        raise OSError("boom")
-
-    def read_snapshot(self, path):
-        _ = path
-        return self.stored, "v2"
+        if not self.lands:
+            raise OSError("boom")
+        return self.stored, f"v{self.generation}"
 
 
 class _FakeEvent:
@@ -95,11 +88,10 @@ class _FakeThread:
 
 
 @pytest.mark.parametrize(
-    ("fs_class", "kept", "next_validator"),
-    [(_FailingFilesystem, "v1", "v2"), (_LostResponseFilesystem, "v2", "v3")],
+    ("lands", "kept", "next_validator"), [(False, "v1", "v2"), (True, "v2", "v3")]
 )
 def test_claim_heartbeat_write_failure_logs_warning(
-    caplog, monkeypatch, fs_class, kept, next_validator
+    caplog, monkeypatch, lands, kept, next_validator
 ) -> None:
     monkeypatch.setattr("firecube.core.controlplane.claims.threading.Event", _FakeEvent)
     monkeypatch.setattr("firecube.core.controlplane.claims.threading.Thread", _FakeThread)
@@ -115,7 +107,7 @@ def test_claim_heartbeat_write_failure_logs_warning(
         stale_threshold_s=120,
     )
 
-    fs, latch = fs_class(), ClaimLossLatch()
+    fs, latch = _CasFilesystem(lands=lands), ClaimLossLatch()
     with caplog.at_level(logging.WARNING, logger="firecube.core.controlplane.claims"):
         handle = ClaimHandle(
             fs=cast(Any, fs),

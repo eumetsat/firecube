@@ -19,6 +19,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from pathlib import Path
 from typing import IO, Any, Protocol, cast
 
@@ -146,7 +147,7 @@ def cond(request: pytest.FixtureRequest, tmp_path: Path) -> tuple[Any, StorageUr
     return fs, StorageUri.from_local_path(tmp_path / "claims")
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 def test_compare_delete_is_reported_on_local_bindings_only(cond):
     fs, base = cond
     assert ConditionalWrite in fs.capabilities()
@@ -171,11 +172,10 @@ def test_create_if_absent_has_one_winner_among_threads(cond):
 
     def race(i: int) -> str:
         barrier.wait()
-        try:
+        with suppress(FileExistsError):
             fs.create_if_absent(base.join("race.json"), b"%d" % i)
-        except FileExistsError:
-            return "lost"
-        return "won"
+            return "won"
+        return "lost"
 
     with ThreadPoolExecutor(16) as pool:
         outcomes = sorted(pool.map(race, range(16)))
@@ -185,8 +185,7 @@ def test_create_if_absent_has_one_winner_among_threads(cond):
 _RACER = """
 import sys
 from pathlib import Path
-from firecube.core.filesystem.fsspec_backend import FsspecFilesystem as F
-from firecube.core.filesystem.obstore_backend import ObstoreFilesystem as O
+from firecube.core.filesystem import FsspecFilesystem as F, ObstoreFilesystem as O
 from firecube.core.filesystem.protocol import PreconditionFailed
 from firecube.core.storage.uri import StorageUri
 from tests.helpers.storage import make_test_binding
@@ -265,9 +264,12 @@ def test_read_snapshot_never_pairs_body_with_another_generation(cond):
     done = threading.Event()
     with ThreadPoolExecutor(1) as pool:
         reads = pool.submit(lambda: [fs.read_snapshot(uri) for _ in iter(done.is_set, True)])
-        for i in range(1, 60):
-            validators[b"%d" % i] = fs.compare_replace(uri, validators[b"%d" % (i - 1)], b"%d" % i)
-        done.set()
+        try:
+            for i in range(1, 60):
+                previous = validators[b"%d" % (i - 1)]
+                validators[b"%d" % i] = fs.compare_replace(uri, previous, b"%d" % i)
+        finally:
+            done.set()
     assert reads.result(timeout=60)
     assert all(validators[body] == validator for body, validator in reads.result())
 

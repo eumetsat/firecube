@@ -422,7 +422,7 @@ class ZarrWriteSession:
         takes the authority over it that promotion publishes metadata under.
 
         Raises:
-            ClaimLostError: A claim of this run was lost, so the run promotes nothing.
+            ClaimLostError: A claim of this run was lost, before or during the drain, so the run promotes nothing.
         """
         with self._cond:
             self._claim_latch.raise_if_set()
@@ -440,6 +440,7 @@ class ZarrWriteSession:
             require_staged_units_fully_written(
                 self._open_root(ledger.store_uri), list(ledger.touched), list(ledger.written)
             )
+        self._claim_latch.raise_if_set()
         self._hold_publishing_authority()
 
     def _hold_publishing_authority(self) -> None:

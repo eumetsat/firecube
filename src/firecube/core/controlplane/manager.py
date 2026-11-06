@@ -1443,8 +1443,9 @@ class ChunkManager:
         could delete it. Each mutation re-reads the current domain directly and
         only clears domains that remain stale AND present; live claims are never
         forcibly overridden. The mutation retires only the previewed acquisition, so a
-        claim renewed or retaken since the preview lands in ``skipped_fresh``. Errors are
-        collected per-claim, and the sweep continues past any single-claim race.
+        claim renewed or retaken since the preview lands in ``skipped_fresh``. The sweep
+        continues past a single-claim race. It collects no errors: a read or retirement
+        I/O error propagates and aborts the sweep.
         """
         result = ClearSweepResult()
         stale = self.list_stale_claims(product=product)

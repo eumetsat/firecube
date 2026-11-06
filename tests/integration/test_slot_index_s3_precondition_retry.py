@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A lost exclusive-create race on a claim must converge, not crash, at the claim layer.
-
-When parallel pods race for ``slot_index_model:current``, the loser's ``create_if_absent``
-raises ``FileExistsError`` (on S3 a 412, translated by the driver). The manager must retry
-through the ``ClaimConflictError`` loop and converge.
-"""
+"""A pod that loses the ``slot_index_model:current`` create race (an s3 412) must retry, not crash."""
 
 from __future__ import annotations
 
@@ -85,9 +80,8 @@ def test_ensure_slot_index_model_converges_after_s3_precondition(
         meta={"plugin": "test"},
     )
 
-    # Bind the repo so the real driver exists, then make the FIRST claim create lose
-    # the race. The first claim create takes the s3 branch of the real `create_if_absent`,
-    # and the put below it fails as s3fs fails a 412; the translation is the code under test.
+    # Bind the repo, then make the FIRST claim create take the s3 branch of the real
+    # `create_if_absent` with a put that fails as s3fs fails a 412 (the translation under test).
     cm.repo._ensure_bound()
     fs_facade = cm.repo._fs
     assert fs_facade is not None

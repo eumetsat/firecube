@@ -253,20 +253,48 @@ digest of that identifier, so claim lookup never requires listing:
 | `last_heartbeat_at` | number | Refreshed by the owner while held |
 | `heartbeat_interval_s` | number | Owner's refresh cadence |
 | `stale_threshold_s` | number | Staleness cutoff, default 120 |
+| `state` | string | `held` or `released` |
+| `incarnation` | string | One id per acquisition |
+| `revision` | string | One id per write of the record |
+
+A reader requires `domain` and `owner_id` as strings. It requires
+`acquired_at` and `last_heartbeat_at` as finite numbers. A record that is not
+a JSON object, or that lacks one of these four fields, is corrupt. A read of a
+corrupt record raises a control-plane corruption error.
+
+The other fields have defaults for a record of an older version. A record
+without `state` reads as `held`. A record without `heartbeat_interval_s` or
+`stale_threshold_s` takes the default of the claim service. A record without
+`incarnation` or `revision` reads with no value for them. A field that is
+present with a wrong type, or a `state` other than `held` or `released`, is
+corrupt.
 
 Semantics:
 
-- Acquisition is the atomic creation of the claim file. If the file already
-  exists, acquisition MUST fail with a claim conflict; it MUST NOT take over
-  the claim, even a stale one.
-- Release deletes the file.
+- Every transition is a compare-and-swap. The writer changes the record only
+  while the record still has the validator the writer last read. A changed or
+  missing record makes the transition fail.
+- Acquisition creates the claim file. If a `released` record exists,
+  acquisition replaces it with a new incarnation.
+- If a `held` record exists, acquisition MUST fail with a claim conflict. It
+  MUST NOT take over the claim, even a stale one.
+- A heartbeat replaces the record of its own revision with a new revision. A
+  heartbeat never creates a record.
+- A heartbeat that finds another incarnation or an unknown revision marks the
+  claim as lost. The owner stops renewing it.
+- Release on a local target deletes the claim file by compare-delete. Release
+  on S3 replaces the record with a `released` record.
+- A listing, a read by domain and an admission check treat a `released` record
+  as absent. On S3 the `released` record stays until the next acquisition of
+  that domain replaces it.
 - A claim is stale when `now - last_heartbeat_at > stale_threshold_s`. A
   crashed owner leaves a stale claim behind. Operators clear stale claims with
   `firecube chunks claims clear`, which refuses to clear fresh claims unless
   forced.
 - Abandoning a run releases every claim whose owner id resolves to that run
-  alone. The release applies to fresh and stale claims. The claim file stays in
-  place if its owner or `acquired_at` changed after the claims were listed.
+  alone. The release applies to fresh and stale claims. The claim stays in
+  place if its owner, `acquired_at` or `incarnation` changed after the claims
+  were listed. It also stays if the record changed before the release wrote.
 - An owner id resolves through its candidates: the id itself and each prefix
   that ends just before a `:`. The claim is released only if exactly one
   candidate is a recorded run, and that run is the abandoned one.
@@ -274,18 +302,27 @@ Semantics:
   abandon already ended. A sweep that a crash interrupted therefore finishes
   its release when it runs again.
 - The `firecube chunks runs abandon --all-stale` sweep releases a claim of a
-  terminal run only if the claim is stale when re-read before the delete.
-  Its dry run reports the claims it would release and the claims it would leave.
+  terminal run only if the claim is stale when re-read. The re-read must show
+  the same owner, `incarnation`, `last_heartbeat_at` and `revision` as the
+  listing. The release then retires the record that the re-read returned. Its
+  dry run reports the claims it would release and the claims it would leave.
 - If the claims of the product cannot be listed, the abandon reports an error
   and does not report success. Run the abandon again to release the claims.
-- Acquisition does not change. A claim that the release left in place still
-  blocks acquisition of its domain.
+- A `held` record that the release left in place still blocks acquisition of
+  its domain. A `released` record does not.
+- `firecube chunks claims clear` retires the record that it read. If another
+  writer changed the record after the read, the command keeps that record and
+  exits 1.
+- A release or a clear never removes the claim of a successor, because the
+  retire compares against the record that was read.
 
-Known limitation: a release reads the claim again, then deletes the file. These
-are two separate operations. If two releases run at the same time, one can
-delete a claim that a successor acquired between the read and the delete.
-`firecube chunks claims clear` has the same limitation. Do not run two releases
-for the same product at the same time.
+A local target runs each compare under the guard file
+`.firecube-claims.lock` in the claims directory. The guard excludes only
+writers that take it. The local validator is `sha256:` followed by the digest
+of the record bytes. An NFS target is not supported.
+
+A writer of an older version rewrites and removes claim records without a
+check. A conforming writer MUST NOT run beside such a writer on one product.
 
 ### Exclusive maintenance claim
 
