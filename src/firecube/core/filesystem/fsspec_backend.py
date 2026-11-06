@@ -21,16 +21,19 @@ import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from firecube.core.filesystem import publication
+from firecube.core.filesystem import conditional, publication
 from firecube.core.filesystem.protocol import (
     AtomicPublish,
     AtomicWriter,
+    CompareDelete,
+    ConditionalWrite,
     Multipart,
     MultipartUploader,
     ObjectVersion,
     ObjectVersions,
+    PreconditionFailed,
 )
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.uri import StorageUri
@@ -43,9 +46,21 @@ LIST_VERSIONS_PAGE_SIZE = 1000
 _BUCKET_VERSIONING_STATES = {"Enabled": "enabled", "Suspended": "suspended"}
 
 
-def _is_listed_publication_temp(entry: Any) -> bool:
+def _is_hidden_path(path: str) -> bool:
+    """Return True for a reserved name that listings leave out: a publication temporary or a guard."""
+    return publication.is_publication_temp(path) or conditional.is_guard_file(path)
+
+
+def _is_hidden_listing_entry(entry: Any) -> bool:
     name = entry.get("name", "") if isinstance(entry, dict) else entry
-    return publication.is_publication_temp(str(name))
+    return _is_hidden_path(str(name))
+
+
+def _require_etag(etag: str | None, uri: StorageUri) -> str:
+    """Return ``etag``; raise ``OSError`` when the store reported none, as no compare could use it."""
+    if not etag:
+        raise OSError(f"the store returned no ETag for {uri.to_str()}")
+    return etag
 
 
 def _create_publication_temp(directory: str) -> tuple[int, str]:
@@ -81,6 +96,20 @@ def _is_precondition_failed(exc: BaseException) -> bool:
                 return True
         current = current.__cause__ or current.__context__
     return False
+
+
+def _raise_compare_refusal(exc: OSError, uri: StorageUri) -> None:
+    """Raise `PreconditionFailed` when ``exc`` is the store refusing an ``If-Match`` request.
+
+    A 412 means the ETag differs. A ``NoSuchKey`` means the object is missing.
+    Any other error returns, and the caller re-raises it.
+    """
+    if _is_precondition_failed(exc):
+        raise PreconditionFailed(
+            uri.to_str(), "the object changed since the validator was read"
+        ) from exc
+    if _has_error_code(exc, "NoSuchKey"):
+        raise PreconditionFailed(uri.to_str(), "the object does not exist") from exc
 
 
 def _error_responses(exc: BaseException) -> list[dict[str, Any]]:
@@ -343,7 +372,7 @@ class FsspecFilesystem:
         # (s3fs answers from a dircache otherwise), but a plain call stays as it was.
         kwargs = {"refresh": True} if refresh else {}
         entries = self._fs.ls(self._to_path(uri), detail=detail, **kwargs)
-        return [entry for entry in entries if not _is_listed_publication_temp(entry)]
+        return [entry for entry in entries if not _is_hidden_listing_entry(entry)]
 
     def isdir(self, uri: StorageUri) -> bool:
         return self._fs.isdir(self._to_path(uri))
@@ -372,7 +401,7 @@ class FsspecFilesystem:
         return [
             self._from_path(path)
             for path in self._fs.find(self._to_path(uri))
-            if not publication.is_publication_temp(str(path))
+            if not _is_hidden_path(str(path))
         ]
 
     def info(self, uri: StorageUri) -> dict:
@@ -381,6 +410,130 @@ class FsspecFilesystem:
     def publish_atomic(self, dst_uri: StorageUri, write: Callable[[StorageUri], None]) -> None:
         publication.publish_atomic(dst_uri, write)
 
+    def read_snapshot(self, uri: StorageUri) -> tuple[bytes, str]:
+        """Return the object's bytes and their validator from one read (see `ConditionalWrite`).
+
+        A local validator is the one ``conditional`` defines. An s3 validator is the
+        ETag of one ``GetObject`` response, quotes included.
+
+        Raises:
+            FileNotFoundError: No object exists at ``uri``.
+            ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
+            OSError: The store returned no ETag, or the request failed.
+        """
+        if self._conditional_protocol(uri) == "file":
+            return conditional.read_snapshot(uri)
+        bucket, key = self._s3_bucket_and_key(uri)
+        data, etag = self._get_object_with_etag(bucket, key)
+        return data, _require_etag(etag, uri)
+
+    def create_if_absent(self, uri: StorageUri, data: bytes) -> str:
+        """Create the object only when none exists, and return its validator.
+
+        On s3 the write is one ``PutObject`` with ``If-None-Match: *``.
+
+        Raises:
+            FileExistsError: An object already exists at ``uri``.
+            ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
+            OSError: The store returned no ETag, or the request failed.
+        """
+        if self._conditional_protocol(uri) == "file":
+            return conditional.create_if_absent(uri, data)
+        try:
+            return self._conditional_put(uri, data, IfNoneMatch="*")
+        except FileExistsError as exc:
+            raise FileExistsError(uri.to_str()) from exc
+        except OSError as exc:
+            if _is_precondition_failed(exc):
+                raise FileExistsError(uri.to_str()) from exc
+            raise
+
+    def compare_replace(self, uri: StorageUri, validator: str, data: bytes) -> str:
+        """Replace the object only while its validator is ``validator``; return the new validator.
+
+        On s3 the write is one ``PutObject`` with ``If-Match`` on the ETag.
+
+        Raises:
+            PreconditionFailed: The object changed since ``validator`` was read, or is missing.
+            ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
+            OSError: The store returned no ETag, or the request failed.
+        """
+        if self._conditional_protocol(uri) == "file":
+            return conditional.compare_replace(uri, validator, data)
+        try:
+            return self._conditional_put(uri, data, IfMatch=validator)
+        except OSError as exc:
+            _raise_compare_refusal(exc, uri)
+            raise
+
+    def compare_delete(self, uri: StorageUri, validator: str) -> None:
+        """Delete the object only while its validator is ``validator`` (see `CompareDelete`).
+
+        On s3 the delete is one ``DeleteObject`` with ``If-Match`` on the ETag.
+
+        Raises:
+            PreconditionFailed: The object changed since ``validator`` was read, or is missing.
+            ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
+            OSError: The request failed.
+        """
+        if self._conditional_protocol(uri) == "file":
+            conditional.compare_delete(uri, validator)
+            return
+        bucket, key = self._s3_bucket_and_key(uri)
+        try:
+            self._call_s3_api(
+                "delete_object", Bucket=bucket, Key=key, IfMatch=validator, **self._fs.req_kw
+            )
+        except OSError as exc:
+            _raise_compare_refusal(exc, uri)
+            raise
+        finally:
+            self._fs.invalidate_cache(self._to_path(uri))
+
+    def _conditional_protocol(self, uri: StorageUri) -> str:
+        """Return ``"file"`` or ``"s3"``, the protocol of the binding that ``uri`` must share."""
+        protocol = self._binding.identity.product_uri.protocol
+        if protocol not in ("file", "s3") or uri.protocol != protocol:
+            raise ValueError(
+                f"conditional writes need a local or s3 binding and a URI of its protocol, "
+                f"got a {protocol} binding and {uri.to_str()}"
+            )
+        return protocol
+
+    def _conditional_put(self, uri: StorageUri, data: bytes, **condition: str) -> str:
+        """Send one ``PutObject`` of ``data`` with ``condition``; return the response ETag."""
+        bucket, key = self._s3_bucket_and_key(uri)
+        try:
+            response = self._call_s3_api(
+                "put_object", Bucket=bucket, Key=key, Body=data, **condition, **self._fs.req_kw
+            )
+        finally:
+            # s3fs caches listings; this write bypasses the paths that invalidate them.
+            self._fs.invalidate_cache(self._to_path(uri))
+        return _require_etag(response.get("ETag"), uri)
+
+    def _get_object_with_etag(self, bucket: str, key: str) -> tuple[bytes, str | None]:
+        """Read one ``GetObject`` response whole; return its body and its ``ETag`` header."""
+        from botocore.exceptions import BotoCoreError
+        from fsspec.asyn import sync
+
+        async def _get() -> tuple[bytes, str | None]:
+            response = await self._fs._call_s3(
+                "get_object", Bucket=bucket, Key=key, **self._fs.req_kw
+            )
+            body = response["Body"]
+            try:
+                data = await body.read()
+            finally:
+                body.close()
+            return data, response.get("ETag")
+
+        try:
+            # fsspec leaves ``sync`` unannotated, so its inferred return type is wrong.
+            return cast("tuple[bytes, str | None]", sync(self._fs.loop, _get))
+        except BotoCoreError as exc:
+            raise OSError(f"s3 get_object failed: {exc}") from exc
+
     def bucket_versioning(self, uri: StorageUri) -> str:
         """Return ``"enabled"``, ``"suspended"`` or ``"absent"`` for the bucket of ``uri``.
 
@@ -388,7 +541,7 @@ class FsspecFilesystem:
             ValueError: The binding or ``uri`` is not s3, or the store reports an unknown state.
         """
         bucket, _key = self._s3_bucket_and_key(uri)
-        response = self._call_versions_api("get_bucket_versioning", Bucket=bucket)
+        response = self._call_s3_api("get_bucket_versioning", Bucket=bucket)
         status = response.get("Status")
         if not status:
             return "absent"
@@ -414,7 +567,7 @@ class FsspecFilesystem:
         entries: list[ObjectVersion] = []
         seen_markers: set[tuple[str, str]] = set()
         while True:
-            page = self._call_versions_api("list_object_versions", **params)
+            page = self._call_s3_api("list_object_versions", **params)
             entries.extend(
                 _listed_version(entry, is_delete_marker=False) for entry in page.get("Versions", [])
             )
@@ -451,7 +604,7 @@ class FsspecFilesystem:
         if not key:
             raise ValueError(f"{uri} names a bucket, not an object")
         try:
-            response = self._call_versions_api(
+            response = self._call_s3_api(
                 "head_object", Bucket=bucket, Key=key, VersionId=version_id
             )
         except FileNotFoundError:
@@ -498,7 +651,7 @@ class FsspecFilesystem:
         """
         bucket, _key = self._s3_bucket_and_key(uri)
         try:
-            response = self._call_versions_api("get_bucket_lifecycle_configuration", Bucket=bucket)
+            response = self._call_s3_api("get_bucket_lifecycle_configuration", Bucket=bucket)
         except PermissionError:
             return None
         except FileNotFoundError as exc:
@@ -507,7 +660,7 @@ class FsspecFilesystem:
             raise
         return {"Rules": _json_ready(response.get("Rules", []))}
 
-    def _call_versions_api(self, method: str, **params: Any) -> dict[str, Any]:
+    def _call_s3_api(self, method: str, **params: Any) -> dict[str, Any]:
         """Call an S3 API method; report a botocore transport failure as ``OSError``.
 
         s3fs leaves non-HTTP botocore exceptions unchanged, so a refused connection
@@ -547,7 +700,10 @@ class FsspecFilesystem:
         # The docs macro asks an instance that has no binding for the driver's own
         # capabilities; such an instance serves no product, so it adds none.
         binding = getattr(self, "_binding", None)
-        if binding is not None and binding.identity.product_uri.protocol == "s3":
+        protocol = None if binding is None else binding.identity.product_uri.protocol
+        if protocol in ("file", "s3"):
+            capabilities |= {ConditionalWrite, CompareDelete}
+        if protocol == "s3":
             capabilities.add(ObjectVersions)
         return capabilities
 

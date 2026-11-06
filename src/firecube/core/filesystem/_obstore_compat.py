@@ -24,7 +24,7 @@ PutMode: Any
 
 try:
     import obstore
-    from obstore.exceptions import AlreadyExistsError
+    from obstore.exceptions import AlreadyExistsError, PreconditionError
     from obstore.store import LocalStore, S3Store, from_url
 
     _put_mode = getattr(obstore, "PutMode", None)
@@ -45,10 +45,20 @@ try:
 except ImportError:
     HAS_OBSTORE = False
     AlreadyExistsError = FileExistsError  # type: ignore[assignment,misc]
+    PreconditionError = None  # type: ignore[assignment,misc]
     S3Store = None  # type: ignore[assignment,misc]
     LocalStore = None  # type: ignore[assignment,misc]
     PutMode = None  # type: ignore[assignment,misc]
     from_url = None  # type: ignore[assignment]
+
+
+def update_put_mode(e_tag: str) -> dict[str, str]:
+    """Return the ``put`` mode that writes only while the stored ETag is ``e_tag``.
+
+    obstore takes an update mode as an ``UpdateVersion`` dict, which no ``PutMode``
+    attribute spells. The dict leaves out ``version``: obstore 0.11.0 refuses ``None`` there.
+    """
+    return {"e_tag": e_tag}
 
 
 def require_obstore() -> None:
