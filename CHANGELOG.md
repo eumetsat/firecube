@@ -1345,16 +1345,6 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   writes normally. Use `--dry-run` on supported deletion and preallocation
   commands to preview those operations.
 
-### Stats
-
-- pytest: full local suite green under `-W error::DeprecationWarning`
-  (`not s3` and `not race` skips only); `not slow and not s3 and not race`
-  lane: 3851 passed, 5 skipped, 86% line coverage.
-- pyright: 0 errors, 0 warnings.
-- ruff: `check` and `format --check` clean.
-- docs: `mkdocs build --strict` succeeds.
-- package: `uv build` produces the `0.1.6` wheel + sdist; `twine check` PASSED.
-
 ## [0.1.5] - 2026-09-03
 
 ### Added
@@ -1561,6 +1551,39 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   fails with `UnboundedAxisError` (a `ConfigurationError`) naming the group,
   instead of a raw `ExtentUnknownError`, in serial and parallel modes alike.
 
+### Removed
+
+- Engine option `pipeline_parallel`. Execution mode is now decided solely by
+  `pipeline_workers`: 2 or more runs the parallel pipeline, 1 runs
+  sequentially. Migration: replace `pipeline_parallel=true` with
+  `pipeline_workers=2` (or more) and delete `pipeline_parallel=false`.
+  Leftover keys in `--option` flags or config files now fail loudly at
+  option validation. Previously `pipeline_parallel=false` was silently
+  ignored whenever `pipeline_workers` was above 1.
+- Removed unused `ItemInfo.key` and `ItemInfo.group` fields. These were placeholders.
+- `docs/reference/api.md` and `docs/reference/advanced-plugin-api.md`, replaced
+  by the per-topic pages. Deep links to their headings no longer resolve.
+- `SUPPORTS_SLOT_RANGE_PARALLELISM` class variable and the `SlotRangeCapable`
+  Protocol/mixin: DirectZarr parallelism is now declared exclusively via
+  `index_spec(ctx) -> IndexSpec | None`. Plugins that still inherit from
+  `SlotRangeCapable` must drop the base class. They must set `PRODUCT_NAME` explicitly.
+- `slot_index_model()` hook on `BaseIngestor`: replaced by `index_spec()`.
+  The legacy `SlotIndexModel` record is still readable for backwards
+  compatibility with cubes written by v0.1.4.post1 (see `firecube zarr index
+  rebuild` to migrate).
+- `timestamp_to_ts_index()` hook: engine-owned slot resolution now handles
+  timestamp→slot mapping via `IndexSpec`'s `resolve_index_spec`.
+- `global_expected_time_count()` hook: derivable from `IndexSpec` groups
+  directly. A plugin needs no callback.
+- `filter_items_to_slot_range()` hook: replaced by
+  `firecube.ingestor.runtime.index_binding.filter_items_by_index`, called by
+  the engine after `IndexSpec` resolution.
+- Migration for 0.1.4.post1 plugins: remove all six symbols from your plugin
+  class. Implement `index_spec()` returning an `IndexSpec`. Implement
+  `inspect_item(item, ctx) -> ItemInfo | None` so the engine can place each
+  item in the resolved index. See `docs/operations/firecube-index.md` for
+  the migration procedure including `firecube zarr index rebuild`.
+
 ### Fixed
 
 - `firecube plugins create --template zarr --write-strategy zarr-python` no
@@ -1633,49 +1656,6 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   extraction root (`..` segments, absolute paths, Windows drive prefixes)
   with `ValueError` instead of extracting them.
 
-### Removed
-
-- Engine option `pipeline_parallel`. Execution mode is now decided solely by
-  `pipeline_workers`: 2 or more runs the parallel pipeline, 1 runs
-  sequentially. Migration: replace `pipeline_parallel=true` with
-  `pipeline_workers=2` (or more) and delete `pipeline_parallel=false`;
-  leftover keys in `--option` flags or config files now fail loudly at
-  option validation. Previously `pipeline_parallel=false` was silently
-  ignored whenever `pipeline_workers` was above 1.
-- Removed unused `ItemInfo.key` and `ItemInfo.group` fields. These were placeholders.
-- `docs/reference/api.md` and `docs/reference/advanced-plugin-api.md`, replaced
-  by the per-topic pages; deep links to their headings no longer resolve.
-- `SUPPORTS_SLOT_RANGE_PARALLELISM` class variable and the `SlotRangeCapable`
-  Protocol/mixin: DirectZarr parallelism is now declared exclusively via
-  `index_spec(ctx) -> IndexSpec | None`. Plugins that still inherit from
-  `SlotRangeCapable` should drop the base class and set `PRODUCT_NAME` explicitly.
-- `slot_index_model()` hook on `BaseIngestor`: replaced by `index_spec()`.
-  The legacy `SlotIndexModel` record is still readable for backwards
-  compatibility with cubes written by v0.1.4.post1 (see `firecube zarr index
-  rebuild` to migrate).
-- `timestamp_to_ts_index()` hook: engine-owned slot resolution now handles
-  timestamp→slot mapping via `IndexSpec`'s `resolve_index_spec`.
-- `global_expected_time_count()` hook: derivable from `IndexSpec` groups
-  directly; no plugin-side callback needed.
-- `filter_items_to_slot_range()` hook: replaced by
-  `firecube.ingestor.runtime.index_binding.filter_items_by_index`, called by
-  the engine after `IndexSpec` resolution.
-
-Migration for 0.1.4.post1 plugins: remove all six symbols from your plugin
-class, implement `index_spec()` returning an `IndexSpec`, and implement
-`inspect_item(item, ctx) -> ItemInfo | None` for the engine to place each
-item in the resolved index. See `docs/operations/firecube-index.md` for
-the migration procedure including `firecube zarr index rebuild`.
-
-### Stats
-
-- pytest: full local suite under `-W error::DeprecationWarning` (`not s3 and
-  not race`): 3251 collected, 3244 passed, 6 skipped, 1 failed. 
-- pyright: 0 errors, 0 warnings.
-- ruff: `check` and `format --check` clean.
-- docs: `mkdocs build --strict` succeeds; docs-static and snapshot tests green.
-- package: `uv build` produces the `0.1.5` wheel + sdist; `twine check` PASSED.
-
 ## [0.1.4.post1] - 2026-07-24
 
 ### Changed
@@ -1727,15 +1707,6 @@ the migration procedure including `firecube zarr index rebuild`.
   successfully installed plugin as missing.
 - The CLI table formatter accepts any `Iterable` of rows, not only a
   materialized `list`, so generator-backed command output renders correctly.
-
-### Stats
-
-- pytest: full suite green under `-W error::DeprecationWarning` (2273 tests
-  collected, 0 failures); `not slow and not s3` lane green at 82% line coverage.
-- pyright: 0 errors, 0 warnings.
-- ruff: `check` and `format --check` clean.
-- docs: `mkdocs build --strict` succeeds.
-- package: `uv build` produces the `0.1.4` wheel + sdist; `twine check` PASSED.
 
 ## [0.1.3] - 2026-06-22
 
@@ -1827,6 +1798,9 @@ the migration procedure including `firecube zarr index rebuild`.
   `-s --source`, `-a --archive`, `-o --output`, `-i --input-data`,
   `-n --product-name`, `-g --group`, `-w --write-mode`, `-f --format`,
   `-r --resolutions`.
+- `duration_cpu_s` now uses `time.process_time()` (process-wide, all threads)
+  instead of per-batch `time.thread_time()`, giving accurate CPU accounting for
+  dask/HDF5/netCDF worker threads.
 
 ### Fixed
 
@@ -1848,28 +1822,6 @@ the migration procedure including `firecube zarr index rebuild`.
   removed from user-facing CLI help.
 - Built docs site no longer references the removed `advise cf` command.
 
-### Internal
-
-- `wrap_user_facing_errors` whitelist extended to `ConfigurationError` (in
-  addition to the OS-level errors added previously).
-- `duration_cpu_s` now uses `time.process_time()` (process-wide, all threads)
-  instead of per-batch `time.thread_time()`, giving accurate CPU accounting for
-  dask/HDF5/netCDF worker threads.
-- Canonical URI scheme policy module (`firecube.cli._uri_policy`) replaces
-  duplicated scheme mappings.
-- CLI command contract manifest covers every core leaf command.
-- Architectural leaks resolved: `catalog intake` passes typed `StorageSession`
-  only; `chunks/_manager` removed `dict` roundtrip; `chunks migrate` uses
-  public repo API; archive converter receives typed session only.
-- `chunks/*` leaf commands added to `CLI_COMMAND_CONTRACTS` as
-  `tier="control-plane"`.
-
-### Stats
-
-- `uv run pytest --strict-deps -m "not slow and not s3 and not docs_static and not snapshot" -q`: 2,161 passed, 39 deselected, 122 warnings.
-- `uv run ruff check .`: passed.
-- `uv run pyright src/`: 0 errors.
-
 ## [0.1.1] - 2026-06-10
 
 ### Added
@@ -1880,26 +1832,14 @@ the migration procedure including `firecube zarr index rebuild`.
 
 ### Changed
 
-- Standardized Firecube package versioning around `pyproject.toml` using PEP 440-compatible SemVer and `v<version>` git tags.
+- Standardized Firecube package versioning around `pyproject.toml` using PEP 440-compatible SemVer and `v<version>` git tags. The package version is `0.1.1`. Runtime code, docs examples, CI checks, and container labels derive it from package metadata instead of hardcoded release strings.
 - Updated CI to validate package/tag consistency, build docs, and pass the bare package version into container OCI labels.
 - Normalized Zarr slot-plan output and Tensogram archive contracts to explicit `v1` schema namespaces.
 - Updated release preparation guidance to draft reviewed changelog entries in the pull request before tagging from `main`.
 
 ### Removed
 
-- Removed unused legacy unversioned Tensogram `.tgm` restore handling and the obsolete archive restore `--group` path.
-
-### Migration Notes
-
-- Tensogram archives now require the `v1` archive layout.
-- The Firecube package version is `0.1.1`; runtime code, docs examples, CI checks, and container labels should derive from package metadata instead of hardcoded release strings.
-
-### Stats
-
-- `uv run pytest --strict-deps -m "not slow and not s3" --cov=src --cov-report=term-missing --cov-report=xml -q`: 2,273 passed, 95 skipped; coverage `TOTAL 79%`.
-- `uv run mkdocs build --strict --site-dir /tmp/firecube-mkdocs-check`: passed.
-- `uv build`: built `firecube-0.1.1.tar.gz` and `firecube-0.1.1-py3-none-any.whl`.
-- `uv run --with twine twine check dist/*`: passed.
+- Removed unused legacy unversioned Tensogram `.tgm` restore handling and the obsolete archive restore `--group` path. Tensogram archives now require the `v1` archive layout.
 
 [Unreleased]: https://github.com/eumetsat/firecube/compare/v0.1.8...HEAD
 [0.1.8]: https://github.com/eumetsat/firecube/compare/v0.1.7...v0.1.8

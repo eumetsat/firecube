@@ -198,6 +198,7 @@ nav:
       - Create: operations/archive/create.md
       - Inspect And Validate: operations/archive/inspect.md
       - Restore: operations/archive/restore.md
+      - Incremental Backups: operations/archive/incremental-backups.md
       - Read A Release With Xarray: operations/archive/read-a-release-with-xarray.md
     - Maintenance:
       - Overview: operations/maintenance/index.md

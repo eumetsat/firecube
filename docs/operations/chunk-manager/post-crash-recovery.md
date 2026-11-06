@@ -139,10 +139,7 @@ pass, or use `--domain` with `--force` after you verify the writer is gone.
 Abandon the stale runs first, then clear the stale claims that remain. The
 run sweep releases a claim only if the claim is stale. The owner of the claim
 must be one run that the sweep abandons or one run that is already terminal.
-Firecube reads the claim again just before it releases the claim. The sweep
-releases only the acquisition that it listed. If the heartbeat moved, or
-another writer took the claim, the sweep keeps the claim. The claim sweep then
-clears the remaining stale claims.
+The sweep keeps any claim whose owner changed since it listed the claim.
 
 ```bash
 firecube chunks runs abandon \
@@ -291,7 +288,6 @@ firecube chunks claims clear \
 | `Left claim` line in the run sweep output | The claim is fresh, more than one run can own it, or another writer replaced it. | See [Claims the Sweep Leaves](#claims-the-sweep-leaves). Stop its writer before you release the claim. |
 | Dry-run shows fewer runs than `runs list --status started` | Some runs are not yet stale. | Wait, or use `--run-id` per run. |
 | `claims list` still shows entries after the sweep | A new writer started between steps. | Stop the writer and repeat the sweep. |
-| `.firecube-claims.lock` in `.firecube/claims/` of a local product, or a file of a released claim on S3 | The lock file guards the claim changes of a local product. A released claim on S3 stays as a `released` record. `claims list` and the sweep ignore both. | Leave both files in place. |
 | `runs abandon --all-stale` exits 1 with "could not be listed" | Firecube could not list the claims, so it abandoned no run. | Fix the listing error and run the sweep again. |
 | Compact cache rebuild fails | The event log is corrupt or missing. | See [Compact Cache](compact.md). |
 
