@@ -144,6 +144,12 @@ Product       State   Owner                 Domain
 MY_PRODUCT.zarr  active  run-123:F024       MY_PRODUCT:zarr_region:F024
 ```
 
+The list shows held claims only. A local product also holds the hidden file
+`.firecube/claims/.firecube-claims.lock`. An S3 product keeps a `released`
+record for a claim that a writer released. The list shows neither of them, and
+neither blocks a writer. If the claims directory cannot be listed, the command
+fails with the listing error and does not print `No claims found.`
+
 ## Check The Compact Cache Status
 
 ```bash

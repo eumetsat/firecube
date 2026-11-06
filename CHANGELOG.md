@@ -143,10 +143,34 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - The template option `zarr_unit_write_buffer` (off by default) makes a
   `DirectZarrIngestor` run write each complete stored unit once, instead of once
   per region piece. It needs `zarr_region_write_concurrency` at 1, the default.
+- A run that loses a write claim to another writer now stops and records
+  `failed` with `ClaimLostError`. The `run_failed` record names the claim in
+  `meta.lost_claim`. Inspect the group before you recover.
+- Releasing a claim raises `ClaimReleaseError` when its heartbeat write is still
+  in flight after `stale_threshold_s`. The claim goes stale. Clear it with
+  `firecube chunks claims clear` after its process has stopped.
 
 ### Changed
 
 
+- Upgrade: stop every older writer of a product before a writer of this version
+  writes to it. The older version can overwrite or delete the claim of a new
+  writer.
+- A claim change now compares against the record that the writer read last. A
+  stale handle, `firecube chunks claims clear` and the stale-claim sweep no
+  longer delete the claim of a new owner.
+- A claim record gains the fields `state`, `incarnation` and `revision`. A
+  record of an older version reads as held.
+- A local product now holds the hidden file `.firecube/claims/.firecube-claims.lock`
+  beside its claim records. Do not delete it. NFS is not supported for the
+  claims of a local product.
+- On S3, releasing a claim now replaces its record with a `released` record.
+  Claim listings and admission checks ignore it. No action is needed.
+- On a storage protocol that cannot write conditionally, such as `gs` and
+  `memory`, claim acquire, renewal and record reads now raise
+  `ConfigurationError`.
+- A claim listing now raises the listing error when the claims directory cannot
+  be listed. Before, it returned no claims.
 - `firecube release create --archive` now completes the inventory and the
   archive before it records the release and makes it current. A failed archive
   leaves no new release. A release without `--archive` creates neither. With
@@ -196,6 +220,11 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Fixed
 
+- A claim heartbeat no longer truncates the claim file. A concurrent claim
+  listing could fail with `ControlPlaneCorruptionError`.
+- A late heartbeat no longer recreates a claim that was cleared or released.
+- A claim record that is `null`, a list, an empty object or has a non-numeric
+  heartbeat now raises `ControlPlaneCorruptionError`.
 - The `fsspec` storage driver listed a local file whose name holds `#`, `?`, a
   tab or a newline under a wrong key, or raised `ValueError`. The listing now
   returns the literal name. Commands that list a local product, such as zip
