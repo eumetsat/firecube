@@ -139,9 +139,13 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - Each retained release writes an inventory manifest under
   `.firecube/releases/inventories/`. It lists every object of the product with
   its size and digest, or its S3 version. The inventory is exact only while no
-  writer runs, so stop the other writers before you create the release.
+   writer runs, so stop the other writers before you create the release.
+- The template option `zarr_unit_write_buffer` (off by default) makes a
+  `DirectZarrIngestor` run write each complete stored unit once, instead of once
+  per region piece. It needs `zarr_region_write_concurrency` at 1, the default.
 
 ### Changed
+
 
 - `firecube release create --archive` now completes the inventory and the
   archive before it records the release and makes it current. A failed archive
@@ -211,6 +215,9 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - The heartbeat of a deletion claim could write the claim file again after the
   cleanup deleted it. The cleanup now releases the claim and stops the
   heartbeat.
+- A claim listing no longer fails with `ControlPlaneCorruptionError` on the
+  in-flight temporary of a local atomic write. If a killed older version left a
+  `.firecube-atomic-*.tmp` file in `.firecube/claims/`, delete that file by hand.
 
 ## [0.1.8] - 2026-11-02
 

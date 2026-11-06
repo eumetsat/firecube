@@ -1,0 +1,10 @@
+# Python 3.12. Versions used by the unit write buffer notebook. The recorded runs used zarr 3.2.1 and obstore 0.11.0.
+firecube==0.1.9
+firecube-mtg-fci-l1c @ git+https://github.com/eumetsat/firecube-mtg-fci-l1c.git@d4d6e8fb97f55a0ab66f01524ebf6b4caddb3bc3
+zarr==3.2.1
+obstore==0.11.0
+numpy==2.5.0
+h5netcdf==1.8.1
+eumdac==3.1.1
+pandas==3.0.5
+matplotlib==3.11.2

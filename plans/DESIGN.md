@@ -166,11 +166,23 @@ Threads inside one process (`pipeline_workers`) are serialised by a lock table. 
 
 ### Guarded writes in DirectZarr flows
 
-- Payload writes: every DirectZarr payload write passes one chokepoint, `guarded_write` (`core/zarr/guard/guarded_write.py`).
-  - It takes the unit locks. If this thread already holds a whole-array lock, it reuses that hold and takes no unit lock.
-  - It applies `write_empty_chunks` to the array it writes. It never changes `zarr.config`.
-  - It writes, then reports the result to the write session of the run before it releases the locks.
+- Payload writes: every DirectZarr payload write passes one chokepoint in `core/zarr/guard/guarded_write.py`. It has two entry points: `guarded_write` for data and `guarded_publish` for an encoded whole unit.
+  - Both take the unit locks. If this thread already holds a whole-array lock, they reuse that hold and take no unit lock.
+  - `guarded_write` applies `write_empty_chunks` to the array it writes. It never changes `zarr.config`.
+  - Each writes, then reports the result to the write session of the run before it releases the locks.
   - Staged runs also record which units the write left without an object.
+  - `guarded_publish` replaces the object of one unit with encoded bytes, or removes it. Its footprint must be exactly the unit clipped to the array read under the lock, else it writes nothing and raises `ValueError`.
+- Unit write buffer: `UnitWriteBuffer` (`core/zarr/guard/unit_buffer.py`) lets a writer publish a complete unit once. It is opt-in and off by default.
+  - It takes pieces of array writes and encodes each into an in-memory scratch array that has the metadata of the destination.
+  - A unit supplied completely, by volume, is published once through a sink. The sink is a Protocol that describes an array, publishes a unit and writes a box.
+  - Every other unit is written as box writes. An overlap flushes the units it touches and taints them, so they take box writes until the buffer closes.
+  - The buffer handles lossless codecs only: `bytes`, `zstd`, `crc32c` and `sharding_indexed` with `bytes` and `crc32c` index codecs. An array with another codec keeps the old path.
+  - The scratch array does the encoding, so zarr builds the shard index and the padding. A hand-built shard can be valid and differ in bytes.
+  - Completeness is the supplied volume. The buffer never inspects scratch content to decide it.
+  - If clearing scratch cells could change the stored bits of a non-canonical NaN, the buffer flushes and writes boxes.
+  - The buffer is not thread-safe. The DirectZarr feeder makes one per slot, inside the slot claim. An exception inside the slot discards it without a flush.
+  - A publish that `guarded_publish` refuses fails the batch. There is no fallback.
+  - The stores are byte-identical with the option on or off.
 - Metadata: in DirectZarr flows, `zarr.json` changes only under a metadata authority (`core/zarr/guard/metadata_authority.py`).
   - An authority is either a held claim (`CLAIM`, cross-process exclusion) or `PROCESS_LOCAL`.
   - `PROCESS_LOCAL` excludes the threads of this process only. No claim stands behind it.

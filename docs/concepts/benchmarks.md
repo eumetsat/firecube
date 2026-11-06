@@ -61,28 +61,70 @@ What this shows:
 
 ## Same-Group Slot Scaling
 
-This workload measured the optional parallel contract of a
-`DirectZarrIngestor` plugin. An MTG FCI L1C FDHSI product used a preallocated
-12-slot Zarr extent on S3, the `obstore` driver, `--write-mode direct`, shared
-geolocation grids, and one disjoint slot per local ingest process.
+Workload: a `DirectZarrIngestor` plugin uses the optional parallel contract. An
+MTG FCI L1C FDHSI product goes to a preallocated 12-slot Zarr extent on S3 with
+the `obstore` driver and `--write-mode direct`. The product shares its
+geolocation grids. Each local ingest process writes one disjoint slot.
 
-For the same 12-slot window, a same-day run took 4,341 seconds with one process
-and 371 seconds with 12 concurrent processes. That is an 11.70x speedup and
-97.5% parallel efficiency for this workload.
+| Configuration | Processes | Wall time | Speedup | Efficiency |
+|---|---:|---:|---:|---:|
+| Single process | 1 | 4,341 s | - | - |
+| Concurrent processes | 12 | **371 s** | **11.70x** | **97.5%** |
 
-Across the self-normalized, balanced strong-scaling points at 1, 2, 3, 4, 6,
-and 12 processes, a least-squares Amdahl fit estimated a parallel fraction of
-0.9976. In a separate self-normalized weak-scaling series with one slot per
-process, measured efficiency remained between 96.6% and 100% through 12
-processes; the Gustafson fit estimated a serial fraction of 0.0261.
+What this shows:
 
-These results demonstrate that preallocated, disjoint slot ranges can remove
-the serialized same-group append bottleneck for a suitable product. They do not
-show that `DirectZarrIngestor` is inherently faster than
-`GenericZarrIngestor`: no comparison between those classes was made. Most
-points had one repetition, the processes shared one host, and S3 endpoint and
-background load varied during the campaign. Treat the result as workload
-evidence, not a performance guarantee or an extrapolation beyond 12 processes.
+- Preallocated, disjoint slot ranges can remove the serialized same-group
+  append bottleneck for a suitable product.
+- The strong-scaling points are self-normalized and balanced, at 1, 2, 3, 4, 6,
+  and 12 processes. A least-squares Amdahl fit of them estimated a parallel
+  fraction of 0.9976.
+- A separate weak-scaling series is self-normalized and has one slot per
+  process. Its measured efficiency stayed between 96.6% and 100% through 12
+  processes.
+- The Gustafson fit of the weak-scaling series estimated a serial fraction of
+  0.0261.
+
+Treat this as workload evidence. Most points had one repetition. The processes
+shared one host. S3 endpoint and background load varied during the campaign.
+The campaign did not compare `DirectZarrIngestor` with `GenericZarrIngestor`.
+The result does not show that one is inherently faster. It is not a
+performance guarantee, and it does not extend beyond 12 processes.
+
+## Unit Write Buffer, Sharded S3
+
+This workload measured the option `zarr_unit_write_buffer`, explained in
+[How The Unit Write Buffer Works](output-formats/zarr/unit-write-buffer.md) and
+described in [Performance Tuning](performance.md#if-zarr-writes-are-slow). An MTG FCI L1C
+product of two hours of FCI observations from 1 July 2025 used the default
+sharded layout. The
+run used 12 processes with one slot each, to a remote S3 object store.
+The processes ran on an x86_64 VM in the same cloud as the bucket. The VM had
+64 logical CPUs and 126 GiB of RAM.
+
+The test had 6 paired rounds. Each round ran the buffer off and on back to back,
+in alternating order. In every
+pair, the two stores were identical. The wall time ran from the launch of the 12
+processes to the last exit.
+
+| Configuration | Wall time | Median | Payload written | Payload read back |
+|---|---:|---:|---:|---:|
+| Buffer off | 358 to 395 s | 364 s | 94.79 GB | 87.6 GB |
+| Buffer on | 90 to 92 s | 91 s | 7.19 GB | ~0 |
+
+The payload written was 13.19 times the final payload with the buffer off and
+1.00 times with it on. The wall-time ratio was about 4.0, with a range of 3.93
+to 4.41. This ratio is for this workload only.
+
+The buffer costs memory. The peak per process rose from 1.1 to 2.55 GiB. The
+process that also writes the static grids rose from 2.5 to 3.6 GiB. At the same
+moment, the 12 processes held about 14.2 GiB with the buffer off and about
+25.7 GiB with it on. These figures are medians of 3 rounds. The highest total seen
+at one moment in the 6 rounds was 26.0 GiB, so they are not a capacity bound.
+
+This result comes from one workload, one VM, one provider and 6 pairs. Other
+setups give other results. An unsharded layout showed the same writes with and
+without the buffer. To repeat the measurement on your own bucket, see the
+notebook [Unit Write Buffer](../showcase/unit-write-buffer.ipynb).
 
 ## Benchmark Your Own Product
 

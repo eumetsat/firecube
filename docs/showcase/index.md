@@ -103,4 +103,31 @@ tuned parallel setup and compare your timings with recorded runs of about
 </div>
 </div>
 
+<div class="showcase-feature" markdown>
+<div class="showcase-feature-copy" markdown>
+
+<span class="showcase-label">Benchmark notebook · Your own S3 bucket</span>
+
+## Unit Write Buffer: Sharded MTG FCI L1C To S3
+
+Learn what the unit write buffer does, then write two hours of FCI observations to your own S3 bucket with the buffer off and on.
+Check that the two stores are identical, then compare your wall time and peak memory with the recorded runs.
+
+<div class="showcase-actions" markdown>
+
+[Open the notebook](unit-write-buffer.ipynb){ .md-button .md-button--primary }
+<a class="md-button notebook-download" href="unit-write-buffer/unit-write-buffer.ipynb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v3h14v-3H5z"/></svg>Download notebook</a>
+
+</div>
+
+</div>
+<div class="showcase-feature-image" markdown>
+
+[![Recorded wall time of 12 processes falls from a median of 364 seconds without the buffer to 91 seconds with it. The payload written to S3 falls from 94.79 GB to 7.19 GB.](../assets/images/unit-write-buffer-preview.png)](unit-write-buffer.ipynb)
+
+<span class="showcase-caption">2 hours of FCI data · 12 processes · Real S3 writes</span>
+
+</div>
+</div>
+
 </div>

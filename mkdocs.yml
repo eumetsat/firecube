@@ -149,6 +149,7 @@ nav:
         - GenericZarrIngestor (Append): concepts/output-formats/zarr/generic-append.md
         - DirectZarrIngestor (Region): concepts/output-formats/zarr/direct-region.md
         - How Parallel Writes Stay Safe: concepts/output-formats/zarr/parallel-writes.md
+        - How The Unit Write Buffer Works: concepts/output-formats/zarr/unit-write-buffer.md
         - Chunk Ownership: concepts/output-formats/zarr/chunk-ownership.md
       - Parquet: concepts/output-formats/parquet.md
       - Tensogram: concepts/output-formats/archive.md
@@ -211,6 +212,7 @@ nav:
     - "Firecube 101: NetCDF To Zarr": showcase/netcdf-to-zarr.ipynb
     - Sentinel-3 SLSTR FRP: showcase/sentinel3-fire-detections.ipynb
     - "Slot-Based Parallelism: MTG FCI L1C": showcase/mtg-fci-l1c-benchmarks.ipynb
+    - "Unit Write Buffer: MTG FCI L1C To S3": showcase/unit-write-buffer.ipynb
   - Plugin Registry:
     - Overview: plugin-registry/index.md
   - Contributing:

@@ -1,0 +1,7 @@
+name: unit-write-buffer-peak-memory.png
+description: Bars show the peak memory per process of an MTG FCI L1C run, without and with the unit write buffer. Each bar is the median of three runs.
+copyright: Copyright 2026 EUMETSAT
+license: Apache-2.0
+license_url: https://www.apache.org/licenses/LICENSE-2.0
+date: 2026-11-05
+about_resource: unit-write-buffer-peak-memory.png
