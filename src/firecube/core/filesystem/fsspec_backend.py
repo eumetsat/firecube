@@ -19,7 +19,6 @@ import datetime
 import errno
 import logging
 import os
-import tempfile
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -47,6 +46,16 @@ _BUCKET_VERSIONING_STATES = {"Enabled": "enabled", "Suspended": "suspended"}
 def _is_listed_publication_temp(entry: Any) -> bool:
     name = entry.get("name", "") if isinstance(entry, dict) else entry
     return publication.is_publication_temp(str(name))
+
+
+def _create_publication_temp(directory: str) -> tuple[int, str]:
+    """Create an exclusive, owner-only reserved publication temporary in ``directory``.
+
+    Return its open file descriptor and path. The mode is the one ``mkstemp`` gives.
+    """
+    tmp = os.path.join(directory, publication.publication_temp_name())
+    fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    return fd, tmp
 
 
 def _is_precondition_failed(exc: BaseException) -> bool:
@@ -144,7 +153,8 @@ class FsspecAtomicWriter:
       makes the *name* appear atomically but the file is created empty and
       filled incrementally, leaving a window where a reader sees a 0-byte file
       (manifests as ``ManifestError`` "is not valid JSON: ... char 0"). We
-      instead write a sibling temp file, fsync it, then ``os.link`` it into
+      instead write a sibling reserved publication temporary (left out of
+      ``ls`` and ``find`` of both drivers), fsync it, then ``os.link`` it into
       place: the link publishes the fully-written inode in one step and fails
       with ``FileExistsError`` if the target already exists, preserving the
       create-if-not-exists contract.
@@ -180,7 +190,8 @@ class FsspecAtomicWriter:
     def replace_atomic(self, uri: StorageUri, data: bytes) -> None:
         """Atomic overwrite-or-create (see `AtomicWriter`).
 
-        - Local filesystem: write a sibling temp file, fsync it, then
+        - Local filesystem: write a sibling reserved publication temporary
+          (left out of ``ls`` and ``find`` of both drivers), fsync it, then
           ``os.replace`` it into place — the rename publishes the fully-written
           inode over the old one in a single step, so a concurrent reader sees
           the old or the new content, never a truncated file. A plain
@@ -193,7 +204,7 @@ class FsspecAtomicWriter:
         path = self._to_path(uri)
         if self._is_local():
             directory = os.path.dirname(path) or "."
-            fd, tmp = tempfile.mkstemp(dir=directory, prefix=".firecube-atomic-", suffix=".tmp")
+            fd, tmp = _create_publication_temp(directory)
             try:
                 with os.fdopen(fd, "wb") as fh:
                     fh.write(data)
@@ -216,7 +227,7 @@ class FsspecAtomicWriter:
     def _write_atomic_local(self, path: str, uri_str: str, data: bytes) -> None:
         """Content-atomic exclusive create for the local filesystem (see class docstring)."""
         directory = os.path.dirname(path) or "."
-        fd, tmp = tempfile.mkstemp(dir=directory, prefix=".firecube-atomic-", suffix=".tmp")
+        fd, tmp = _create_publication_temp(directory)
         try:
             with os.fdopen(fd, "wb") as fh:
                 fh.write(data)

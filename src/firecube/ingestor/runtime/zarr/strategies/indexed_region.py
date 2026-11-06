@@ -54,6 +54,7 @@ from firecube.core.zarr.guard.unit_ownership import require_window_owns_stored_u
 from firecube.core.zarr.region_writer import RegionZarrWriter, open_root_read_only
 from firecube.ingestor.runtime.coverage import CoverageTracker
 from firecube.ingestor.runtime.parallel_evidence import log_filter_evidence
+from firecube.ingestor.runtime.zarr.strategies._buffered_regions import write_slot_buffered
 
 if TYPE_CHECKING:
     from firecube.core.config import StorageConfig
@@ -206,6 +207,7 @@ class IndexedRegionStrategy:
         suppress_static_emission_for_non_owner: bool = False,
         static_owner_slot_start: int | None = None,
         zarr_write_empty_chunks: bool = False,
+        zarr_unit_write_buffer: bool = False,
         on_write: Callable[[WriteResult], None] | None = None,
         track_units: bool = False,
     ) -> dict[str, Any]:
@@ -241,6 +243,9 @@ class IndexedRegionStrategy:
                 writes, compared against this run's own slot start.
             zarr_write_empty_chunks: Whether to persist chunks holding only
                 fill values. ``False`` keeps sparse arrays compact.
+            zarr_unit_write_buffer: Publish each complete stored unit once
+                instead of once per region piece. Only the serial path
+                (``region_write_concurrency`` of 1) reads it.
             on_write: Called on the writing thread with the `WriteResult` of
                 every payload write (see `RegionZarrWriter`).
             track_units: Report in each `WriteResult` which touched units
@@ -267,6 +272,7 @@ class IndexedRegionStrategy:
             suppress_static_emission_for_non_owner=suppress_static_emission_for_non_owner,
             static_owner_slot_start=static_owner_slot_start,
             zarr_write_empty_chunks=zarr_write_empty_chunks,
+            zarr_unit_write_buffer=zarr_unit_write_buffer,
             on_write=on_write,
             track_units=track_units,
         )
@@ -287,6 +293,7 @@ class IndexedRegionStrategy:
         suppress_static_emission_for_non_owner: bool = False,
         static_owner_slot_start: int | None = None,
         zarr_write_empty_chunks: bool = False,
+        zarr_unit_write_buffer: bool = False,
         on_write: Callable[[WriteResult], None] | None = None,
         track_units: bool = False,
     ) -> dict[str, Any]:
@@ -321,6 +328,8 @@ class IndexedRegionStrategy:
             static_owner_slot_start: V1 scalar owner ``slot_start`` for one
                 group per run.
             zarr_write_empty_chunks: Passed to every writer this call builds.
+            zarr_unit_write_buffer: Hands each slot's intents to
+                `write_slot_buffered` on the serial path.
             on_write: Passed to every writer this call builds.
             track_units: Passed to every writer this call builds.
 
@@ -536,6 +545,17 @@ class IndexedRegionStrategy:
                     else:
                         slot_ctx = contextlib.nullcontext()
                     with slot_ctx:
+                        if zarr_unit_write_buffer:
+                            write_slot_buffered(
+                                writer,
+                                slot_intents,
+                                time_coord_name=self._time_coord_name,
+                                dispatch=functools.partial(self._dispatch_intent, writer),
+                                record=functools.partial(
+                                    self._record_landed_intent, tracker, group_name
+                                ),
+                            )
+                            continue
                         for intent in slot_intents:
                             self._dispatch_intent(writer, intent)
                             if intent.kind == "timestamp" and intent.timestamp_val is not None:
@@ -1039,6 +1059,24 @@ class IndexedRegionStrategy:
                 time_val=time_val,
                 aligned=True,
             )
+
+    def _record_landed_intent(self, tracker: CoverageTracker, group_name: str, intent: Any) -> None:
+        """Record one intent's coverage as the serial loop records it, once its cells landed."""
+        if intent.kind == "region":
+            tracker.record_write(
+                group=group_name,
+                arrays=[intent.array],
+                ts_index=intent.ts_index,
+                time_val=None,
+                aligned=True,
+            )
+            return
+        self._record_timed_non_region_coverage(
+            tracker=tracker,
+            group_name=group_name,
+            intent=intent,
+            time_coord_name=self._time_coord_name,
+        )
 
     @staticmethod
     def _resolved_region_data(intent: Any) -> np.ndarray:

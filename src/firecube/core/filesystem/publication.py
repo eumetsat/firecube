@@ -18,7 +18,8 @@
 The ``AtomicPublish`` capability of both storage adapters delegates here. This
 module is the one place that knows the reserved temporary name and the local
 rename dance; the listings of both adapters and the staged-metadata seeder use
-``is_publication_temp`` to leave in-flight temporaries out.
+``is_publication_temp`` to leave in-flight temporaries out. The fsspec atomic
+writer stages its local writes under the same reserved name.
 """
 
 from __future__ import annotations
