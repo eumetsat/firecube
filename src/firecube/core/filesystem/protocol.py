@@ -191,9 +191,24 @@ class ConditionalWrite(Protocol):
         ...
 
 
+def unquoted_etag(validator: str) -> str:
+    """Return ``validator`` without one outer pair of double quotes.
+
+    An S3 ``If-Match`` header carries this form: Ceph RGW refuses a quoted ETag there.
+    """
+    if len(validator) >= 2 and validator.startswith('"') and validator.endswith('"'):
+        return validator[1:-1]
+    return validator
+
+
 @runtime_checkable
 class CompareDelete(Protocol):
-    """Deletion of an object only while it is the generation an earlier read saw."""
+    """Deletion of an object only while it is the generation an earlier read saw.
+
+    Only local bindings report it. Ceph RGW ignores ``If-Match`` on ``DeleteObject``, so
+    an S3 delete cannot be made conditional on every supported store. S3 claims are
+    released by a conditional replace to a released record instead.
+    """
 
     def compare_delete(self, uri: StorageUri, validator: str) -> None:
         """Delete the object at ``uri`` only while its validator is ``validator``.

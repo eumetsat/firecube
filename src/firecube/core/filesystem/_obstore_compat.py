@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from firecube.core.filesystem.protocol import unquoted_etag
+
 PutMode: Any
 
 try:
@@ -57,8 +59,9 @@ def update_put_mode(e_tag: str) -> dict[str, str]:
 
     obstore takes an update mode as an ``UpdateVersion`` dict, which no ``PutMode``
     attribute spells. The dict leaves out ``version``: obstore 0.11.0 refuses ``None`` there.
+    obstore sends ``e_tag`` as the ``If-Match`` value, so the dict holds it unquoted.
     """
-    return {"e_tag": e_tag}
+    return {"e_tag": unquoted_etag(e_tag)}
 
 
 def require_obstore() -> None:

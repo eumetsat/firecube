@@ -279,7 +279,8 @@ class ObstoreFilesystem:
         if protocol == "file":
             capabilities |= {ConditionalWrite, CompareDelete}
         elif protocol == "s3":
-            # obstore 0.11.0 has no conditional delete, so an s3 binding lacks CompareDelete.
+            # Ceph RGW ignores If-Match on DeleteObject, and obstore 0.11.0 has no
+            # conditional delete, so an s3 binding lacks CompareDelete.
             capabilities.add(ConditionalWrite)
         return capabilities
 
@@ -328,7 +329,7 @@ class ObstoreFilesystem:
     def compare_replace(self, uri: StorageUri, validator: str, data: bytes) -> str:
         """Replace the object only while its validator is ``validator``; return the new validator.
 
-        On s3 the write is a ``put`` in update mode, an ``If-Match`` PUT on the ETag.
+        On s3 the write is a ``put`` in update mode, an ``If-Match`` PUT on the unquoted ETag.
 
         Raises:
             PreconditionFailed: The object changed since ``validator`` was read, or is missing.
@@ -352,9 +353,11 @@ class ObstoreFilesystem:
     def compare_delete(self, uri: StorageUri, validator: str) -> None:
         """Delete the local file only while its validator is ``validator`` (see `CompareDelete`).
 
+        An s3 binding refuses, since Ceph RGW ignores ``If-Match`` on ``DeleteObject``.
+
         Raises:
             PreconditionFailed: The file changed since ``validator`` was read, or is missing.
-            NotImplementedError: The binding is s3, where obstore has no conditional delete.
+            NotImplementedError: The binding is s3, where a delete cannot be made conditional.
             ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
         """
         if self._conditional_protocol(uri) != "file":

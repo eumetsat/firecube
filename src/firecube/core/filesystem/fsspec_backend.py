@@ -34,6 +34,7 @@ from firecube.core.filesystem.protocol import (
     ObjectVersion,
     ObjectVersions,
     PreconditionFailed,
+    unquoted_etag,
 )
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.uri import StorageUri
@@ -451,7 +452,7 @@ class FsspecFilesystem:
     def compare_replace(self, uri: StorageUri, validator: str, data: bytes) -> str:
         """Replace the object only while its validator is ``validator``; return the new validator.
 
-        On s3 the write is one ``PutObject`` with ``If-Match`` on the ETag.
+        On s3 the write is one ``PutObject`` with ``If-Match`` on the ETag without its quotes.
 
         Raises:
             PreconditionFailed: The object changed since ``validator`` was read, or is missing.
@@ -461,34 +462,27 @@ class FsspecFilesystem:
         if self._conditional_protocol(uri) == "file":
             return conditional.compare_replace(uri, validator, data)
         try:
-            return self._conditional_put(uri, data, IfMatch=validator)
+            return self._conditional_put(uri, data, IfMatch=unquoted_etag(validator))
         except OSError as exc:
             _raise_compare_refusal(exc, uri)
             raise
 
     def compare_delete(self, uri: StorageUri, validator: str) -> None:
-        """Delete the object only while its validator is ``validator`` (see `CompareDelete`).
+        """Delete the local file only while its validator is ``validator`` (see `CompareDelete`).
 
-        On s3 the delete is one ``DeleteObject`` with ``If-Match`` on the ETag.
+        An s3 binding refuses, since Ceph RGW ignores ``If-Match`` on ``DeleteObject``.
 
         Raises:
-            PreconditionFailed: The object changed since ``validator`` was read, or is missing.
+            PreconditionFailed: The file changed since ``validator`` was read, or is missing.
+            NotImplementedError: The binding is s3, where a delete cannot be made conditional.
             ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
-            OSError: The request failed.
         """
-        if self._conditional_protocol(uri) == "file":
-            conditional.compare_delete(uri, validator)
-            return
-        bucket, key = self._s3_bucket_and_key(uri)
-        try:
-            self._call_s3_api(
-                "delete_object", Bucket=bucket, Key=key, IfMatch=validator, **self._fs.req_kw
+        if self._conditional_protocol(uri) != "file":
+            raise NotImplementedError(
+                f"an s3 delete cannot be made conditional on every supported store, "
+                f"so {uri.to_str()} cannot be compare-deleted"
             )
-        except OSError as exc:
-            _raise_compare_refusal(exc, uri)
-            raise
-        finally:
-            self._fs.invalidate_cache(self._to_path(uri))
+        conditional.compare_delete(uri, validator)
 
     def _conditional_protocol(self, uri: StorageUri) -> str:
         """Return ``"file"`` or ``"s3"``, the protocol of the binding that ``uri`` must share."""
@@ -701,10 +695,11 @@ class FsspecFilesystem:
         # capabilities; such an instance serves no product, so it adds none.
         binding = getattr(self, "_binding", None)
         protocol = None if binding is None else binding.identity.product_uri.protocol
-        if protocol in ("file", "s3"):
+        if protocol == "file":
             capabilities |= {ConditionalWrite, CompareDelete}
-        if protocol == "s3":
-            capabilities.add(ObjectVersions)
+        elif protocol == "s3":
+            # Ceph RGW ignores If-Match on DeleteObject, so an s3 binding lacks CompareDelete.
+            capabilities |= {ConditionalWrite, ObjectVersions}
         return capabilities
 
     @classmethod
