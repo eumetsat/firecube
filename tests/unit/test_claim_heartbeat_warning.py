@@ -19,20 +19,45 @@ from typing import Any, cast
 
 import pytest
 
-from firecube.core.controlplane.claims import ClaimHandle
+from firecube.core.controlplane.claims import ClaimHandle, ClaimLossLatch
 from firecube.core.controlplane.types import ClaimInfo
+from firecube.core.filesystem.protocol import ConditionalWrite
 from firecube.core.storage.uri import StorageUri
 
 pytestmark = pytest.mark.unit
 
 
 class _FailingFilesystem:
-    def open(self, path, mode):
-        _ = (path, mode)
+    failing = True
+
+    def capabilities(self):
+        return [ConditionalWrite]
+
+    def compare_replace(self, path, validator, data) -> str:
+        _ = (path, validator, data)
+        if self.failing:
+            raise OSError("boom")
+        return "v2"
+
+    def read_snapshot(self, path) -> tuple[bytes, str]:
+        _ = path
         raise OSError("boom")
 
-    def rm(self, path, recursive=False):
-        _ = (path, recursive)
+
+class _LostResponseFilesystem(_FailingFilesystem):
+    """The renewal lands in the store, then its response is lost."""
+
+    stored = b""
+
+    def compare_replace(self, path, validator, data):
+        if not self.failing:
+            return "v3"
+        self.stored = data
+        raise OSError("boom")
+
+    def read_snapshot(self, path):
+        _ = path
+        return self.stored, "v2"
 
 
 class _FakeEvent:
@@ -46,6 +71,9 @@ class _FakeEvent:
 
     def set(self) -> None:
         return None
+
+    def is_set(self) -> bool:
+        return False
 
 
 class _FakeThread:
@@ -66,7 +94,13 @@ class _FakeThread:
         _ = timeout
 
 
-def test_claim_heartbeat_write_failure_logs_warning(caplog, monkeypatch) -> None:
+@pytest.mark.parametrize(
+    ("fs_class", "kept", "next_validator"),
+    [(_FailingFilesystem, "v1", "v2"), (_LostResponseFilesystem, "v2", "v3")],
+)
+def test_claim_heartbeat_write_failure_logs_warning(
+    caplog, monkeypatch, fs_class, kept, next_validator
+) -> None:
     monkeypatch.setattr("firecube.core.controlplane.claims.threading.Event", _FakeEvent)
     monkeypatch.setattr("firecube.core.controlplane.claims.threading.Thread", _FakeThread)
 
@@ -81,16 +115,23 @@ def test_claim_heartbeat_write_failure_logs_warning(caplog, monkeypatch) -> None
         stale_threshold_s=120,
     )
 
+    fs, latch = fs_class(), ClaimLossLatch()
     with caplog.at_level(logging.WARNING, logger="firecube.core.controlplane.claims"):
         handle = ClaimHandle(
-            fs=cast(Any, _FailingFilesystem()),
+            fs=cast(Any, fs),
             claim_path=StorageUri.parse(info.claim_path),
             info=info,
             heartbeat_interval_s=30,
             stale_threshold_s=120,
+            validator="v1",
+            latch=latch,
         )
 
+    assert handle.validator == kept  # a committed renewal is adopted, one that failed is not
+    fs.failing = False  # so that the next renewal and the release succeed
+    assert handle._beat() and handle.validator == next_validator
     handle.release()
+    assert not latch.is_set and not handle.lost  # a transient error warns and loses nothing
 
     assert any(
         rec.levelno == logging.WARNING

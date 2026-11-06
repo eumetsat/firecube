@@ -372,7 +372,7 @@ def test_concurrent_all_stale_clears_are_idempotent(
     Simulates two operators (two ``ChunkManager`` instances against the same
     on-disk control-plane root) running ``clear_stale_claims`` concurrently.
     Uses deterministic monkeypatch interleaving instead of threads: when
-    operator A is about to call ``clear_claim`` on the 5th stale claim,
+    operator A is about to retire the 5th stale claim (``release_claim_if_unchanged``),
     operator B's full sweep runs first, then A resumes.
 
     Operator B's ``list_stale_claims`` is captured up-front so its preview
@@ -414,18 +414,21 @@ def test_concurrent_all_stale_clears_are_idempotent(
 
     monkeypatch.setattr(manager_b.repo, "list_stale_claims", cached_list_stale_claims_for_b)
 
-    original_a_clear_claim = manager_a.repo.clear_claim
+    manager_a.repo._ensure_bound()
+    claims_a = manager_a.repo.claims
+    assert claims_a is not None
+    original_a_release = claims_a.release_claim_if_unchanged
     a_call_count = {"n": 0}
     b_result_holder: dict[str, Any] = {}
     trigger_at = 5
 
-    def racy_a_clear_claim(*, product: str, domain_id: str, force: bool = False) -> bool:
+    def racy_a_release(*, product: str, claim: ClaimInfo, stale_only: bool = False) -> Any:
         a_call_count["n"] += 1
         if a_call_count["n"] == trigger_at and "result" not in b_result_holder:
             b_result_holder["result"] = manager_b.clear_stale_claims(product=product, dry_run=False)
-        return original_a_clear_claim(product=product, domain_id=domain_id, force=force)
+        return original_a_release(product=product, claim=claim, stale_only=stale_only)
 
-    monkeypatch.setattr(manager_a.repo, "clear_claim", racy_a_clear_claim)
+    monkeypatch.setattr(claims_a, "release_claim_if_unchanged", racy_a_release)
 
     try:
         result_a = manager_a.clear_stale_claims(product=product, dry_run=False)

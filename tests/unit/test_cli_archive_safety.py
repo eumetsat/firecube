@@ -27,6 +27,7 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 
 _LOCAL_STORAGE_FLAGS = ["--storage-type", "local", "--storage-driver", "fsspec"]
 
@@ -248,7 +249,9 @@ def test_overwrite_restore_of_an_invalid_archive_keeps_the_target(tmp_path, kind
     r = CliRunner().invoke(
         cli, [*args, "--overwrite", "--yes-i-really-mean-it", *_LOCAL_STORAGE_FLAGS]
     )
+    guard = f".firecube/claims/{GUARD_FILE_NAME}"  # the claims directory keeps its guard file
     after = {k: v for k, v in tree().items() if not k.startswith(".firecube/runs/archive-restore-")}
+    after.pop(guard, None)
     assert after == before
     assert r.exit_code != 0, r.output
 

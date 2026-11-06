@@ -54,6 +54,7 @@ from firecube.core.errors import (
     ManifestError,
     ProductUnderMaintenanceError,
 )
+from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
 from firecube.core.index_spec import IndexSpec, IntegerAxis, RegularTimeAxis
 from firecube.core.storage.session import StorageSession
@@ -66,6 +67,10 @@ from tests.helpers.cli_hints import run_hint
 from tests.helpers.storage import make_test_binding, make_test_session
 
 pytestmark = pytest.mark.integration
+
+
+def _claim_records(root: Path) -> list[Path]:  # the permanent guard file is no record
+    return [p for p in (root / ".firecube" / "claims").glob("*") if p.name != GUARD_FILE_NAME]
 
 
 def _local_env(tmp_path: Path) -> dict[str, str]:
@@ -358,7 +363,7 @@ def test_archive_create_keeps_archive_error_and_releases_claim(tmp_path, monkeyp
     result = _zip_create_with_control_plane(tmp_path)
     assert result.exit_code != 0
     assert "archive boom" in result.output
-    assert list((tmp_path / "s.zarr" / ".firecube" / "claims").glob("*")) == []
+    assert _claim_records(tmp_path / "s.zarr") == []
 
 
 def _restore_state(tmp_path: Path) -> tuple[list[str], list[str]]:
@@ -472,7 +477,7 @@ def test_restore_stops_its_claim_heartbeat(tmp_path, monkeypatch, lib):
             )
             assert result.exit_code == 0, result.output
         time.sleep(2.5)
-        assert list((tmp_path / "r.zarr" / ".firecube" / "claims").glob("*")) == []
+        assert _claim_records(tmp_path / "r.zarr") == []
     finally:
         for handle in handles:
             handle.release()
@@ -620,7 +625,7 @@ def test_exclusive_acquire_refuses_a_started_run_and_leaves_no_claim(
         with pytest.raises(ExclusiveMaintenanceRefusedError) as refused:
             acquirer.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
     assert refused.value.runs == ("live-writer",)
-    assert list((tmp_path / GATED / ".firecube" / "claims").glob("*")) == []
+    assert _claim_records(tmp_path / GATED) == []
 
 
 @pytest.mark.contract
@@ -629,16 +634,16 @@ def test_unreadable_exclusive_claim_refuses_a_writer_start_and_fails_its_run(
 ):
     holder, writer = pair
     claim = holder.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
-    real_open = FsspecFilesystem.open
+    real_read = FsspecFilesystem.read_snapshot
 
-    def failing_open(self, uri, mode="rb"):
-        if mode == "r" and "/.firecube/claims/" in uri.to_str():
+    def failing_read(self, uri):
+        if "/.firecube/claims/" in uri.to_str():
             raise PermissionError("injected claim read failure")
-        return real_open(self, uri, mode)
+        return real_read(self, uri)
 
     try:
         with monkeypatch.context() as patched:
-            patched.setattr(FsspecFilesystem, "open", failing_open)
+            patched.setattr(FsspecFilesystem, "read_snapshot", failing_read)
             with pytest.raises(ProductUnderMaintenanceError) as refused:
                 _start(writer, "writer")
         assert (refused.value.owner_id, refused.value.stale) == (None, None)
@@ -663,7 +668,7 @@ def test_exclusive_acquire_fails_closed_on_a_run_listing_error(pair, tmp_path, m
     monkeypatch.setattr(FsspecFilesystem, "ls", failing_ls)
     with pytest.raises((ExclusiveMaintenanceRefusedError, OSError)):
         acquirer.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
-    assert list((tmp_path / GATED / ".firecube" / "claims").glob("*")) == []
+    assert _claim_records(tmp_path / GATED) == []
 
 
 @pytest.mark.contract
@@ -685,7 +690,7 @@ def test_exclusive_acquire_refuses_a_run_started_between_acquire_and_verify(
     with pytest.raises(ExclusiveMaintenanceRefusedError) as refused:
         acquirer.acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
     assert refused.value.runs == ("late-writer",)
-    assert list((tmp_path / GATED / ".firecube" / "claims").glob("*")) == []
+    assert _claim_records(tmp_path / GATED) == []
 
 
 @pytest.mark.contract
@@ -851,7 +856,7 @@ def test_stale_exclusive_claim_still_refuses_writers_and_names_clear_claim(pair,
         product=GATED, domain=exclusive_maintenance_domain(GATED), owner_id=MAINT
     )
     try:
-        (claim_file,) = (tmp_path / GATED / ".firecube" / "claims").glob("*")
+        (claim_file,) = _claim_records(tmp_path / GATED)
         payload = json.loads(claim_file.read_text())
         claim_file.write_text(json.dumps({**payload, "last_heartbeat_at": 1.0}))
         with pytest.raises(ProductUnderMaintenanceError) as refused:

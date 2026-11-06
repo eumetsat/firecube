@@ -22,6 +22,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from firecube.core.controlplane.claims import ClaimLossLatch
 from firecube.ingestor.runtime.zarr.alignment import AlignmentMonitor
 from firecube.ingestor.runtime.zarr.append import append_time_groups
 from firecube.ingestor.templates.generic import _build_zarr_batch_runtime
@@ -89,6 +90,7 @@ def test_generic_zarr_runtime_passes_host_time_dim_to_append_strategy():
         _chunk_manager=SimpleNamespace(storage_config=object()),
         _alignment=AlignmentMonitor(),
         _append_order=None,
+        _run_claim_latch=ClaimLossLatch(),
         name="test-product",
         _resolve_time_dim_name=lambda: "time",
     )

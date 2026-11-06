@@ -39,6 +39,7 @@ from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.types import exclusive_maintenance_domain
+from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.zarr.guard import metadata_authority
 
 pytestmark = [pytest.mark.integration, pytest.mark.contract]
@@ -98,6 +99,12 @@ def _chunks(store: Path) -> dict[str, bytes | None]:
         for path, data in _tree(store, firecube=False).items()
         if data is not None and Path(path).name not in DOCUMENT_NAMES
     }
+
+
+def _claim_files(store: Path) -> list[Path]:
+    """The claim records of a store, the permanent guard file left out."""
+    claims = store / ".firecube" / "claims"
+    return [p for p in claims.iterdir() if p.name != GUARD_FILE_NAME]
 
 
 def _runs(store: Path, prefix: str = "migrate-") -> dict[str, dict]:
@@ -229,7 +236,7 @@ def test_interrupted_migration_resumes_under_its_run_or_refuses_a_hand_edit(
         writes.append(path)
         written = real_publish(authority, target, path, *args, **kwargs)
         if checkpoint == "claim-swap":  # another owner takes the claim after the first document
-            claim = next((store / ".firecube" / "claims").iterdir())
+            (claim,) = _claim_files(store)
             claim.write_text(json.dumps({**json.loads(claim.read_text()), "owner_id": "other"}))
         return written
 
@@ -303,7 +310,7 @@ def test_crash_left_claim_blocks_the_rerun_until_claims_clear(tmp_path, monkeypa
         crash.setattr(ClaimHandle, "release", lambda self: self._stop.set())  # a killed process
         _migrate(store, RETITLE, exit_code=1)
     ((run_id, _),) = _runs(store).items()
-    assert len(list((store / ".firecube" / "claims").iterdir())) == 1
+    assert len(_claim_files(store)) == 1
 
     _migrate(store, RETITLE, exit_code=1)
     assert {k: v["status"] for k, v in _runs(store).items()} == {run_id: "started"}

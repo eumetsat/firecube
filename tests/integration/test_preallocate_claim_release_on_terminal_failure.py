@@ -59,6 +59,7 @@ from firecube.cli.main import cli
 from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.manager import ChunkManager
+from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.ingestor.api import (
     DirectZarrIngestor,
     PipelineBatch,
@@ -218,6 +219,8 @@ def _coord_materialization_claims_on_disk(target: Path) -> list[str]:
     assert claims_dir.is_dir(), f"claims directory not found at {claims_dir}"
     domains: list[str] = []
     for claim_file in claims_dir.iterdir():
+        if claim_file.name == GUARD_FILE_NAME:
+            continue
         domain = json.loads(claim_file.read_text(encoding="utf-8")).get("domain", "")
         if ":coord_materialization:" in domain:
             domains.append(domain)

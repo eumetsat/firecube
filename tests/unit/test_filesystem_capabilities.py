@@ -12,25 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Protocol
+import fcntl
+import os
+import subprocess
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import IO, Any, Protocol, cast
 
 import pytest
 
+from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
 from firecube.core.filesystem.obstore_backend import ObstoreFilesystem
 from firecube.core.filesystem.protocol import (
     AtomicPublish,
     AtomicWriter,
+    CompareDelete,
+    ConditionalWrite,
     Multipart,
     MultipartUploader,
+    PreconditionFailed,
     RangedRead,
     Signer,
     StorageFilesystem,
     StorageFilesystemFull,
+    unquoted_etag,
 )
 from firecube.core.storage.uri import StorageUri
 from tests.helpers.rows import table_row
 from tests.helpers.storage import make_test_binding
+
+ROOT = Path(__file__).parents[2]
 
 
 @pytest.mark.unit
@@ -44,7 +59,8 @@ def test_fsspec_capabilities_includes_multipart(tmp_path):
 def test_obstore_capabilities_includes_ranged_read(tmp_path):
     fs = ObstoreFilesystem.from_local(str(tmp_path))
 
-    assert fs.capabilities() == {Multipart, RangedRead, AtomicPublish}
+    expected = {Multipart, RangedRead, AtomicPublish, ConditionalWrite, CompareDelete}
+    assert fs.capabilities() == expected
 
 
 @pytest.mark.unit
@@ -121,3 +137,152 @@ def test_direct_construction_is_fully_wired(subtests, tmp_path):
             assert fs.exists(uri)
             with pytest.raises(FileExistsError):
                 fs.atomic_writer.write_atomic(uri, b"again")
+
+
+@pytest.fixture(params=["fsspec", "obstore"])
+def cond(request: pytest.FixtureRequest, tmp_path: Path) -> tuple[Any, StorageUri]:
+    backend = FsspecFilesystem if request.param == "fsspec" else ObstoreFilesystem
+    fs = backend(make_test_binding(tmp_path, driver=request.param))
+    return fs, StorageUri.from_local_path(tmp_path / "claims")
+
+
+@pytest.mark.unit
+def test_compare_delete_is_reported_on_local_bindings_only(cond):
+    fs, base = cond
+    assert ConditionalWrite in fs.capabilities()
+    assert (CompareDelete in fs.capabilities()) is (base.protocol == "file")
+
+
+_ETAGS = [('W/"x"', 'W/"x"'), ('"abc-2"', "abc-2"), ("", ""), ('"', '"'), ("abc", "abc")]
+_ETAGS += [('""x""', '"x"')]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("raw", "want"), _ETAGS)
+def test_unquoted_etag_strips_one_outer_pair_only(raw, want):
+    assert unquoted_etag(raw) == want
+
+
+@pytest.mark.integration
+@pytest.mark.concurrency
+def test_create_if_absent_has_one_winner_among_threads(cond):
+    fs, base = cond
+    barrier = threading.Barrier(16)
+
+    def race(i: int) -> str:
+        barrier.wait()
+        try:
+            fs.create_if_absent(base.join("race.json"), b"%d" % i)
+        except FileExistsError:
+            return "lost"
+        return "won"
+
+    with ThreadPoolExecutor(16) as pool:
+        outcomes = sorted(pool.map(race, range(16)))
+    assert outcomes == ["lost"] * 15 + ["won"]
+
+
+_RACER = """
+import sys
+from pathlib import Path
+from firecube.core.filesystem.fsspec_backend import FsspecFilesystem as F
+from firecube.core.filesystem.obstore_backend import ObstoreFilesystem as O
+from firecube.core.filesystem.protocol import PreconditionFailed
+from firecube.core.storage.uri import StorageUri
+from tests.helpers.storage import make_test_binding
+driver, root, validator, me = sys.argv[1:]
+fs = (F if driver == "fsspec" else O)(make_test_binding(Path(root), driver=driver))
+uri = StorageUri.from_local_path(Path(root) / "claims" / "race.json")
+print("ready", flush=True)
+sys.stdin.readline()
+try:
+    body = me.encode()
+    print("won", fs.compare_replace(uri, validator, body) if validator else fs.create_if_absent(uri, body))
+except (FileExistsError, PreconditionFailed):
+    print("lost")
+"""
+
+
+@pytest.mark.integration
+@pytest.mark.concurrency
+@pytest.mark.parametrize("seeded", [False, True], ids=["create", "replace"])
+def test_conditional_write_has_one_winner_among_processes(cond, tmp_path, seeded):
+    fs, base = cond
+    uri = base.join("race.json")
+    validator = fs.create_if_absent(uri, b"seed") if seeded else ""
+    driver = "fsspec" if isinstance(fs, FsspecFilesystem) else "obstore"
+    argv = [sys.executable, "-c", _RACER, driver, str(tmp_path), validator]
+    pipe = {"cwd": ROOT, "stdin": subprocess.PIPE, "stdout": subprocess.PIPE, "text": True}
+    procs = [subprocess.Popen([*argv, me], **pipe) for me in "ab"]
+    Path(base.path).mkdir(parents=True, exist_ok=True)
+    guard = os.open(Path(base.path) / GUARD_FILE_NAME, os.O_RDONLY | os.O_CREAT, 0o644)
+    fcntl.flock(guard, fcntl.LOCK_EX)
+    try:
+        assert [cast("IO[str]", p.stdout).readline().strip() for p in procs] == ["ready"] * 2
+        for p in procs:
+            print("go", file=p.stdin, flush=True)
+        time.sleep(2)
+        assert [p.poll() for p in procs] == [None, None], "a child crossed the held guard"
+    finally:
+        os.close(guard)
+    outs = [p.communicate(timeout=90)[0].split() for p in procs]
+    assert sorted(out[0] for out in outs) == ["lost", "won"]
+    me, won = next((m, out[1]) for m, out in zip("ab", outs, strict=True) if out[0] == "won")
+    assert fs.read_snapshot(uri) == (me.encode(), won)
+
+
+@pytest.mark.integration
+def test_stale_validator_is_refused_by_replace_and_delete(cond):
+    fs, base = cond
+    uri = base.join("claim.json")
+    stale = fs.create_if_absent(uri, b"one")
+    current = fs.compare_replace(uri, stale, b"two")
+    with pytest.raises(PreconditionFailed):
+        fs.compare_replace(uri, stale, b"three")
+    refused = PreconditionFailed if CompareDelete in fs.capabilities() else NotImplementedError
+    with pytest.raises(refused):
+        fs.compare_delete(uri, stale)
+    assert fs.read_snapshot(uri) == (b"two", current)
+
+
+@pytest.mark.integration
+def test_compare_replace_never_creates_a_missing_object(cond):
+    fs, base = cond
+    uri = base.join("absent.json")
+    validator = fs.create_if_absent(uri, b"one")
+    fs.rm(uri)
+    with pytest.raises(PreconditionFailed):
+        fs.compare_replace(uri, validator, b"two")
+    assert not fs.exists(uri)
+
+
+@pytest.mark.integration
+@pytest.mark.concurrency
+def test_read_snapshot_never_pairs_body_with_another_generation(cond):
+    fs, base = cond
+    uri = base.join("moving.json")
+    validators = {b"0": fs.create_if_absent(uri, b"0")}
+    done = threading.Event()
+    with ThreadPoolExecutor(1) as pool:
+        reads = pool.submit(lambda: [fs.read_snapshot(uri) for _ in iter(done.is_set, True)])
+        for i in range(1, 60):
+            validators[b"%d" % i] = fs.compare_replace(uri, validators[b"%d" % (i - 1)], b"%d" % i)
+        done.set()
+    assert reads.result(timeout=60)
+    assert all(validators[body] == validator for body, validator in reads.result())
+
+
+@pytest.mark.integration
+def test_guard_file_is_never_listed_and_never_removed(cond):
+    fs, base = cond
+    uri = base.join("claim.json")
+    guard = Path(base.path) / GUARD_FILE_NAME
+    validator = fs.create_if_absent(uri, b"a")
+    inode = os.stat(guard).st_ino
+    validator = fs.compare_replace(uri, validator, b"b")
+    assert os.stat(guard).st_ino == inode
+    fs.compare_delete(uri, validator)
+    assert os.stat(guard).st_ino == inode
+    fs.create_if_absent(base.join("other.json"), b"c")
+    assert [Path(str(u)).name for u in fs.ls(base)] == ["other.json"]
+    assert [Path(u.path).name for u in fs.find(base)] == ["other.json"]
