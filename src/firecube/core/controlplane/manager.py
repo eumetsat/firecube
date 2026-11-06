@@ -1438,12 +1438,13 @@ class ChunkManager:
     def clear_stale_claims(self, *, product: str, dry_run: bool = True) -> ClearSweepResult:
         """Bulk-clear stale write claims for a product with mutation-time re-check.
 
-        Between preview (``list_stale_claims``) and mutation (``clear_claim``),
+        Between preview (``list_stale_claims``) and mutation (``release_claim_if_unchanged``),
         a live pod could refresh a previously stale claim or another operator
         could delete it. Each mutation re-reads the current domain directly and
         only clears domains that remain stale AND present; live claims are never
-        forcibly overridden. Errors are collected per-claim, and the sweep
-        continues past any single-claim race.
+        forcibly overridden. The mutation retires only the previewed acquisition, so a
+        claim renewed or retaken since the preview lands in ``skipped_fresh``. Errors are
+        collected per-claim, and the sweep continues past any single-claim race.
         """
         result = ClearSweepResult()
         stale = self.list_stale_claims(product=product)
@@ -1461,13 +1462,15 @@ class ChunkManager:
             if current.last_heartbeat_at != claim.last_heartbeat_at or not current.stale:
                 result.skipped_fresh.append(claim.domain)
                 continue
-            try:
-                cleared = self.clear_claim(product=product, domain_id=claim.domain, force=False)
-            except ClaimConflictError:
-                result.skipped_fresh.append(claim.domain)
-                continue
-            if cleared:
+            # Retire only the previewed acquisition: a successor that took the domain since
+            # the preview reads as changed, never as cleared.
+            outcome = self.repo.claims.release_claim_if_unchanged(
+                product=product, claim=claim, stale_only=True
+            )
+            if outcome == "released":
                 result.cleared.append(claim.domain)
+            elif outcome == "changed":
+                result.skipped_fresh.append(claim.domain)
             else:
                 result.skipped_missing.append(claim.domain)
         return result

@@ -35,6 +35,7 @@ import pandas as pd
 import xarray as xr
 import zarr
 
+from firecube.core.controlplane.claims import ClaimHandle, ClaimLossLatch
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
@@ -907,16 +908,20 @@ def append_time_groups(
         cov = AppendCoverageBuilder(time_dim_name=append_dim)
         touched: TouchedSlots | None = None
         touched_ref: list[TouchedSlots | None] = [None]
+        latch: ClaimLossLatch | None = None
 
         try:
             claim_ctx = (
                 claim_for_group(str(group)) if claim_for_group is not None else nullcontext()
             )
+            latch = _claim_latch(claim_ctx)
             with claim_ctx:
                 for start in range(0, len(ts_list), int(batch_size)):
                     batch = ts_list[start : start + int(batch_size)]
                     if not batch:
                         continue
+                    if latch is not None:
+                        latch.raise_if_set()
                     is_final = is_final_batch and (start + int(batch_size) >= len(ts_list))
                     batches_attempted += 1
                     ts_requested += len(batch)
@@ -955,6 +960,8 @@ def append_time_groups(
                         resume_svc=resume_svc,
                     )
 
+            if latch is not None:
+                latch.raise_if_set()  # also a loss that the release of the claim found
             _append_coverage_entry(
                 coverage_entries,
                 cov,
@@ -980,6 +987,7 @@ def append_time_groups(
                 state_deleted_value=state_deleted_value,
                 resume_svc=resume_svc,
                 logger=logger,
+                claim_lost=latch is not None and latch.is_set,
                 committed=coverage_entries,
                 not_attempted_groups=group_order[group_order.index(str(group)) + 1 :],
                 counters=_build_metrics(
@@ -1011,6 +1019,18 @@ def append_time_groups(
     )
 
 
+def _claim_latch(claim: Any) -> ClaimLossLatch | None:
+    """The latch that records the loss of *claim*; ``None`` for a claim that is no handle.
+
+    A handle the caller gave no latch gets one scoped to this call.
+    """
+    if not isinstance(claim, ClaimHandle):
+        return None
+    if claim.latch is None:
+        claim.attach_latch(ClaimLossLatch())
+    return claim.latch
+
+
 def _touched_slots(group: str, resume_svc: AppendResumeService) -> TouchedSlots:
     """Start tracking a group's writes just before its first write begins.
 
@@ -1035,6 +1055,7 @@ def _failed_batch(
     state_deleted_value: int,
     resume_svc: AppendResumeService,
     logger: logging.Logger,
+    claim_lost: bool,
     committed: list[dict[str, Any]],
     not_attempted_groups: list[str],
     counters: dict[str, Any],
@@ -1052,6 +1073,8 @@ def _failed_batch(
         state_deleted_value: Deleted-state value recorded in coverage entries.
         resume_svc: Resume service whose cursor and cache are rewound.
         logger: Receives the failure and repair log lines.
+        claim_lost: The run lost a claim. The group is then not repaired, because
+            its store may hold the data of the writer that took the claim over.
         committed: Coverage entries of the groups flushed before this one.
         not_attempted_groups: Groups after this one in write order.
         counters: Batch counters accumulated up to the failure.
@@ -1067,7 +1090,7 @@ def _failed_batch(
         extra={"group": group, "committed_groups": [entry["group"] for entry in committed]},
     )
     failed_entry: dict[str, Any] | None = None
-    if touched is None:
+    if touched is None or claim_lost:
         repair = RepairOutcome()
     else:
         repair = repair_failed_group(

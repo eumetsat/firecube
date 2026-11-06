@@ -371,9 +371,28 @@ class IndexEnsuredEvent:
         }
 
 
+CLAIM_STATE_HELD: Final = "held"
+CLAIM_STATE_RELEASED: Final = "released"
+ClaimState = Literal["held", "released"]
+"""The state of a claim record: held by its owner, or released and free to acquire."""
+
+
 @dataclass(slots=True)
 class ClaimInfo:
-    """Projected information for one write-domain claim."""
+    """Projected information for one held write-domain claim.
+
+    Attributes:
+        product: The logical product name.
+        domain: The canonical write-domain identifier.
+        owner_id: The owner the claim was acquired for.
+        claim_path: The URI of the claim record.
+        acquired_at: When the claim was acquired, in seconds since the epoch.
+        last_heartbeat_at: When the owner last renewed the claim, in seconds since the epoch.
+        heartbeat_interval_s: How often the owner renews the claim.
+        stale_threshold_s: How long without a renewal makes the claim stale.
+        incarnation: The id of this acquisition, or `None` for a record of an older version.
+        revision: The id of the last write of the record, or `None` for an older record.
+    """
 
     product: str
     domain: str
@@ -383,6 +402,8 @@ class ClaimInfo:
     last_heartbeat_at: float
     heartbeat_interval_s: int
     stale_threshold_s: int
+    incarnation: str | None = None
+    revision: str | None = None
 
     @property
     def stale(self) -> bool:

@@ -876,7 +876,7 @@ class DeletionEngine:
     def _clear_maintenance_claims(self, claims: Iterable[tuple[str, WriteDomain, Any]]) -> None:
         """Release each acquired claim, newest first; releasing stops its heartbeat too.
 
-        A failed release is logged; deleting the file alone lets the heartbeat write it back.
+        A failed release is logged, and its claim stays until it goes stale and is cleared.
         """
         for product, domain, handle in reversed(list(claims)):
             try:

@@ -573,6 +573,48 @@ def _restore_with_fields(cls: type[Exception], message: object, fields: dict[str
     return cls(message, **fields)
 
 
+class ClaimReleaseError(FirecubeError):
+    """A claim was not released because its heartbeat write was still in flight.
+
+    The claim record stays as it was. It goes stale, and an operator clears it.
+
+    Attributes:
+        domain: The claim's domain identifier.
+        owner_id: The owner the claim was acquired for.
+    """
+
+    def __init__(self, message: object, *, domain: str, owner_id: str) -> None:
+        self.domain = domain
+        self.owner_id = owner_id
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        fields = {"domain": self.domain, "owner_id": self.owner_id}
+        return (_restore_with_fields, (type(self), self.args[0], fields), self.__dict__)
+
+
+class ClaimLostError(FirecubeError):
+    """A run lost a claim it held, so it writes no further batch.
+
+    Another writer replaced the claim record. The run cannot tell what that
+    writer has stored since, so it stops instead of writing over it.
+
+    Attributes:
+        domain: The domain identifier of the first claim the run lost.
+    """
+
+    def __init__(self, message: object, *, domain: str) -> None:
+        self.domain = domain
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (
+            _restore_with_fields,
+            (type(self), self.args[0], {"domain": self.domain}),
+            self.__dict__,
+        )
+
+
 class ExclusiveMaintenanceRefusedError(FirecubeError):
     """Exclusive maintenance of a product is refused because other writers are present.
 
