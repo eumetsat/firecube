@@ -3866,6 +3866,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operations/archive/incremental-backups/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Incremental Backups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operations/archive/read-a-release-with-xarray/" class="md-nav__link">
         
   
@@ -6329,21 +6357,41 @@ digest of that identifier, so claim lookup never requires listing:
 <td>number</td>
 <td>Staleness cutoff, default 120</td>
 </tr>
+<tr>
+<td><code>state</code></td>
+<td>string</td>
+<td><code>held</code> or <code>released</code></td>
+</tr>
+<tr>
+<td><code>incarnation</code></td>
+<td>string</td>
+<td>One id per acquisition</td>
+</tr>
+<tr>
+<td><code>revision</code></td>
+<td>string</td>
+<td>One id per write of the record</td>
+</tr>
 </tbody>
 </table>
+<p>A record without <code>state</code> reads as <code>held</code>.</p>
 <p>Semantics:</p>
 <ul>
-<li>Acquisition is the atomic creation of the claim file. If the file already
-  exists, acquisition MUST fail with a claim conflict; it MUST NOT take over
-  the claim, even a stale one.</li>
-<li>Release deletes the file.</li>
+<li>Every transition is a compare-and-swap. A changed or missing record makes it
+  fail.</li>
+<li>Acquisition creates the claim file, or replaces a <code>released</code> record. If a
+  <code>held</code> record exists, acquisition MUST fail with a claim conflict. It MUST
+  NOT take over the claim, even a stale one.</li>
+<li>A heartbeat replaces its own revision and never creates a record. Release
+  deletes the file, or replaces it with a <code>released</code> record on S3. Listings
+  treat a <code>released</code> record as absent.</li>
 <li>A claim is stale when <code>now - last_heartbeat_at &gt; stale_threshold_s</code>. A
   crashed owner leaves a stale claim behind. Operators clear stale claims with
   <code>firecube chunks claims clear</code>, which refuses to clear fresh claims unless
   forced.</li>
 <li>Abandoning a run releases every claim whose owner id resolves to that run
-  alone. The release applies to fresh and stale claims. The claim file stays in
-  place if its owner or <code>acquired_at</code> changed after the claims were listed.</li>
+  alone. The release applies to fresh and stale claims. The claim stays in
+  place if its record changed after the claims were listed.</li>
 <li>An owner id resolves through its candidates: the id itself and each prefix
   that ends just before a <code>:</code>. The claim is released only if exactly one
   candidate is a recorded run, and that run is the abandoned one.</li>
@@ -6351,18 +6399,15 @@ digest of that identifier, so claim lookup never requires listing:
   abandon already ended. A sweep that a crash interrupted therefore finishes
   its release when it runs again.</li>
 <li>The <code>firecube chunks runs abandon --all-stale</code> sweep releases a claim of a
-  terminal run only if the claim is stale when re-read before the delete.
+  terminal run only if the claim is stale when re-read before the release.
   Its dry run reports the claims it would release and the claims it would leave.</li>
 <li>If the claims of the product cannot be listed, the abandon reports an error
   and does not report success. Run the abandon again to release the claims.</li>
-<li>Acquisition does not change. A claim that the release left in place still
-  blocks acquisition of its domain.</li>
+<li>A <code>held</code> record that the release left in place still blocks acquisition of
+  its domain.</li>
+<li><code>firecube chunks claims clear</code> keeps a record that changed after it read it,
+  and exits 1.</li>
 </ul>
-<p>Known limitation: a release reads the claim again, then deletes the file. These
-are two separate operations. If two releases run at the same time, one can
-delete a claim that a successor acquired between the read and the delete.
-<code>firecube chunks claims clear</code> has the same limitation. Do not run two releases
-for the same product at the same time.</p>
 <h3 id="exclusive-maintenance-claim">Exclusive maintenance claim</h3>
 <p>The domain <code>&lt;product&gt;:maintenance:exclusive</code> is the exclusive maintenance claim
 of a product. It is a claim like any other, and the rules above apply to its

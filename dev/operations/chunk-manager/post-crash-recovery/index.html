@@ -4051,6 +4051,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../archive/incremental-backups/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Incremental Backups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../archive/read-a-release-with-xarray/" class="md-nav__link">
         
   
@@ -5508,7 +5536,7 @@ it would release:</p>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  Would release claim MY_PRODUCT.zarr:zarr_region:F003
 </code></pre></div>
 <p>A <code>Would release claim</code> line names a stale claim that the committed sweep
-deletes. A <code>Would leave claim</code> line names a claim that the committed sweep
+releases. A <code>Would leave claim</code> line names a claim that the committed sweep
 keeps. The sweep keeps a claim that is fresh or whose owner is ambiguous. The
 dry run judges each claim by its age at the time of the listing:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>  Would leave claim MY_PRODUCT.zarr:zarr_region:F002
@@ -5540,9 +5568,7 @@ pass, or use <code>--domain</code> with <code>--force</code> after you verify th
 <p>Abandon the stale runs first, then clear the stale claims that remain. The
 run sweep releases a claim only if the claim is stale. The owner of the claim
 must be one run that the sweep abandons or one run that is already terminal.
-Firecube reads the age of the claim again just before it deletes the claim. If
-the heartbeat moved, the sweep keeps the claim. The claim sweep then clears the
-remaining stale claims.</p>
+The sweep keeps any claim whose owner changed since it listed the claim.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--all-stale<span class="w"> </span><span class="se">\</span>

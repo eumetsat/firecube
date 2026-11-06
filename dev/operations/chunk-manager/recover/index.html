@@ -4046,6 +4046,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../archive/incremental-backups/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Incremental Backups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../archive/read-a-release-with-xarray/" class="md-nav__link">
         
   
@@ -5515,6 +5543,7 @@ abandon. The command then exits 1 and releases no claim:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Product                  State    Owner                    Domain
 <a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>--------------------------------------------------------------------------------------------
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>MY_PRODUCT.zarr          active   docs-started-run:F001    MY_PRODUCT:zarr_region:F001
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>MY_PRODUCT.zarr          active   docs-started-run:F002    MY_PRODUCT:zarr_region:F002
 </code></pre></div>
 <p>The <code>Domain</code> value is the exact value to pass to <code>--domain</code>.</p>
 <h2 id="clear-a-blocking-claim">Clear A Blocking Claim</h2>
@@ -5539,6 +5568,10 @@ cleared even though it does not look stale:</p>
 <p>Expected output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>Cleared claim for MY_PRODUCT:zarr_region:F001
 </code></pre></div>
+<p>If another writer took the claim after the command read it, the command exits
+1 and keeps that claim. Do not delete <code>.firecube/claims/.firecube-claims.lock</code>.</p>
+<p>On S3, a <code>released</code> record stays in <code>.firecube/claims/</code>. It is harmless. The
+next acquisition of the domain replaces it.</p>
 <p>Verify:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
@@ -5634,6 +5667,26 @@ command then uses the marker of its time coordinate.</p>
 <td>Claim does not look stale</td>
 <td>The heartbeat timestamp is still recent.</td>
 <td>Use <code>--force</code> only if the writer is gone.</td>
+</tr>
+<tr>
+<td>Run records <code>failed</code> with <code>ClaimLostError</code></td>
+<td>Another writer replaced a claim of the run. The run admits no further batch. Writes already in flight can finish. Firecube skips the recovery of the failed group.</td>
+<td>Find the other writer and wait until it stops. Inspect the group, because it can hold part of a batch and data of the other writer. Then <a href="#recover-from-a-failed-batch">recover the failed batch</a>.</td>
+</tr>
+<tr>
+<td><code>ClaimReleaseError</code>: the claim "was not released"</td>
+<td>A heartbeat write was still in flight when the run released the claim. The record stays and goes stale.</td>
+<td>Confirm the process has stopped. Wait until the claim is stale, then use <code>chunks claims clear</code>.</td>
+</tr>
+<tr>
+<td><code>chunks claims clear</code> exits 1 and keeps the claim</td>
+<td>Another writer took the claim after the command read it.</td>
+<td>List the claims again. Confirm that the new owner is stopped, then clear the claim.</td>
+</tr>
+<tr>
+<td>Claim operations fail with <code>ConfigurationError</code> on a storage other than <code>file</code> and <code>s3</code></td>
+<td>The storage cannot write conditionally, so Firecube refuses to acquire, renew or read a claim record. A listing of a missing or empty claims directory still returns no claims.</td>
+<td>Use a <code>file://</code> or <code>s3://</code> product. Do not read an empty listing on such a storage as proof that no writer is active.</td>
 </tr>
 <tr>
 <td><code>ProductUnderMaintenanceError</code>: <code>Product MY_PRODUCT.zarr is under exclusive maintenance by &lt;owner&gt; (claim MY_PRODUCT.zarr:maintenance:exclusive), so &lt;run&gt; is refused. Retry when that maintenance has finished.</code></td>
