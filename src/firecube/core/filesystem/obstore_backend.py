@@ -25,12 +25,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
-from firecube.core.filesystem import publication
+from firecube.core.filesystem import conditional, publication
 from firecube.core.filesystem.protocol import (
     AtomicPublish,
     AtomicWriter,
+    CompareDelete,
+    ConditionalWrite,
     Multipart,
     MultipartUploader,
+    PreconditionFailed,
     RangedRead,
 )
 from firecube.core.storage.binding import StorageBinding
@@ -192,11 +195,7 @@ class ObstoreFilesystem:
         rel_path = self._resolve_path(uri).rstrip("/")
         prefix = rel_path + "/" if rel_path else ""
         result = self._store.list_with_delimiter(prefix=prefix)
-        objects = [
-            obj
-            for obj in result.get("objects", [])
-            if not publication.is_publication_temp(obj["path"])
-        ]
+        objects = [obj for obj in result.get("objects", []) if not _is_hidden_key(obj["path"])]
         prefixes = result.get("common_prefixes", [])
         if detail:
             items: list[dict[str, Any]] = [
@@ -258,9 +257,7 @@ class ObstoreFilesystem:
         paths: list[StorageUri] = []
         for batch in self._store.list(prefix=prefix):
             paths.extend(
-                self._from_path(item["path"])
-                for item in batch
-                if not publication.is_publication_temp(item["path"])
+                self._from_path(item["path"]) for item in batch if not _is_hidden_key(item["path"])
             )
         return paths
 
@@ -274,10 +271,110 @@ class ObstoreFilesystem:
         }
 
     def capabilities(self) -> set[type]:
-        return {Multipart, RangedRead, AtomicPublish}
+        capabilities: set[type] = {Multipart, RangedRead, AtomicPublish}
+        # The docs macro asks an instance that has no binding for the driver's own
+        # capabilities; such an instance serves no product, so it adds none.
+        binding = getattr(self, "_binding", None)
+        protocol = None if binding is None else binding.identity.product_uri.protocol
+        if protocol == "file":
+            capabilities |= {ConditionalWrite, CompareDelete}
+        elif protocol == "s3":
+            # Ceph RGW ignores If-Match on DeleteObject, and obstore 0.11.0 has no
+            # conditional delete, so an s3 binding lacks CompareDelete.
+            capabilities.add(ConditionalWrite)
+        return capabilities
 
     def publish_atomic(self, dst_uri: StorageUri, write: Callable[[StorageUri], None]) -> None:
         publication.publish_atomic(dst_uri, write)
+
+    def read_snapshot(self, uri: StorageUri) -> tuple[bytes, str]:
+        """Return the object's bytes and their validator from one read (see `ConditionalWrite`).
+
+        A local validator is the one ``conditional`` defines. An s3 validator is the
+        ETag of the GET response, quotes included.
+
+        Raises:
+            FileNotFoundError: No object exists at ``uri``.
+            ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
+            OSError: The store returned no ETag.
+        """
+        if self._conditional_protocol(uri) == "file":
+            return conditional.read_snapshot(uri)
+        result = self._store.get(self._resolve_path(uri))
+        data = bytes(result.bytes())
+        return data, _require_e_tag(result.meta.get("e_tag"), uri)
+
+    def create_if_absent(self, uri: StorageUri, data: bytes) -> str:
+        """Create the object only when none exists, and return its validator.
+
+        On s3 the write is a ``put`` with mode ``create``, an ``If-None-Match: *`` PUT.
+
+        Raises:
+            FileExistsError: An object already exists at ``uri``.
+            ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
+            OSError: The store returned no ETag.
+        """
+        if self._conditional_protocol(uri) == "file":
+            return conditional.create_if_absent(uri, data)
+        from firecube.core.filesystem import _obstore_compat
+
+        try:
+            result = self._store.put(
+                self._resolve_path(uri), data, mode=_obstore_compat.PutMode.Create
+            )
+        except _obstore_compat.AlreadyExistsError as exc:
+            raise FileExistsError(uri.to_str()) from exc
+        return _require_e_tag(result.get("e_tag"), uri)
+
+    def compare_replace(self, uri: StorageUri, validator: str, data: bytes) -> str:
+        """Replace the object only while its validator is ``validator``; return the new validator.
+
+        On s3 the write is a ``put`` in update mode, an ``If-Match`` PUT on the unquoted ETag.
+
+        Raises:
+            PreconditionFailed: The object changed since ``validator`` was read, or is missing.
+            ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
+            OSError: The store returned no ETag.
+        """
+        if self._conditional_protocol(uri) == "file":
+            return conditional.compare_replace(uri, validator, data)
+        from firecube.core.filesystem import _obstore_compat
+
+        try:
+            result = self._store.put(
+                self._resolve_path(uri), data, mode=_obstore_compat.update_put_mode(validator)
+            )
+        except _obstore_compat.PreconditionError as exc:
+            raise PreconditionFailed(uri.to_str(), "the object changed or is missing") from exc
+        except FileNotFoundError as exc:
+            raise PreconditionFailed(uri.to_str(), "the object does not exist") from exc
+        return _require_e_tag(result.get("e_tag"), uri)
+
+    def compare_delete(self, uri: StorageUri, validator: str) -> None:
+        """Delete the local file only while its validator is ``validator`` (see `CompareDelete`).
+
+        An s3 binding refuses, since Ceph RGW ignores ``If-Match`` on ``DeleteObject``.
+
+        Raises:
+            PreconditionFailed: The file changed since ``validator`` was read, or is missing.
+            NotImplementedError: The binding is s3, where a delete cannot be made conditional.
+            ValueError: The binding is neither local nor s3, or ``uri`` is of another protocol.
+        """
+        if self._conditional_protocol(uri) != "file":
+            raise NotImplementedError(
+                f"obstore has no conditional delete, so {uri.to_str()} cannot be compare-deleted"
+            )
+        conditional.compare_delete(uri, validator)
+
+    def _conditional_protocol(self, uri: StorageUri) -> str:
+        """Return ``"file"`` or ``"s3"``, the protocol of the binding that ``uri`` must share."""
+        protocol = self._binding.identity.product_uri.protocol
+        if protocol not in ("file", "s3") or uri.protocol != protocol:
+            raise ValueError(
+                f"conditional writes need a local or s3 binding and a URI of its protocol, "
+                f"got a {protocol} binding and {uri.to_str()}"
+            )
+        return protocol
 
     @property
     def atomic_writer(self) -> AtomicWriter:
@@ -354,6 +451,18 @@ class ObstoreAtomicWriter:
         """
         rel_path = ObstoreFilesystem._test_resolve_path(uri, self._store_prefix)
         self._store.put(rel_path, data)
+
+
+def _is_hidden_key(path: str) -> bool:
+    """Return True for a reserved name that listings leave out: a publication temporary or a guard."""
+    return publication.is_publication_temp(path) or conditional.is_guard_file(path)
+
+
+def _require_e_tag(e_tag: str | None, uri: StorageUri) -> str:
+    """Return ``e_tag``; raise ``OSError`` when the store reported none, as no compare could use it."""
+    if not e_tag:
+        raise OSError(f"the store returned no ETag for {uri.to_str()}")
+    return e_tag
 
 
 def _store_prefix_for(binding: StorageBinding) -> str:

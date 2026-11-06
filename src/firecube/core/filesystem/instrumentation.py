@@ -213,6 +213,12 @@ class InstrumentedFilesystem:
         "glob",
         "get",
         "put",
+        "compare_delete",
+    }
+    # Conditional writes: the method name and the position of its ``data`` argument.
+    _conditional_writes: ClassVar[dict[str, int]] = {
+        "create_if_absent": 1,
+        "compare_replace": 2,
     }
 
     def __init__(self, wrapped: Any):
@@ -244,7 +250,13 @@ class InstrumentedFilesystem:
 
     def __getattr__(self, name: str):
         attr = getattr(self._wrapped, name)
-        if not callable(attr) or name not in self._timed_methods:
+        if not callable(attr):
+            return attr
+        if name == "read_snapshot":
+            return self._timed_snapshot_read(attr)
+        if name in self._conditional_writes:
+            return self._timed_conditional_write(attr, self._conditional_writes[name])
+        if name not in self._timed_methods:
             return attr
 
         def _wrapped_call(*args, **kwargs):
@@ -256,5 +268,47 @@ class InstrumentedFilesystem:
             except Exception as exc:
                 record_fs_call(duration_s=time.perf_counter() - start, success=False, error=exc)
                 raise
+
+        return _wrapped_call
+
+    @staticmethod
+    def _timed_snapshot_read(read_snapshot: Any) -> Any:
+        """Wrap ``read_snapshot`` so it records its latency and the bytes it read."""
+
+        def _wrapped_call(*args, **kwargs):
+            start = time.perf_counter()
+            try:
+                data, validator = read_snapshot(*args, **kwargs)
+            except Exception as exc:
+                record_fs_call(duration_s=time.perf_counter() - start, success=False, error=exc)
+                raise
+            record_fs_call(
+                duration_s=time.perf_counter() - start,
+                success=True,
+                bytes_read=_payload_size(data),
+            )
+            return data, validator
+
+        return _wrapped_call
+
+    @staticmethod
+    def _timed_conditional_write(write: Any, data_position: int) -> Any:
+        """Wrap a conditional write so it records its latency and, on success, the bytes it wrote."""
+
+        def _wrapped_call(*args, **kwargs):
+            positional = args[data_position] if len(args) > data_position else None
+            data = kwargs.get("data", positional)
+            start = time.perf_counter()
+            try:
+                validator = write(*args, **kwargs)
+            except Exception as exc:
+                record_fs_call(duration_s=time.perf_counter() - start, success=False, error=exc)
+                raise
+            record_fs_call(
+                duration_s=time.perf_counter() - start,
+                success=True,
+                bytes_written=_payload_size(data),
+            )
+            return validator
 
         return _wrapped_call

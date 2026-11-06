@@ -37,6 +37,7 @@ from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import EVENT_RUN_ABANDONED, WriteDomain
 from firecube.core.errors import ManifestError
+from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.runtime.resume_guard import ResumeGuard
 from tests.helpers.storage import make_test_binding
@@ -219,7 +220,9 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
         ],
     )
     assert result.exit_code == 0, result.output
-    remaining_claim_files = list(_claims_dir(tmp_path, PRODUCT).iterdir())
+    remaining_claim_files = [
+        p for p in _claims_dir(tmp_path, PRODUCT).iterdir() if p.name != GUARD_FILE_NAME
+    ]
     assert len(remaining_claim_files) == 2, [p.name for p in remaining_claim_files]
     surviving_names = {p.name for p in remaining_claim_files}
     for dom in seeded["fresh_claim_domains"]:

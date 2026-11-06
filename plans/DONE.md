@@ -1,5 +1,22 @@
 # Done
 
+## 2026-11-06 — Conditional claim transitions and the lost-claim stop
+
+**Decision.** Every transition of `FilesystemClaimService` is a compare-and-swap against the revision it last read, through the new `ConditionalWrite` capability of both storage drivers. A claim record has `state` (`held` or `released`), `incarnation` and `revision`. A run that loses a claim records the loss in a run-level latch, admits no further batch and records `failed` with `ClaimLostError`. The decisions of 2026-11-05 and the later decisions of the maintainer on 2026-11-06 govern it.
+
+- Cause. The claim service read a record and then wrote or deleted it in a second operation. A heartbeat rewrote the file in place. A stale handle, a `clear_claim` call and a sweep could delete the claim of a successor. A listing error read as no claims. Nothing stopped a run that lost its claim from writing the next batch.
+- Closed in `plans/TODO.md`. The entry "Claim transitions are check-then-act" and the heartbeat-truncation entry. Also the claim clauses of four entries: listings that fail open, `clear_claim` and the sweep, a heartbeat that outlives release, and discarded maintenance handles.
+- Protocol. Acquire creates the record or replaces a `released` one. A heartbeat replaces its own revision and re-reads once when the response is lost. Release waits at most `stale_threshold_s` for the write in flight, and otherwise raises `ClaimReleaseError`. Clear and sweep retire the revision they read.
+- Local targets. Each compare runs under the permanent guard file `.firecube-claims.lock` and a process lock. NFS is not supported.
+- S3 (decision of the maintainer, 2026-11-06, which replaces the plan of 2026-11-05 to delete S3 claims conditionally). No S3 binding reports `CompareDelete`, because Ceph RGW ignores `If-Match` on `DeleteObject`. An S3 release replaces the record with a `released` one. The drivers send the ETag in `If-Match` without quotes, because RGW refuses a quoted value.
+- Evidence (ran). A conformance run on a Ceph RGW endpoint passed 30 of 30 cases and left its scratch prefix empty. The two RGW behaviours above came from its first runs. The reproduction tests of `tests/integration/test_claim_transitions.py` failed on the unchanged tree and pass after the change.
+- Cost (measured). On a local target, a heartbeat took 684.8 us (`fsspec`) and 775.1 us (`obstore`) with the compare-and-swap write. The blind rewrite took 34.4 us and 89.3 us. Each figure is the median of 3 runs of 1,000 beats.
+- Rollout rule. Stop or drain every writer of a product that runs the old version before the new version writes to it.
+- Run latch. The run owns one latch for every claim of an ingest run, GenericZarr included. The run reads each held claim once before the success record. A takeover after that read and before the `complete` record is not excluded (accepted by the maintainer, 2026-11-06).
+- What stays open. Fencing of data writes, released claim files on S3, and the weak coverage of the lost-response heartbeat. Each has an entry in `plans/TODO.md`.
+
+---
+
 ## 2026-11-05 — Atomic writer temporaries no longer appear in listings
 
 **Decision.** `FsspecAtomicWriter.write_atomic` and `replace_atomic` stage a local write under the reserved publication temporary name from `publication.publication_temp_name()` (`.firecube-publish-*.tmp`). The file is created exclusive with mode 0600, as `mkstemp` created it. The fix sits at the `AtomicWriter` seam in the driver and not in the control plane. There is one reserved temporary family.

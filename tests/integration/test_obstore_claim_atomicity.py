@@ -53,15 +53,31 @@ from moto.server import ThreadedMotoServer
 
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.claims import ClaimHandle
-from firecube.core.controlplane.types import WriteDomain
+from firecube.core.controlplane.types import CONTROL_DIRNAME, WriteDomain
 from firecube.core.credentials import Credentials
 from firecube.core.errors import ClaimConflictError
+from firecube.core.filesystem.protocol import PreconditionFailed
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
+from tests.integration.test_claim_transitions import ClaimEnv, owner_of
 
-pytestmark = [pytest.mark.s3, pytest.mark.concurrency]
+from tests.integration.test_claim_transitions import (  # noqa: F401  isort: skip
+    test_heartbeat_in_flight_at_release_does_not_recreate_claim as test_s3_heartbeat_in_flight_at_release_does_not_recreate_claim,
+    test_late_heartbeat_after_force_clear_does_not_recreate_or_overwrite_claim as test_s3_late_heartbeat_after_force_clear_does_not_recreate_or_overwrite_claim,
+    test_stale_handle_release_keeps_successor_claim as test_s3_stale_handle_release_keeps_successor_claim,
+    test_sweep_does_not_delete_successor_acquired_after_its_read as test_s3_sweep_does_not_delete_successor_acquired_after_its_read,
+)
+from tests.unit.test_filesystem_capabilities import (  # noqa: F401  isort: skip
+    test_compare_delete_is_reported_on_local_bindings_only,
+    test_create_if_absent_has_one_winner_among_threads,
+    test_read_snapshot_never_pairs_body_with_another_generation,
+    test_compare_replace_never_creates_a_missing_object,
+    test_stale_validator_is_refused_by_replace_and_delete,
+)
+
+pytestmark = [pytest.mark.s3, pytest.mark.concurrency, pytest.mark.integration]
 
 _BUCKET = "test-bucket"
 _ACCESS_KEY = "testing"
@@ -69,6 +85,7 @@ _SECRET_KEY = "testing"
 _REGION = "us-east-1"
 _PRODUCT = "product.zarr"
 _THREADS = 10
+_IF_MATCH: list[str | None] = []
 
 
 @pytest.fixture(scope="module")
@@ -78,6 +95,13 @@ def moto_s3_endpoint() -> Iterator[str]:
     host, port = server.get_host_and_port()
     endpoint = f"http://{host}:{port}"
     try:
+        wsgi = server._server.app  # type: ignore[union-attr]
+
+        def record(env: Any, start: Any) -> Any:
+            _IF_MATCH.append(env.get("HTTP_IF_MATCH"))
+            return wsgi(env, start)
+
+        server._server.app = record  # type: ignore[union-attr]
         yield endpoint
     finally:
         server.stop()
@@ -119,7 +143,6 @@ def _binding_for_s3(endpoint: str, driver: Any = "obstore") -> StorageBinding:
     )
 
 
-@pytest.mark.integration
 def test_concurrent_claim_acquisition_against_obstore_s3(
     moto_s3_endpoint: str,
     s3_bucket: Any,
@@ -208,7 +231,6 @@ def test_concurrent_claim_acquisition_against_obstore_s3(
         manager.close()
 
 
-@pytest.mark.integration
 def test_abandon_releases_claim_missing_from_a_cached_listing(
     moto_s3_endpoint: str, s3_bucket: Any, tmp_path: Path
 ) -> None:
@@ -234,7 +256,53 @@ def test_abandon_releases_claim_missing_from_a_cached_listing(
         )
         claim_key = put_claim("slot=1", "run-r:grp")
         manager.abandon_run(product=_PRODUCT, run_id="run-r", reason="killed writer")
-        listed = s3_bucket.list_objects_v2(Bucket=_BUCKET, Prefix=f"{_PRODUCT}/.firecube/claims/")
-        assert claim_key not in [obj["Key"] for obj in listed.get("Contents", [])]
+        record = json.loads(s3_bucket.get_object(Bucket=_BUCKET, Key=claim_key)["Body"].read())
+        assert record["state"] == "released"
     finally:
         manager.close()
+
+
+@pytest.fixture(params=["fsspec", "obstore"])
+def claim_env(
+    request: pytest.FixtureRequest, moto_s3_endpoint: str, s3_bucket: Any
+) -> Iterator[ClaimEnv]:
+    control = lambda p: StorageUri(protocol="s3", authority=_BUCKET, path=f"/{p}/{CONTROL_DIRNAME}")  # noqa: E731
+    env = ClaimEnv(_binding_for_s3(moto_s3_endpoint, request.param), control)
+    yield env
+    env.close()
+
+
+@pytest.mark.parametrize("claim_env", ["fsspec"], indirect=True)
+def test_fsspec_s3_claim_read_survives_object_replaced_after_its_first_request(
+    claim_env: ClaimEnv, s3_bucket: Any
+) -> None:
+    """s3fs pins the ETag it saw on HEAD; a heartbeat between HEAD and GET raised FileExpired."""
+    service = claim_env.service(hb=3600, stale=120)
+    domain = claim_env.domain("replaced-during-read")
+    service.acquire(product=_PRODUCT, domain=domain, owner_id="A")
+    key = f"{_PRODUCT}/.firecube/claims/{domain.claim_name}"
+
+    def heartbeat_lands() -> None:
+        record = json.loads(s3_bucket.get_object(Bucket=_BUCKET, Key=key)["Body"].read())
+        s3_bucket.put_object(Bucket=_BUCKET, Key=key, Body=json.dumps(record).encode() + b" ")
+
+    fired = claim_env.after_next_read(heartbeat_lands)
+    assert owner_of(service, domain) == "A"
+    assert fired, "no claim read happened for the hook to follow"
+
+
+@pytest.fixture
+def cond(claim_env: ClaimEnv) -> tuple[Any, StorageUri]:
+    return claim_env.fs, claim_env.control_for(_PRODUCT).join("claims")
+
+
+def test_s3_if_match_is_sent_unquoted_while_validators_stay_quoted(cond: Any) -> None:
+    fs, base = cond
+    uri = base.join("wire.json")
+    first = fs.create_if_absent(uri, b"a")
+    _IF_MATCH.clear()
+    second = fs.compare_replace(uri, first, b"b")
+    with pytest.raises(PreconditionFailed):
+        fs.compare_replace(uri, first, b"c")
+    assert [h for h in _IF_MATCH if h] == [first.strip('"')] * 2
+    assert all(v[0] == v[-1] == '"' for v in (first, second))

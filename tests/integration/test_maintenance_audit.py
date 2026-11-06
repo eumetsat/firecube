@@ -419,14 +419,14 @@ def test_restore_error_survives_failing_bookkeeping(tmp_path, monkeypatch, faili
         boom = Mock(side_effect=OSError("bookkeeping boom"))
         monkeypatch.setattr(ChunkManager, "record_maintenance_failed", boom)
     else:
-        real_rm = FsspecFilesystem.rm
+        real_delete = FsspecFilesystem.compare_delete
 
-        def rm(self, uri, recursive=False):
+        def compare_delete(self, uri, validator):
             if "/claims/" in uri.to_str():
                 raise PermissionError("bookkeeping boom")
-            return real_rm(self, uri, recursive)
+            return real_delete(self, uri, validator)
 
-        monkeypatch.setattr(FsspecFilesystem, "rm", rm)
+        monkeypatch.setattr(FsspecFilesystem, "compare_delete", compare_delete)
     args = ["archive", "restore", "--archive", archive.as_uri(), "--storage-type", "local"]
     args += ["--target", (tmp_path / "r.zarr").as_uri(), "--storage-driver", "fsspec"]
     result = CliRunner().invoke(cli, args, env=_local_env(tmp_path))
@@ -442,14 +442,14 @@ def test_restore_archive_raises_its_own_error_when_bookkeeping_fails(tmp_path, m
         zf.writestr("notes.txt", "no zarr here")
     boom = Mock(side_effect=OSError("bookkeeping boom"))
     monkeypatch.setattr(ChunkManager, "record_maintenance_failed", boom)
-    real_rm = FsspecFilesystem.rm
+    real_delete = FsspecFilesystem.compare_delete
 
-    def rm(self, uri, recursive=False):
+    def compare_delete(self, uri, validator):
         if "/claims/" in uri.to_str():
             raise PermissionError("bookkeeping boom")
-        return real_rm(self, uri, recursive)
+        return real_delete(self, uri, validator)
 
-    monkeypatch.setattr(FsspecFilesystem, "rm", rm)
+    monkeypatch.setattr(FsspecFilesystem, "compare_delete", compare_delete)
     warnings: list[str] = []
     with pytest.raises(lib.ArchiveConversionError, match="No Zarr v3 root metadata found"):
         lib.restore_archive(

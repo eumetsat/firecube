@@ -44,12 +44,16 @@ def _bare_path_suggestion(value: str) -> str:
 def parse_and_validate_uri(value: str | None, *, param_hint: str) -> StorageUri:
     """Admit one CLI URI value and return it as a StorageUri.
 
-    Accepts lowercase ``file://`` and ``s3://`` only. A ``file://`` URI names no host,
+    Accepts lowercase ``file://`` and ``s3://`` only. A ``stac://`` value is refused;
+    ``StorageUri`` never holds ``stac://``. A ``file://`` URI names no host,
     ``localhost`` included, and a path below the root. An ``s3://`` URI names a bucket. A
     value with ``?``, ``#`` or a control character is refused. The ``file://`` path is
     literal and never percent-decoded, because Firecube serializes ``file://`` URIs
     literally. The check is one pass over the value and does no I/O, except that the
     working directory and ``HOME`` may be read to build the bare-path suggestion.
+
+    Not covered: ``--config-file``, ``--target-dir``, ``--workspace`` and the ``--output``
+    of ``firecube completion`` are local paths outside this policy.
 
     Args:
         value: The raw option or argument value.
@@ -116,7 +120,8 @@ def parse_and_validate_source_uri(
     ``stac://`` value returns a `StacCollectionUri` after refusing a non-lowercase scheme,
     a missing host, a path that does not end in ``/collections/<id>``, a ``?``, a ``#``
     and a control character. It does no I/O. A command without a STAC branch refuses the
-    `StacCollectionUri` result in its body with a `click.UsageError`.
+    `StacCollectionUri` result in its body with a `click.UsageError`. A plugin that needs a
+    local path calls `local_path_from_target` from `firecube.core.api`.
 
     Args:
         value: The raw option value.

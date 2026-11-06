@@ -253,20 +253,29 @@ digest of that identifier, so claim lookup never requires listing:
 | `last_heartbeat_at` | number | Refreshed by the owner while held |
 | `heartbeat_interval_s` | number | Owner's refresh cadence |
 | `stale_threshold_s` | number | Staleness cutoff, default 120 |
+| `state` | string | `held` or `released` |
+| `incarnation` | string | One id per acquisition |
+| `revision` | string | One id per write of the record |
+
+A record without `state` reads as `held`.
 
 Semantics:
 
-- Acquisition is the atomic creation of the claim file. If the file already
-  exists, acquisition MUST fail with a claim conflict; it MUST NOT take over
-  the claim, even a stale one.
-- Release deletes the file.
+- Every transition is a compare-and-swap. A changed or missing record makes it
+  fail.
+- Acquisition creates the claim file, or replaces a `released` record. If a
+  `held` record exists, acquisition MUST fail with a claim conflict. It MUST
+  NOT take over the claim, even a stale one.
+- A heartbeat replaces its own revision and never creates a record. Release
+  deletes the file, or replaces it with a `released` record on S3. Listings
+  treat a `released` record as absent.
 - A claim is stale when `now - last_heartbeat_at > stale_threshold_s`. A
   crashed owner leaves a stale claim behind. Operators clear stale claims with
   `firecube chunks claims clear`, which refuses to clear fresh claims unless
   forced.
 - Abandoning a run releases every claim whose owner id resolves to that run
-  alone. The release applies to fresh and stale claims. The claim file stays in
-  place if its owner or `acquired_at` changed after the claims were listed.
+  alone. The release applies to fresh and stale claims. The claim stays in
+  place if its record changed after the claims were listed.
 - An owner id resolves through its candidates: the id itself and each prefix
   that ends just before a `:`. The claim is released only if exactly one
   candidate is a recorded run, and that run is the abandoned one.
@@ -274,18 +283,14 @@ Semantics:
   abandon already ended. A sweep that a crash interrupted therefore finishes
   its release when it runs again.
 - The `firecube chunks runs abandon --all-stale` sweep releases a claim of a
-  terminal run only if the claim is stale when re-read before the delete.
+  terminal run only if the claim is stale when re-read before the release.
   Its dry run reports the claims it would release and the claims it would leave.
 - If the claims of the product cannot be listed, the abandon reports an error
   and does not report success. Run the abandon again to release the claims.
-- Acquisition does not change. A claim that the release left in place still
-  blocks acquisition of its domain.
-
-Known limitation: a release reads the claim again, then deletes the file. These
-are two separate operations. If two releases run at the same time, one can
-delete a claim that a successor acquired between the read and the delete.
-`firecube chunks claims clear` has the same limitation. Do not run two releases
-for the same product at the same time.
+- A `held` record that the release left in place still blocks acquisition of
+  its domain.
+- `firecube chunks claims clear` keeps a record that changed after it read it,
+  and exits 1.
 
 ### Exclusive maintenance claim
 

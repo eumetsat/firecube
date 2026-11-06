@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from contextlib import nullcontext
@@ -25,9 +26,14 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 import zarr
+from zarr.buffer import default_buffer_prototype
+from zarr.storage import MemoryStore
 
 from firecube.core.controlplane import ChunkManager
+from firecube.core.controlplane.claims import ClaimLossLatch
 from firecube.core.controlplane.types import WriteDomain
+from firecube.core.errors import ClaimLostError
+from firecube.core.zarr._zarr_compat import sync
 from firecube.core.zarr.guard.guarded_write import WriteResult
 from firecube.core.zarr.guard.metadata_authority import AuthorityBasis, MetadataAuthority
 from firecube.core.zarr.guard.unit_ownership import StagedSlotWrite, WriteFootprint
@@ -773,3 +779,46 @@ def test_direct_batch_keeps_no_written_or_absent_units(
     assert data[1].tolist() == [1.0, 1.0]
     assert session.written_units(store_uri) == {}
     assert session.absent_units(store_uri) == {}
+
+
+def test_verify_promotion_raises_when_draining_batch_loses_claim() -> None:
+    store = MemoryStore()
+    zarr.group(store=store, attributes={"title": "successor"})
+    latch = ClaimLossLatch()
+    entered, draining = threading.Event(), threading.Event()
+    session = _session(
+        [],
+        write_mode="staged",
+        claim_latch=latch,
+        workspace_uri="file:///unused",
+        open_final_store=lambda: ("file:///final", store),
+    )
+    real_drain = session._drain
+
+    def drain_signalling(what: str) -> None:
+        draining.set()
+        real_drain(what)
+
+    session._drain = drain_signalling  # type: ignore[method-assign]  # only seam for "drain started"
+
+    def batch() -> None:
+        with session.admit_write():
+            entered.set()
+            assert draining.wait(5)
+            latch.set("p:zarr_region:g:slot=0")
+
+    worker = threading.Thread(target=batch)
+    worker.start()
+    try:
+        assert entered.wait(5)
+        with pytest.raises(ClaimLostError):
+            session.verify_promotion()
+    finally:
+        worker.join(5)
+    assert not worker.is_alive()
+    assert latch.is_set
+    document = json.loads(
+        sync(store.get("zarr.json", prototype=default_buffer_prototype())).to_bytes()  # type: ignore[union-attr]
+    )
+    assert document["attributes"] == {"title": "successor"}
+    session.close()

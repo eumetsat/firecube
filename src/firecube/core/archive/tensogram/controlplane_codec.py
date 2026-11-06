@@ -44,10 +44,15 @@ def serialize_controlplane(
 
     When *group* is specified only spans for that group are included.
     Claims (write locks) are always included in full — they have no group field.
-    Run records are included only for runs referenced by the result set.
+    Released claims are left out. Run records are included only for runs referenced
+    by the result set.
 
     Returns:
         ``(descriptor_dict, uint8_array)`` suitable for ``TensogramFile.append()``.
+
+    Raises:
+        OSError: The claims directory cannot be listed.
+        ControlPlaneCorruptionError: A claim record cannot be read or parsed.
     """
     list_kwargs: dict[str, Any] = {"product": product, "chunk_type": "span"}
     if group is not None:
@@ -90,19 +95,15 @@ def serialize_controlplane(
             }
         )
 
-    claim_records: list[dict[str, Any]] = []
-    try:
-        claims = manager.list_claims(product=product)
-        claim_records.extend(
-            {
-                "domain": claim.domain,
-                "owner_id": claim.owner_id,
-                "acquired_at": claim.acquired_at,
-            }
-            for claim in claims
-        )
-    except Exception as exc:
-        _log.debug("Could not collect claims for %s: %s", product, exc)
+    # A listing error propagates: an archive must not record "no claims" for a failed read.
+    claim_records: list[dict[str, Any]] = [
+        {
+            "domain": claim.domain,
+            "owner_id": claim.owner_id,
+            "acquired_at": claim.acquired_at,
+        }
+        for claim in manager.list_claims(product=product)
+    ]
 
     state: dict[str, Any] = {
         "schema_version": "v1",

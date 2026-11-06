@@ -140,6 +140,7 @@ Expected output when a claim exists:
 Product                  State    Owner                    Domain
 --------------------------------------------------------------------------------------------
 MY_PRODUCT.zarr          active   docs-started-run:F001    MY_PRODUCT:zarr_region:F001
+MY_PRODUCT.zarr          active   docs-started-run:F002    MY_PRODUCT:zarr_region:F002
 ```
 
 The `Domain` value is the exact value to pass to `--domain`.
@@ -176,6 +177,12 @@ Expected output:
 ```text
 Cleared claim for MY_PRODUCT:zarr_region:F001
 ```
+
+If another writer took the claim after the command read it, the command exits
+1 and keeps that claim. Do not delete `.firecube/claims/.firecube-claims.lock`.
+
+On S3, a `released` record stays in `.firecube/claims/`. It is harmless. The
+next acquisition of the domain replaces it.
 
 Verify:
 
@@ -277,6 +284,10 @@ command then uses the marker of its time coordinate.
 | `Left claim` line after an abandon | More than one run can own the claim, or another writer replaced it. | Inspect the current owner with `chunks claims list`. Verify that writer is stopped, then use `chunks claims clear`. |
 | Claim remains after crash | No abandon covers the claim. | Verify no writer is active, then use `chunks claims clear`. |
 | Claim does not look stale | The heartbeat timestamp is still recent. | Use `--force` only if the writer is gone. |
+| Run records `failed` with `ClaimLostError` | Another writer replaced a claim of the run. The run admits no further batch. Writes already in flight can finish. Firecube skips the recovery of the failed group. | Find the other writer and wait until it stops. Inspect the group, because it can hold part of a batch and data of the other writer. Then [recover the failed batch](#recover-from-a-failed-batch). |
+| `ClaimReleaseError`: the claim "was not released" | A heartbeat write was still in flight when the run released the claim. The record stays and goes stale. | Confirm the process has stopped. Wait until the claim is stale, then use `chunks claims clear`. |
+| `chunks claims clear` exits 1 and keeps the claim | Another writer took the claim after the command read it. | List the claims again. Confirm that the new owner is stopped, then clear the claim. |
+| Claim operations fail with `ConfigurationError` on a storage other than `file` and `s3` | The storage cannot write conditionally, so Firecube refuses to acquire, renew or read a claim record. A listing of a missing or empty claims directory still returns no claims. | Use a `file://` or `s3://` product. Do not read an empty listing on such a storage as proof that no writer is active. |
 | `ProductUnderMaintenanceError`: `Product MY_PRODUCT.zarr is under exclusive maintenance by <owner> (claim MY_PRODUCT.zarr:maintenance:exclusive), so <run> is refused. Retry when that maintenance has finished.` | A maintenance run holds the exclusive claim of the product. At run start, Firecube refuses the new run and records it as failed. An index rebuild is refused before any run exists. | Wait for the maintenance run to finish. Then start the run again. If the message says the claim is stale, verify that the owner process is gone. Abandon a run only after its process has stopped. Then follow [Abandon A Stuck Run](#abandon-a-stuck-run) with the owner as `--run-id`. Or follow [Clear A Blocking Claim](#clear-a-blocking-claim) with `--domain MY_PRODUCT.zarr:maintenance:exclusive`. |
 | Run ends with `status=failed` and "later batch(es) were not attempted" | Append ingestion stopped before processing all inputs. | Fix the reported error, then [recover the failed batch](#recover-from-a-failed-batch). |
 | Rerun refused: "spans from a failed run exist" | The retry needs an explicit choice about keeping earlier work. | Follow [Recover From A Failed Batch](#recover-from-a-failed-batch) for the original write mode. |

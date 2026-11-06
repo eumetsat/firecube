@@ -137,6 +137,7 @@ def _build_zarr_batch_runtime(
         chunk_manager=ingestor._chunk_manager,
         product=_ctx_product_name(ctx, ingestor.name),
         run_id=str(ctx.run_id or ctx.option("run_id", "unknown")),
+        latch=ingestor._run_claim_latch,
     )
     write_ctx_mgr = batch_runner.build_zarr_write_context(zarr_config=zarr_config)
     strategy = batch_runner.build_append_strategy(
@@ -392,6 +393,8 @@ class GenericZarrIngestor(BaseIngestor):
                         attempted=False,
                         error="not attempted: run halted after an earlier batch failed",
                     )
+                # A run that lost any of its claims admits no further batch.
+                self._run_claim_latch.raise_if_set()
                 with (
                     write_ctx_mgr,
                     _telemetry_span(
@@ -638,11 +641,17 @@ class GenericParquetIngestor(BaseIngestor):
                     category="parquet_path",
                     name=str(rel),
                 )
+                # A run that lost any of its claims writes no further part.
+                self._run_claim_latch.raise_if_set()
                 with self._chunk_manager.acquire_claim(
                     product=product,
                     domain=domain,
                     owner_id=f"{run_id}:{rel}",
-                ):
+                ) as claim:
+                    # Batches run on worker threads, outside the run's claim context.
+                    attach = getattr(claim, "attach_latch", None)
+                    if attach is not None:
+                        attach(self._run_claim_latch)
                     storage_config = self._chunk_manager.storage_config
                     if storage_config is None:
                         raise ConfigurationError("Parquet writing requires output storage.")
@@ -654,6 +663,8 @@ class GenericParquetIngestor(BaseIngestor):
                     rows_written_total += self.write_parquet(
                         dataset, output_path=output_path, storage_options=storage_options, ctx=ctx
                     )
+                # Also a loss that the release of the claim found.
+                self._run_claim_latch.raise_if_set()
                 outputs.append(output_path)
                 coverage.append(
                     {

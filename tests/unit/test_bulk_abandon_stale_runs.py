@@ -46,6 +46,7 @@ from firecube.core.controlplane.types import (
     AbandonSweepResult,
     WriteDomain,
 )
+from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.storage.uri import StorageUri
 from tests.helpers.storage import make_test_binding
 from tests.unit._helpers.counting_fs import CountingFilesystem, make_counting_local_fs
@@ -783,6 +784,8 @@ def test_enumeration_bounded_scales_with_N_not_S(tmp_path: Path) -> None:
 
 def _set_heartbeat(root: Path, domain: str, age_s: float) -> None:
     for path in (root / _P / ".firecube" / "claims").iterdir():
+        if path.name == GUARD_FILE_NAME:
+            continue
         payload = json.loads(path.read_text(encoding="utf-8"))
         if payload["domain"] == domain:
             payload["last_heartbeat_at"] = time.time() - age_s

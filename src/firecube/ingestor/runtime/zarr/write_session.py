@@ -75,6 +75,7 @@ from typing import Any
 
 from zarr.buffer import default_buffer_prototype
 
+from firecube.core.controlplane.claims import ClaimLossLatch
 from firecube.core.controlplane.types import WriteDomain
 from firecube.core.errors import ConfigurationError, StorageError
 from firecube.core.storage.completion import StagedPromotionUnits
@@ -300,6 +301,7 @@ class ZarrWriteSession:
         drain_timeout: float = 60.0,
         workspace_uri: str | None = None,
         open_final_store: Callable[[], tuple[str, Any]] | None = None,
+        claim_latch: ClaimLossLatch | None = None,
     ) -> None:
         """Build the session; no I/O.
 
@@ -308,6 +310,8 @@ class ZarrWriteSession:
         verified promotion, the authority promoted ``zarr.json`` documents
         are published under. Without it a staged run reports no promotion
         units.
+
+        ``claim_latch`` is the run's claim loss latch; without it the session makes its own.
         """
         self.product = product
         self.run_id = run_id
@@ -328,6 +332,7 @@ class ZarrWriteSession:
         self._closed = False  # the first close() has drained and released
         self._drain_failed: str | None = None  # the first close()'s drain timed out
         self._claims = RunSchemaClaims()
+        self._claim_latch = claim_latch if claim_latch is not None else ClaimLossLatch()
         self._ledger = StagedWriteLedger()
         self._engine_owned_checked = False
         self._results_lock = threading.Lock()
@@ -348,6 +353,11 @@ class ZarrWriteSession:
         return self._state
 
     @property
+    def claim_latch(self) -> ClaimLossLatch:
+        """The latch that records the loss of any claim of this run; it outlives the claims."""
+        return self._claim_latch
+
+    @property
     def staged(self) -> bool:
         return self.write_mode == "staged"
 
@@ -357,8 +367,13 @@ class ZarrWriteSession:
 
         The batch counts as in flight until the block exits, which is what
         `verify_promotion` and `close` wait for.
+
+        Raises:
+            ClaimLostError: A claim of this run was lost; the loss stays for the
+                whole run, also after the lost claim was released.
         """
         with self._cond:
+            self._claim_latch.raise_if_set()
             if self._state not in (SessionState.PREPARED, SessionState.WRITING):
                 raise WriteSessionStateError(
                     f"write refused: session is {self._state.value}, not prepared or writing"
@@ -405,8 +420,12 @@ class ZarrWriteSession:
         The seeding authority is released after the drain, before the check.
         When the check passes, a staged session that knows its final target
         takes the authority over it that promotion publishes metadata under.
+
+        Raises:
+            ClaimLostError: A claim of this run was lost, before or during the drain, so the run promotes nothing.
         """
         with self._cond:
+            self._claim_latch.raise_if_set()
             if self._state not in (SessionState.PREPARED, SessionState.WRITING):
                 raise WriteSessionStateError(
                     f"promotion refused: session is {self._state.value}, not prepared or writing"
@@ -421,6 +440,7 @@ class ZarrWriteSession:
             require_staged_units_fully_written(
                 self._open_root(ledger.store_uri), list(ledger.touched), list(ledger.written)
             )
+        self._claim_latch.raise_if_set()
         self._hold_publishing_authority()
 
     def _hold_publishing_authority(self) -> None:
@@ -685,7 +705,9 @@ class ZarrWriteSession:
         with self._operation():
             return self._claims.acquire(
                 (self.run_id, group),
-                lambda: self._acquire_claim(product=self.product, domain=domain, owner_id=owner_id),
+                lambda: self._acquire_with_latch(
+                    product=self.product, domain=domain, owner_id=owner_id
+                ),
                 HeldClaim(domain.identifier, owner_id),
             )
 
@@ -695,11 +717,19 @@ class ZarrWriteSession:
             product=self.product, category="zarr_region", name=f"{group}:slot={ts_index}"
         )
         with self._operation():
-            return self._acquire_claim(
+            return self._acquire_with_latch(
                 product=self.product,
                 domain=domain,
                 owner_id=f"{self.run_id}:{group}:slot={ts_index}",
             )
+
+    def _acquire_with_latch(self, **kwargs: Any) -> Any:
+        """Acquire a claim for this run and make its loss a loss of the run."""
+        handle = self._acquire_claim(**kwargs)
+        attach = getattr(handle, "attach_latch", None)
+        if attach is not None:
+            attach(self._claim_latch)
+        return handle
 
     def record_touched(
         self, store_uri: str, writes: Sequence[StagedSlotWrite], *, arrays: Iterable[str] = ()

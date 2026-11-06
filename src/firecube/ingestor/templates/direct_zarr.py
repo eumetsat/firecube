@@ -221,12 +221,14 @@ def _hold_setup_authority(
     domain: WriteDomain,
     owner_id: str,
     describe_conflict: bool,
+    claim_latch: Any = None,
 ) -> contextlib.AbstractContextManager[MetadataAuthority]:
     """Take the setup claim of *group_name* and the authority over its subtree it entitles.
 
     The authority is released before the claim. Without a control plane
     (``chunk_manager`` is ``None``) it is explicitly ``PROCESS_LOCAL``: it
     excludes the threads of this process only. *describe_conflict* is set on the last attempt.
+    The claim reports its loss to *claim_latch*, the run's, when one is given.
     """
     claim = (
         chunk_manager.acquire_claim(
@@ -238,6 +240,10 @@ def _hold_setup_authority(
         if chunk_manager is not None
         else None
     )
+    if claim is not None and claim_latch is not None:
+        attach = getattr(claim, "attach_latch", None)
+        if attach is not None:
+            attach(claim_latch)
     return hold_authority(
         writer.metadata_scope(group_name),
         claim=claim,
@@ -256,8 +262,11 @@ def _setup_global_zarr_schema(
     chunk_manager: Any,
     time_coord_name: str = "timestamp",
     template_config: Any = None,
+    claim_latch: Any = None,
 ) -> None:
     """Ensure direct-Zarr arrays are sized for the full parallel run.
+
+    A setup claim, on any retry, reports its loss to *claim_latch*, the run's.
 
     When ``template_config`` is provided, per-array codec declarations are
     validated against the template compression setting BEFORE any array is
@@ -371,6 +380,7 @@ def _setup_global_zarr_schema(
                     domain=domain,
                     owner_id=f"{run_id}:{group_name}:schema_global",
                     describe_conflict=_schema_attempt == _schema_max_retries,
+                    claim_latch=claim_latch,
                 ) as authority:
                     # Re-check INSIDE the claim: another pod may have converged
                     # between the outer satisfied-check and claim acquisition.
@@ -1538,7 +1548,9 @@ class DirectZarrIngestor(BaseIngestor):
                 chunk_manager=self._chunk_manager,
                 time_coord_name=self._resolve_time_dim_name(),
                 template_config=getattr(self, "template_config", None),
+                claim_latch=session.claim_latch,
             )
+            session.claim_latch.raise_if_set()
             self._parallel_execution_state.schema_verified[group_name] = True
             schema_hash = _compute_schema_hash(
                 filtered_group_specs,
@@ -1600,6 +1612,7 @@ class DirectZarrIngestor(BaseIngestor):
             if write_mode == "staged"
             else None,
             open_final_store=lambda: self._final_store(ctx),
+            claim_latch=self._run_claim_latch,
         )
         self._zarr_write_session = session
         return session

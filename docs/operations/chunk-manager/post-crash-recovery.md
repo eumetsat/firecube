@@ -94,7 +94,7 @@ Expected output:
 ```
 
 A `Would release claim` line names a stale claim that the committed sweep
-deletes. A `Would leave claim` line names a claim that the committed sweep
+releases. A `Would leave claim` line names a claim that the committed sweep
 keeps. The sweep keeps a claim that is fresh or whose owner is ambiguous. The
 dry run judges each claim by its age at the time of the listing:
 
@@ -139,9 +139,7 @@ pass, or use `--domain` with `--force` after you verify the writer is gone.
 Abandon the stale runs first, then clear the stale claims that remain. The
 run sweep releases a claim only if the claim is stale. The owner of the claim
 must be one run that the sweep abandons or one run that is already terminal.
-Firecube reads the age of the claim again just before it deletes the claim. If
-the heartbeat moved, the sweep keeps the claim. The claim sweep then clears the
-remaining stale claims.
+The sweep keeps any claim whose owner changed since it listed the claim.
 
 ```bash
 firecube chunks runs abandon \

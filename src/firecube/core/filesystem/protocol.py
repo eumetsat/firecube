@@ -137,6 +137,88 @@ class AtomicPublish(Protocol):
         ...
 
 
+class PreconditionFailed(Exception):
+    """A conditional write or delete found its object changed or missing, and changed nothing.
+
+    Attributes:
+        uri: The object the operation named, as a string.
+        detail: What the driver or the store reported.
+    """
+
+    def __init__(self, uri: str, detail: str) -> None:
+        super().__init__(f"{uri}: {detail}")
+        self.uri = uri
+        self.detail = detail
+
+    def __reduce__(self) -> tuple[type[PreconditionFailed], tuple[str, str]]:
+        return (type(self), (self.uri, self.detail))
+
+
+@runtime_checkable
+class ConditionalWrite(Protocol):
+    """Compare-and-swap of a whole small object against the validator of an earlier read.
+
+    A validator is an opaque string naming one stored generation of an object.
+    Compare it only with validators from the same driver and store.
+    A refusal can follow a write of the same call that committed before its response was lost.
+    The caller re-reads the object to tell the two apart.
+    """
+
+    def read_snapshot(self, uri: StorageUri) -> tuple[bytes, str]:
+        """Return the object's bytes and their validator, both from one read.
+
+        Raises:
+            FileNotFoundError: No object exists at ``uri``.
+        """
+        ...
+
+    def create_if_absent(self, uri: StorageUri, data: bytes) -> str:
+        """Create the object at ``uri`` with ``data`` only when none exists, and return its validator.
+
+        Raises:
+            FileExistsError: An object already exists at ``uri``.
+        """
+        ...
+
+    def compare_replace(self, uri: StorageUri, validator: str, data: bytes) -> str:
+        """Replace the object with ``data`` only while its validator is ``validator``.
+
+        Returns the validator of the new object. The call never creates an object.
+
+        Raises:
+            PreconditionFailed: The object changed since ``validator`` was read, or is missing.
+        """
+        ...
+
+
+def unquoted_etag(validator: str) -> str:
+    """Return ``validator`` without one outer pair of double quotes.
+
+    An S3 ``If-Match`` header carries this form: Ceph RGW refuses a quoted ETag there.
+    """
+    if len(validator) >= 2 and validator.startswith('"') and validator.endswith('"'):
+        return validator[1:-1]
+    return validator
+
+
+@runtime_checkable
+class CompareDelete(Protocol):
+    """Deletion of an object only while it is the generation an earlier read saw.
+
+    Only local bindings report it. Ceph RGW ignores ``If-Match`` on ``DeleteObject``, so
+    an S3 delete cannot be made conditional on every supported store. S3 claims are
+    released by a conditional replace to a released record instead.
+    """
+
+    def compare_delete(self, uri: StorageUri, validator: str) -> None:
+        """Delete the object at ``uri`` only while its validator is ``validator``.
+
+        Raises:
+            PreconditionFailed: The object changed since ``validator`` was read, or is missing.
+        """
+        ...
+
+
 @runtime_checkable
 class RangedRead(Protocol):
     """Byte-range read capability for storage drivers."""

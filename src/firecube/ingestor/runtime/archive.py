@@ -252,7 +252,7 @@ def _release_claim(claim_handle: Any, *, warn: Callable[[str], None]) -> None:
 
     A failed release goes to `warn` as a warning, so it never replaces a pending error.
     """
-    # Release stops the heartbeat; deleting the file alone lets it come back.
+    # Release stops the heartbeat and retires only the record generation this handle wrote.
     if claim_handle is not None:
         try:
             claim_handle.release()

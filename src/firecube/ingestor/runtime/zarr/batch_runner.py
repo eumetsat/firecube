@@ -24,6 +24,7 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from firecube.core.controlplane.claims import ClaimLossLatch
 from firecube.core.controlplane.types import WriteDomain
 from firecube.core.product import write_mode_policy
 from firecube.ingestor.runtime.zarr.alignment import AlignmentMonitor
@@ -184,16 +185,28 @@ def build_claim_closure_for_append(
     chunk_manager: Any,
     product: str,
     run_id: str,
+    latch: ClaimLossLatch | None = None,
 ) -> Callable[[str], Any]:
-    """Build the per-group append claim closure used by AppendStrategy."""
+    """Build the per-group append claim closure used by AppendStrategy.
+
+    The closure attaches one `ClaimLossLatch` to every claim it acquires, so a
+    lost claim stops every later append that shares the latch. Pass the run's
+    latch; without one the closure makes its own.
+    """
+    if latch is None:
+        latch = ClaimLossLatch()
 
     def _claim_for_group(group_name: str) -> Any:
         domain = WriteDomain(product=product, category="zarr_append", name=str(group_name))
-        return chunk_manager.acquire_claim(
+        handle = chunk_manager.acquire_claim(
             product=product,
             domain=domain,
             owner_id=f"{run_id}:{group_name}",
         )
+        attach = getattr(handle, "attach_latch", None)
+        if attach is not None:
+            attach(latch)
+        return handle
 
     return _claim_for_group
 

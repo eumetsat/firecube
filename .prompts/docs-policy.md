@@ -92,7 +92,10 @@ Move interrupting sections to their canonical owner and link them.
 ## 5. Writing Rules
 
 - Start with the reader's question and dominant need.
-- Use public CLI flags and public SDK imports only.
+- Explain the user consequence before the architecture.
+- Use public CLI flags and public SDK imports only. Public SDK imports come from
+  `firecube.ingestor.api` and `firecube.core.api`. An explicitly internal page is
+  the exception.
 - Default terminal examples to an activated virtual environment: show
   `source .venv/bin/activate` in setup, then use `firecube` and `python` directly.
   Installation may mention `uv run firecube` as an alternative to activation.
@@ -159,3 +162,15 @@ Use the prompt templates under `.prompts/` when creating or rewriting pages:
 - `/write-internal-doc` for architecture and design rationale.
 
 Templates are scaffolds. Remove empty sections before publishing.
+
+## 8. CHANGELOG.md
+
+`CHANGELOG.md` follows Keep a Changelog 1.1.0 strictly.
+
+- Put `## [Unreleased]` first, then `## [x.y.z] - YYYY-MM-DD`, newest first.
+- Use only these `###` headings, in this order: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`. Use each at most once per version. Omit it when empty.
+- Give each version one comparison link at the foot of the file. A version with no tag has no link.
+- Write one entry per user-visible consequence. State the consequence first and the mechanism in one clause.
+- Write a migration step as a sentence inside the `Changed` or `Removed` entry that requires it.
+- Do not add statistics, test counts, internal refactors with no user-visible effect, commit hashes, an issue number as the subject, or extra headings.
+- Do not name any agent, role, operator or model.

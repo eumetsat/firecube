@@ -940,7 +940,8 @@ class ManifestRepository:
         return entry
 
     def _assert_compaction_allowed(self, product: str) -> None:
-        claims = self.list_claims(product=product)
+        # A fresh, strict listing: a cached or failed listing must not read as "no claims".
+        claims = self.list_product_claims(product=product)
         if claims:
             rendered = ", ".join(
                 f"{claim.domain} (owner={claim.owner_id}, stale={claim.stale})" for claim in claims

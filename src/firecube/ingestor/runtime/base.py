@@ -30,10 +30,11 @@ from pathlib import Path
 from typing import Any, ClassVar, cast, get_type_hints
 
 from firecube.core.controlplane import ChunkManager
+from firecube.core.controlplane.claims import ClaimLossLatch, reporting_claim_loss
 from firecube.core.controlplane.metrics import collect_wal_metrics
 from firecube.core.controlplane.types import IndexEnsuredOutcome
 from firecube.core.discovery import DiscoveryRequest, SourceItem, discover
-from firecube.core.errors import Message, Param, PluginOption
+from firecube.core.errors import ClaimLostError, Message, Param, PluginOption
 from firecube.core.filesystem import collect_filesystem_metrics
 from firecube.core.index_resolve import ExtentUnknownError
 from firecube.core.intake import CatalogGroupInfo
@@ -85,6 +86,20 @@ __all__ = [
     "BaseIngestor",
     "LocalSourceFile",
 ]
+
+
+def _claim_loss_behind(exc: BaseException) -> ClaimLostError | None:
+    """The `ClaimLostError` that a run failure, or one of its failed batches, came from."""
+    failures = [exc, *(res.failure for res in getattr(exc, "failed", ()))]
+    for failure in failures:
+        seen: set[int] = set()
+        current: BaseException | None = failure
+        while current is not None and id(current) not in seen:
+            if isinstance(current, ClaimLostError):
+                return current
+            seen.add(id(current))
+            current = current.__cause__ or current.__context__
+    return None
 
 
 def _output_storage_session(
@@ -399,6 +414,8 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         # True once the engine-owned resolved-index record has been ensured in
         # this pod process; fast-path in _ensure_index_record_at_startup.
         self._resolved_index_stamped: bool = False
+        # Records the loss of any claim of the current run; `run` replaces it per run.
+        self._run_claim_latch = ClaimLossLatch()
 
     # --- BatchPlanHost Protocol Implementation ---
 
@@ -787,6 +804,17 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         _ = ctx
         return
 
+    def _refuse_lost_claim(self) -> None:
+        """Lifecycle hook: refuse to complete a run whose claim loss latch is set.
+
+        Called once the workers and claim scopes have finished, and again before
+        the successful terminal record (main thread).
+
+        Raises:
+            ClaimLostError: The run lost one of its claims.
+        """
+        self._run_claim_latch.raise_if_set()
+
     def _close_run_state(self) -> None:
         """Optional lifecycle hook: end of every run, whatever its outcome (main thread).
 
@@ -1007,6 +1035,9 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         )
         run_started_recorded = False
         producer: dict[str, Any] | None = None
+        # Every claim of this run reports its loss here: claims taken on this thread
+        # through `reporting_claim_loss`, worker claims by explicit attachment.
+        claim_latch = self._run_claim_latch = ClaimLossLatch()
 
         from firecube.ingestor.runtime.output_guard import (
             fresh_output_run,
@@ -1029,6 +1060,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 collect_filesystem_metrics() as fs_metrics,
                 collect_wal_metrics() as wal_metrics,
                 ingest_span,
+                reporting_claim_loss(claim_latch),
                 contextlib.ExitStack() as output_ownership,
             ):
                 self._bind_index_at_startup(runtime_plugin_ctx)
@@ -1189,6 +1221,9 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     else:
                         execution_result = self._firecube_engine.finalize(runtime_ctx, state, self)
 
+                # A claim lost while the last batch ran fails the run, recorded below.
+                self._refuse_lost_claim()
+
                 # 7. Output completion (storage write + manifest)
                 #
                 # Original ordering (buggy for staged uploads):
@@ -1207,6 +1242,11 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 execution_result = self._firecube_engine.complete_output(
                     execution_result, runtime_ctx, host=self
                 )
+                # A claim lost during output completion, or one whose loss only its later
+                # release would find: one read per claim still held, such as the product claim.
+                confirmed = claim_latch.confirm_held_claims()
+                self._log.debug("confirmed %d held claim(s) before the terminal record", confirmed)
+                self._refuse_lost_claim()
 
                 # 8. Recording
                 if not execution_result.registered:
@@ -1225,18 +1265,27 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             # never reached a terminal WAL event. After the output-completion
             # reorder above, execution_result.registered becomes True only after
             # both complete_output() and register_run() succeed.
+            # A batch that failed for another reason after a claim was lost still names
+            # the lost claim, from the run's latch.
+            lost = _claim_loss_behind(exc) or claim_latch.error()
             if run_started_recorded and not execution_result.registered:
                 with contextlib.suppress(Exception):
                     slice_meta = self._run_record_meta(runtime_plugin_ctx)
+                    failure_meta = {**slice_meta, "producer": producer}
+                    if lost is not None:
+                        failure_meta["lost_claim"] = lost.domain
                     self._span_recorder.register_run_failure(
                         run_id=run_id,
                         product=product,
                         output_path=str(runtime_ctx.target or ""),
                         output_format=str(runtime_ctx.output_format or ""),
-                        slice_meta={**slice_meta, "producer": producer},
+                        slice_meta=failure_meta,
                         error=str(exc),
                     )
                     execution_result.registered = True
+            if exc.__cause__ is None and lost is not None and lost is not exc:
+                # The run is recorded failed; name the lost claim as the root cause.
+                exc.__cause__ = lost
             raise
 
         finally:
