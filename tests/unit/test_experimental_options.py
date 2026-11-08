@@ -75,7 +75,8 @@ def test_x_write_mode_does_not_shadow_typed_write_mode() -> None:
     )
     engine_config, _template, _plugin = configurator.configure(ctx)
 
-    assert not hasattr(engine_config, "write_mode")
+    with pytest.warns(DeprecationWarning, match=r"ctx\.execution\.write_mode"):
+        assert engine_config.write_mode == "direct"  # type: ignore[attr-defined]
     assert ctx.execution.write_mode == "direct"
     assert ctx.options["x_write_mode"] == "staged"
 

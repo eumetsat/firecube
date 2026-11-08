@@ -5,6 +5,10 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 ## Active Work
 
+### Due in v0.2.0
+
+- **Remove the `EngineConfig` moved-field forward in v0.2.0 (accepted, 2026-11-08).** Remove the forward in `_refuse_moved_fields` and the read of the attached `ExecutionParams`. Keep the `ConfigurationError` for construction. Remove the attach in `TierConfigurator.configure` (`src/firecube/ingestor/runtime/configure.py`). Decide whether `_MOVED_TO_EXECUTION_PARAMS` (`src/firecube/ingestor/config/engine.py`) stays for the construction refusal. Move the `CHANGELOG.md` entry to `Removed`. Reason: `plans/DONE.md`, 2026-11-08.
+
 ### Open after the metadata snapshots and migrate plan (2026-11-04)
 
 Internal contributor material. The plan landed the metadata snapshot store, release records, the migrate executor and the `snapshot`, `migrate` and `release` command groups (`plans/DONE.md`, 2026-11-04). Each item is recorded, not scheduled. The label names the evidence.
@@ -329,7 +333,7 @@ Internal contributor material. The plan added `firecube.operations` and `open_pr
 - **Plugin suites fail against this branch (found, not fixed, ran).** The suites of `firecube-mtg-fci-l1c` and `firecube-sentinel3-slstr-aod` read or pass `engine_config.write_mode`. Other plugin suites fail through the removed `--output-format` and `write_mode` option. Migrate each plugin to `ctx.execution.write_mode`.
 - **`tests/integration/test_cli_input_data_presence.py::test_override_discovery_no_input_data_succeeds` fails in the full lane (found, not fixed, ran).** It fails by test order with `tests/integration/test_phase3_single_group_preserved.py` and passes alone. It fails on the base commit too.
 - **`ChunkManager` allocates a `firecube_chunks_*` temporary workspace that close never removes (found, not fixed, read).** The code is in `src/firecube/core/controlplane/manager.py` and `repo.py`. The defect is older than the plan.
-- **Some `ChunkManager` method docstrings carry private-caller prose (found, not fixed, read).** A docs page that renders the members would publish it. `docs/reference/operations.md` renders the class without members for this reason.
+- **Some `ChunkManager` method docstrings carry private-caller prose (found, not fixed, read).** A docs page that renders the members would publish it. `docs/reference/python-api/operations.md` renders the class without members for this reason.
 - **The archive dry runs are weaker than the real run (found, not fixed, read).** They do not read every entry of a standalone (full) zip archive for its CRC. An incremental backup chain is read in full, so its dry run does check the CRC. With `--overwrite` they do not refuse a symlink at a kept target path. The real run refuses it inside the run.
 - **`tgm_product_label` returns `None` for a missing or unopenable `.tgm` (found, not fixed, read).** `archive restore` without `--product-name` then says the archive records no label. It does not say the file is missing.
 - **A real archive restore validates the zip metadata, or the tensogram structure, twice (recorded, read).** The preflight and the run each validate.
@@ -363,6 +367,7 @@ Internal contributor material. The rework recorded the product label once and ma
 - **The dry run does not cover three refusals of the real run (recorded, read).** They are the staged sparse-window refusal, the DirectZarr pod-startup check of dtype and schema drift, and the remote `AUTO` irregular axis.
 - **The release preflight reads the snapshot ref outside `ChunkManager` (recorded, read).** `latest_snapshot_id` in `src/firecube/core/controlplane/metadata_snapshots.py` takes a filesystem, and `src/firecube/ingestor/runtime/release.py` passes `session.fs()`.
 - **A `file://` URI that `Path.as_uri()` builds percent-encodes brackets, and the label lookup then reports no label (recorded, read).** `src/firecube/core/storage/uri.py` treats the path of a file URI literally by design. Decide whether a bracket in a store path is supported.
+- **A `ConfigurationError` raised inside the batch-processing hook (`_process_batch`) exits 1, not 2 (recorded 2026-11-08, read).** `PipelineFailedBatchesError` wraps the error, and the error boundary classifies the wrapper as `CHECK_FAILED` (1), not `USAGE` (2). A moved-field read in that hook is one case (`plans/DONE.md`, 2026-11-08). Whether batch aggregation should preserve the class of a configuration refusal is open for the maintainer.
 
 ### Open after structured errors (2026-10-20)
 

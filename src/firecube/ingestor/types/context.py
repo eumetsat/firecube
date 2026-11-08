@@ -53,8 +53,8 @@ class ExecutionParams:
     Options and plugin configuration never carry these fields. Construction validates them.
 
     Attributes:
-        write_mode: ``"staged"`` builds the output in a workspace, then uploads it; ``"direct"``
-            writes the target in place.
+        write_mode: ``"direct"`` (the default) writes the target in place; ``"staged"`` builds the
+            output in a workspace, then uploads it, and only a staged run gets the promotion checks.
         slot_start: First slot index of an orchestrated parallel run.
         slot_end: One past the last slot index of an orchestrated parallel run.
         slot_size: Slot width the CLI used to derive the slot range from the environment.
@@ -65,7 +65,7 @@ class ExecutionParams:
         dry_run: Plan the run and report what would block it, without writing anything.
     """
 
-    write_mode: str = "staged"
+    write_mode: str = "direct"
     slot_start: int | None = None
     slot_end: int | None = None
     slot_size: int | None = None

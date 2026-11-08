@@ -10,13 +10,14 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 ### Added
 
 - The module `firecube.operations` is the public Python surface of the CLI.
-  The commands listed below call it, and so can your code. `ingest` and the
-  other deferred commands do not run through it yet. Each operation uses the
-  canonical name of its function. The module keeps no alias.
+  The commands below call it, and so can your code. `ingest` and the other
+  deferred commands do not run through it yet. The module keeps the original
+  name of each function and defines no alias.
 - `open_product` in `firecube.operations` opens a product store. Use it as a
   context manager. It yields a `Product` and reads the recorded label. It
-  refuses a store that records another label, and by default a store that
-  records none. It closes the manager it built on exit.
+  refuses a store that records a label other than the one you pass. By default,
+  it also refuses a store that records no label. It closes the manager it built
+  on exit.
 - Each operation takes a `Product` first. The operations are `migrate_product`,
   `adopt_product`, `list_migrations`, `create_archive`, `restore_archive`,
   `create_release_for_product`, `list_releases_for_product`,
@@ -24,9 +25,10 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   `take_snapshot_for_product`, `rebuild_index_record`,
   `verify_index_record`, `preallocate_product`, `plan_slots`,
   `consolidate_time_coords` and `ZarrMultiresBuilder`.
-  `verify_release_for_product` returns a `ReleaseCheck`.
-- `preallocate_product` mints the run id `preallocate:<16 hex>` when the caller
-  gives none.
+  - `verify_release_for_product` returns a `ReleaseCheck`.
+  - `ZarrMultiresBuilder` is a class. It takes the `Product` in its constructor.
+  - `preallocate_product` mints the run id `preallocate:<16 hex>` when the
+    caller gives none.
 - Run records name the producer of the run in `meta.producer`. The record holds
   the plugin name, distribution and version, the Firecube version and a digest
   of the run configuration. The `source.kind` field is `vcs`, `editable`,
@@ -39,6 +41,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   `<product>:maintenance:exclusive`. The call
   `ChunkManager.acquire_exclusive_maintenance` takes it. It refuses while
   another claim or another run that is not terminal exists on the product.
+  The claim binds the label that the store records, so a second spelling of the
+  product URI cannot bypass it.
 - A recorded writer now refuses to run while another owner holds the exclusive
   maintenance claim.
   - `firecube ingest` and `firecube zarr preallocate` (also without a
@@ -157,7 +161,7 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - Each retained release writes an inventory manifest under
   `.firecube/releases/inventories/`. It lists every object of the product with
   its size and digest, or its S3 version. The inventory is exact only while no
-   writer runs, so stop the other writers before you create the release.
+  writer runs, so stop the other writers before you create the release.
 - The template option `zarr_unit_write_buffer` (off by default) makes a
   `DirectZarrIngestor` run write each complete stored unit once, instead of once
   per region piece. It needs `zarr_region_write_concurrency` at 1, the default.
@@ -167,37 +171,38 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - `--dry-run` exists on `firecube ingest`, `firecube snapshot take`,
   `firecube migrate run`, `firecube migrate adopt`, `firecube release create`,
   `firecube zarr multires` and `firecube zarr index rebuild`. A dry run writes
-  nothing. It makes the refusals that this entry lists for the command. `firecube
-  ingest --dry-run` exits 1 when the resume guard, the index, the fresh-target
-  rule or an exclusive maintenance claim would block the run.
+  nothing. It makes the refusals of the real run, except the ones listed below.
+  - `firecube ingest --dry-run` exits 1 when the resume guard, the index, the
+    fresh-target rule or an exclusive maintenance claim would block the run.
   - The dry runs of `firecube migrate run`, `firecube migrate adopt` and
     `firecube zarr preallocate` do not check for a held exclusive maintenance
     claim. They exit 0 while the real run exits 1.
-  - A dry run of `firecube ingest` does not make every refusal of a real run.
-    It does not check the staged sparse-window refusal. It does not run the
-    pod-startup drift check of a DirectZarr product. It does not resolve a
-    remote `AUTO` irregular axis.
+  - A dry run of `firecube ingest` does not check the staged sparse-window
+    refusal. It does not run the pod-startup drift check of a DirectZarr
+    product. It does not resolve a remote `AUTO` irregular axis.
   - `firecube release create --dry-run` also covers `--archive`,
     `--archive-full` and `--retain-versions`.
-  - The preview counts of a zip archive are current-cut counts.
+  - The object counts in its retention block are current counts. The real run
+    also retains the documents that it writes.
 - The root option `firecube --debug` prints the traceback of an error. The
   variable `FIRECUBE_DEBUG=1` does the same.
 - `firecube zarr compare` reports each differing attribute key on its own line,
   as `attrs[<key>] <left> != <right>`. It treats identical NaN attribute values
   as equal.
-- `ExecutionParams` is a public class in `firecube.ingestor.api`. It holds the
-  write mode and the slot window of a run. A plugin reads it from
-  `IngestContext.execution`.
+- `ExecutionParams` is a public class in `firecube.ingestor.api`. It holds how a
+  run executes. The fields are `write_mode`, the slot window (`slot_start`,
+  `slot_end`, `slot_size` and `slot_group`), the static-array owner
+  (`static_owner_slot_start` and `suppress_static_emission_for_non_owner`) and
+  `dry_run`. A plugin reads it from `IngestContext.execution`.
+- `firecube migrate run`, `firecube migrate adopt` and `firecube release create`
+  ask for confirmation on a terminal. Off a terminal, they exit 2 unless you
+  pass `--yes-i-really-mean-it`. `--dry-run` skips the question.
 
 ### Changed
 
 - `resolve_storage_config` no longer exports storage settings to the
   environment by default. Pass `export_env=True` to export storage settings.
   The CLI passes it.
-- `EngineConfig(write_mode=...)` now raises `ConfigurationError`. The message
-  names `ExecutionParams(write_mode=...)`. Move the write mode to
-  `ExecutionParams`. Read `ctx.execution.write_mode` instead of
-  `engine_config.write_mode`.
 - `firecube archive create --dry-run` and `firecube archive restore --dry-run`
   now refuse four cases that only the real run refused before.
   - A missing input, or a malformed archive or source structure.
@@ -209,13 +214,9 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   standalone (full) zip archive. The dry run of an incremental backup chain
   reads the whole chain, and so reads every member for its CRC. The other is the
   refusal of a symlink at a kept target path under `--overwrite`.
-- `firecube archive create` exits 2, not 1, when a ZIP-only option is refused.
-  The message is unchanged.
-- A command that needs a recorded label refuses an unlabelled store with the
-  same message as before. It no longer prints the `Usage:` and `Try ... --help`
-  lines. The exit code stays 2. The commands are `chunks list`, `chunks runs
-  list`, `zarr index show`, `zarr index verify`, `zarr multires`,
-  `zarr consolidate-time-coord`, `release list` and `snapshot list`.
+- `firecube archive create --archive-format zip` exits 2, not 1, when you pass
+  `--group`, `--start-date`, `--end-date` or `--variables`. The message is
+  unchanged.
 - The text of `MissingProductNameError` now reads `Option:  --product-name
   <name>`. It read `CLI flag:  --product-name <name>`.
 - `firecube zarr index rebuild` records the canonical target URI in its run
@@ -225,9 +226,8 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - Releasing a claim now raises `ClaimReleaseError` when its heartbeat write is
   still in flight after `stale_threshold_s`. The claim goes stale. Clear it
   with `firecube chunks claims clear` after its process has stopped.
-- Upgrade: stop every older writer of a product before a writer of this version
-  writes to it. The older version can overwrite or delete the claim of a new
-  writer.
+- Stop every older writer of a product before a writer of this version writes
+  to it. The older version can overwrite or delete the claim of a new writer.
 - A claim change now compares against the record that the writer read last. A
   stale handle, `firecube chunks claims clear` and the stale-claim sweep no
   longer delete the claim of a new owner.
@@ -263,11 +263,6 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   publishes through a hard link, so a lost race cannot replace an archive that
   appeared meanwhile. A filesystem that has no hard links, such as some FUSE
   mounts, makes the command fail. Use `--overwrite` there.
-
-- The zip archive code now lives in the package `firecube.core.archive.zip`. The
-  tensogram code moved to `firecube.core.archive.tensogram`. These modules are
-  internal, so no public import changes.
-
 - `firecube_last_modifier` and `firecube_release` are now reserved root
   attributes, so a plugin that declares either name as a root group attribute
   is refused with a `ConfigurationError`. Rename the attribute in the
@@ -289,49 +284,45 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - Firecube ignores the old `.firecube/snapshots/` directory and
   `.firecube/LATEST.json`. Delete these files if you no longer need them.
 - The metric names and the keys of the JSON output do not change.
-- **Breaking:** `-t/--target` is now the one spelling of the product URI on
-  every command that takes one. It replaces `-p/--product` on `firecube zarr
-  validate`, `firecube parquet validate`, `firecube parquet consolidate`,
-  `firecube catalog intake` and `firecube advise`. It replaces `-s/--source` on
-  `firecube archive create`. It replaces `-n/--product-name` on `firecube
-  chunks`. Update your scripts. An old flag fails with a hint that names the new
-  one.
-- **Breaking:** `firecube zarr preallocate` and `firecube zarr slots` now take
-  `-t` as the short form of `--target`.
-- **Breaking:** these commands no longer take `--product-name`. They read the
-  label that the store records.
-  - `firecube snapshot`, `firecube release`, `firecube migrate run` and
-    `firecube migrate status`.
-  - `firecube zarr index show` and `firecube zarr index verify`.
-  - `firecube zarr multires` and `firecube zarr consolidate-time-coord`.
-
-  `firecube zarr index rebuild` and `firecube migrate adopt` keep
-  `--product-name`, with no short form. Stop passing the flag to the commands
-  in the list.
-- **Breaking:** the store records the product label once, in
-  `.firecube/product.json`, and every command that takes a target reads it
-  back. The CLI never infers the label from the URI path. A command that reads
-  the label refuses a store without one, exits 2 and names `firecube migrate
-  adopt`. Run that command once on each store that predates this version.
-- **Breaking:** `firecube archive restore` keeps the label that the archive
-  records. It no longer takes the label from the name of the target. If the
-  archive records no label, the command exits 2 unless you pass
-  `--product-name <label>`. If you pass a label that differs from the archive
-  label, the command refuses it. If the target store records another label, the
-  command refuses the restore and exits 2 without a write. For an archive that
-  records no label, add `--product-name` to your restore scripts.
-- **Breaking:** a label that differs from the recorded label is refused with
-  exit 2. This includes `firecube ingest --product-name`, `firecube zarr slots`
-  and `firecube zarr preallocate`. `--product-name` is optional on the write
-  commands. It only sets the label the first time a store records one. The order
+- `-t/--target` is now the one spelling of the product URI on every command
+  that takes one. `firecube zarr preallocate` and `firecube zarr slots` now take
+  `-t` as the short form.
+  - It replaces `-p/--product` on `firecube zarr validate`, `firecube parquet
+    validate`, `firecube parquet consolidate`, `firecube catalog intake` and
+    `firecube advise`.
+  - It replaces `-s/--source` on `firecube archive create`.
+  - It replaces `-n/--product-name` on `firecube chunks`.
+  - Update your scripts. An old flag fails with exit 2 and a hint that names the
+    new one.
+- The store records the product label once, in `.firecube/product.json`. Every
+  command that takes a target reads it back. The CLI never infers the label from
+  the URI path. A command that reads the label refuses a store without one. It
+  exits 2 and names `firecube migrate adopt`. Run that command once on each
+  store that predates this version.
+- `firecube zarr index show`, `firecube zarr index verify`, `firecube zarr
+  multires` and `firecube zarr consolidate-time-coord` no longer take
+  `--product-name`. They read the label that the store records. Stop passing the
+  flag to these commands. `firecube zarr index rebuild` keeps `--product-name`,
+  with no short form.
+- A command that gets a label that differs from the recorded label exits 2.
+  This includes `firecube ingest --product-name`, `firecube zarr slots` and
+  `firecube zarr preallocate`. `--product-name` is optional on these write
+  commands. It sets the label only the first time a store records one. The order
   is `--product-name`, then `default_product_name` in the config, then the
   plugin `PRODUCT_NAME`.
-- **Breaking:** `firecube chunks list`, `firecube chunks delete` and `firecube
-  chunks claims list` take either `--target` or `--all-products`. Without one of
-  them they exit 2. They no longer fall back to the `[storage]` base URI of the
-  config file. A scan of the base URI prints `[chunks] scanning base <uri>` on
-  stderr first.
-- **Breaking:** every command now ends with one exit code from a single table.
+- `firecube archive restore` keeps the label that the archive records. It no
+  longer takes the label from the name of the target. If the archive records no
+  label, the command exits 2 unless you pass `--product-name <label>`. If you
+  pass a label that differs from the archive label, the command refuses it. If
+  the target store records another label, the command exits 2 without a write.
+  For an archive that records no label, add `--product-name` to your restore
+  scripts.
+- `firecube chunks list`, `firecube chunks delete` and `firecube chunks claims
+  list` take either `--target` or `--all-products`. Without one of them they
+  exit 2. They no longer fall back to the `[storage]` base URI of the config
+  file. A scan of the base URI prints `[chunks] scanning base <uri>` on stderr
+  first.
+- Every command now ends with one exit code from a single table.
   - 0: the command did what you asked.
   - 1: a check found a problem or the library refused the operation.
   - 2: the invocation or the configuration is wrong.
@@ -345,44 +336,59 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
     store has no index record. They exited 3 before.
   - An unexpected error prints one `Error:` line and a hint to use `--debug`.
     Check any script that tests for a code other than 0 or 1.
-- **Breaking:** `-f/--format` takes `table`, `json` or `csv` on every command
-  that has it. `table` replaces `text` on `firecube advise compliance`,
-  `firecube migrate`, `firecube release` and `firecube snapshot`. Use `-f table`
-  or leave the flag out.
+- `-f/--format` takes `table`, `json` or `csv` on every command that has it.
+  `table` replaces `text` on `firecube advise compliance`. Use `-f table` or
+  leave the flag out.
   - `firecube archive info` no longer offers `csv`.
   - `firecube archive list` and `firecube archive validate` now offer `json`.
   - `firecube zarr index show --json` is now `-f json`.
-- **Breaking:** `firecube plugins list` prints the name, the module and the first
-  line of the description of each plugin in `table`, `csv` and `json`. The JSON
-  output was a list of names. It is now a list of objects with the keys `name`,
-  `module` and `description`. If one plugin cannot report its descriptor, the
-  command fails. Use `firecube plugins describe <name>` to see one plugin.
-- **Breaking:** the plugin class owns the output format. `GenericParquetIngestor`
-  and `GenericTensogramIngestor` now record `parquet` and `tensogram` in the
-  manifest and in the run records. They did not before.
-- **Breaking:** `firecube ingest`, `firecube zarr slots` and `firecube zarr
-  preallocate` refuse seven keys: `write_mode`, `slot_start`, `slot_end`,
-  `slot_size`, `slot_group`, `suppress_static_emission_for_non_owner` and
+- `firecube plugins list` prints the name, the module and the first line of the
+  description of each plugin in `table`, `csv` and `json`. The JSON output was a
+  list of names. It is now a list of objects with the keys `name`, `module` and
+  `description`. If one plugin cannot report its descriptor, the command fails.
+  Use `firecube plugins describe <name>` to see one plugin.
+- The plugin class owns the output format. `GenericParquetIngestor` and
+  `GenericTensogramIngestor` now record `parquet` and `tensogram` in the
+  manifest and in the run records. They recorded `zarr` before, unless you
+  passed `--output-format`.
+- `firecube ingest`, `firecube zarr slots` and `firecube zarr preallocate`
+  refuse seven keys: `write_mode`, `slot_start`, `slot_end`, `slot_size`,
+  `slot_group`, `suppress_static_emission_for_non_owner` and
   `static_owner_slot_start`. The refusal applies to `--option` and to
   `[plugins.<name>]` in the config file. Pass the matching flag, such as
   `--write-mode`, instead.
-- **Breaking:** an SDK run without a `write_mode` now uses `staged`. The write
-  mode was an empty string before. If you call the ingestor from Python and
-  need `direct`, pass `ExecutionParams(write_mode="direct")` in the context.
-- **Breaking:** `firecube migrate run`, `firecube migrate adopt` and `firecube
-  release create` now ask for confirmation on a terminal. Off a terminal, they
-  exit 2 unless you pass `--yes-i-really-mean-it`. Add the flag to your
-  scripts. `--dry-run` skips the question.
+- A run from Python that sets no `write_mode` now uses `direct`. The default
+  was `staged`. The CLI still requires `--write-mode`. A run in `direct` mode
+  does not get the checks that only `staged` makes. These are the sparse-window
+  refusal, the incomplete-units and promotion checks, and the second
+  fresh-target check before upload. If you call the ingestor from Python and
+  need those checks, pass `ExecutionParams(write_mode="staged")` in the
+  context.
+
+### Deprecated
+
+- Firecube deprecates a plugin read of `self.engine_config.<field>` for the eight
+  fields that moved to `ExecutionParams`: `write_mode`, `dry_run`,
+  `slot_start`, `slot_end`, `slot_size`, `slot_group`,
+  `static_owner_slot_start` and `suppress_static_emission_for_non_owner`.
+  - During a run, the read still returns the value of the run. It emits a
+    `DeprecationWarning` that names `ctx.execution.<field>`.
+  - Firecube will remove the forward in v0.2.0. Read `ctx.execution.<field>`
+    instead.
+  - `EngineConfig(<field>=...)` raises `ConfigurationError`. The message names
+    `ExecutionParams(<field>=...)`. Pass the value in `ExecutionParams`.
+  - A read on an `EngineConfig` built outside a run raises `ConfigurationError`.
 
 ### Removed
 
-- **Breaking:** the `--output-format` option of `firecube ingest`. The plugin
+- Firecube removes the `--output-format` option of `firecube ingest`. The plugin
   declares its output format. Run `firecube plugins describe <name>` to see it.
-- **Breaking:** `--option dry_run=true`. Use `firecube ingest --dry-run`. The old
-  option wrote data.
-- **Breaking:** the `--quiet` option of `firecube chunks`.
-- **Breaking:** the short options `-n`, `-p` and `-s`. They are not reused. Use
-  `--target`, or `--product-name` where the command records a label.
+- Firecube removes `--option dry_run=true`. The old option wrote data. Use
+  `firecube ingest --dry-run`.
+- Firecube removes the `--quiet` option of `firecube chunks`. Remove it from your
+  scripts.
+- Firecube removes the short options `-n`, `-p` and `-s`, and does not reuse
+  them. Use `--target`, or `--product-name` where the command records a label.
 
 ### Fixed
 
@@ -396,8 +402,9 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
   returns the literal name. Commands that list a local product, such as zip
   archive creation and metadata snapshots, no longer fail on such a name.
 - `firecube archive restore` of a backup chain now applies the deleted keys of
-  each incremental backup before its objects and deletes the empty directories
-  they leave. A Zarr array whose rank changed between two releases restores.
+  each incremental backup before its objects. The restore also deletes the empty
+  directories that those deletions leave. A Zarr array whose rank changed
+  between two releases restores.
 - `firecube chunks compact status` now reports the number of records in the
   cache. Before, it always reported 0. The hidden alias
   `firecube chunks snapshots status` had the same fault in 0.1.8.
@@ -413,10 +420,6 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 - A claim listing no longer fails with `ControlPlaneCorruptionError` on the
   in-flight temporary of a local atomic write. If a killed older version left a
   `.firecube-atomic-*.tmp` file in `.firecube/claims/`, delete that file by hand.
-- A second spelling of a product label no longer bypasses the exclusive
-  maintenance claim. A writer that named the same store under another label did
-  not see the claim. The store now records one label, and a different label is
-  refused.
 - `firecube parquet validate` now exits 1 when a file is invalid or no file is
   found. It exits 4 when the target does not exist. It exited 0 in both cases.
 - `firecube zarr consolidate-time-coord` now exits 1 when no group has a time

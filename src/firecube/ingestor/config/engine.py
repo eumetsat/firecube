@@ -24,8 +24,9 @@ from __future__ import annotations
 import functools
 import json
 import re
+import warnings
 from dataclasses import dataclass, fields
-from typing import Any, TypeVar, get_type_hints
+from typing import Any, TypeVar, cast, get_type_hints
 
 from firecube.core.discovery import (
     StacSearchError,
@@ -70,27 +71,70 @@ def _parse_stac_search(value: Any) -> dict[str, Any] | None:
     return validate_stac_search(value)
 
 
-def _refuse_write_mode[C](cls: type[C]) -> type[C]:
-    """Tombstone: make the constructor refuse `write_mode`, which `ExecutionParams` now holds.
+_MOVED_TO_EXECUTION_PARAMS: tuple[str, ...] = (
+    "write_mode",
+    "dry_run",
+    "slot_start",
+    "slot_end",
+    "slot_size",
+    "slot_group",
+    "static_owner_slot_start",
+    "suppress_static_emission_for_non_owner",
+)
 
-    A wrapper, not an `InitVar`: an `InitVar` default stays readable as `EngineConfig().write_mode`.
+
+def _refuse_moved_fields[C](cls: type[C]) -> type[C]:
+    """Make a class refuse the fields that `ExecutionParams` now holds.
+
+    The constructor raises `ConfigurationError` for each moved field passed as a keyword. A read
+    of a moved field forwards to the attached `_execution` with a `DeprecationWarning` that names
+    `ctx.execution.<name>`; the forward will be removed in v0.2.0. With nothing attached, the read raises
+    `ConfigurationError`. No value is stored and no default is invented. Any other missing
+    attribute raises `AttributeError`, so `copy`, `pickle` and `dataclasses.replace` work. It is a
+    wrapper, not an `InitVar`: an `InitVar` default stays readable as `EngineConfig().write_mode`.
+
+    Args:
+        cls: The dataclass to guard.
+
+    Returns:
+        The same class, with `__init__` wrapped and `__getattr__` added.
     """
     init = cls.__init__
+    moved = frozenset(_MOVED_TO_EXECUTION_PARAMS)
 
     @functools.wraps(init)
-    def __init__(self: C, *args: Any, write_mode: object = _UNSET, **kwargs: Any) -> None:
-        if write_mode is not _UNSET:
-            raise ConfigurationError(
-                "EngineConfig takes no write_mode: write mode is now a field of "
-                "ExecutionParams, so pass ExecutionParams(write_mode=...) instead."
-            )
+    def __init__(self: C, *args: Any, **kwargs: Any) -> None:
+        for name in _MOVED_TO_EXECUTION_PARAMS:
+            if kwargs.get(name, _UNSET) is not _UNSET:
+                raise ConfigurationError(
+                    f"{cls.__name__} takes no {name}: it is now a field of "
+                    f"ExecutionParams, so pass ExecutionParams({name}=...) instead."
+                )
         init(self, *args, **kwargs)
 
+    def __getattr__(self: C, name: str) -> Any:
+        if name in moved:
+            execution = self.__dict__.get("_execution")
+            if execution is not None:
+                warnings.warn(
+                    f"Reading {cls.__name__}.{name} is deprecated: read ctx.execution.{name} "
+                    f"instead. The read will be removed in v0.2.0.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                return getattr(execution, name)
+            raise ConfigurationError(
+                f"{cls.__name__} has no {name}: it is now a field of ExecutionParams, "
+                f"so read ctx.execution.{name} instead."
+            )
+        raise AttributeError(f"{cls.__name__!r} object has no attribute {name!r}")
+
     cls.__init__ = __init__  # type: ignore[method-assign]
+    cls.__getattr__ = __getattr__  # type: ignore[attr-defined]
     return cls
 
 
-@_refuse_write_mode
+@_refuse_moved_fields
 @dataclass
 class EngineConfig:
     """Configuration for the Firecube Engine (Runtime & Workspace).
@@ -147,7 +191,14 @@ class EngineConfig:
         skip_preflight: Skip storage preflight checks.
 
     The write mode, the slot window and the dry run are not options: `ExecutionParams` holds them.
+    A run attaches its `ExecutionParams` as `_execution`, so a plugin that still reads a moved
+    field gets the value and a `DeprecationWarning` until v0.2.0. Read `ctx.execution` instead.
     """
+
+    # The run's ExecutionParams, set by TierConfigurator.configure. Without an annotation this is
+    # no dataclass field, so it is not an option key and not in repr or equality. The class
+    # default also keeps a read of it from reaching __getattr__.
+    _execution = cast(Any, None)
 
     # Execution (Pipeline)
     pipeline_workers: int = 1

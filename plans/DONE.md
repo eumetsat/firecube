@@ -1,5 +1,34 @@
 # Done
 
+## 2026-11-08 — `EngineConfig` forwards moved-field reads with a warning until v0.2.0
+
+**Decision.** The maintainer decided on 2026-11-08 that existing plugins keep working. A read of a moved field on the `EngineConfig` of a run returns the value of the run and emits a `DeprecationWarning`. Firecube will remove the forward in v0.2.0. This amends the tombstone and the no-alias bullets of the entry "`ExecutionParams` defaults to `direct`, and `EngineConfig` refuses the moved fields" below. The base is commit 5942d26.
+
+- Exception to the shim rule. `plans/STYLE.md` forbids a forwarding shim. This is a time-limited exception with one removal date, v0.2.0.
+- Reads. During a run, a read of one of the eight moved fields returns the `ExecutionParams` value. The warning names `ctx.execution.<field>` and v0.2.0.
+- Reason. The earlier refusal failed an external plugin run at its first read. The `EngineConfig` of a run now carries the `ExecutionParams` of that run, so the forward has a run to read from and invents no default.
+- Refusals that stay. Construction with a moved field raises `ConfigurationError`, because the field would have two sources. A read on an `EngineConfig` built outside a run raises `ConfigurationError`, because no run supplies a value.
+- Scope. The attachment is not an option key. It is not in `config_keys(EngineConfig)`, in `--option` or in the config file.
+- Changelog. The entry moved from `Changed` to `Deprecated` in `CHANGELOG.md`.
+- What stays open. The removal is the item "Remove the `EngineConfig` moved-field forward in v0.2.0" in `plans/TODO.md`.
+
+---
+
+## 2026-11-08 — `ExecutionParams` defaults to `direct`, and `EngineConfig` refuses the moved fields
+
+**Decision.** This entry supersedes the `staged` default of the 2026-11-07 entries "CLI and API building blocks" and "One CLI surface". Nothing shipped with that default, so `CHANGELOG.md` replaces its entry. The maintainer approved both changes on 2026-11-08.
+
+- Default. `ExecutionParams.write_mode` defaults to `direct`. The parameter defaults of `resolve_dataset_target` and `BaseIngestor.resolve_output_uri` match it.
+- Reason (D2). The scaffolder defaults to `direct`. The `staged` mode earns its workspace only on a remote target. The CLI stays explicit, and `--write-mode` stays required.
+- Cost (D2). An SDK caller that sets no mode loses the checks that only `staged` makes. These are the sparse-window refusal, the incomplete-units and promotion checks in the engine, and the second fresh-target check before upload. The first fresh-target check runs in both modes.
+- Trigger. A smoke run failed 79 rows. A plugin read `engine_config.write_mode`. Commit 9580758 moved that field, so the read raised a bare `AttributeError`. The ingest exited 70.
+- Tombstones. `EngineConfig` refuses all eight moved fields: `write_mode`, `dry_run`, `slot_start`, `slot_end`, `slot_size`, `slot_group`, `static_owner_slot_start` and `suppress_static_emission_for_non_owner`. Construction raises `ConfigurationError` naming `ExecutionParams(<field>=...)`. A read raises `ConfigurationError` naming `ctx.execution.<field>`. A read in a hook that runs before the batches, such as `discover_source_files`, exits 2. A read inside the batch-processing hook (`_process_batch`) fails that batch, and the run exits 1. The message is the same in both cases (D5).
+- No alias. `EngineConfig` holds no reference to the run, so a forwarding property has no run to read from and returns a default silently. `plans/STYLE.md` forbids such shims.
+- Propagation (D3). The read refusal passes through `hasattr` and `getattr` with a default, because `hasattr` swallows `AttributeError` only. A compatibility read that silently takes a default is what the refusal exists to stop. A test pins it.
+- What stays open. The reads in the AOD and FCI plugins are outside this repository.
+
+---
+
 ## 2026-11-07 — CLI and API building blocks: `firecube.operations` and `open_product`
 
 **Decision.** The CLI calls one public Python facade, `firecube.operations`. A library caller reaches the same operations with the same refusals. The decisions D1 to D6 of 2026-11-07 govern it.

@@ -72,6 +72,15 @@ not part of the public contract and are rejected by the plugin contract test.
 
     [:octicons-arrow-right-24: Metadata Migration](migration.md)
 
+-   :material-language-python:{ .lg .middle } **Python API**
+
+    ---
+
+    The `firecube.operations` facade: open a product, then archive,
+    migrate, release, snapshot, and maintain its Zarr arrays from Python.
+
+    [:octicons-arrow-right-24: Operations](python-api/operations.md)
+
 -   :material-tools:{ .lg .middle } **Core Utilities**
 
     ---
@@ -80,15 +89,6 @@ not part of the public contract and are rejected by the plugin contract test.
     preparation helpers from `firecube.core.api`.
 
     [:octicons-arrow-right-24: Core Utilities](core-utilities.md)
-
--   :material-language-python:{ .lg .middle } **Operations (Python)**
-
-    ---
-
-    The `firecube.operations` facade: open a product, then archive,
-    migrate, release, snapshot, and maintain its Zarr arrays from Python.
-
-    [:octicons-arrow-right-24: Operations (Python)](operations.md)
 
 -   :material-cog:{ .lg .middle } **Configuration**
 

@@ -27,7 +27,12 @@ from firecube.core.uris import local_path_from_target
 from firecube.ingestor.api import IngestResult, OutputPaths
 from firecube.ingestor.contracts.interfaces import PipelineHost
 from firecube.ingestor.runtime.engine import PipelineExecutor
-from firecube.ingestor.types.context import RuntimeIdentity, RuntimeIngestContext, StorageContext
+from firecube.ingestor.types.context import (
+    ExecutionParams,
+    RuntimeIdentity,
+    RuntimeIngestContext,
+    StorageContext,
+)
 
 
 class _FakeHost:
@@ -91,6 +96,7 @@ def _make_ctx(source: Path) -> RuntimeIngestContext:
         output_format="zarr",
         storage=StorageContext(output=session),
         options={"upload_workers": 4},
+        execution=ExecutionParams(write_mode="staged"),
         run_id="test-run",
         identity=RuntimeIdentity(run_id="test-run"),
     )

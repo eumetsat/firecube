@@ -98,7 +98,7 @@ class ProductResolver:
 def resolve_dataset_target(
     target: str,
     *,
-    write_mode: str | WriteModePolicy = "staged",
+    write_mode: str | WriteModePolicy = "direct",
     temp_root: Path | None = None,
     direct_base_uri: str | None = None,
 ) -> str:

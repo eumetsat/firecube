@@ -90,6 +90,7 @@ def pytest_sessionstart(session):
         "direct_zarr_capable_test_plugin",
         "direct_zarr_non_capable_test_plugin",
         "e2e_zarr_test_plugin",
+        "engine_config_read_test_plugin",
         "multi_group_capable_test_plugin",
         "cf_time_dim_test_plugin",
         "slot_shape_test_plugin",

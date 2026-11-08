@@ -102,9 +102,10 @@ class TierConfigurator:
 
     Unknown keys (not owned by any tier) raise ``ValueError`` at configure
     time, enforcing the strict schema contract. A field of `ExecutionParams`
-    raises ``ConfigurationError``: the context carries those.
+    raises ``ConfigurationError``: the context carries those. The returned `EngineConfig` holds
+    ``ctx.execution`` itself, so a deprecated read of a moved field forwards to it.
 
-    ``configure()`` is pure: it does not mutate ``ctx``.
+    ``configure()`` does not mutate ``ctx``.
     """
 
     def __init__(
@@ -156,6 +157,7 @@ class TierConfigurator:
         plugin_opts = {k: options[k] for k in plugin_keys if k in options}
 
         engine_config = EngineConfig.from_options(engine_opts)
+        engine_config._execution = ctx.execution
         template_config = (
             self._template_config_class.from_options(template_opts)
             if self._template_config_class

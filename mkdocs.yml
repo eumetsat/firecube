@@ -229,8 +229,9 @@ nav:
       - Index Specification: reference/parallelism.md
       - Extensions: reference/extensions.md
       - Metadata Migration: reference/migration.md
+    - Python API:
+      - Operations: reference/python-api/operations.md
     - Core Utilities: reference/core-utilities.md
-    - Operations (Python): reference/operations.md
     - CLI Reference: reference/cli.md
     - Configuration: reference/config.md
     - Observability: reference/observability.md

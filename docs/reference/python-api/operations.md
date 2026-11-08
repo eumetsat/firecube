@@ -1,4 +1,4 @@
-# Operations (Python)
+# Operations
 
 The module `firecube.operations` is the public Python facade over the operations the `firecube` command line runs. An operation takes the open product as its first argument. Open a product with `open_product`, used as a context manager. Exports keep their original names, without aliases. The module does not re-export errors. `Product.session` and `Product.manager` serve the engine and the operations. They are not part of the contract.
 
@@ -140,6 +140,6 @@ The module `firecube.operations` is the public Python facade over the operations
 
 ## See Also
 
-- [CLI Reference](cli.md)
-- [Exceptions](exceptions.md)
-- [Storage Drivers](storage-drivers.md)
+- [CLI Reference](../cli.md)
+- [Exceptions](../exceptions.md)
+- [Storage Drivers](../storage-drivers.md)

@@ -1584,7 +1584,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         return None
 
     def resolve_output_uri(
-        self, ctx: RuntimeIngestContext | PluginContext, write_mode: str = "staged"
+        self, ctx: RuntimeIngestContext | PluginContext, write_mode: str = "direct"
     ) -> str:
         """Resolve the canonical output URI (Dataset Directory) for this run."""
         from firecube.core.product import resolve_dataset_target, write_mode_policy

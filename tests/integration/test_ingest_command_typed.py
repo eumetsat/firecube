@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import warnings
 from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
@@ -367,6 +368,37 @@ def test_plugin_listings_name_no_execution_parameter(show: str, key: str) -> Non
 
     assert result.exit_code == 0 and "pipeline_workers" in result.output, result.output
     assert key not in result.output
+
+
+@pytest.mark.parametrize("hook", ["discovery", "batch"])
+def test_plugin_hook_reading_write_mode_off_engine_config_gets_the_run_value_with_a_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, hook: str
+) -> None:
+    source = tmp_path / "src"
+    source.mkdir()
+    seen = tmp_path / "seen.txt"
+    monkeypatch.setenv("ENGINE_CONFIG_READ_OUT", str(seen))
+    args = [*_required_args(tmp_path), "--input-data", source.as_uri()]
+    args[args.index("cli_test_plugin")] = "engine_config_read_test_plugin"
+    args[args.index("direct")] = "staged"
+    if hook == "batch":  # skip the discovery read so the first read is in `_process_batch`
+        monkeypatch.setattr(
+            "engine_config_read_test_plugin.EngineConfigReadIngestor.discover_source_files",
+            lambda self, ctx: ["a"],
+        )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = CliRunner().invoke(cli, args)
+
+    assert result.exit_code == 0, result.output
+    assert "ctx.execution" not in result.output, result.output
+    assert seen.read_text(encoding="utf-8").splitlines()[0] == f"{hook}=staged"
+    moved = [w for w in caught if "ctx.execution.write_mode" in str(w.message)]
+    assert moved, [str(w.message) for w in caught]
+    assert issubclass(moved[0].category, DeprecationWarning)
+    assert "v0.2.0" in str(moved[0].message)
+    assert moved[0].filename.endswith("engine_config_read_test_plugin/__init__.py")
 
 
 def test_plugin_config_table_write_mode_is_refused(tmp_path: Path) -> None:

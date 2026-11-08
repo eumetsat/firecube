@@ -46,7 +46,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from firecube.ingestor.api import GenericZarrIngestor, PluginContext
+from firecube.ingestor.api import ExecutionParams, GenericZarrIngestor, PluginContext
 from firecube.ingestor.runtime.zarr import batch_runner, staged_metadata
 from tests.helpers.storage import make_test_context
 
@@ -112,6 +112,7 @@ def _make_ctx(
         source=str(source_dir),
         product=product,
         options=options,
+        execution=ExecutionParams(write_mode="staged"),
     )
 
 
