@@ -4859,7 +4859,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4875,11 +4875,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5080,6 +5108,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5389,7 +5445,7 @@
 finished products with <code>firecube migrate run</code>. A step changes attributes in the
 Zarr metadata documents of a product. A step never moves or rewrites a chunk.
 A change that moves chunks, such as a renamed dimension, is not a step.</p>
-<p>The public types are in <code>firecube.ingestor.api</code>. Each link in this guide goes
+<p>The public types are in <code>firecube.sdk</code>. Each link in this guide goes
 to the generated entry of one type in the
 <a href="../../../reference/migration/">Metadata Migration reference</a>. The operator runs
 the step as described in <a href="../../../operations/maintenance/migrate/">Migrate Metadata</a>.</p>
@@ -5403,7 +5459,7 @@ objects.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABSENT</span><span class="p">,</span> <span class="n">AttributePatch</span><span class="p">,</span> <span class="n">MetadataPlan</span><span class="p">,</span> <span class="n">StoreView</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABSENT</span><span class="p">,</span> <span class="n">AttributePatch</span><span class="p">,</span> <span class="n">MetadataPlan</span><span class="p">,</span> <span class="n">StoreView</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">NameVariables</span><span class="p">:</span>
@@ -5431,18 +5487,18 @@ objects.</p>
 <a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">patches</span><span class="p">)</span>
 </code></pre></div>
 <p>Declare the five class attributes of
-<a href="../../../reference/migration/#firecube.ingestor.api.MigrationStep"><code>MigrationStep</code></a>.
+<a href="../../../reference/migration/#firecube.sdk.MigrationStep"><code>MigrationStep</code></a>.
 Name the <code>id</code> <code>&lt;namespace&gt;:&lt;from&gt;-&gt;&lt;to&gt;</code>, as in <code>my-plugin:0.1.0-&gt;0.2.0</code>.
 Firecube enforces one rule on the <code>id</code>: it must equal the entry-point name.
 The form is a naming convention.</p>
 <p>Read the store only through the
-<a href="../../../reference/migration/#firecube.ingestor.api.StoreView"><code>StoreView</code></a>.
+<a href="../../../reference/migration/#firecube.sdk.StoreView"><code>StoreView</code></a>.
 A field that the document lacks holds
-<a href="../../../reference/migration/#firecube.ingestor.api.ABSENT"><code>ABSENT</code></a>.
+<a href="../../../reference/migration/#firecube.sdk.ABSENT"><code>ABSENT</code></a>.
 Test <code>node.attributes is ABSENT</code> before you read it.</p>
 <p>Return the changes as
-<a href="../../../reference/migration/#firecube.ingestor.api.AttributePatch"><code>AttributePatch</code></a>
-objects. Keep <a href="../../../reference/migration/#firecube.ingestor.api.MigrationStep.plan"><code>plan</code></a>
+<a href="../../../reference/migration/#firecube.sdk.AttributePatch"><code>AttributePatch</code></a>
+objects. Keep <a href="../../../reference/migration/#firecube.sdk.MigrationStep.plan"><code>plan</code></a>
 pure.</p>
 <p>If the store already holds the values that the step sets, the plan changes
 nothing. Firecube then writes only its own stamp. The run reports the outcome
@@ -5533,16 +5589,18 @@ line:</p>
 <p><code>migrate run</code> refuses a store that has no control plane. Adopt the store first:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>adopt<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///tmp/rain.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--product-name<span class="w"> </span>rain
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--product-name<span class="w"> </span>rain<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
+<p>Off a terminal, <code>migrate adopt</code> and <code>migrate run</code> exit with code 2 unless you pass
+<code>--yes-i-really-mean-it</code>. On a terminal, they ask for confirmation. <code>--dry-run</code> skips the question.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>adopted the store as product rain (run adopt-aee4c651-d814-4963-8179-dffaa476710b, Zarr format 3)
 </code></pre></div>
 <p>Run the plan without a write. Quote the step id, because the shell reads <code>&gt;</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>run<span class="w"> </span><span class="s1">&#39;my-plugin:0.1.0-&gt;0.2.0&#39;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///tmp/rain.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--product-name<span class="w"> </span>rain<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">level</span><span class="o">=</span>L3<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--dry-run
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">level</span><span class="o">=</span>L3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--dry-run
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>set /:processing_level
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>set precip_rate:long_name
@@ -5556,8 +5614,8 @@ line:</p>
 without <code>--dry-run</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>run<span class="w"> </span><span class="s1">&#39;my-plugin:0.1.0-&gt;0.2.0&#39;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///tmp/rain.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--product-name<span class="w"> </span>rain<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">level</span><span class="o">=</span>L3
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">level</span><span class="o">=</span>L3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>set /:processing_level
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>set precip_rate:long_name
@@ -5618,7 +5676,7 @@ again with <code>--option level=L1</code>:</p>
 </table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../../reference/migration/#firecube.ingestor.api.MigrationStep"><code>MigrationStep</code></a></strong>: the contract of a step</li>
+<li><strong><a href="../../../reference/migration/#firecube.sdk.MigrationStep"><code>MigrationStep</code></a></strong>: the contract of a step</li>
 <li><strong><a href="../../../operations/maintenance/migrate/">Migrate Metadata</a></strong>: run, resume and inspect a migration</li>
 <li><strong><a href="../../../operations/maintenance/create-a-release/">Create A Release</a></strong>: what <code>to_release</code> creates</li>
 <li><strong><a href="../direct-zarr/">Declare The Schema And Index</a></strong>: the root attributes that a plugin must not declare</li>

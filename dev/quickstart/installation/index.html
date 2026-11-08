@@ -4805,7 +4805,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4821,11 +4821,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5026,6 +5054,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5316,7 +5372,9 @@ isolated environment and install the released package from PyPI.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>firecube
 </code></pre></div>
 <p>The next step installs the existing Quickstart plugin in this environment so
-the Firecube CLI can discover it.</p>
+the Firecube CLI can discover it. The command <code>firecube plugins install</code> runs
+<code>uv pip install</code>. Keep <code>uv</code> on your <code>PATH</code> in the shell that runs it. If <code>uv</code> is
+missing, the command prints <code>No such file or directory: 'uv'</code> and exits with code 4.</p>
 <h2 id="verify-the-installation">Verify The Installation</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>--version
 </code></pre></div>

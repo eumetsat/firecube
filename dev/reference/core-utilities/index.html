@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://eumetsat.github.io/firecube/dev/reference/core-utilities/">
       
       
-        <link rel="prev" href="../migration/">
+        <link rel="prev" href="../operations/">
       
       
         <link rel="next" href="../cli/">
@@ -4717,7 +4717,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4733,11 +4733,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4947,6 +4975,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -5021,7 +5077,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.parse_uri" class="md-nav__link">
+  <a href="#firecube.sdk.parse_uri" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;parse_uri
@@ -5032,7 +5088,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.is_remote_target" class="md-nav__link">
+  <a href="#firecube.sdk.is_remote_target" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;is_remote_target
@@ -5043,7 +5099,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.infer_target_protocol" class="md-nav__link">
+  <a href="#firecube.sdk.infer_target_protocol" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;infer_target_protocol
@@ -5054,7 +5110,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.local_path_from_target" class="md-nav__link">
+  <a href="#firecube.sdk.local_path_from_target" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;local_path_from_target
@@ -5065,7 +5121,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.create_filesystem_for_uri" class="md-nav__link">
+  <a href="#firecube.sdk.create_filesystem_for_uri" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_filesystem_for_uri
@@ -5076,7 +5132,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.path_stats" class="md-nav__link">
+  <a href="#firecube.sdk.path_stats" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;path_stats
@@ -5087,7 +5143,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.ensure_directory" class="md-nav__link">
+  <a href="#firecube.sdk.ensure_directory" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;ensure_directory
@@ -5098,7 +5154,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.delete_path" class="md-nav__link">
+  <a href="#firecube.sdk.delete_path" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;delete_path
@@ -5120,7 +5176,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.discover" class="md-nav__link">
+  <a href="#firecube.sdk.discover" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;discover
@@ -5131,7 +5187,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.DiscoveryRequest" class="md-nav__link">
+  <a href="#firecube.sdk.DiscoveryRequest" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DiscoveryRequest
@@ -5142,7 +5198,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.SourceItem" class="md-nav__link">
+  <a href="#firecube.sdk.SourceItem" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SourceItem
@@ -5154,7 +5210,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.SourceItem-attributes" class="md-nav__link">
+  <a href="#firecube.sdk.SourceItem-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
         Attributes
@@ -5166,7 +5222,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.SourceItem.identity" class="md-nav__link">
+  <a href="#firecube.sdk.SourceItem.identity" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;identity
@@ -5187,7 +5243,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.discover_input_files" class="md-nav__link">
+  <a href="#firecube.sdk.discover_input_files" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;discover_input_files
@@ -5209,7 +5265,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.prepare_netcdf_for_zarr" class="md-nav__link">
+  <a href="#firecube.sdk.prepare_netcdf_for_zarr" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;prepare_netcdf_for_zarr
@@ -5220,7 +5276,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.clean_netcdf_encoding" class="md-nav__link">
+  <a href="#firecube.sdk.clean_netcdf_encoding" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;clean_netcdf_encoding
@@ -5231,7 +5287,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.normalize_string_vars" class="md-nav__link">
+  <a href="#firecube.sdk.normalize_string_vars" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;normalize_string_vars
@@ -5242,7 +5298,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.rename_time_dim" class="md-nav__link">
+  <a href="#firecube.sdk.rename_time_dim" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;rename_time_dim
@@ -5253,7 +5309,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.read_hdf5_array" class="md-nav__link">
+  <a href="#firecube.sdk.read_hdf5_array" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;read_hdf5_array
@@ -5264,7 +5320,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.materialize_hdf5_path" class="md-nav__link">
+  <a href="#firecube.sdk.materialize_hdf5_path" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;materialize_hdf5_path
@@ -5286,7 +5342,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.extract_all_from_zips" class="md-nav__link">
+  <a href="#firecube.sdk.extract_all_from_zips" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;extract_all_from_zips
@@ -5308,7 +5364,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.epoch_s_to_iso" class="md-nav__link">
+  <a href="#firecube.sdk.epoch_s_to_iso" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;epoch_s_to_iso
@@ -5319,7 +5375,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.iso_to_epoch_s" class="md-nav__link">
+  <a href="#firecube.sdk.iso_to_epoch_s" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;iso_to_epoch_s
@@ -5330,7 +5386,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.normalize_epoch_iso" class="md-nav__link">
+  <a href="#firecube.sdk.normalize_epoch_iso" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;normalize_epoch_iso
@@ -5352,7 +5408,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.RESERVED_ARRAY_ATTRS" class="md-nav__link">
+  <a href="#firecube.sdk.RESERVED_ARRAY_ATTRS" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;RESERVED_ARRAY_ATTRS
@@ -5363,7 +5419,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.assert_attrs_safe" class="md-nav__link">
+  <a href="#firecube.sdk.assert_attrs_safe" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;assert_attrs_safe
@@ -5374,32 +5430,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR" class="md-nav__link">
+  <a href="#firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;FIRECUBE_STATIC_WRITTEN_ATTR
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.core.api.ATTR_PREALLOCATED" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;ATTR_PREALLOCATED
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.core.api.ATTR_COORD_MANAGED" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;ATTR_COORD_MANAGED
       
     </span>
   </a>
@@ -5440,7 +5474,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;BatchResourceRegistry
@@ -5452,7 +5486,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry-functions" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
         Methods:
@@ -5464,7 +5498,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry.register" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry.register" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;register
@@ -5475,7 +5509,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry.teardown" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry.teardown" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;teardown
@@ -5486,7 +5520,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry.teardown_all" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry.teardown_all" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;teardown_all
@@ -5518,7 +5552,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.physical_chunk_keys_for_region" class="md-nav__link">
+  <a href="#firecube.sdk.physical_chunk_keys_for_region" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;physical_chunk_keys_for_region
@@ -5529,7 +5563,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.chunk_axis_range" class="md-nav__link">
+  <a href="#firecube.sdk.chunk_axis_range" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;chunk_axis_range
@@ -5540,7 +5574,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.axis_selection_is_chunk_aligned" class="md-nav__link">
+  <a href="#firecube.sdk.axis_selection_is_chunk_aligned" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;axis_selection_is_chunk_aligned
@@ -5562,7 +5596,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ZarrCompareReport
@@ -5574,7 +5608,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport-attributes" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
         Attributes
@@ -5586,7 +5620,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport.mismatches" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport.mismatches" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;mismatches
@@ -5602,7 +5636,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport-functions" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
         Methods:
@@ -5614,7 +5648,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport.to_dict" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport.to_dict" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_dict
@@ -5635,7 +5669,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.compare_zarr_stores" class="md-nav__link">
+  <a href="#firecube.sdk.compare_zarr_stores" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compare_zarr_stores
@@ -5850,7 +5884,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.parse_uri" class="md-nav__link">
+  <a href="#firecube.sdk.parse_uri" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;parse_uri
@@ -5861,7 +5895,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.is_remote_target" class="md-nav__link">
+  <a href="#firecube.sdk.is_remote_target" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;is_remote_target
@@ -5872,7 +5906,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.infer_target_protocol" class="md-nav__link">
+  <a href="#firecube.sdk.infer_target_protocol" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;infer_target_protocol
@@ -5883,7 +5917,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.local_path_from_target" class="md-nav__link">
+  <a href="#firecube.sdk.local_path_from_target" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;local_path_from_target
@@ -5894,7 +5928,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.create_filesystem_for_uri" class="md-nav__link">
+  <a href="#firecube.sdk.create_filesystem_for_uri" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_filesystem_for_uri
@@ -5905,7 +5939,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.path_stats" class="md-nav__link">
+  <a href="#firecube.sdk.path_stats" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;path_stats
@@ -5916,7 +5950,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.ensure_directory" class="md-nav__link">
+  <a href="#firecube.sdk.ensure_directory" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;ensure_directory
@@ -5927,7 +5961,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.delete_path" class="md-nav__link">
+  <a href="#firecube.sdk.delete_path" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;delete_path
@@ -5949,7 +5983,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.discover" class="md-nav__link">
+  <a href="#firecube.sdk.discover" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;discover
@@ -5960,7 +5994,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.DiscoveryRequest" class="md-nav__link">
+  <a href="#firecube.sdk.DiscoveryRequest" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DiscoveryRequest
@@ -5971,7 +6005,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.SourceItem" class="md-nav__link">
+  <a href="#firecube.sdk.SourceItem" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SourceItem
@@ -5983,7 +6017,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.SourceItem-attributes" class="md-nav__link">
+  <a href="#firecube.sdk.SourceItem-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
         Attributes
@@ -5995,7 +6029,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.SourceItem.identity" class="md-nav__link">
+  <a href="#firecube.sdk.SourceItem.identity" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;identity
@@ -6016,7 +6050,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.discover_input_files" class="md-nav__link">
+  <a href="#firecube.sdk.discover_input_files" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;discover_input_files
@@ -6038,7 +6072,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.prepare_netcdf_for_zarr" class="md-nav__link">
+  <a href="#firecube.sdk.prepare_netcdf_for_zarr" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;prepare_netcdf_for_zarr
@@ -6049,7 +6083,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.clean_netcdf_encoding" class="md-nav__link">
+  <a href="#firecube.sdk.clean_netcdf_encoding" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;clean_netcdf_encoding
@@ -6060,7 +6094,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.normalize_string_vars" class="md-nav__link">
+  <a href="#firecube.sdk.normalize_string_vars" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;normalize_string_vars
@@ -6071,7 +6105,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.rename_time_dim" class="md-nav__link">
+  <a href="#firecube.sdk.rename_time_dim" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;rename_time_dim
@@ -6082,7 +6116,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.read_hdf5_array" class="md-nav__link">
+  <a href="#firecube.sdk.read_hdf5_array" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;read_hdf5_array
@@ -6093,7 +6127,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.materialize_hdf5_path" class="md-nav__link">
+  <a href="#firecube.sdk.materialize_hdf5_path" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;materialize_hdf5_path
@@ -6115,7 +6149,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.extract_all_from_zips" class="md-nav__link">
+  <a href="#firecube.sdk.extract_all_from_zips" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;extract_all_from_zips
@@ -6137,7 +6171,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.epoch_s_to_iso" class="md-nav__link">
+  <a href="#firecube.sdk.epoch_s_to_iso" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;epoch_s_to_iso
@@ -6148,7 +6182,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.iso_to_epoch_s" class="md-nav__link">
+  <a href="#firecube.sdk.iso_to_epoch_s" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;iso_to_epoch_s
@@ -6159,7 +6193,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.normalize_epoch_iso" class="md-nav__link">
+  <a href="#firecube.sdk.normalize_epoch_iso" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;normalize_epoch_iso
@@ -6181,7 +6215,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.RESERVED_ARRAY_ATTRS" class="md-nav__link">
+  <a href="#firecube.sdk.RESERVED_ARRAY_ATTRS" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;RESERVED_ARRAY_ATTRS
@@ -6192,7 +6226,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.assert_attrs_safe" class="md-nav__link">
+  <a href="#firecube.sdk.assert_attrs_safe" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;assert_attrs_safe
@@ -6203,32 +6237,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR" class="md-nav__link">
+  <a href="#firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;FIRECUBE_STATIC_WRITTEN_ATTR
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.core.api.ATTR_PREALLOCATED" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;ATTR_PREALLOCATED
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#firecube.core.api.ATTR_COORD_MANAGED" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;ATTR_COORD_MANAGED
       
     </span>
   </a>
@@ -6269,7 +6281,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;BatchResourceRegistry
@@ -6281,7 +6293,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry-functions" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
         Methods:
@@ -6293,7 +6305,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry.register" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry.register" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;register
@@ -6304,7 +6316,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry.teardown" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry.teardown" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;teardown
@@ -6315,7 +6327,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.BatchResourceRegistry.teardown_all" class="md-nav__link">
+  <a href="#firecube.sdk.BatchResourceRegistry.teardown_all" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;teardown_all
@@ -6347,7 +6359,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.physical_chunk_keys_for_region" class="md-nav__link">
+  <a href="#firecube.sdk.physical_chunk_keys_for_region" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;physical_chunk_keys_for_region
@@ -6358,7 +6370,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.chunk_axis_range" class="md-nav__link">
+  <a href="#firecube.sdk.chunk_axis_range" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;chunk_axis_range
@@ -6369,7 +6381,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.axis_selection_is_chunk_aligned" class="md-nav__link">
+  <a href="#firecube.sdk.axis_selection_is_chunk_aligned" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;axis_selection_is_chunk_aligned
@@ -6391,7 +6403,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ZarrCompareReport
@@ -6403,7 +6415,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport-attributes" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport-attributes" class="md-nav__link">
     <span class="md-ellipsis">
       
         Attributes
@@ -6415,7 +6427,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport.mismatches" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport.mismatches" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;mismatches
@@ -6431,7 +6443,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport-functions" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
         Methods:
@@ -6443,7 +6455,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firecube.core.api.ZarrCompareReport.to_dict" class="md-nav__link">
+  <a href="#firecube.sdk.ZarrCompareReport.to_dict" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_dict
@@ -6464,7 +6476,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#firecube.core.api.compare_zarr_stores" class="md-nav__link">
+  <a href="#firecube.sdk.compare_zarr_stores" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;compare_zarr_stores
@@ -6506,14 +6518,14 @@
 
 
 <h1 id="core-utilities">Core Utilities</h1>
-<p>This reference covers the helper functions exported from <code>firecube.core.api</code>
+<p>This reference covers the helper functions exported from <code>firecube.sdk</code>
 for use inside plugin hooks: URI and filesystem handling, source discovery,
 dataset preparation, and time conversion.</p>
 <p><code>RESERVED_ARRAY_ATTRS</code>, <code>assert_attrs_safe()</code>, and
 <code>FIRECUBE_STATIC_WRITTEN_ATTR</code> describe the array attribute keys Firecube
-owns for Zarr writes. The sealing marker constants stamped by <code>firecube zarr
-preallocate</code> and <code>firecube zarr consolidate-time-coord</code> are operator-tooling
-surface; they are documented with those commands in
+owns for Zarr writes. The sealing marker constants are operator-tooling
+surface. <code>firecube zarr preallocate</code> and <code>firecube zarr consolidate-time-coord</code>
+stamp them. They are documented with those commands in
 <a href="../cli/">CLI reference</a>.</p>
 <p><code>compare_zarr_stores()</code> performs a read-only, driver-aware comparison of two
 Zarr stores and returns <code>ZarrCompareReport</code>.</p>
@@ -6526,156 +6538,156 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 </thead>
 <tbody>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.parse_uri" href="#firecube.core.api.parse_uri"><code>parse_uri</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.parse_uri" href="#firecube.sdk.parse_uri"><code>parse_uri</code></a></td>
 <td>Parse a URI/path into a minimal fsspec-like structure.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.is_remote_target" href="#firecube.core.api.is_remote_target"><code>is_remote_target</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.is_remote_target" href="#firecube.sdk.is_remote_target"><code>is_remote_target</code></a></td>
 <td>Return True when <code>target</code> is a non-local URI (e.g. s3://...).</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.infer_target_protocol" href="#firecube.core.api.infer_target_protocol"><code>infer_target_protocol</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.infer_target_protocol" href="#firecube.sdk.infer_target_protocol"><code>infer_target_protocol</code></a></td>
 <td>Infer the fsspec protocol for a target string.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.local_path_from_target" href="#firecube.core.api.local_path_from_target"><code>local_path_from_target</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.local_path_from_target" href="#firecube.sdk.local_path_from_target"><code>local_path_from_target</code></a></td>
 <td>Resolve a target string into an absolute local path.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.create_filesystem_for_uri" href="#firecube.core.api.create_filesystem_for_uri"><code>create_filesystem_for_uri</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.create_filesystem_for_uri" href="#firecube.sdk.create_filesystem_for_uri"><code>create_filesystem_for_uri</code></a></td>
 <td>Create a driver-aware filesystem for a concrete product/output URI.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.path_stats" href="#firecube.core.api.path_stats"><code>path_stats</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.path_stats" href="#firecube.sdk.path_stats"><code>path_stats</code></a></td>
 <td>Get bytes and file count for a path (local or remote).</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.ensure_directory" href="#firecube.core.api.ensure_directory"><code>ensure_directory</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.ensure_directory" href="#firecube.sdk.ensure_directory"><code>ensure_directory</code></a></td>
 <td>Ensure a directory exists, creating parents if needed.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.delete_path" href="#firecube.core.api.delete_path"><code>delete_path</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.delete_path" href="#firecube.sdk.delete_path"><code>delete_path</code></a></td>
 <td>Delete a path (file or directory) from storage.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.discover" href="#firecube.core.api.discover"><code>discover</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.discover" href="#firecube.sdk.discover"><code>discover</code></a></td>
 <td>Discover the source items of every source of a run.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.DiscoveryRequest
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.DiscoveryRequest
 
 
   
       dataclass
-  " href="#firecube.core.api.DiscoveryRequest"><code>DiscoveryRequest</code></a></td>
+  " href="#firecube.sdk.DiscoveryRequest"><code>DiscoveryRequest</code></a></td>
 <td>What <code>discover</code> resolves: the sources of one run and how to narrow them.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.SourceItem
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.SourceItem
 
 
   
       dataclass
-  " href="#firecube.core.api.SourceItem"><code>SourceItem</code></a></td>
+  " href="#firecube.sdk.SourceItem"><code>SourceItem</code></a></td>
 <td>One discovered source granule.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.discover_input_files" href="#firecube.core.api.discover_input_files"><code>discover_input_files</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.discover_input_files" href="#firecube.sdk.discover_input_files"><code>discover_input_files</code></a></td>
 <td>Discover input files from a local path or remote URI.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.prepare_netcdf_for_zarr" href="#firecube.core.api.prepare_netcdf_for_zarr"><code>prepare_netcdf_for_zarr</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.prepare_netcdf_for_zarr" href="#firecube.sdk.prepare_netcdf_for_zarr"><code>prepare_netcdf_for_zarr</code></a></td>
 <td>Convenience wrapper: rename time dimension then clean encodings.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.clean_netcdf_encoding" href="#firecube.core.api.clean_netcdf_encoding"><code>clean_netcdf_encoding</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.clean_netcdf_encoding" href="#firecube.sdk.clean_netcdf_encoding"><code>clean_netcdf_encoding</code></a></td>
 <td>Strip HDF5 chunk hints from all variable encodings.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.normalize_string_vars" href="#firecube.core.api.normalize_string_vars"><code>normalize_string_vars</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.normalize_string_vars" href="#firecube.sdk.normalize_string_vars"><code>normalize_string_vars</code></a></td>
 <td>Normalize string-typed variables in a NetCDF-loaded Dataset for Zarr writes.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.rename_time_dim" href="#firecube.core.api.rename_time_dim"><code>rename_time_dim</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.rename_time_dim" href="#firecube.sdk.rename_time_dim"><code>rename_time_dim</code></a></td>
 <td>Rename the time dimension to Firecube's append convention.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.read_hdf5_array" href="#firecube.core.api.read_hdf5_array"><code>read_hdf5_array</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.read_hdf5_array" href="#firecube.sdk.read_hdf5_array"><code>read_hdf5_array</code></a></td>
 <td>Read a named array from a local HDF5(-like) file, with xarray fallback.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.materialize_hdf5_path" href="#firecube.core.api.materialize_hdf5_path"><code>materialize_hdf5_path</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.materialize_hdf5_path" href="#firecube.sdk.materialize_hdf5_path"><code>materialize_hdf5_path</code></a></td>
 <td>Return a local HDF5 path for a source path (ZIP or direct HDF5-like file).</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.extract_all_from_zips" href="#firecube.core.api.extract_all_from_zips"><code>extract_all_from_zips</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.extract_all_from_zips" href="#firecube.sdk.extract_all_from_zips"><code>extract_all_from_zips</code></a></td>
 <td>Extract every member of each ZIP archive, optionally in parallel.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.epoch_s_to_iso" href="#firecube.core.api.epoch_s_to_iso"><code>epoch_s_to_iso</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.epoch_s_to_iso" href="#firecube.sdk.epoch_s_to_iso"><code>epoch_s_to_iso</code></a></td>
 <td>Convert whole seconds-since-epoch to a canonical <code>"YYYY-MM-DDTHH:MM:SSZ"</code>.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.iso_to_epoch_s" href="#firecube.core.api.iso_to_epoch_s"><code>iso_to_epoch_s</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.iso_to_epoch_s" href="#firecube.sdk.iso_to_epoch_s"><code>iso_to_epoch_s</code></a></td>
 <td>Convert an ISO-8601 UTC timestamp to whole seconds since Unix epoch.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.coerce_to_epoch_s" href="../parallelism/#firecube.core.api.coerce_to_epoch_s"><code>coerce_to_epoch_s</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.coerce_to_epoch_s" href="../parallelism/#firecube.sdk.coerce_to_epoch_s"><code>coerce_to_epoch_s</code></a></td>
 <td>Coerce a coordinate value to seconds since the Unix epoch (UTC).</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.normalize_epoch_iso" href="#firecube.core.api.normalize_epoch_iso"><code>normalize_epoch_iso</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.normalize_epoch_iso" href="#firecube.sdk.normalize_epoch_iso"><code>normalize_epoch_iso</code></a></td>
 <td>Round-trip an ISO-8601 UTC string through <code>epoch_s</code> and back to <code>"...Z"</code>.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.RESERVED_ARRAY_ATTRS
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.RESERVED_ARRAY_ATTRS
 
 
   
       module-attribute
-  " href="#firecube.core.api.RESERVED_ARRAY_ATTRS"><code>RESERVED_ARRAY_ATTRS</code></a></td>
+  " href="#firecube.sdk.RESERVED_ARRAY_ATTRS"><code>RESERVED_ARRAY_ATTRS</code></a></td>
 <td>Reserved Zarr array attribute keys managed by Firecube.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.assert_attrs_safe" href="#firecube.core.api.assert_attrs_safe"><code>assert_attrs_safe</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.assert_attrs_safe" href="#firecube.sdk.assert_attrs_safe"><code>assert_attrs_safe</code></a></td>
 <td>Raise ValueError if <em>attrs</em> contains any reserved key.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR
 
 
   
       module-attribute
-  " href="#firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR"><code>FIRECUBE_STATIC_WRITTEN_ATTR</code></a></td>
+  " href="#firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR"><code>FIRECUBE_STATIC_WRITTEN_ATTR</code></a></td>
 <td>Zarr array attr Firecube stamps after a static array commit.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.BatchResourceRegistry" href="#firecube.core.api.BatchResourceRegistry"><code>BatchResourceRegistry</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.BatchResourceRegistry" href="#firecube.sdk.BatchResourceRegistry"><code>BatchResourceRegistry</code></a></td>
 <td>Track closeable resources by batch and close each batch idempotently.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.physical_chunk_keys_for_region" href="#firecube.core.api.physical_chunk_keys_for_region"><code>physical_chunk_keys_for_region</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.physical_chunk_keys_for_region" href="#firecube.sdk.physical_chunk_keys_for_region"><code>physical_chunk_keys_for_region</code></a></td>
 <td>Return physical chunk keys touched by one region write.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.chunk_axis_range" href="#firecube.core.api.chunk_axis_range"><code>chunk_axis_range</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.chunk_axis_range" href="#firecube.sdk.chunk_axis_range"><code>chunk_axis_range</code></a></td>
 <td>Return chunk indices intersected by a half-open axis selection.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.axis_selection_is_chunk_aligned" href="#firecube.core.api.axis_selection_is_chunk_aligned"><code>axis_selection_is_chunk_aligned</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.axis_selection_is_chunk_aligned" href="#firecube.sdk.axis_selection_is_chunk_aligned"><code>axis_selection_is_chunk_aligned</code></a></td>
 <td>Return whether a half-open axis selection aligns to chunk boundaries.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.ZarrCompareReport
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.ZarrCompareReport
 
 
   
       dataclass
-  " href="#firecube.core.api.ZarrCompareReport"><code>ZarrCompareReport</code></a></td>
+  " href="#firecube.sdk.ZarrCompareReport"><code>ZarrCompareReport</code></a></td>
 <td>Summary of a read-only comparison between two Zarr stores.</td>
 </tr>
 <tr>
-<td><a class="autorefs autorefs-internal" title="            firecube.core.api.compare_zarr_stores" href="#firecube.core.api.compare_zarr_stores"><code>compare_zarr_stores</code></a></td>
+<td><a class="autorefs autorefs-internal" title="            firecube.sdk.compare_zarr_stores" href="#firecube.sdk.compare_zarr_stores"><code>compare_zarr_stores</code></a></td>
 <td>Compare two Zarr stores through the configured storage abstraction.</td>
 </tr>
 </tbody>
@@ -6686,8 +6698,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.parse_uri" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.parse_uri</span>
+<h2 id="firecube.sdk.parse_uri" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.parse_uri</span>
 
 
 </h2>
@@ -6714,8 +6726,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.is_remote_target" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.is_remote_target</span>
+<h2 id="firecube.sdk.is_remote_target" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.is_remote_target</span>
 
 
 </h2>
@@ -6734,8 +6746,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.infer_target_protocol" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.infer_target_protocol</span>
+<h2 id="firecube.sdk.infer_target_protocol" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.infer_target_protocol</span>
 
 
 </h2>
@@ -6755,8 +6767,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.local_path_from_target" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.local_path_from_target</span>
+<h2 id="firecube.sdk.local_path_from_target" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.local_path_from_target</span>
 
 
 </h2>
@@ -6776,8 +6788,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.create_filesystem_for_uri" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.create_filesystem_for_uri</span>
+<h2 id="firecube.sdk.create_filesystem_for_uri" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.create_filesystem_for_uri</span>
 
 
 </h2>
@@ -6796,8 +6808,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.path_stats" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.path_stats</span>
+<h2 id="firecube.sdk.path_stats" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.path_stats</span>
 
 
 </h2>
@@ -6905,8 +6917,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.ensure_directory" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.ensure_directory</span>
+<h2 id="firecube.sdk.ensure_directory" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.ensure_directory</span>
 
 
 </h2>
@@ -6925,8 +6937,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.delete_path" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.delete_path</span>
+<h2 id="firecube.sdk.delete_path" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.delete_path</span>
 
 
 </h2>
@@ -7072,8 +7084,8 @@ Zarr stores and returns <code>ZarrCompareReport</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.discover" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.discover</span>
+<h2 id="firecube.sdk.discover" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.discover</span>
 
 
 </h2>
@@ -7116,12 +7128,12 @@ API's pages.</p>
                 <code>request</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            firecube.core.api.DiscoveryRequest
+                  <code><a class="autorefs autorefs-internal" title="            firecube.sdk.DiscoveryRequest
 
 
   
       dataclass
-   (firecube.core.discovery._types.DiscoveryRequest)" href="#firecube.core.api.DiscoveryRequest">DiscoveryRequest</a></code>
+   (firecube.core.discovery._types.DiscoveryRequest)" href="#firecube.sdk.DiscoveryRequest">DiscoveryRequest</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7147,12 +7159,12 @@ API's pages.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="            firecube.core.api.SourceItem
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="            firecube.sdk.SourceItem
 
 
   
       dataclass
-   (firecube.core.discovery._types.SourceItem)" href="#firecube.core.api.SourceItem">SourceItem</a>]</code>
+   (firecube.core.discovery._types.SourceItem)" href="#firecube.sdk.SourceItem">SourceItem</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7252,8 +7264,8 @@ hrefs = [item.href for item in items]
 
 
 
-<h2 id="firecube.core.api.DiscoveryRequest" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.DiscoveryRequest</span>
+<h2 id="firecube.sdk.DiscoveryRequest" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.sdk.DiscoveryRequest</span>
 
 
   <span class="doc doc-labels">
@@ -7281,7 +7293,7 @@ hrefs = [item.href for item in items]
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.DiscoveryRequest.sources">sources</span></code></td>
+            <td><code><span title="firecube.sdk.DiscoveryRequest.sources">sources</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>, ...]</code>
             </td>
@@ -7294,7 +7306,7 @@ collections/&lt;id&gt;</code> URIs searched as one STAC API collection each.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.DiscoveryRequest.storage_config">storage_config</span></code></td>
+            <td><code><span title="firecube.sdk.DiscoveryRequest.storage_config">storage_config</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a> | None</code>
             </td>
@@ -7305,7 +7317,7 @@ collections/&lt;id&gt;</code> URIs searched as one STAC API collection each.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.DiscoveryRequest.input_filters">input_filters</span></code></td>
+            <td><code><span title="firecube.sdk.DiscoveryRequest.input_filters">input_filters</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="collections.abc.Sequence" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>] | None</code>
             </td>
@@ -7319,7 +7331,7 @@ positive entry only matching assets are kept, and <code>!</code> entries exclude
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.DiscoveryRequest.stac_search">stac_search</span></code></td>
+            <td><code><span title="firecube.sdk.DiscoveryRequest.stac_search">stac_search</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" title="collections.abc.Mapping" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping">Mapping</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>] | None</code>
             </td>
@@ -7332,7 +7344,7 @@ search defines them. <code>collections</code> always comes from the source URI.<
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.DiscoveryRequest.operation">operation</span></code></td>
+            <td><code><span title="firecube.sdk.DiscoveryRequest.operation">operation</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></code>
             </td>
@@ -7379,8 +7391,8 @@ is missing.</p>
 
 
 
-<h2 id="firecube.core.api.SourceItem" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.SourceItem</span>
+<h2 id="firecube.sdk.SourceItem" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.sdk.SourceItem</span>
 
 
   <span class="doc doc-labels">
@@ -7413,7 +7425,7 @@ ingestor class declares <code>SOURCE_ITEMS = True</code>; then they receive thes
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.href">href</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.href">href</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></code>
             </td>
@@ -7425,7 +7437,7 @@ absolute asset href a STAC API publishes (often <code>https://</code>).</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.scheme">scheme</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.scheme">scheme</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></code>
             </td>
@@ -7437,7 +7449,7 @@ or <code>"stac"</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.collection">collection</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.collection">collection</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -7448,7 +7460,7 @@ or <code>"stac"</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.item_id">item_id</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.item_id">item_id</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -7459,7 +7471,7 @@ or <code>"stac"</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.asset_key">asset_key</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.asset_key">asset_key</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -7470,7 +7482,7 @@ or <code>"stac"</code>.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.datetime">datetime</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.datetime">datetime</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -7482,7 +7494,7 @@ or <code>None</code> when the item has none or the item is from a file tree.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.bbox">bbox</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.bbox">bbox</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#float">float</a>, ...] | None</code>
             </td>
@@ -7493,7 +7505,7 @@ or <code>None</code> when the item has none or the item is from a file tree.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.media_type">media_type</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.media_type">media_type</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</code>
             </td>
@@ -7504,7 +7516,7 @@ or <code>None</code> when the item has none or the item is from a file tree.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.SourceItem.roles">roles</span></code></td>
+            <td><code><span title="firecube.sdk.SourceItem.roles">roles</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>, ...]</code>
             </td>
@@ -7549,13 +7561,13 @@ or <code>None</code> when the item has none or the item is from a file tree.</p>
 
 
 
-<h3 id="firecube.core.api.SourceItem-attributes">Attributes</h3>
+<h3 id="firecube.sdk.SourceItem-attributes">Attributes</h3>
 
 <div class="doc doc-object doc-attribute">
 
 
 
-<h4 id="firecube.core.api.SourceItem.identity" class="doc doc-heading">
+<h4 id="firecube.sdk.SourceItem.identity" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">identity</span>
 
 
@@ -7593,8 +7605,8 @@ assets never share an identity. A part without either character is unchanged.</p
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.discover_input_files" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.discover_input_files</span>
+<h2 id="firecube.sdk.discover_input_files" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.discover_input_files</span>
 
 
 </h2>
@@ -7838,8 +7850,8 @@ is empty, a bare <code>!</code>, or not a string.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.prepare_netcdf_for_zarr" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.prepare_netcdf_for_zarr</span>
+<h2 id="firecube.sdk.prepare_netcdf_for_zarr" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.prepare_netcdf_for_zarr</span>
 
 
 </h2>
@@ -7863,8 +7875,8 @@ is empty, a bare <code>!</code>, or not a string.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.clean_netcdf_encoding" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.clean_netcdf_encoding</span>
+<h2 id="firecube.sdk.clean_netcdf_encoding" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.clean_netcdf_encoding</span>
 
 
 </h2>
@@ -7887,8 +7899,8 @@ returns the same dataset object.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.normalize_string_vars" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.normalize_string_vars</span>
+<h2 id="firecube.sdk.normalize_string_vars" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.normalize_string_vars</span>
 
 
 </h2>
@@ -8047,8 +8059,8 @@ string normalization still runs.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.rename_time_dim" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.rename_time_dim</span>
+<h2 id="firecube.sdk.rename_time_dim" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.rename_time_dim</span>
 
 
 </h2>
@@ -8069,8 +8081,8 @@ If <em>source</em> is not present, return the dataset unchanged (no error).</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.read_hdf5_array" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.read_hdf5_array</span>
+<h2 id="firecube.sdk.read_hdf5_array" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.read_hdf5_array</span>
 
 
 </h2>
@@ -8235,8 +8247,8 @@ If <em>source</em> is not present, return the dataset unchanged (no error).</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.materialize_hdf5_path" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.materialize_hdf5_path</span>
+<h2 id="firecube.sdk.materialize_hdf5_path" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.materialize_hdf5_path</span>
 
 
 </h2>
@@ -8412,8 +8424,8 @@ or multiple candidates are present.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.extract_all_from_zips" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.extract_all_from_zips</span>
+<h2 id="firecube.sdk.extract_all_from_zips" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.extract_all_from_zips</span>
 
 
 </h2>
@@ -8611,8 +8623,8 @@ so operators control it with <code>--option extract_workers=N</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.epoch_s_to_iso" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.epoch_s_to_iso</span>
+<h2 id="firecube.sdk.epoch_s_to_iso" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.epoch_s_to_iso</span>
 
 
 </h2>
@@ -8631,8 +8643,8 @@ so operators control it with <code>--option extract_workers=N</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.iso_to_epoch_s" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.iso_to_epoch_s</span>
+<h2 id="firecube.sdk.iso_to_epoch_s" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.iso_to_epoch_s</span>
 
 
 </h2>
@@ -8655,8 +8667,8 @@ cheap to import for code paths that never touch the epoch helpers.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.normalize_epoch_iso" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.normalize_epoch_iso</span>
+<h2 id="firecube.sdk.normalize_epoch_iso" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.normalize_epoch_iso</span>
 
 
 </h2>
@@ -8681,8 +8693,8 @@ cheap to import for code paths that never touch the epoch helpers.</p>
 
 
 
-<h2 id="firecube.core.api.RESERVED_ARRAY_ATTRS" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.core.api.RESERVED_ARRAY_ATTRS</span>
+<h2 id="firecube.sdk.RESERVED_ARRAY_ATTRS" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.sdk.RESERVED_ARRAY_ATTRS</span>
 
 
   <span class="doc doc-labels">
@@ -8697,12 +8709,12 @@ cheap to import for code paths that never touch the epoch helpers.</p>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs._FIRECUBE_RUN_ID_ATTR">_FIRECUBE_RUN_ID_ATTR</span></span><span class="p">,</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs._FIRECUBE_SPAN_ID_ATTR">_FIRECUBE_SPAN_ID_ATTR</span></span><span class="p">,</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs._FIRECUBE_INTERNAL_ATTR">_FIRECUBE_INTERNAL_ATTR</span></span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="n"><a class="autorefs autorefs-internal" title="            firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="n"><a class="autorefs autorefs-internal" title="            firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR
 
 
   
       module-attribute
-   (firecube.core.zarr._reserved_attrs.FIRECUBE_STATIC_WRITTEN_ATTR)" href="#firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR">FIRECUBE_STATIC_WRITTEN_ATTR</a></span><span class="p">,</span>
+   (firecube.core.zarr._reserved_attrs.FIRECUBE_STATIC_WRITTEN_ATTR)" href="#firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR">FIRECUBE_STATIC_WRITTEN_ATTR</a></span><span class="p">,</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="n"><span title="firecube.core.zarr._reserved_attrs.FIRECUBE_GROUP_IDENTITY_HASH_ATTR">FIRECUBE_GROUP_IDENTITY_HASH_ATTR</span></span><span class="p">,</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="s2">&quot;firecube_coord_managed&quot;</span><span class="p">,</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="s2">&quot;firecube_engine_owned&quot;</span><span class="p">,</span>
@@ -8733,8 +8745,8 @@ cheap to import for code paths that never touch the epoch helpers.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.assert_attrs_safe" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.assert_attrs_safe</span>
+<h2 id="firecube.sdk.assert_attrs_safe" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.assert_attrs_safe</span>
 
 
 </h2>
@@ -8840,8 +8852,8 @@ cheap to import for code paths that never touch the epoch helpers.</p>
 
 
 
-<h2 id="firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR</span>
+<h2 id="firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR</span>
 
 
   <span class="doc doc-labels">
@@ -8869,61 +8881,11 @@ cheap to import for code paths that never touch the epoch helpers.</p>
 coordinates and <code>ATTR_COORD_MANAGED</code> on observed-values coordinates it
 materializes; <code>firecube zarr consolidate-time-coord</code> stamps
 <code>ATTR_PREALLOCATED</code> together with <code>ATTR_CONSOLIDATED_AT</code>.</p>
+<p><code>ATTR_PREALLOCATED</code> and <code>ATTR_COORD_MANAGED</code> are documented in
+<a href="../operations/#firecube.operations.ATTR_PREALLOCATED">Operations</a>.
+<code>ATTR_CONSOLIDATED_AT</code> and <code>assert_coord_markers_consistent()</code> are not in
+<code>firecube.sdk</code>. Their import path <code>firecube.core.api</code> is deprecated until v0.2.0.</p>
 
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h2 id="firecube.core.api.ATTR_PREALLOCATED" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.core.api.ATTR_PREALLOCATED</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
-  </span>
-
-</h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">ATTR_PREALLOCATED</span> <span class="o">=</span> <span class="s1">&#39;firecube_preallocated&#39;</span>
-</code></pre></div>
-
-    <div class="doc doc-contents first">
-
-        <p>Zarr array attr stamped on a time coord array after dense preallocate materialization.</p>
-<p>Presence of this attr (with value <code>True</code>) means the coord array was written
-dense during <code>firecube zarr preallocate</code>. Subsequent <code>write_timestamp</code>
-calls perform an equality drift check instead of creating new chunk files.</p>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h2 id="firecube.core.api.ATTR_COORD_MANAGED" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">firecube.core.api.ATTR_COORD_MANAGED</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
-  </span>
-
-</h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">ATTR_COORD_MANAGED</span> <span class="o">=</span> <span class="s1">&#39;firecube_coord_managed&#39;</span>
-</code></pre></div>
-
-    <div class="doc doc-contents first">
-
-        <p>Zarr array attr for an engine-managed unsealed coordinate.</p>
-<p>Presence of this attr (with value <code>True</code>) means the materializer may fill
-NaT holes during staged seeding, while pods verify-or-error on writes. It is
-mutually exclusive with <code>ATTR_PREALLOCATED</code>.</p>
-
-    </div>
-
-</div>
 
 <div class="doc doc-object doc-attribute">
 
@@ -8983,8 +8945,8 @@ message). A consistent attribute set returns <code>None</code>.</p>
 
 
 
-<h2 id="firecube.core.api.BatchResourceRegistry" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.BatchResourceRegistry</span>
+<h2 id="firecube.sdk.BatchResourceRegistry" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.sdk.BatchResourceRegistry</span>
 
 
 </h2>
@@ -9054,12 +9016,12 @@ finally:
 
 
 
-<h3 id="firecube.core.api.BatchResourceRegistry-functions">Methods:</h3>
+<h3 id="firecube.sdk.BatchResourceRegistry-functions">Methods:</h3>
 
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.core.api.BatchResourceRegistry.register" class="doc doc-heading">
+<h4 id="firecube.sdk.BatchResourceRegistry.register" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">register</span>
 
 
@@ -9194,7 +9156,7 @@ True
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.core.api.BatchResourceRegistry.teardown" class="doc doc-heading">
+<h4 id="firecube.sdk.BatchResourceRegistry.teardown" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">teardown</span>
 
 
@@ -9302,7 +9264,7 @@ close exceptions are logged and suppressed behind the first.</p>
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.core.api.BatchResourceRegistry.teardown_all" class="doc doc-heading">
+<h4 id="firecube.sdk.BatchResourceRegistry.teardown_all" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">teardown_all</span>
 
 
@@ -9342,8 +9304,8 @@ attempted and the first exception is re-raised at the end.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.physical_chunk_keys_for_region" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.physical_chunk_keys_for_region</span>
+<h2 id="firecube.sdk.physical_chunk_keys_for_region" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.physical_chunk_keys_for_region</span>
 
 
 </h2>
@@ -9556,8 +9518,8 @@ full.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.chunk_axis_range" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.chunk_axis_range</span>
+<h2 id="firecube.sdk.chunk_axis_range" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.chunk_axis_range</span>
 
 
 </h2>
@@ -9707,8 +9669,8 @@ chunks:</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.axis_selection_is_chunk_aligned" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.axis_selection_is_chunk_aligned</span>
+<h2 id="firecube.sdk.axis_selection_is_chunk_aligned" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.axis_selection_is_chunk_aligned</span>
 
 
 </h2>
@@ -9874,8 +9836,8 @@ True
 
 
 
-<h2 id="firecube.core.api.ZarrCompareReport" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.core.api.ZarrCompareReport</span>
+<h2 id="firecube.sdk.ZarrCompareReport" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">firecube.sdk.ZarrCompareReport</span>
 
 
   <span class="doc doc-labels">
@@ -9911,7 +9873,7 @@ True
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.ZarrCompareReport.equivalent">equivalent</span></code></td>
+            <td><code><span title="firecube.sdk.ZarrCompareReport.equivalent">equivalent</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></code>
             </td>
@@ -9925,7 +9887,7 @@ responsible for mapping layout-only to exit 0 with a warning.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.ZarrCompareReport.content_mismatches">content_mismatches</span></code></td>
+            <td><code><span title="firecube.sdk.ZarrCompareReport.content_mismatches">content_mismatches</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</code>
             </td>
@@ -9936,7 +9898,7 @@ responsible for mapping layout-only to exit 0 with a warning.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="firecube.core.api.ZarrCompareReport.layout_mismatches">layout_mismatches</span></code></td>
+            <td><code><span title="firecube.sdk.ZarrCompareReport.layout_mismatches">layout_mismatches</span></code></td>
             <td>
                   <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</code>
             </td>
@@ -9974,13 +9936,13 @@ responsible for mapping layout-only to exit 0 with a warning.</p>
 
 
 
-<h3 id="firecube.core.api.ZarrCompareReport-attributes">Attributes</h3>
+<h3 id="firecube.sdk.ZarrCompareReport-attributes">Attributes</h3>
 
 <div class="doc doc-object doc-attribute">
 
 
 
-<h4 id="firecube.core.api.ZarrCompareReport.mismatches" class="doc doc-heading">
+<h4 id="firecube.sdk.ZarrCompareReport.mismatches" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">mismatches</span>
 
 
@@ -10001,12 +9963,12 @@ responsible for mapping layout-only to exit 0 with a warning.</p>
 </div>
 
 
-<h3 id="firecube.core.api.ZarrCompareReport-functions">Methods:</h3>
+<h3 id="firecube.sdk.ZarrCompareReport-functions">Methods:</h3>
 
 <div class="doc doc-object doc-function">
 
 
-<h4 id="firecube.core.api.ZarrCompareReport.to_dict" class="doc doc-heading">
+<h4 id="firecube.sdk.ZarrCompareReport.to_dict" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">to_dict</span>
 
 
@@ -10034,8 +9996,8 @@ responsible for mapping layout-only to exit 0 with a warning.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="firecube.core.api.compare_zarr_stores" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.core.api.compare_zarr_stores</span>
+<h2 id="firecube.sdk.compare_zarr_stores" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">firecube.sdk.compare_zarr_stores</span>
 
 
 </h2>
@@ -10148,12 +10110,12 @@ and full array values. Runtime-managed attrs such as <code>firecube_run_id</code
       <tbody>
           <tr class="doc-section-item">
 <td><code>ZarrCompareReport</code></td>            <td>
-                  <code><a class="autorefs autorefs-internal" title="            firecube.core.api.ZarrCompareReport
+                  <code><a class="autorefs autorefs-internal" title="            firecube.sdk.ZarrCompareReport
 
 
   
       dataclass
-   (firecube.core.zarr.validation.ZarrCompareReport)" href="#firecube.core.api.ZarrCompareReport">ZarrCompareReport</a></code>
+   (firecube.core.zarr.validation.ZarrCompareReport)" href="#firecube.sdk.ZarrCompareReport">ZarrCompareReport</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -10163,12 +10125,12 @@ and full array values. Runtime-managed attrs such as <code>firecube_run_id</code
           </tr>
           <tr class="doc-section-item">
 <td></td>            <td>
-                  <code><a class="autorefs autorefs-internal" title="            firecube.core.api.ZarrCompareReport
+                  <code><a class="autorefs autorefs-internal" title="            firecube.sdk.ZarrCompareReport
 
 
   
       dataclass
-   (firecube.core.zarr.validation.ZarrCompareReport)" href="#firecube.core.api.ZarrCompareReport">ZarrCompareReport</a></code>
+   (firecube.core.zarr.validation.ZarrCompareReport)" href="#firecube.sdk.ZarrCompareReport">ZarrCompareReport</a></code>
             </td>
             <td>
               <div class="doc-md-description">

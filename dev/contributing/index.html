@@ -4794,7 +4794,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4810,11 +4810,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5015,6 +5043,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5285,8 +5341,7 @@ because external plugins use the public SDK and do not need engine internals.</p
   public/private boundaries, runtime areas, and contributor checks.</li>
 </ul>
 <h2 id="boundaries">Boundaries</h2>
-<p>Plugin code should import public symbols from <code>firecube.ingestor.api</code> and
-<code>firecube.core.api</code>.</p>
+<p>Import public symbols from <code>firecube.sdk</code> in plugin code.</p>
 <p>Firecube contributor work may touch internals, but it must preserve the public
 SDK boundary, CLI contract, storage-driver boundary, ChunkManager behavior, and
 observability boundary.</p>

@@ -4859,7 +4859,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4875,11 +4875,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5080,6 +5108,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5408,7 +5464,7 @@ by <code>coordinate=</code>, which Firecube resolves against the discovered axis
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.sdk</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">DirectZarrIngestor</span><span class="p">,</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">IndexedWrite</span><span class="p">,</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">IndexSpec</span><span class="p">,</span>
@@ -5512,7 +5568,7 @@ the earliest observation regardless of file naming or discovery order.</p>
 so it must be idempotent and must not depend on the order items arrive in.
 Duplicate timestamps are refused at discovery time, before any array is
 created. The
-<a href="../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.discovered"><code>TimeAxis.discovered</code> reference</a>
+<a href="../../../reference/parallelism/#firecube.sdk.TimeAxis.discovered"><code>TimeAxis.discovered</code> reference</a>
 names each discovery error and its cause.</p>
 <h2 id="verify">Verify</h2>
 <p>A discovered axis needs no extra commands for a serial run; discovery happens
@@ -5523,8 +5579,7 @@ inside the normal ingest:</p>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct
 </code></pre></div>
 <p>Then confirm the stored coordinate holds every source timestamp in sorted
 order:</p>
@@ -5577,7 +5632,7 @@ workflow.</p>
 </table>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
-<li><strong><a href="../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.discovered"><code>TimeAxis.discovered</code> Reference</a></strong> — exact constructor contract and failure modes</li>
+<li><strong><a href="../../../reference/parallelism/#firecube.sdk.TimeAxis.discovered"><code>TimeAxis.discovered</code> Reference</a></strong> — exact constructor contract and failure modes</li>
 <li><strong><a href="../../../concepts/output-formats/zarr/direct-region/">DirectZarrIngestor (Region)</a></strong> — how each axis regime owns the coordinate array</li>
 <li><strong><a href="../direct-zarr/">Declare The Schema And Index</a></strong> — the full plugin contract this page builds on</li>
 <li><strong><a href="../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></strong> — preallocate, plan, and launch workers</li>

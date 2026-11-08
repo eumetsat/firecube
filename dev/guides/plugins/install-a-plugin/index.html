@@ -4848,7 +4848,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4864,11 +4864,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5069,6 +5097,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5380,13 +5436,15 @@ available without reinstalling the package.</p>
 </code></pre></div>
 <p>The install command reports the Python environment it uses, installs the local
 package, and checks plugin discovery in a fresh Python process. The detected
-plugin list should contain <code>my_plugin</code>.</p>
+plugin list should contain <code>my_plugin</code>. The command runs <code>uv pip install</code>, so
+<code>uv</code> must be on your <code>PATH</code>. If <code>uv</code> is missing, the command exits with code 4.</p>
 <h2 id="verify-the-installation">Verify The Installation</h2>
 <p>Check the registered plugin ID, product name, and available options:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>list
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>firecube<span class="w"> </span>plugins<span class="w"> </span>describe<span class="w"> </span>my_plugin
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>my_plugin<span class="w"> </span>--show-options
 </code></pre></div>
+<p>The command <code>plugins list</code> prints the name, the module and the description of each plugin. For a script, add <code>-f json</code> or <code>-f csv</code>. The default is <code>-f table</code>.</p>
 <p>Use the ID printed by <code>plugins list</code> in later <code>firecube ingest</code> commands. The
 generated data-conversion methods can still be incomplete at this point;
 inspection does not require running ingestion.</p>

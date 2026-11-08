@@ -4187,6 +4187,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#preview-a-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview A Release
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#create-a-release_1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4881,7 +4892,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4897,11 +4908,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5102,6 +5141,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5320,6 +5387,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#preview-a-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview A Release
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#create-a-release_1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5447,34 +5525,59 @@ a release later, see <a href="../verify-a-release/">Verify A Release</a>.</p>
 <ul>
 <li>Stop every writer of the product. See
   <a href="../#prerequisites">Maintenance Operations</a>.</li>
-<li>Make sure that the product has a control plane. If it has none, run
-  <code>firecube migrate adopt</code> first. See
+<li>Make sure that the product records a product label and has a control plane.
+  If it has none, run <code>firecube migrate adopt</code> first. See
   <a href="../adopt-a-foreign-store/">Adopt A Foreign Store</a>.</li>
 </ul>
-<h2 id="create-a-release_1">Create A Release</h2>
+<h2 id="preview-a-release">Preview A Release</h2>
+<p>Add <code>--dry-run</code> to see what the command would record. A dry run makes its
+refusals from reads only and writes nothing. It asks no confirmation.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="m">1</span>.0.0<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--note<span class="w"> </span><span class="s2">&quot;first release&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--note<span class="w"> </span><span class="s2">&quot;first release&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--dry-run
+</code></pre></div>
+<p>Expected output resembles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>would record release &#39;1.0.0&#39; and make it current; nothing is written
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Dry run: nothing is written.
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Release:      1.0.0
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Would:        record the release and make it current
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>Previous:     -
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>Note:         first release
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>Documents:    zarr.json
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>Retention:    none
+</code></pre></div>
+<p>A dry run with <code>--archive</code> or <code>--retain-versions</code> also prints the retention
+block. The object counts in that block are current-cut counts: the run also
+retains the documents that it writes. See
+<a href="#retain-the-chunk-bytes">Retain The Chunk Bytes</a>.</p>
+<h2 id="create-a-release_1">Create A Release</h2>
+<p><code>release create</code> changes the store. On a terminal, the command asks for
+confirmation. Off a terminal, the command exits 2 and writes nothing until you
+add <code>--yes-i-really-mean-it</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="m">1</span>.0.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--note<span class="w"> </span><span class="s2">&quot;first release&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <p>Expected output for a Zarr v2 store with a consolidated <code>.zmetadata</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>wrote .zattrs, .zmetadata
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>snapshot dadfa2e8c110e0fd…
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>recorded release &#39;1.0.0&#39; at snapshot dadfa2e8c110e0fd…
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>release &#39;1.0.0&#39; is current
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>release &#39;1.0.0&#39; created in run release-bb4fa223-…
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>Release:      1.0.0
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>Created:      2026-11-04T00:31:51+00:00
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>Previous:     -
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>Snapshot:     dadfa2e8c110e0fd…
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>Run:          release-bb4fa223-…
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>Producer:     unknown
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>Note:         first release
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>Runs since:   3
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  adopt-345bfd72-…
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  migrate-2e97c56b-…
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>  release-bb4fa223-…
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>Retention:    none
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>wrote .zattrs, .zmetadata
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>snapshot dadfa2e8c110e0fd…
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>recorded release &#39;1.0.0&#39; at snapshot dadfa2e8c110e0fd…
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>release &#39;1.0.0&#39; is current
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>release &#39;1.0.0&#39; created in run release-bb4fa223-…
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>Release:      1.0.0
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>Created:      2026-11-04T00:31:51+00:00
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>Previous:     -
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>Snapshot:     dadfa2e8c110e0fd…
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>Run:          release-bb4fa223-…
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>Producer:     unknown
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>Note:         first release
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>Runs since:   3
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>  adopt-345bfd72-…
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>  migrate-2e97c56b-…
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>  release-bb4fa223-…
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>Retention:    none
 </code></pre></div>
 <p>On a Zarr v3 store, the first line is <code>wrote zarr.json</code>. The other lines keep
 their shape. The <code>Runs since</code> list holds the runs of your store.</p>
@@ -5484,19 +5587,17 @@ you repeat <code>release create</code> for an existing version and the metadata 
 equals its snapshot, the command prints <code>release '1.0.0' is current already</code>.
 It exits 0 and writes nothing.</p>
 <h2 id="list-and-show-releases">List And Show Releases</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>The command prints one line per release, oldest first. A <code>*</code> marks the current
 release:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>* 1.0.0  2026-11-04T00:31:51+00:00  snapshot=dadfa2e8c110e0fd…  producer=unknown
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>* 1.0.0  2026-11-04T00:31:51+00:00  snapshot=dadfa2e8c110e0fd…  producer=unknown
 </code></pre></div>
 <p>A product with no release prints <code>No releases</code> and exits 0.</p>
 <p>Show one release with its note and the runs since the previous release:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>show<span class="w"> </span><span class="m">1</span>.0.0<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>show<span class="w"> </span><span class="m">1</span>.0.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Without a version, the command shows the current release. It exits 1 when the
 release does not exist. If a migration step created the release, the list of
@@ -5517,34 +5618,45 @@ Firecube holds its own claim and does not stop a process outside Firecube.</p>
 <p>Choose the retention when you create a release. A record is never rewritten, so
 <code>release create</code> refuses to add an archive to a version that exists. Use a
 version that no record uses. Add <code>--archive</code> with a <code>file://</code> URI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="m">1</span>.1.0<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT-1.1.0.zip&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="m">1</span>.1.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--archive<span class="w"> </span><span class="s2">&quot;file:///data/archives/MY_PRODUCT-1.1.0.zip&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<p>A dry run of the same command prints the planned retention. The output
+resembles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Retention:
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  Kind:              zip
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  Archive:           file:///data/archives/MY_PRODUCT-1.1.0.zip
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  Mode:              full
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>  Chain length:      1
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>  Deleted keys:      0
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>  Objects:           52
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>  (current-cut counts; the run also retains the documents it writes)
 </code></pre></div>
 <p>The archive is a local ZIP file. The product can be remote. The product must be
 a Zarr v3 store, because the command refuses a product without a root
 <code>zarr.json</code>.</p>
 <p>The command prints two more progress lines than a release without retention.
 The first backup of a product is a full backup:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>inventory 3415078ca68e6b0e… lists 31 objects
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>full backup /data/archives/MY_PRODUCT-1.1.0.zip holds 31 objects, 18187 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>inventory 3415078ca68e6b0e… lists 31 objects
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>full backup /data/archives/MY_PRODUCT-1.1.0.zip holds 31 objects, 18187 bytes
 </code></pre></div>
 <p>A later release writes an incremental backup if the current release also
 retains a ZIP archive and <code>--archive-full</code> is not set. The progress line then
 starts with <code>incremental backup</code> and counts only the objects that it holds.</p>
 <p>The output of <code>release create</code> and <code>release show</code> ends with a <code>Retention:</code>
 block:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Retention:
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  Kind:              zip
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  Archive:           file:///data/archives/MY_PRODUCT-1.1.0.zip
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  Mode:              full
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  Chain length:      1
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  Deleted keys:      0
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>  Size (bytes):      18187
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>  Digest:            sha256:4c403f8cfea97d55…
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>  Inventory:         3415078ca68e6b0e…
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>  Run:               archive-create-157c693e-…
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Retention:
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>  Kind:              zip
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>  Archive:           file:///data/archives/MY_PRODUCT-1.1.0.zip
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>  Mode:              full
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>  Chain length:      1
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>  Deleted keys:      0
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>  Size (bytes):      18187
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>  Digest:            sha256:4c403f8cfea97d55…
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>  Inventory:         3415078ca68e6b0e…
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>  Run:               archive-create-157c693e-…
 </code></pre></div>
 <p>The first release with an archive writes a full backup. It holds every object of
 the inventory. If the current release retains a ZIP archive, the next release
@@ -5567,7 +5679,7 @@ previous backup. The chain length of a full backup is 1.</p>
 Use it to start a new backup chain.</p>
 <p>Each archive needs its own path. A path that holds anything is refused, and
 Firecube never overwrites it:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Error: Something exists at /data/archives/MY_PRODUCT-1.1.0.zip, the path given as --archive. A release never reuses or overwrites an archive: remove it or pick another path, then run again.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Error: Something exists at /data/archives/MY_PRODUCT-1.1.0.zip, the path given as --archive. A release never reuses or overwrites an archive: remove it or pick another path, then run again.
 </code></pre></div>
 <p>The refusal comes before the command takes the inventory.</p>
 <p>An archive file is the only copy of the bytes. The durability of a backup chain
@@ -5594,27 +5706,27 @@ archive to a local disk and copy it afterwards.</p>
 </ul>
 <p>Both refusals leave no inventory, no archive and no release record. The refusal
 of a deleted key reads:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Error: The key &#39;line\nbreak&#39; was deleted since release &#39;1&#39; and holds a control character, so it cannot be restored from a backup chain and no incremental backup lists it. Deleted keys refused: 1. Write a full backup with --archive-full instead.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Error: The key &#39;line\nbreak&#39; was deleted since release &#39;1&#39; and holds a control character, so it cannot be restored from a backup chain and no incremental backup lists it. Deleted keys refused: 1. Write a full backup with --archive-full instead.
 </code></pre></div>
 <h3 id="retain-as-object-versions">Retain As Object Versions</h3>
 <p>On a versioned S3 bucket, the release can record the version identifier of each
 object. This copies no bytes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="m">2</span>.0.0<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;s3://my-bucket/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--storage-type<span class="w"> </span>s3<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>--retain-versions
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>firecube<span class="w"> </span>release<span class="w"> </span>create<span class="w"> </span><span class="m">2</span>.0.0<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;s3://my-bucket/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--storage-type<span class="w"> </span>s3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--retain-versions<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <p>Expected output ends with these lines:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>inventory 5393dc285018cee1… lists 26 object versions and 0 delete markers
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>…
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Retention:
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  Kind:              s3-versions
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  Bucket versioning: enabled
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>  Objects:           26
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>  Inventory:         5393dc285018cee1…
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>  Run:               release-e8cc87f3-…
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>inventory 5393dc285018cee1… lists 26 object versions and 0 delete markers
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>…
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>Retention:
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>  Kind:              s3-versions
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>  Bucket versioning: enabled
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>  Objects:           26
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>  Inventory:         5393dc285018cee1…
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>  Run:               release-e8cc87f3-…
 </code></pre></div>
 <p>The option has these requirements. Assume that the settings of the bucket stay
 the same while the command runs. Then Firecube refuses the command before it
@@ -5645,7 +5757,7 @@ first release.</p>
 <p>Run the same <code>release create</code> command again. The rerun resumes from the last
 completed step. If the first run stamped the root attribute but did not record
 the release, the rerun continues from the snapshot step:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>run release-cec9a4c8-… stamped release &#39;1.0&#39; before; resuming from the snapshot
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>run release-cec9a4c8-… stamped release &#39;1.0&#39; before; resuming from the snapshot
 </code></pre></div>
 <p>If a record exists but the release is not current, the rerun completes the
 release. It does so only while the live metadata still equals the snapshot of
@@ -5672,22 +5784,23 @@ new <code>release create</code> always starts a new run, so abandon the old run.
 <li>Make sure that no process of the run is still running.</li>
 <li>Abandon the run. This also releases the claim that the run owns:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;release process killed&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--yes-i-really-mean-it
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;release process killed&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <ol>
 <li>If the claim names no recorded run, clear it:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--domain<span class="w"> </span>MY_PRODUCT:maintenance:exclusive<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>--force<span class="w"> </span>--yes-i-really-mean-it
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>--domain<span class="w"> </span>MY_PRODUCT:maintenance:exclusive<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>--force<span class="w"> </span>--yes-i-really-mean-it
 </code></pre></div>
 <ol>
-<li>Run the same <code>release create</code> command again.</li>
+<li>Run the same <code>release create</code> command again, with <code>--yes-i-really-mean-it</code>
+   off a terminal.</li>
 </ol>
 <p>See <a href="../../chunk-manager/recover/">Recover Runs And Claims</a> for more detail.</p>
 <h2 id="failure-recovery">Failure Recovery</h2>
@@ -5700,6 +5813,16 @@ new <code>release create</code> always starts a new run, so abandon the old run.
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>Confirmation required: release create changes the store</code> (exit 2)</td>
+<td>The run is off a terminal and has no <code>--yes-i-really-mean-it</code>.</td>
+<td>Preview with <code>--dry-run</code>. Then add <code>--yes-i-really-mean-it</code>.</td>
+</tr>
+<tr>
+<td><code>records no product label. Record one with firecube migrate adopt</code> (exit 2)</td>
+<td>The store records no label. The command wrote nothing.</td>
+<td>Run <code>firecube migrate adopt</code>.</td>
+</tr>
 <tr>
 <td><code>release '…' exists and names snapshot …, and the store's metadata no longer matches it</code></td>
 <td>The version exists, and the metadata changed since.</td>

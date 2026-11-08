@@ -4842,7 +4842,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4858,11 +4858,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5063,6 +5091,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5414,7 +5470,7 @@ tracking.</p>
 <h2 id="time-axes-and-coordinate-ownership">Time Axes And Coordinate Ownership</h2>
 <p>The declared time axis decides what the coordinate array stores and who
 writes it. Declaring one is a single entry in <code>index_spec</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexSpec</span><span class="p">,</span> <span class="n">TimeAxis</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.sdk</span><span class="w"> </span><span class="kn">import</span> <span class="n">IndexSpec</span><span class="p">,</span> <span class="n">TimeAxis</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">IndexSpec</span><span class="p">(</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my_product_v1&quot;</span><span class="p">,</span>
@@ -5442,12 +5498,12 @@ whose timestamp differs from the stored value is refused loudly, never
 merged.</p>
 <p>Each <code>TimeAxis</code> constructor commits the product to one regime:</p>
 <ul>
-<li><strong>Grid</strong> (<a href="../../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.grid"><code>TimeAxis.grid</code></a>): regular cadence and the nominal grid is the
+<li><strong>Grid</strong> (<a href="../../../../reference/parallelism/#firecube.sdk.TimeAxis.grid"><code>TimeAxis.grid</code></a>): regular cadence and the nominal grid is the
   truth. Slot <code>n</code> stores exactly <code>epoch + n * cadence</code>, so the axis is filled
   and sealed without reading any source data. Worker timestamps must land
   exactly on the grid; any deviation is treated as corruption. Claim this
   only when the source guarantees exact slot times.</li>
-<li><strong>Observed</strong> (<a href="../../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.observed"><code>TimeAxis.observed</code></a>): regular cadence for placement, real
+<li><strong>Observed</strong> (<a href="../../../../reference/parallelism/#firecube.sdk.TimeAxis.observed"><code>TimeAxis.observed</code></a>): regular cadence for placement, real
   observation times for storage. A ten-minute sensor rarely stamps files at
   the slot boundary; the observation arrives at <code>00:00:02</code> or <code>00:10:07</code>.
   Firecube floors each timestamp onto the cadence to find its slot while the
@@ -5456,10 +5512,10 @@ merged.</p>
   products need. The axis stays open-ended: windows materialize as source
   data arrives, and re-runs reconcile per slot instead of failing or
   overwriting.</li>
-<li><strong>Explicit</strong> (<a href="../../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.explicit"><code>TimeAxis.explicit</code></a>): no regular cadence, but the full list
+<li><strong>Explicit</strong> (<a href="../../../../reference/parallelism/#firecube.sdk.TimeAxis.explicit"><code>TimeAxis.explicit</code></a>): no regular cadence, but the full list
   of timestamps is known upfront. The declaration carries the values, so the
   axis is written and sealed like the grid regime.</li>
-<li><strong>Discovered</strong> (<a href="../../../../reference/parallelism/#firecube.ingestor.api.TimeAxis.discovered"><code>TimeAxis.discovered</code></a>): the timestamps live inside the
+<li><strong>Discovered</strong> (<a href="../../../../reference/parallelism/#firecube.sdk.TimeAxis.discovered"><code>TimeAxis.discovered</code></a>): the timestamps live inside the
   source files. This declares <code>IrregularTimeAxis(values=AUTO)</code>, the spelling
   the reference and error messages use. Firecube runs <code>inspect_item</code> over
   every item before any write, sorts the collected coordinates, and builds

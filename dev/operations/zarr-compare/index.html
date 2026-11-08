@@ -3510,6 +3510,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#compare-a-store-with-its-restored-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compare A Store With Its Restored Archive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#failure-recovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4842,7 +4853,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4858,11 +4869,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5063,6 +5102,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5303,6 +5370,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#compare-a-store-with-its-restored-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compare A Store With Its Restored Archive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#failure-recovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5394,6 +5472,8 @@ exits nonzero, so it can gate a promotion step in a pipeline.</p>
      dtypes, attrs, or missing arrays). One line per difference:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>array data/values: shape (2, 2) != (3, 2)
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>array data/lat: firecube_static_written True != None
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>array data/data: attrs[long_name] &#39;test data&#39; != &lt;missing&gt;
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>array data/data: attrs[zarr_fill_value] &lt;missing&gt; != 0.0
 </code></pre></div>
 </li>
 </ol>
@@ -5402,6 +5482,42 @@ public attrs, Firecube's static-array marker, and values. Runtime trace attrs
 are ignored. Any other nonzero exit status means the command could not run,
 for example because a URI is missing, a store has no Zarr metadata, or the
 storage flags do not match the URI scheme.</p>
+<p>Firecube reports each differing attribute key on its own line as
+<code>attrs[&lt;key&gt;] &lt;left&gt; != &lt;right&gt;</code>. A key that one store lacks shows as
+<code>&lt;missing&gt;</code>. Two attributes that hold the same NaN value are equal.</p>
+<h2 id="compare-a-store-with-its-restored-archive">Compare A Store With Its Restored Archive</h2>
+<p>A ZIP archive restores the store file for file. Compare the source with the
+restored store:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>compare<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">   </span>file:///data/products/MY_PRODUCT.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">   </span>file:///data/restored/MY_PRODUCT.zarr
+</code></pre></div>
+<p>For a ZIP archive the command prints nothing and exits 0.</p>
+<p>A Tensogram archive stores the arrays in its own encoding. A restore decodes
+them back into a Zarr store, but the store is not identical to the source. The
+command exits 1 and lists the differences. The restored store differs in
+these ways:</p>
+<ul>
+<li>The names of the coordinate arrays and the dimension names.</li>
+<li>The dtype of the time coordinate.</li>
+<li>The attributes of an array. The restore nests the user attributes inside one
+  attribute named <code>attrs</code>. The restored array gains the keys <code>name</code>,
+  <code>zarr_chunks</code>, <code>zarr_compressor</code> and <code>zarr_fill_value</code>.</li>
+<li>The attributes of the time coordinate. The restored coordinate does not keep
+  its own attributes, for example <code>axis</code> and <code>standard_name</code>.</li>
+</ul>
+<p>A source array with <code>units='K'</code> and <code>long_name='test data'</code> gives these lines:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>array temp: attrs[attrs] &lt;missing&gt; != {&#39;units&#39;: &#39;K&#39;, &#39;long_name&#39;: &#39;test data&#39;}
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>array temp: attrs[long_name] &#39;test data&#39; != &lt;missing&gt;
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>array temp: attrs[units] &#39;K&#39; != &lt;missing&gt;
+</code></pre></div>
+<p>A time coordinate also changes its dtype:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>array data/timestamp: dtype datetime64[ns] != float64
+</code></pre></div>
+<p>A Tensogram archive that records no product label needs <code>--product-name &lt;label&gt;</code>
+on <code>archive restore</code>.</p>
+<p>Do not use <code>zarr compare</code> to gate a Tensogram restore. To check the archive
+itself, run <code>firecube archive validate</code>.</p>
 <h2 id="failure-recovery">Failure Recovery</h2>
 <table>
 <thead>
@@ -5423,8 +5539,8 @@ storage flags do not match the URI scheme.</p>
 <td>Compare the ingestion configuration and plugin schema before copying or promoting either store.</td>
 </tr>
 <tr>
-<td><code>attrs differ</code></td>
-<td>User-visible array attrs differ after Firecube-managed attrs were removed.</td>
+<td><code>attrs[&lt;key&gt;] &lt;left&gt; != &lt;right&gt;</code></td>
+<td>The user-visible attribute <code>&lt;key&gt;</code> differs after Firecube-managed attrs were removed.</td>
 <td>Inspect the array metadata and decide which store owns the intended metadata.</td>
 </tr>
 <tr>

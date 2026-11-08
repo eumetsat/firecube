@@ -4892,7 +4892,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4908,11 +4908,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5113,6 +5141,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5463,12 +5519,12 @@ blocking claim behind.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">PRODUCT_NAME</span><span class="o">=</span><span class="s2">&quot;MY_PRODUCT&quot;</span>
 </code></pre></div>
 <h2 id="inspect-runs">Inspect Runs</h2>
-<p>Pass the full URI through <code>--product-name</code> for every ChunkManager command on
+<p>Pass the product URI through <code>--target</code> for every ChunkManager command on
 this page. This binds the command directly to the product without a storage
 configuration.</p>
 <p>Start by listing runs:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>A stuck run usually appears as <code>started</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Run ID                               Status     State    Parts Events
@@ -5482,23 +5538,23 @@ Abandon a run only after its process has stopped. An abandoned run whose process
 <h2 id="abandon-a-stuck-run">Abandon A Stuck Run</h2>
 <p>Preview the operation:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--run-id<span class="w"> </span>docs-started-run<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;process is no longer active&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--dry-run
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>[dry-run] Would abandon run &#39;docs-started-run&#39; for product &#39;MY_PRODUCT.zarr&#39; (reason: process is no longer active)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>[dry-run] Would abandon run &#39;docs-started-run&#39; for product &#39;MY_PRODUCT&#39; (reason: process is no longer active)
 </code></pre></div>
 <p>Abandon the run in a non-interactive shell:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--run-id<span class="w"> </span>docs-started-run<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;process is no longer active&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Abandoned run docs-started-run for MY_PRODUCT.zarr
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Abandoned run docs-started-run for MY_PRODUCT
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>Released claim MY_PRODUCT:zarr_region:F001
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>Released claim MY_PRODUCT:zarr_region:F002
 </code></pre></div>
@@ -5516,7 +5572,7 @@ Confirm that its writer is stopped, then clear the claim. See
 releases the claims that the run owns.</p>
 <p>Verify:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Run ID                               Status     State    Parts Events
@@ -5526,9 +5582,9 @@ releases the claims that the run owns.</p>
 <h3 id="if-the-claims-cannot-be-listed">If The Claims Cannot Be Listed</h3>
 <p>If Firecube cannot list the claims of the product, it still records the
 abandon. The command then exits 1 and releases no claim:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Error: The write claims of MY_PRODUCT.zarr could not be listed: [Errno 13] Permission denied: &#39;/data/products/MY_PRODUCT.zarr/.firecube/claims&#39;.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Error: The write claims of MY_PRODUCT could not be listed: [Errno 13] Permission denied: &#39;/data/products/MY_PRODUCT.zarr/.firecube/claims&#39;.
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>Run docs-started-run is recorded abandoned; run the abandon again to release its claims:
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --run-id docs-started-run --reason &quot;&lt;reason&gt;&quot;
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --run-id docs-started-run --reason &quot;&lt;reason&gt;&quot;
 </code></pre></div>
 <p>Fix the cause of the listing error. Then run the same abandon command again:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Run docs-started-run already terminal with status=abandoned
@@ -5537,13 +5593,13 @@ abandon. The command then exits 1 and releases no claim:</p>
 </code></pre></div>
 <h2 id="inspect-claims">Inspect Claims</h2>
 <p>List claims before clearing anything:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output when a claim exists:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Product                  State    Owner                    Domain
 <a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>--------------------------------------------------------------------------------------------
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>MY_PRODUCT.zarr          active   docs-started-run:F001    MY_PRODUCT:zarr_region:F001
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>MY_PRODUCT.zarr          active   docs-started-run:F002    MY_PRODUCT:zarr_region:F002
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>MY_PRODUCT               active   docs-started-run:F001    MY_PRODUCT:zarr_region:F001
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>MY_PRODUCT               active   docs-started-run:F002    MY_PRODUCT:zarr_region:F002
 </code></pre></div>
 <p>The <code>Domain</code> value is the exact value to pass to <code>--domain</code>.</p>
 <h2 id="clear-a-blocking-claim">Clear A Blocking Claim</h2>
@@ -5553,14 +5609,14 @@ also own a left claim now. Verify that the current owner is stopped before
 you clear it.</p>
 <p>Clear a stale claim in non-interactive context:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--domain<span class="w"> </span>MY_PRODUCT:zarr_region:F001<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <p>Use <code>--force</code> only after verifying no writer is active and the claim must be
 cleared even though it does not look stale:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>--domain<span class="w"> </span>MY_PRODUCT:zarr_region:F001<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span>--force<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span>--yes-i-really-mean-it
@@ -5573,7 +5629,7 @@ cleared even though it does not look stale:</p>
 <p>On S3, a <code>released</code> record stays in <code>.firecube/claims/</code>. It is harmless. The
 next acquisition of the domain replaces it.</p>
 <p>Verify:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>No claims found.
@@ -5588,9 +5644,8 @@ already succeeded:</p>
 <a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PRODUCT_NAME</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">resume_existing</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">  </span>--write-mode<span class="w"> </span>direct<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">resume_existing</span><span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <h2 id="recover-from-a-failed-batch">Recover From A Failed Batch</h2>
 <p>A run recorded as <code>failed</code> has already stopped and does not need to be
@@ -5608,13 +5663,13 @@ command with <code>--option force_reingest=true</code> and all required inputs. 
 run did not publish its staged data, so every batch must be written again.</p>
 <p>After the retry, verify the new run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>The new run should show <code>complete</code>. The earlier run remains <code>failed</code> in the
 history.</p>
 <p>Validate each affected Zarr group, replacing <code>data</code> with its group path:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>validate<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span>--product<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span>--group<span class="w"> </span>data
 </code></pre></div>
 <p>Check that the JSON report has <code>is_valid: true</code> and the command exits 0. If it
@@ -5626,7 +5681,7 @@ command exits 1 and <code>info_notes</code> holds this note:</p>
 </code></pre></div>
 <p>If you see the note, pass the time dimension of the plugin:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>validate<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span>--product<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span>--group<span class="w"> </span>data<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span>--time-dim<span class="w"> </span><span class="nb">time</span>
 </code></pre></div>
@@ -5689,9 +5744,9 @@ command then uses the marker of its time coordinate.</p>
 <td>Use a <code>file://</code> or <code>s3://</code> product. Do not read an empty listing on such a storage as proof that no writer is active.</td>
 </tr>
 <tr>
-<td><code>ProductUnderMaintenanceError</code>: <code>Product MY_PRODUCT.zarr is under exclusive maintenance by &lt;owner&gt; (claim MY_PRODUCT.zarr:maintenance:exclusive), so &lt;run&gt; is refused. Retry when that maintenance has finished.</code></td>
+<td><code>ProductUnderMaintenanceError</code>: <code>Product MY_PRODUCT is under exclusive maintenance by &lt;owner&gt; (claim MY_PRODUCT:maintenance:exclusive), so &lt;run&gt; is refused. Retry when that maintenance has finished.</code></td>
 <td>A maintenance run holds the exclusive claim of the product. At run start, Firecube refuses the new run and records it as failed. An index rebuild is refused before any run exists.</td>
-<td>Wait for the maintenance run to finish. Then start the run again. If the message says the claim is stale, verify that the owner process is gone. Abandon a run only after its process has stopped. Then follow <a href="#abandon-a-stuck-run">Abandon A Stuck Run</a> with the owner as <code>--run-id</code>. Or follow <a href="#clear-a-blocking-claim">Clear A Blocking Claim</a> with <code>--domain MY_PRODUCT.zarr:maintenance:exclusive</code>.</td>
+<td>Wait for the maintenance run to finish. Then start the run again. If the message says the claim is stale, verify that the owner process is gone. Abandon a run only after its process has stopped. Then follow <a href="#abandon-a-stuck-run">Abandon A Stuck Run</a> with the owner as <code>--run-id</code>. Or follow <a href="#clear-a-blocking-claim">Clear A Blocking Claim</a> with <code>--domain MY_PRODUCT:maintenance:exclusive</code>.</td>
 </tr>
 <tr>
 <td>Run ends with <code>status=failed</code> and "later batch(es) were not attempted"</td>

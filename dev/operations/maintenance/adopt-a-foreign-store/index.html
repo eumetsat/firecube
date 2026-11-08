@@ -4842,7 +4842,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4858,11 +4858,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5063,6 +5091,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5359,12 +5415,15 @@
 <p>Use <code>firecube migrate adopt</code> to give a Zarr store that Firecube did not write a
 control plane. A foreign store is, for example, a store that xarray wrote.</p>
 <p>Adoption records the store as an imported product with unverified chunks. It
-writes <code>.firecube/schema.json</code> and one <code>adopt</code> run. It writes no Zarr document
-and no chunk, and it invents no history of ingested spans.</p>
-<p>Two commands need a control plane: a real <code>firecube migrate run</code> and
-<code>firecube release create</code>. Both refuse a store that has none and write nothing.
-<code>firecube migrate run --dry-run</code> still prints the plan. The <code>firecube snapshot</code>
-commands work on a store that has no control plane.</p>
+writes <code>.firecube/schema.json</code>, the product label in <code>.firecube/product.json</code>
+and one <code>adopt</code> run. It writes no Zarr document and no chunk, and it invents no
+history of ingested spans.</p>
+<p>A command that needs the recorded product label refuses a store that records
+none. The refusal exits 2 and names <code>firecube migrate adopt</code>. This holds for
+<code>snapshot</code>, <code>release</code>, <code>migrate run</code> and <code>chunks</code>. Pure-storage readers and first
+writes, such as <code>zarr validate</code> and <code>archive create</code>, do not need the label.
+A real <code>migrate run</code> and <code>release create</code> also need the control plane that
+adoption writes.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
 <li>Install Firecube and activate its virtual environment.</li>
@@ -5397,61 +5456,77 @@ own store and change the path:</p>
 </code></pre></div>
 <h2 id="adopt-the-store">Adopt The Store</h2>
 <ol>
-<li>Take a snapshot of the metadata before the adoption:</li>
+<li>Preview the adoption. A dry run writes nothing:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>take<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>adopt<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--dry-run
 </code></pre></div>
-<p>Copy the identifier from the <code>Snapshot:</code> line.</p>
+<p>Expected output resembles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>would adopt the store as product MY_PRODUCT in one adopt run (Zarr format 2); nothing is written
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>product label MY_PRODUCT would be recorded
+</code></pre></div>
 <ol>
-<li>Adopt the store:</li>
+<li>Adopt the store. On a terminal, the command asks for confirmation. Off a
+   terminal, the command exits 2 until you add <code>--yes-i-really-mean-it</code>:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>adopt<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>adopt<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--yes-i-really-mean-it
 </code></pre></div>
 <p>Expected output for a Zarr format 2 store resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>adopted the store as product MY_PRODUCT (run adopt-63a5a61d-…, Zarr format 2)
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Warning: the store of product MY_PRODUCT is Zarr format 2. Firecube cannot append to it, so ingest and preallocate do not support this store. Convert it to Zarr format 3 outside Firecube before you ingest into it.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>adopted the store as product MY_PRODUCT (run adopt-63a5a61d-…, Zarr format 2)
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>Warning: the store of product MY_PRODUCT is Zarr format 2. Firecube cannot append to it, so ingest and preallocate do not support this store. Convert it to Zarr format 3 outside Firecube before you ingest into it.
 </code></pre></div>
 <p>The command prints the warning on stderr, after the line that names the run.
    The adoption succeeds and exits 0. Add <code>-f json</code> to print the result as JSON
    on stdout. The progress lines then go to stderr.</p>
 <p>A Zarr format 3 store prints the first line only:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>adopted the store as product MY_PRODUCT (run adopt-27c54b51-…, Zarr format 3)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>adopted the store as product MY_PRODUCT (run adopt-27c54b51-…, Zarr format 3)
 </code></pre></div>
 <p>If the store is already a product, the command writes nothing, prints no
 warning and exits 0:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>product MY_PRODUCT already has a control plane; nothing to adopt
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>product MY_PRODUCT already has a control plane; nothing to adopt
+</code></pre></div>
+<p>If the store records another label, the command exits 2 and writes nothing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Error: Product label &#39;OTHER&#39; is refused: the product at file:///data/products/MY_PRODUCT.zarr records the label &#39;MY_PRODUCT&#39;.
 </code></pre></div>
 <h2 id="verify">Verify</h2>
 <ol>
-<li>Take a second snapshot and compare the two:</li>
+<li>Take a snapshot. The snapshot lists the control-plane document and the Zarr
+   documents that the store held before the adoption:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>take<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>diff<span class="w"> </span>&lt;before-id&gt;<span class="w"> </span>latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>take<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>show<span class="w"> </span>latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Before:  c8aef7318ceb252a…
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>After:   6d2973fa3e0188da…
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>+ .firecube/schema.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Snapshot:     9116405736e4a6e5c75489614fea736b4877f9737c763377fa792fb7f26dc4a8
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>Parent:       -
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Manifest:     b567ed8dc5c0789cbc2e363d139351da3b579b443f3c993418c1ead112187b59
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>Taken:        2026-11-07T12:08:54+00:00
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>Consistency:  observation
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>Trigger:      cli
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>Run:          -
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>Documents:    8
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>  .firecube/schema.json  firecube_schema  87 B  sha256:58d5516a75dc
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>  .zattrs  v2_attrs  2 B  sha256:44136fa355b3
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>  ...
 </code></pre></div>
-<p>The only change is the new control-plane document. No Zarr document
-   changed.</p>
+<p>The adoption changed no Zarr document. The page
+   <a href="../snapshot/">Snapshot Metadata</a> describes the other snapshot commands.</p>
 <ol>
 <li>List the runs of the product:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Run ID                               Status     State    Parts Events
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>--------------------------------------------------------------------------------
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>adopt-63a5a61d-e80f-416a-9e10-d70b64229859 complete   active   2     2
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Run ID                               Status     State    Parts Events
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>--------------------------------------------------------------------------------
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>adopt-4d47c395-186c-494b-9a7f-f443999d852a complete   active   2     2
 </code></pre></div>
 <h2 id="failure-recovery">Failure Recovery</h2>
 <table>
@@ -5474,14 +5549,9 @@ warning and exits 0:</p>
 <td>Convert the store to Zarr format 3 outside Firecube before you ingest into it. Maintenance commands still work on the store.</td>
 </tr>
 <tr>
-<td><code>the store of product … has no control plane; adopt it with firecube migrate adopt before running a migration</code></td>
-<td><code>migrate run</code> found no control plane. It exits 1 and writes nothing.</td>
+<td><code>records no product label. Record one with firecube migrate adopt</code> (exit 2)</td>
+<td><code>migrate run</code> or <code>migrate run --dry-run</code> found a store that records no label. It writes nothing.</td>
 <td>Run <code>firecube migrate adopt</code>. Run the migration again.</td>
-</tr>
-<tr>
-<td><code>the store of product … has no control plane; a real run needs firecube migrate adopt first</code></td>
-<td><code>migrate run --dry-run</code> found no control plane. It prints the plan and writes nothing.</td>
-<td>Run <code>firecube migrate adopt</code> before the real run.</td>
 </tr>
 </tbody>
 </table>

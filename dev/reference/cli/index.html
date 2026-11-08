@@ -4717,7 +4717,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4733,11 +4733,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4938,6 +4966,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -6814,6 +6870,12 @@ storage management and diagnostics.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
+<td><code>--debug</code></td>
+<td>boolean</td>
+<td>Print the traceback of an error; sets FIRECUBE_DEBUG=1.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
 <td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
@@ -6868,9 +6930,9 @@ set --option pipeline_batch_size=N.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-p</code>, <code>--product</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -6908,9 +6970,9 @@ set --option pipeline_batch_size=N.</p>
 <h4 id="firecube-advise-compliance">firecube advise compliance</h4>
 <p>run structural compliance checks</p>
 <p>Opens a Zarr cube and runs the selected compliance profile. Findings are
-emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
+emitted as a human-readable table (default) or as JSON. Exit codes: 0 on clean
 (or warnings/info without --strict), 1 if any error finding is reported,
-2 if warnings/info appear under --strict.</p>
+3 if warnings/info appear under --strict.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube advise compliance [OPTIONS]
 </code></pre></div>
@@ -6932,9 +6994,9 @@ emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-p</code>, <code>--product</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -6944,15 +7006,15 @@ emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>output format for the report</td>
-<td><code>text</code></td>
+<td><code>-f</code>, <code>--format</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>--strict</code></td>
 <td>boolean</td>
-<td>treat any warning or info finding as a non-zero exit (code 2)</td>
+<td>treat any warning or info finding as a non-zero exit (code 3)</td>
 <td><code>False</code></td>
 </tr>
 <tr>
@@ -7029,9 +7091,9 @@ product group.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-s</code>, <code>--source</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Zarr store URI (file:///abs/path or s3://bucket/key)</td>
+<td>Target Firecube product URI; --storage-type must match URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -7159,7 +7221,7 @@ inspection.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>table</code> &#x7C; <code>json</code> &#x7C; <code>csv</code>)</td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
 <td>Output format.</td>
 <td><code>table</code></td>
 </tr>
@@ -7175,7 +7237,8 @@ inspection.</p>
 <p>list contents of a .tgm or .zip archive</p>
 <p>displays per-variable group entries including name, dimensions, and time
 range. a .zip archive is shown as one xarray dataset per group. no data is
-decoded; useful for reviewing archive contents before restoring.</p>
+decoded; useful for reviewing archive contents before restoring.
+with -f json, a .zip archive lists every variable of each group.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube archive list [OPTIONS]
 </code></pre></div>
@@ -7197,6 +7260,12 @@ decoded; useful for reviewing archive contents before restoring.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
+<td><code>-f</code>, <code>--format</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
+</tr>
+<tr>
 <td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
@@ -7209,7 +7278,8 @@ decoded; useful for reviewing archive contents before restoring.</p>
 <p>decodes all encoded array groups from a .tgm archive, or copies every entry
 of a .zip archive, and writes them back to the target Zarr store. archive
 groups restore to their original paths. zip archives restore to local
-targets only.</p>
+targets only. the restored product takes the label the archive records;
+--product-name names it only when the archive records none.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube archive restore [OPTIONS]
 </code></pre></div>
@@ -7234,6 +7304,12 @@ targets only.</p>
 <td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
 <td>Target Firecube product URI; --storage-type must match URI scheme.</td>
+<td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--product-name</code></td>
+<td>text</td>
+<td>Logical product name. The restored product keeps the label the archive records; needed only when the archive records none.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -7313,6 +7389,12 @@ corrupted or incomplete.</p>
 <td><code>False</code></td>
 </tr>
 <tr>
+<td><code>-f</code>, <code>--format</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
+</tr>
+<tr>
 <td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
@@ -7353,7 +7435,7 @@ library.</p>
 <p>Generates an Intake YAML catalog for a supported product store. Discovers
 dataset groups using the specified plugin and writes a catalog file with
 source specs and optional storage_options placeholders. Requires
---product, --output, and --collection-id.</p>
+--target, --output, and --collection-id.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>firecube catalog intake [OPTIONS] PLUGIN
 </code></pre></div>
@@ -7369,9 +7451,9 @@ source specs and optional storage_options placeholders. Requires
 </thead>
 <tbody>
 <tr>
-<td><code>-p</code>, <code>--product</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -7446,12 +7528,6 @@ history</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--quiet</code></td>
-<td>boolean</td>
-<td>Suppress storage configuration banner.</td>
-<td><code>False</code></td>
-</tr>
-<tr>
 <td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
@@ -7509,9 +7585,9 @@ operations prompt in a terminal and require the flag in non-TTY contexts.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>full product URI</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -7560,7 +7636,8 @@ operations prompt in a terminal and require the flag in non-TTY contexts.</p>
 </table>
 <h5 id="firecube-chunks-claims-list">firecube chunks claims list</h5>
 <p>list active write claims</p>
-<p>list active write-coordination claims for one or all products. claims are
+<p>list active write-coordination claims for one product (--target) or
+every product under the [storage] base URI (--all-products). claims are
 short-lived locks written to .firecube/claims/ to coordinate concurrent
 writes. stale claims from crashed processes can block ingestion -- use
 claims clear to release them</p>
@@ -7579,10 +7656,16 @@ claims clear to release them</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>full product URI to inspect</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--all-products</code></td>
+<td>boolean</td>
+<td>Act on every product under the [storage] base URI of the config file. Excludes --target.</td>
+<td><code>False</code></td>
 </tr>
 <tr>
 <td><code>--workspace</code></td>
@@ -7593,7 +7676,7 @@ claims clear to release them</p>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
 <td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
-<td>output format</td>
+<td>Output format.</td>
 <td><code>table</code></td>
 </tr>
 <tr>
@@ -7649,9 +7732,9 @@ corrupt, or very stale to restore fast query performance for chunks list</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>full product URI to rebuild into a fresh compact cache</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -7663,7 +7746,7 @@ corrupt, or very stale to restore fast query performance for chunks list</p>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
 <td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
-<td>output format</td>
+<td>Output format.</td>
 <td><code>table</code></td>
 </tr>
 <tr>
@@ -7700,9 +7783,9 @@ when it was last rebuilt. use to decide whether a rebuild is needed</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>full product URI to check compact cache status for</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -7714,7 +7797,7 @@ when it was last rebuilt. use to decide whether a rebuild is needed</p>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
 <td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
-<td>output format</td>
+<td>Output format.</td>
 <td><code>table</code></td>
 </tr>
 <tr>
@@ -7752,15 +7835,15 @@ removes both control-plane records and the underlying storage files. use
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Full product URI to delete from.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--all-products</code></td>
 <td>boolean</td>
-<td>Apply to all products (mutually exclusive with --product-name).</td>
+<td>Act on every product under the [storage] base URI of the config file. Excludes --target.</td>
 <td><code>False</code></td>
 </tr>
 <tr>
@@ -7864,9 +7947,9 @@ first</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>full product URI to delete spans from</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -7939,9 +8022,10 @@ first</p>
 </table>
 <h4 id="firecube-chunks-list">firecube chunks list</h4>
 <p>list tracked chunk records</p>
-<p>list chunk records tracked in the .firecube/ control plane for one or
-all products. filter by product, date range, span, or chunk type.
-supports table and JSON output for scripting</p>
+<p>list chunk records tracked in the .firecube/ control plane for one
+product (--target) or every product under the [storage] base URI
+(--all-products). filter by date range, span, or chunk type. supports
+table and JSON output for scripting</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>firecube chunks list [OPTIONS]
 </code></pre></div>
@@ -7963,10 +8047,16 @@ supports table and JSON output for scripting</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>full product URI to inspect</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--all-products</code></td>
+<td>boolean</td>
+<td>Act on every product under the [storage] base URI of the config file. Excludes --target.</td>
+<td><code>False</code></td>
 </tr>
 <tr>
 <td><code>--end-date</code></td>
@@ -8007,7 +8097,7 @@ supports table and JSON output for scripting</p>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
 <td>choice (<code>table</code> &#x7C; <code>json</code> &#x7C; <code>csv</code>)</td>
-<td>output format</td>
+<td>Output format.</td>
 <td><code>table</code></td>
 </tr>
 <tr>
@@ -8092,9 +8182,9 @@ prompt in a terminal and require the flag in non-TTY contexts.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>full product URI</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -8161,9 +8251,9 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>full product URI</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -8181,7 +8271,7 @@ and span counts. use to identify stuck or failed runs before abandoning</p>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
 <td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
-<td>output format</td>
+<td>Output format.</td>
 <td><code>table</code></td>
 </tr>
 <tr>
@@ -8230,7 +8320,8 @@ completion for all firecube commands and options.</p>
 <p>The plugin handles source reading; firecube manages write strategy (staged
 or direct), pipeline parallelism, and chunk tracking. Use --option to pass
 plugin-specific overrides, or --show-options to list available options for
-a plugin.</p>
+a plugin. --dry-run prints the plan and writes nothing; it exits 1 when a
+check would block the run.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>firecube ingest [OPTIONS] PLUGIN
 </code></pre></div>
@@ -8270,16 +8361,10 @@ a plugin.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>-n</code>, <code>--product-name</code></td>
+<td><code>--product-name</code></td>
 <td>text</td>
-<td>Logical product name. Overrides the plugin class default and the per-plugin config default.</td>
+<td>Logical product name. Overrides the per-plugin config default_product_name and the plugin class PRODUCT_NAME. The store refuses a name that differs from the one it records.</td>
 <td>None</td>
-</tr>
-<tr>
-<td><code>--output-format</code></td>
-<td>text</td>
-<td>output format to deliver (e.g. parquet, zarr)</td>
-<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--storage-type</code></td>
@@ -8348,6 +8433,12 @@ a plugin.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
+<td><code>--dry-run</code></td>
+<td>boolean</td>
+<td>Show what would happen without making any changes.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
 <td><code>--option</code></td>
 <td>TYPED_OPTION</td>
 <td>Plugin/engine option in key=value form.</td>
@@ -8399,9 +8490,12 @@ store that Firecube did not write a control plane.</p>
 <p>give an existing Zarr store a control plane</p>
 <p>records the store as an imported product in one adopt run. no Zarr document
 and no chunk is written, and no span history is invented. a store that is
-already a product stays as it is. adopting a Zarr format 2 store prints a
-warning, because Firecube cannot append to it. with --format json the progress lines go
-to stderr.</p>
+already a product stays as it is, and gets the product label if it records
+none. a store that records another label is refused. adopting a Zarr format 2
+store prints a warning, because Firecube cannot append to it. with --format
+json the progress lines go to stderr. --dry-run reports the run and the label
+it would record and writes nothing. adopt asks for confirmation in a terminal
+and needs --yes-i-really-mean-it elsewhere.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>firecube migrate adopt [OPTIONS]
 </code></pre></div>
@@ -8448,9 +8542,21 @@ to stderr.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td>boolean</td>
+<td>Show what would happen without making any changes.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td><code>--yes-i-really-mean-it</code></td>
+<td>boolean</td>
+<td>Skip confirmation prompts. Required for destructive operations in non-TTY.</td>
+<td><code>False</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -8480,9 +8586,9 @@ entry points and imports no step. needs no product.</p>
 <tbody>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -8499,8 +8605,10 @@ exclusive maintenance claim, takes a snapshot before and after, and records
 a maintenance run. a store with no control plane is refused: run migrate
 adopt first. a step that already ran is not run again. an interrupted
 run of the step resumes. --dry-run prints the plan and the attribute classes
-and writes nothing, also on a store with no control plane. pass --allow interpretation or --allow unknown to change
-attributes of that class. with --format json the progress lines go to stderr.</p>
+and writes nothing. a store that records no product label is refused: run migrate adopt first. pass --allow interpretation or --allow unknown to change
+attributes of that class. with --format json the progress lines go to stderr.
+a run asks for confirmation in a terminal and needs --yes-i-really-mean-it
+elsewhere.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>firecube migrate run [OPTIONS] STEP_ID
 </code></pre></div>
@@ -8519,12 +8627,6 @@ attributes of that class. with --format json the progress lines go to stderr.</p
 <td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
 <td>Target Firecube product URI; --storage-type must match URI scheme.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -8547,9 +8649,9 @@ attributes of that class. with --format json the progress lines go to stderr.</p
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>--allow</code></td>
@@ -8588,6 +8690,12 @@ attributes of that class. with --format json the progress lines go to stderr.</p
 <td><code>False</code></td>
 </tr>
 <tr>
+<td><code>--yes-i-really-mean-it</code></td>
+<td>boolean</td>
+<td>Skip confirmation prompts. Required for destructive operations in non-TTY.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
 <td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
@@ -8621,12 +8729,6 @@ maintenance records and changes nothing.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -8646,9 +8748,9 @@ maintenance records and changes nothing.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -8706,9 +8808,9 @@ is not modified.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-p</code>, <code>--product</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -8753,7 +8855,8 @@ is not modified.</p>
 <p>validate Parquet files</p>
 <p>Checks PAR1 magic bytes at head and tail. Scans all .parquet files under
 the product path and reports any missing or corrupt files. Read-only; does
-not modify any data.</p>
+not modify any data. Exits 1 when a file is invalid or none is found, and
+4 when the target does not exist.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>firecube parquet validate [OPTIONS]
 </code></pre></div>
@@ -8769,9 +8872,9 @@ not modify any data.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-p</code>, <code>--product</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -9113,6 +9216,10 @@ archive, a full or an incremental backup; --retain-versions retains them
 as the object versions of a versioned s3 bucket. an interrupted create
 that wrote an archive is
 refused on rerun until the file is removed.</p>
+<p>--dry-run makes the refusals of a run from reads only and prints what it
+would write, archive and retention included, and writes nothing. a create
+asks for confirmation in a terminal and needs --yes-i-really-mean-it
+elsewhere.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>firecube release create [OPTIONS] VERSION
 </code></pre></div>
@@ -9131,12 +9238,6 @@ refused on rerun until the file is removed.</p>
 <td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
 <td>Target Firecube product URI; --storage-type must match URI scheme.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -9159,9 +9260,9 @@ refused on rerun until the file is removed.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>--note</code></td>
@@ -9185,6 +9286,18 @@ refused on rerun until the file is removed.</p>
 <td><code>--retain-versions</code></td>
 <td>boolean</td>
 <td>Record the version id of every object instead of copying bytes. Needs a versioned s3 bucket and the fsspec driver. Exclusive with --archive.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td>boolean</td>
+<td>Show what would happen without making any changes.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
+<td><code>--yes-i-really-mean-it</code></td>
+<td>boolean</td>
+<td>Skip confirmation prompts. Required for destructive operations in non-TTY.</td>
 <td><code>False</code></td>
 </tr>
 <tr>
@@ -9221,12 +9334,6 @@ release prints a notice, or an empty list in json, and exits 0.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -9246,9 +9353,9 @@ release prints a notice, or an empty list in json, and exits 0.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -9285,12 +9392,6 @@ release exists.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -9310,9 +9411,9 @@ release exists.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -9356,12 +9457,6 @@ or a bucket setting changed, and when no such release exists.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -9381,9 +9476,9 @@ or a bucket setting changed, and when no such release exists.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>--sample</code></td>
@@ -9453,12 +9548,6 @@ attributes, dimension names, fill value, storage keys and extensions. exits
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -9478,9 +9567,9 @@ attributes, dimension names, fill value, storage keys and extensions. exits
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -9516,12 +9605,6 @@ or an empty list in json, and exits 0.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -9541,9 +9624,9 @@ or an empty list in json, and exits 0.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -9579,12 +9662,6 @@ size and digest. exits 1 when no such snapshot exists.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -9604,9 +9681,9 @@ size and digest. exits 1 when no such snapshot exists.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -9621,7 +9698,8 @@ size and digest. exits 1 when no such snapshot exists.</p>
 <p>stores the exact bytes of every Zarr metadata document under
 .firecube/metadata/ and prints the new snapshot record. no chunk is read.
 the snapshot is an observation: a writer running at the same time can make
-it mix states. it takes no maintenance claim.</p>
+it mix states. it takes no maintenance claim. --dry-run prints the documents,
+the manifest and the parent the snapshot would record, and writes nothing.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a>firecube snapshot take [OPTIONS]
 </code></pre></div>
@@ -9643,12 +9721,6 @@ it mix states. it takes no maintenance claim.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -9668,9 +9740,15 @@ it mix states. it takes no maintenance claim.</p>
 </tr>
 <tr>
 <td><code>-f</code>, <code>--format</code></td>
-<td>choice (<code>text</code> &#x7C; <code>json</code>)</td>
-<td>Output format; json prints sorted keys.</td>
-<td><code>text</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td>boolean</td>
+<td>Show what would happen without making any changes.</td>
+<td><code>False</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -9768,7 +9846,7 @@ before replacing the original array. If a local consolidation is
 interrupted, re-run the command: it detects the partial state, repairs
 it, and preserves the coordinate values.</p>
 <p>Use it for existing cubes with chunks=(1,) on the time coordinate.
-Always run with --dry-run first.</p>
+Always run with --dry-run first. Exits 1 when no group has a time coordinate.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a>firecube zarr consolidate-time-coord [OPTIONS]
 </code></pre></div>
@@ -9784,27 +9862,15 @@ Always run with --dry-run first.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--target</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>URI of the Zarr cube to consolidate.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
+<td>Target Firecube product URI; --storage-type must match URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
-<td>Storage backend type.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
-<td><code>--storage-driver</code></td>
-<td>choice (<code>fsspec</code> &#x7C; <code>obstore</code>)</td>
-<td>Storage driver.</td>
+<td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -9812,6 +9878,12 @@ Always run with --dry-run first.</p>
 <td>boolean</td>
 <td>Use anonymous access for public S3 buckets. Overrides any credentials in the environment or config file.</td>
 <td>None</td>
+</tr>
+<tr>
+<td><code>--storage-driver</code></td>
+<td>choice (<code>fsspec</code> &#x7C; <code>obstore</code>)</td>
+<td>Storage backend driver.</td>
+<td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--dry-run</code></td>
@@ -9864,7 +9936,7 @@ Always run with --dry-run first.</p>
 </tbody>
 </table>
 <h5 id="firecube-zarr-index-rebuild">firecube zarr index rebuild</h5>
-<p>Rebuild the resolved-index record from a plugin declaration.</p>
+<p>Rebuild the resolved-index record from a plugin declaration; <code>--dry-run</code> writes nothing.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a>firecube zarr index rebuild [OPTIONS]
 </code></pre></div>
@@ -9880,9 +9952,9 @@ Always run with --dry-run first.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--target</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Product Zarr URI to rebuild the index for.</td>
+<td>Target Firecube product URI; --storage-type must match URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -9904,6 +9976,12 @@ Always run with --dry-run first.</p>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
+<td><code>--dry-run</code></td>
+<td>boolean</td>
+<td>Show what would happen without making any changes.</td>
+<td><code>False</code></td>
+</tr>
+<tr>
 <td><code>-h</code>, <code>--help</code></td>
 <td>boolean</td>
 <td>Show this message and exit.</td>
@@ -9912,7 +9990,7 @@ Always run with --dry-run first.</p>
 </tbody>
 </table>
 <h5 id="firecube-zarr-index-show">firecube zarr index show</h5>
-<p>Show the current resolved-index record.</p>
+<p>Show the current resolved-index record; <code>-f json</code> emits the raw record.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a>firecube zarr index show [OPTIONS]
 </code></pre></div>
@@ -9928,22 +10006,16 @@ Always run with --dry-run first.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--target</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Product Zarr URI to inspect.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
-<td><code>--json</code></td>
-<td>boolean</td>
-<td>Emit the raw record as JSON.</td>
-<td><code>Sentinel.UNSET</code></td>
+<td><code>-f</code>, <code>--format</code></td>
+<td>choice (<code>table</code> &#x7C; <code>json</code>)</td>
+<td>Output format.</td>
+<td><code>table</code></td>
 </tr>
 <tr>
 <td><code>--derived</code> / <code>--no-derived</code></td>
@@ -9976,15 +10048,9 @@ Always run with --dry-run first.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--target</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Product Zarr URI to inspect.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -10009,6 +10075,8 @@ Always run with --dry-run first.</p>
 </table>
 <h4 id="firecube-zarr-multires">firecube zarr multires</h4>
 <p>Build multi-resolution Zarr pyramid for an existing product.</p>
+<p>--dry-run makes the same checks, prints each layer it would write or replace,
+and writes nothing.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>firecube zarr multires [OPTIONS]
 </code></pre></div>
@@ -10026,7 +10094,7 @@ Always run with --dry-run first.</p>
 <tr>
 <td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Target product URI required (file:///abs/path or s3://bucket/key); scheme must match --storage-type.</td>
+<td>Target Firecube product URI; --storage-type must match URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -10054,12 +10122,6 @@ Always run with --dry-run first.</p>
 <td><code>lon</code></td>
 </tr>
 <tr>
-<td><code>--product-name</code></td>
-<td>text</td>
-<td>Logical product name.</td>
-<td><code>Sentinel.UNSET</code></td>
-</tr>
-<tr>
 <td><code>--storage-type</code></td>
 <td>choice (<code>local</code> &#x7C; <code>s3</code>)</td>
 <td>Storage locality/class. Inferred from URI scheme when omitted (file://→local, s3://→s3).</td>
@@ -10076,6 +10138,12 @@ Always run with --dry-run first.</p>
 <td>choice (<code>fsspec</code> &#x7C; <code>obstore</code>)</td>
 <td>Storage backend driver.</td>
 <td><code>Sentinel.UNSET</code></td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td>boolean</td>
+<td>Show what would happen without making any changes.</td>
+<td><code>False</code></td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -10105,7 +10173,7 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>--target</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
 <td>Target product URI required (file:///abs/path or s3://bucket/key).</td>
 <td><code>Sentinel.UNSET</code></td>
@@ -10113,7 +10181,7 @@ with a diff showing expected vs found values. Safe to re-run.</p>
 <tr>
 <td><code>--product-name</code></td>
 <td>text</td>
-<td>Logical product name.</td>
+<td>Logical product name. Optional: overrides the plugin config default_product_name and the plugin PRODUCT_NAME. The store refuses a name that differs from the one it records.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -10213,15 +10281,15 @@ Above 1,000,000 ranges it refuses the plan; pass --yes-i-really-mean-it to emit 
 </thead>
 <tbody>
 <tr>
-<td><code>--target</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Target product URI required (file:///abs/path or s3://bucket/key).</td>
+<td>Target product URI (file:///path or s3://bucket/key).</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
 <td><code>--product-name</code></td>
 <td>text</td>
-<td>Logical product name.</td>
+<td>Logical product name. Optional: overrides the plugin config default_product_name and the plugin PRODUCT_NAME. The store refuses a name that differs from the one it records.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>
@@ -10307,7 +10375,7 @@ Above 1,000,000 ranges it refuses the plan; pass --yes-i-really-mean-it to emit 
 <h4 id="firecube-zarr-validate">firecube zarr validate</h4>
 <p>validate a Zarr array group</p>
 <p>Checks dimension shapes, dtypes, chunk boundaries, and required metadata
-without modifying any data. Requires --product and --group; exits with a
+without modifying any data. Requires --target and --group; exits with a
 structured JSON summary.</p>
 <p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a>firecube zarr validate [OPTIONS]
@@ -10324,9 +10392,9 @@ structured JSON summary.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>-p</code>, <code>--product</code></td>
+<td><code>-t</code>, <code>--target</code></td>
 <td>text</td>
-<td>Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
+<td>Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme.</td>
 <td><code>Sentinel.UNSET</code></td>
 </tr>
 <tr>

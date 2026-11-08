@@ -4715,7 +4715,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4731,11 +4731,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -4936,6 +4964,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -6458,12 +6514,12 @@ An operator MAY delete the <code>compact/</code> directory at any time. A rebuil
 creates the cache again from the WAL.</p>
 <h2 id="resolved-index-indexcurrentjson">Resolved Index: <code>index/current.json</code></h2>
 <p>The resolved-index record is the durable form of an engine-resolved
-<a href="../parallelism/#firecube.ingestor.api.IndexSpec"><code>IndexSpec</code></a>. It is written
+<a href="../parallelism/#firecube.sdk.IndexSpec"><code>IndexSpec</code></a>. It is written
 once, after the first successful resolution, and verified against the plugin
 declaration on every later run. Inspect it with <code>firecube zarr index show</code>;
 regenerate it with <code>firecube zarr index rebuild</code>. The rendered API reference
 for the record type is
-<a href="../parallelism/#firecube.ingestor.api.ResolvedIndexRecord"><code>ResolvedIndexRecord</code></a>.</p>
+<a href="../parallelism/#firecube.sdk.ResolvedIndexRecord"><code>ResolvedIndexRecord</code></a>.</p>
 <table>
 <thead>
 <tr>

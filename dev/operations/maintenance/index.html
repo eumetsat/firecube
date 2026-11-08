@@ -4086,6 +4086,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#preview-and-ask-for-confirmation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview And Ask For Confirmation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4809,7 +4820,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4825,11 +4836,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5030,6 +5069,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5259,6 +5326,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#preview-and-ask-for-confirmation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview And Ask For Confirmation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5294,9 +5372,10 @@
 and to keep a record of each state you hand over. They do not write a chunk.
 Two options of <code>release create</code> read chunk objects: <code>--archive</code> reads them to
 archive them, and <code>--retain-versions</code> lists their versions.</p>
-<p>The <code>firecube snapshot</code> commands work on any Zarr v2 or v3 store. A real
-<code>migrate run</code> and <code>release create</code> need a control plane. A store that Firecube
-did not write has none, so run <code>migrate adopt</code> on it first.</p>
+<p>Every maintenance command reads the product label back from the store. A store
+that Firecube did not write records no label, and the command exits 2. Run
+<code>migrate adopt</code> on such a store first. A real <code>migrate run</code> and <code>release create</code>
+also need the control plane that adoption writes.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
 <li>Install Firecube, then activate its virtual environment:</li>
@@ -5346,8 +5425,23 @@ for the other writers that check it.</p>
 </tr>
 </tbody>
 </table>
-<p>Every command except <code>firecube migrate list</code> needs <code>--target</code> and
-<code>--product-name</code>.</p>
+<p>Every command except <code>firecube migrate list</code> needs <code>-t/--target</code>. Only
+<code>firecube migrate adopt</code> also needs <code>--product-name</code>, because it records the
+label.</p>
+<h2 id="preview-and-ask-for-confirmation">Preview And Ask For Confirmation</h2>
+<p>Five maintenance commands take <code>--dry-run</code>: <code>snapshot take</code>, <code>migrate run</code>,
+<code>migrate adopt</code>, <code>release create</code> and <code>zarr multires</code>. <code>release create</code> also
+takes it together with <code>--archive</code>. A dry run writes nothing. It makes the
+refusals that the page of that command lists. <code>zarr index rebuild</code> takes
+<code>--dry-run</code> too. See
+<a href="../firecube-index/">Inspect And Manage The Resolved Index</a>.</p>
+<p>The dry runs of <code>migrate run</code>, <code>migrate adopt</code> and <code>zarr preallocate</code> do not
+check for a held exclusive maintenance claim. They exit 0 while the real run
+exits 1. A clean preview of those three commands is no proof that the product is free.</p>
+<p>Three commands ask for confirmation: <code>migrate run</code>, <code>migrate adopt</code> and
+<code>release create</code>. On a terminal, the command asks a question. Off a terminal,
+the command exits 2 until you add <code>--yes-i-really-mean-it</code>. <code>--dry-run</code> skips
+the question.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="snapshot/">Snapshot Metadata</a></strong> — capture, list, show and compare snapshots</li>

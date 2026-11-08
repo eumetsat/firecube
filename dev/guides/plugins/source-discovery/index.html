@@ -4859,7 +4859,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4875,11 +4875,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5080,6 +5108,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5393,7 +5449,7 @@ selection with filters.</p>
 is a <code>file://</code>, <code>s3://</code> or <code>stac://</code> URI. The plugin receives it as given in
 <code>ctx.sources</code>. If the run has exactly one value, <code>ctx.source</code> is that value.
 To get the local path of a <code>file://</code> value, call <code>local_path_from_target</code> from
-<code>firecube.core.api</code>. A library caller can pass a local path instead of a URI.
+<code>firecube.sdk</code>. A library caller can pass a local path instead of a URI.
 The default selection for a <code>file://</code> or <code>s3://</code> source is:</p>
 <ul>
 <li>files ending in <code>.zip</code>, <code>.h5</code>, <code>.nc</code>, <code>.nc4</code>, <code>.hdf</code>, or <code>.he5</code>, in any letter case</li>
@@ -5486,10 +5542,10 @@ stops with <code>No source files found after applying input filters</code>. Chec
 <ul>
 <li><strong><a href="../paired-source-files/">Read Paired Source Files</a></strong> — use a custom discovery
   hook to keep measurements and metadata together.</li>
-<li><strong><a href="../../../reference/hooks/#firecube.ingestor.api.BaseIngestor.discover_source_files">Discovery Hook</a></strong>
+<li><strong><a href="../../../reference/hooks/#firecube.sdk.BaseIngestor.discover_source_files">Discovery Hook</a></strong>
   — override discovery for catalogs or custom ordering. If file names do not
   sort chronologically, order items by timestamp before batching for appends.</li>
-<li><strong><a href="../../../reference/core-utilities/#firecube.core.api.discover_input_files">Discovery Helper</a></strong>
+<li><strong><a href="../../../reference/core-utilities/#firecube.sdk.discover_input_files">Discovery Helper</a></strong>
   — apply filters in a custom hook; replacing built-in discovery does not
   apply them automatically.</li>
 </ul>

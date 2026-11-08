@@ -4892,7 +4892,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4908,11 +4908,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5113,6 +5141,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5470,8 +5526,8 @@ chunk.</p>
 <ul>
 <li>Stop every writer of the product. See
   <a href="../#prerequisites">Maintenance Operations</a>.</li>
-<li>Make sure that the product has a control plane. If it has none, run
-  <code>firecube migrate adopt</code> first. See
+<li>Make sure that the product records a product label and has a control plane.
+  If it has none, run <code>firecube migrate adopt</code> first. See
   <a href="../adopt-a-foreign-store/">Adopt A Foreign Store</a>.</li>
 <li>Find the identifier of the step. List the installed steps:</li>
 </ul>
@@ -5488,9 +5544,8 @@ chunk.</p>
 nothing, not even <code>.firecube/</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>run<span class="w"> </span>firecube:set-attrs<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--set<span class="w"> </span><span class="nv">title</span><span class="o">=</span><span class="s2">&quot;Daily temperature&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--dry-run
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--set<span class="w"> </span><span class="nv">title</span><span class="o">=</span><span class="s2">&quot;Daily temperature&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--dry-run
 </code></pre></div>
 <p>Expected output for a Zarr v2 store with a consolidated <code>.zmetadata</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>set /:title
@@ -5510,32 +5565,37 @@ line starts with <code>planned outcome:</code>.</p>
 <p>A migration rewrites the consolidated image that the store already has. It
 never creates one.</p>
 <h2 id="run-the-step">Run The Step</h2>
-<p>Run the same command without <code>--dry-run</code>:</p>
+<p>Run the same command without <code>--dry-run</code>. On a terminal, the command asks for
+confirmation. Off a terminal, the command exits 2 and writes nothing until you
+add <code>--yes-i-really-mean-it</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>run<span class="w"> </span>firecube:set-attrs<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--set<span class="w"> </span><span class="nv">title</span><span class="o">=</span><span class="s2">&quot;Daily temperature&quot;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--set<span class="w"> </span><span class="nv">title</span><span class="o">=</span><span class="s2">&quot;Daily temperature&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--yes-i-really-mean-it
+</code></pre></div>
+<p>The refusal without the flag reads:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Error: Confirmation required: migrate run changes the store. Re-run with --yes-i-really-mean-it, preview it with --dry-run, or run interactively.
 </code></pre></div>
 <p>Expected output for a Zarr v2 store with a consolidated <code>.zmetadata</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>set /:title
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>class /:title: descriptive, allowed
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>write .zattrs
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>write .zmetadata (consolidated image)
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>outcome: executed
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>before snapshot a827266280f251f9…
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>wrote 2 of 2 planned documents
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>after snapshot efd16ef6fe8ce243…
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>step firecube:set-attrs executed in run migrate-2e97c56b-…
-</code></pre></div>
-<p>Expected output for a Zarr v3 store with consolidated metadata:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>set /:title
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>class /:title: descriptive, allowed
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>write zarr.json (consolidated image)
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>outcome: executed
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>before snapshot f9bdead6fb4b769a…
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>wrote 1 of 1 planned documents
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>after snapshot 30d9a1a1041c400e…
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>step firecube:set-attrs executed in run migrate-138ff41c-…
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>write .zattrs
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>write .zmetadata (consolidated image)
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>outcome: executed
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>before snapshot fb7ffe6294783fd5b5ea227168566a4e01d0f83c17b00a628eddbc1c458c3567
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>wrote 2 of 2 planned documents
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>after snapshot ad48a4d79070aeec27462b37e7979254159e137f964200d6bdac82f30d9e9675
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>step firecube:set-attrs executed in run migrate-4b00e9dc-87f8-43be-b76a-d337e8552786
+</code></pre></div>
+<p>Expected output for a Zarr v3 store with consolidated metadata:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>set /:title
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>class /:title: descriptive, allowed
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>write zarr.json (consolidated image)
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>outcome: executed
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>before snapshot f9bdead6fb4b769a…
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>wrote 1 of 1 planned documents
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>after snapshot 30d9a1a1041c400e…
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>step firecube:set-attrs executed in run migrate-138ff41c-…
 </code></pre></div>
 <p>The built-in step takes these options:</p>
 <table>
@@ -5562,20 +5622,17 @@ never creates one.</p>
 </table>
 <p>A step from a plugin takes <code>--option KEY=VALUE</code>. A key that you give once is a
 string. A key that you give more than once is a list in the order given.</p>
-<p>If the store has no control plane, a real run exits 1 and writes nothing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Error: the store of product MY_PRODUCT has no control plane; adopt it with firecube migrate adopt before running a migration
+<p>If the store records no product label, both a real run and a dry run exit 2 and
+write nothing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Error: The product at file:///data/products/MY_PRODUCT.zarr records no product label. Record one with firecube migrate adopt --target file:///data/products/MY_PRODUCT.zarr --product-name &lt;label&gt;.
 </code></pre></div>
-<p>Run <code>firecube migrate adopt</code>, then run the step again. A dry run on such a
-store prints the plan after this line and writes nothing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>the store of product MY_PRODUCT has no control plane; a real run needs firecube migrate adopt first
-</code></pre></div>
+<p>Run <code>firecube migrate adopt</code>, then run the step again.</p>
 <h2 id="verify">Verify</h2>
 <ol>
 <li>Read the recorded runs:</li>
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>firecube<span class="w"> </span>migrate<span class="w"> </span>status<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output resembles:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>2026-11-04T00:31:44+00:00  migrate-2e97c56b-…  firecube:set-attrs  firecube 0.1.8  executed  complete
@@ -5587,8 +5644,7 @@ store prints the plan after this line and writes nothing:</p>
    output.</li>
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>diff<span class="w"> </span>&lt;before-id&gt;<span class="w"> </span>&lt;after-id&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>The diff lists your attribute and <code>firecube_last_modifier</code>. It lists no
    other change. See <a href="../snapshot/">Snapshot Metadata</a>.</p>
@@ -5657,20 +5713,21 @@ after state.</p>
 <li>Make sure that no process of the run is still running.</li>
 <li>List the claim and the run:</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span>--status<span class="w"> </span>started
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span>--status<span class="w"> </span>started
 </code></pre></div>
 <ol>
 <li>Clear the claim of the stopped migration. Do not abandon the run. A claim
    that is not marked stale needs <code>--force</code>:</li>
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>claims<span class="w"> </span>clear<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>--domain<span class="w"> </span>MY_PRODUCT:maintenance:exclusive<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>--force<span class="w"> </span>--yes-i-really-mean-it
 </code></pre></div>
 <ol>
-<li>Run the same <code>migrate run</code> command again. The rerun resumes the journal of
+<li>Run the same <code>migrate run</code> command again, with <code>--yes-i-really-mean-it</code> off a
+   terminal. The rerun resumes the journal of
    the interrupted run under the same run id and applies the journaled bytes.
    Example for a run that stopped after the first of two document writes:</li>
 </ol>
@@ -5686,7 +5743,7 @@ is excluded from resumption. The next <code>migrate run</code> plans afresh from
 current state of the documents. It uses a new run id and takes a new before
 snapshot. It does not apply the bytes of the abandoned run.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>runs<span class="w"> </span>abandon<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span>--run-id<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span>--reason<span class="w"> </span><span class="s2">&quot;migrate process killed&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span>--yes-i-really-mean-it
@@ -5706,9 +5763,14 @@ stays with the status <code>abandoned</code>.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>has no control plane; adopt it with firecube migrate adopt</code></td>
+<td><code>records no product label. Record one with firecube migrate adopt</code> (exit 2)</td>
 <td>The store was not written by Firecube and is not adopted. The run wrote nothing.</td>
 <td>Run <code>firecube migrate adopt</code>. See <a href="../adopt-a-foreign-store/">Adopt A Foreign Store</a>.</td>
+</tr>
+<tr>
+<td><code>Confirmation required: migrate run changes the store</code> (exit 2)</td>
+<td>The run is off a terminal and has no <code>--yes-i-really-mean-it</code>.</td>
+<td>Preview with <code>--dry-run</code>. Then add <code>--yes-i-really-mean-it</code>.</td>
 </tr>
 <tr>
 <td><code>Write-domain claim conflict for …:maintenance:exclusive</code></td>

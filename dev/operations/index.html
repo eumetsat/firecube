@@ -4820,7 +4820,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4836,11 +4836,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5041,6 +5069,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5315,18 +5371,19 @@
 <p>Use these pages to run coordinated write workflows and to inspect, recover,
 clean up, archive, or restore Firecube products.</p>
 <p>Operations commands work against a product URI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>For S3 products, use the full S3 URI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--product-name<span class="w"> </span><span class="s2">&quot;s3://bucket/products/MY_PRODUCT.zarr&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--target<span class="w"> </span><span class="s2">&quot;s3://bucket/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <h2 id="preflight">Preflight</h2>
 <p>Check the CLI surface before running destructive commands:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>chunks<span class="w"> </span>list<span class="w"> </span>--help
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>firecube<span class="w"> </span>archive<span class="w"> </span>create<span class="w"> </span>--help
 </code></pre></div>
-<p>For storage-deleting operations on local products, make sure the storage config
-points at the product root:</p>
+<p>A command with <code>--target</code> needs no storage configuration. A command with
+<code>--all-products</code> scans the base path of the storage configuration. Set that path
+for local products:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_STORAGE_TYPE</span><span class="o">=</span><span class="nb">local</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_STORAGE_DRIVER</span><span class="o">=</span>fsspec
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_TARGET_PATH</span><span class="o">=</span>/data/products

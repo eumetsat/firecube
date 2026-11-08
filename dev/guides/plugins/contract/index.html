@@ -1882,6 +1882,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#move-to-firecubesdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Move To firecube.sdk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4837,7 +4848,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4853,11 +4864,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5058,6 +5097,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5309,6 +5376,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#move-to-firecubesdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Move To firecube.sdk
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5346,8 +5424,7 @@ class through package metadata.</p>
 <p>The generated ingestor already contains the decorator and product name. The
 <a href="../../../reference/templates/#registration"><code>register_ingestor</code></a> decorator
 sets <code>cls.name</code>; do not repeat the same value in a <code>name</code> class attribute.
-Import SDK types from <code>firecube.ingestor.api</code> and helpers from
-<code>firecube.core.api</code>.</p>
+Import every Firecube name from <code>firecube.sdk</code>.</p>
 <p>Every concrete plugin class must declare a non-empty
 <code>PRODUCT_NAME: ClassVar[str]</code>. Use <code>PluginConfig</code> only when the product needs
 typed options. See the <a href="../../../reference/config/">Configuration Reference</a> for these
@@ -5383,7 +5460,11 @@ ingestion using representative input data for the selected plugin path.</p>
 </tr>
 <tr>
 <td>Importing from a deep Firecube module</td>
-<td>Import from <code>firecube.ingestor.api</code> or <code>firecube.core.api</code>.</td>
+<td>Import from <code>firecube.sdk</code>.</td>
+</tr>
+<tr>
+<td>Importing from <code>firecube.ingestor.api</code> or <code>firecube.core.api</code></td>
+<td>Import from <code>firecube.sdk</code>. See <a href="#move-to-firecubesdk">Move To firecube.sdk</a>.</td>
 </tr>
 <tr>
 <td>Using a different entry-point key</td>
@@ -5391,6 +5472,22 @@ ingestion using representative input data for the selected plugin path.</p>
 </tr>
 </tbody>
 </table>
+<h2 id="move-to-firecubesdk">Move To firecube.sdk</h2>
+<p>The modules <code>firecube.ingestor.api</code> and <code>firecube.core.api</code> are deprecated. They keep every name until v0.2.0. The first use of any name of either module raises a <code>DeprecationWarning</code>. The module warns once per process. The warning names v0.2.0 as the removal release.</p>
+<ol>
+<li>
+<p>Replace the import path in the package and in its tests:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sed<span class="w"> </span>-i.bak<span class="w"> </span><span class="s1">&#39;s/firecube\.\(ingestor\|core\)\.api/firecube.sdk/g&#39;</span><span class="w"> </span><span class="k">$(</span>git<span class="w"> </span>ls-files<span class="w"> </span><span class="s1">&#39;*.py&#39;</span><span class="k">)</span>
+</code></pre></div>
+<p>The option <code>-i.bak</code> works on GNU and BSD <code>sed</code>. It leaves a <code>.bak</code> copy of each file. Delete the copies when the tests pass.</p>
+</li>
+<li>
+<p>Run the tests of the plugin.</p>
+</li>
+<li>If an import fails, the name is not in <code>firecube.sdk</code>. For example, <code>StorageConfig</code> is not in it. Put that one import back on the old module. The name stays there until v0.2.0.</li>
+<li><a href="https://github.com/eumetsat/firecube/issues">Open an issue</a> that asks for the name in <code>firecube.sdk</code>. Give the name and say what your plugin needs it for.</li>
+</ol>
+<p>A use of a name that is not in <code>firecube.sdk</code> raises a <code>DeprecationWarning</code> that names it. Use that warning to find the imports that must stay.</p>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../">Plugin Development Overview</a></strong> — review the public authoring classes</li>

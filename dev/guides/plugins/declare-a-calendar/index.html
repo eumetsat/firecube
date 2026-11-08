@@ -4903,7 +4903,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4919,11 +4919,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5124,6 +5152,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5574,7 +5630,7 @@
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">firecube.sdk</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">DirectZarrIngestor</span><span class="p">,</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">IndexedWrite</span><span class="p">,</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">IndexSpec</span><span class="p">,</span>
@@ -5712,8 +5768,7 @@
 <p>The resolved index lists the same dates and does not open the arrays:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>firecube<span class="w"> </span>zarr<span class="w"> </span>index<span class="w"> </span>show<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--target<span class="w"> </span>file:///tmp/my_product.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--product-name<span class="w"> </span>my_product<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--derived
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--derived
 </code></pre></div>
 <p>The list contains <code>2049-02-30T00:00:00</code>.</p>
 <h2 id="append-datasets-with-a-calendar">Append Datasets With A Calendar</h2>
@@ -5812,11 +5867,11 @@
 <td>Firecube refuses and writes no data. Keep the declaration, or preallocate a new target.</td>
 </tr>
 <tr>
-<td>Running <code>firecube archive create --source file:///tmp/my_product.zarr --archive file:///tmp/my_product.tgm</code> (short flags <code>-s</code> and <code>-a</code>) on a calendar cube</td>
+<td>Running <code>firecube archive create --target file:///tmp/my_product.zarr --archive file:///tmp/my_product.tgm</code> (short flags <code>-t</code> and <code>-a</code>) on a calendar cube</td>
 <td>Without the tensogram extra, the command exits with an error. Install it with <code>uv pip install 'firecube[tensogram]'</code>. With the extra, the default <code>tensogram</code> format cannot carry <code>units</code> and <code>calendar</code>, so Firecube refuses the cube. Add <code>--archive-format zip</code> and use a <code>.zip</code> archive path. A zip archive keeps the whole store, and <code>firecube archive restore --archive &lt;zip&gt; --target &lt;uri&gt;</code> returns the coordinate with its <code>units</code> and <code>calendar</code>. Restoring a <code>.tgm</code> archive does not restore the CF <code>units</code> and <code>calendar</code> of a time coordinate.</td>
 </tr>
 <tr>
-<td>Running <code>firecube chunks list --product-name file:///tmp/my_product.zarr --time-range 2049-02-01:2049-03-01</code> (short flag <code>-n</code>) on a <code>360_day</code> store, or the same filter with <code>firecube chunks delete</code></td>
+<td>Running <code>firecube chunks list --target file:///tmp/my_product.zarr --time-range 2049-02-01:2049-03-01</code> (short flag <code>-t</code>) on a <code>360_day</code> store, or the same filter with <code>firecube chunks delete</code></td>
 <td>Firecube reads the recorded span bounds as Gregorian dates. If a bound is not a Gregorian date, such as 30 February, the command exits with an error that names the span. <code>delete</code> removes nothing.</td>
 </tr>
 <tr>
@@ -5828,7 +5883,7 @@
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong><a href="../direct-zarr/">Declare The Schema And Index</a></strong> - the full plugin contract this page builds on</li>
-<li><strong><a href="../../../reference/parallelism/#firecube.ingestor.api.RegularTimeAxis">Index Specification Reference</a></strong> - <code>calendar</code>, <code>units</code> and <code>slot_count</code> on the time axes</li>
+<li><strong><a href="../../../reference/parallelism/#firecube.sdk.RegularTimeAxis">Index Specification Reference</a></strong> - <code>calendar</code>, <code>units</code> and <code>slot_count</code> on the time axes</li>
 <li><strong><a href="../../../operations/parallel-zarr-writes/">Run Parallel Zarr Writes</a></strong> - preallocate, plan and start workers</li>
 </ul>
 

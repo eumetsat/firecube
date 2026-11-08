@@ -4114,6 +4114,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#preview-a-snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview A Snapshot
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#read-the-consistency" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4864,7 +4875,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4880,11 +4891,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5085,6 +5124,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5314,6 +5381,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#preview-a-snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview A Snapshot
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#read-the-consistency" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5411,13 +5489,13 @@ restores a snapshot, and no command removes one.</p>
 <li>Stop every writer of the product. A writer that runs during <code>snapshot take</code>
   can make the snapshot mix states. See
   <a href="../#prerequisites">Maintenance Operations</a>.</li>
-<li>Make sure that the target is a Zarr store. <code>snapshot take</code> needs no control
-  plane.</li>
+<li>Make sure that the store records a product label. A store that Firecube did
+  not write records none. Run <code>firecube migrate adopt</code> on it first. See
+  <a href="../adopt-a-foreign-store/">Adopt A Foreign Store</a>.</li>
 </ul>
 <h2 id="take-a-snapshot">Take A Snapshot</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>take<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output resembles:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Snapshot:     a899640037411f64…
@@ -5434,6 +5512,21 @@ the store and writes nothing else. The
 <a href="../../../reference/control-plane-spec/#metadata-snapshots-metadata">Control-Plane Spec</a>
 describes the layout of that directory.</p>
 <p>Add <code>-f json</code> to print the record as JSON with sorted keys.</p>
+<h2 id="preview-a-snapshot">Preview A Snapshot</h2>
+<p>Add <code>--dry-run</code> to <code>snapshot take</code>. The command prints the number of documents,
+the manifest and the parent that the snapshot would record. It writes nothing.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>take<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--dry-run
+</code></pre></div>
+<p>Expected output resembles:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Dry run: nothing is written.
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Label:        MY_PRODUCT (recorded)
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Documents:    7
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Parent:       -
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>Manifest:     bfb4d73c990e06806cb6a2524a051c7468785fe6d10f625deae2ac7f3cdfd074
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>Would write:  up to 7 blobs, one manifest, one record and refs/latest.json; an existing blob is kept
+</code></pre></div>
 <h2 id="read-the-consistency">Read The Consistency</h2>
 <p>The <code>Consistency</code> line shows how far you can trust a snapshot:</p>
 <ul>
@@ -5447,53 +5540,50 @@ describes the layout of that directory.</p>
 <code>release create</code> make <code>coherent</code> snapshots. See <a href="../migrate/">Migrate Metadata</a>
 and <a href="../create-a-release/">Create A Release</a>.</p>
 <h2 id="list-snapshots">List Snapshots</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>The command prints one line per snapshot, oldest first:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>a899640037411f64…  2026-11-04T00:31:43+00:00  observation  cli  run=-
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>a827266280f251f9…  2026-11-04T00:31:44+00:00  coherent  migrate-before  run=migrate-2e97c56b-…
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>efd16ef6fe8ce2438…  2026-11-04T00:31:44+00:00  coherent  migrate-after  run=migrate-2e97c56b-…
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>a899640037411f64…  2026-11-04T00:31:43+00:00  observation  cli  run=-
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>a827266280f251f9…  2026-11-04T00:31:44+00:00  coherent  migrate-before  run=migrate-2e97c56b-…
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>efd16ef6fe8ce2438…  2026-11-04T00:31:44+00:00  coherent  migrate-after  run=migrate-2e97c56b-…
 </code></pre></div>
 <p>A product with no snapshot prints <code>No metadata snapshots</code> and exits 0.</p>
 <h2 id="show-one-snapshot">Show One Snapshot</h2>
 <p>Pass the full 64-digit identifier from <code>snapshot list</code>, or <code>latest</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>show<span class="w"> </span>latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>show<span class="w"> </span>latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Expected output resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Snapshot:     efd16ef6fe8ce243…
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Parent:       a827266280f251f9…
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Manifest:     902887b7713a2db4…
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>Taken:        2026-11-04T00:31:44+00:00
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>Consistency:  coherent
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>Trigger:      migrate-after
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>Run:          migrate-2e97c56b-…
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>Documents:    12
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>  .firecube/schema.json  firecube_schema  87 B  sha256:881cb8f63416
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>  .zattrs  v2_attrs  324 B  sha256:260503fd362c
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>  .zgroup  v2_group  22 B  sha256:7c578b275a7c
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>  .zmetadata  v2_consolidated  1716 B  sha256:a394d15b3fd6
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>  temperature/.zarray  v2_array  321 B  sha256:e47f736c1caf
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>  ...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Snapshot:     efd16ef6fe8ce243…
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>Parent:       a827266280f251f9…
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Manifest:     902887b7713a2db4…
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>Taken:        2026-11-04T00:31:44+00:00
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>Consistency:  coherent
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>Trigger:      migrate-after
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>Run:          migrate-2e97c56b-…
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>Documents:    12
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>  .firecube/schema.json  firecube_schema  87 B  sha256:881cb8f63416
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>  .zattrs  v2_attrs  324 B  sha256:260503fd362c
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>  .zgroup  v2_group  22 B  sha256:7c578b275a7c
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>  .zmetadata  v2_consolidated  1716 B  sha256:a394d15b3fd6
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>  temperature/.zarray  v2_array  321 B  sha256:e47f736c1caf
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>  ...
 </code></pre></div>
 <h2 id="compare-two-snapshots">Compare Two Snapshots</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>diff<span class="w"> </span>&lt;before-id&gt;<span class="w"> </span>latest<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>firecube<span class="w"> </span>snapshot<span class="w"> </span>diff<span class="w"> </span>&lt;before-id&gt;<span class="w"> </span>latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--target<span class="w"> </span><span class="s2">&quot;file:///data/products/MY_PRODUCT.zarr&quot;</span>
 </code></pre></div>
 <p>Each of the two arguments is a full identifier or <code>latest</code>. Expected output
 resembles:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Before:  a827266280f251f9…
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>After:   efd16ef6fe8ce243…
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>~ .zattrs
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>~ .zmetadata
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>Nodes:
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  Node: (root)
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    attribute added: firecube_last_modifier = {&quot;at&quot;: &quot;2026-11-04T00:31:44+00:00&quot;, &quot;distribution&quot;: &quot;firecube&quot;, &quot;operation&quot;: &quot;migrate&quot;, &quot;run_id&quot;: &quot;migrate-2e9...
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    attribute added: title = &quot;Daily temperature&quot;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Before:  a827266280f251f9…
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>After:   efd16ef6fe8ce243…
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>~ .zattrs
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>~ .zmetadata
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>Nodes:
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>  Node: (root)
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    attribute added: firecube_last_modifier = {&quot;at&quot;: &quot;2026-11-04T00:31:44+00:00&quot;, &quot;distribution&quot;: &quot;firecube&quot;, &quot;operation&quot;: &quot;migrate&quot;, &quot;run_id&quot;: &quot;migrate-2e9...
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    attribute added: title = &quot;Daily temperature&quot;
 </code></pre></div>
 <p>The first block lists the changed documents. <code>+</code> marks an added document, <code>-</code>
 a removed document and <code>~</code> a changed document.</p>
@@ -5515,6 +5605,11 @@ exits 0 whether or not the snapshots differ.</p>
 <td><code>is not a snapshot id: expected 64 lowercase hex digits</code></td>
 <td>The argument is a prefix or contains capital letters.</td>
 <td>Copy the full identifier from <code>snapshot list</code>, or pass <code>latest</code>.</td>
+</tr>
+<tr>
+<td><code>records no product label. Record one with firecube migrate adopt</code> (exit 2)</td>
+<td>The store records no label. The command wrote nothing.</td>
+<td>Run <code>firecube migrate adopt</code>.</td>
 </tr>
 <tr>
 <td><code>No metadata snapshots</code></td>

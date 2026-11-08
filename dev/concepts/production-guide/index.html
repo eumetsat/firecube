@@ -3032,6 +3032,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#preview-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview A Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#keep-chunkmanager-records-with-the-product" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4875,7 +4886,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4891,11 +4902,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5096,6 +5135,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5314,6 +5381,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#preview-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preview A Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#keep-chunkmanager-records-with-the-product" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5437,15 +5515,24 @@ products, dates, regions, or other independent work at the external job level.</
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged
 </code></pre></div>
 <p>This keeps failures understandable: one job has one product URI, one run record,
 and one set of ChunkManager records to inspect.</p>
 <p>Use full product URIs such as <code>file:///data/products/MY_PRODUCT.zarr</code> or
 <code>s3://bucket/products/MY_PRODUCT.zarr</code>. Firecube infers storage type from the
-URI and defaults the driver to configured settings or <code>fsspec</code>. Product name,
-output format, and write mode remain separate choices.</p>
+URI and defaults the driver to configured settings or <code>fsspec</code>. The write mode
+remains a separate choice. The plugin class owns the output format. The store
+records the product name once, and every later command reads it back.</p>
+<h2 id="preview-a-run">Preview A Run</h2>
+<p>Add <code>--dry-run</code> to the command to see the plan before a job writes anything:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/source<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/MY_PRODUCT.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--dry-run
+</code></pre></div>
+<p>A dry run writes nothing. It prints the batches, the groups and the result of the resume guard. If a check would block the real run, the command exits with code 1. Exit code 2 means the invocation is wrong. The <a href="../../reference/config/#exit-codes">exit-code table</a> lists every code.</p>
 <h2 id="keep-chunkmanager-records-with-the-product">Keep ChunkManager Records With The Product</h2>
 <p>ChunkManager records live in the product's <code>.firecube/</code> directory. They are part
 of the Firecube product state, not disposable logs.</p>
@@ -5458,15 +5545,14 @@ package and restore workflows.</p>
 <h2 id="make-retries-explicit">Make Retries Explicit</h2>
 <p>Use <code>resume_existing=true</code> when a workflow is meant to resume rather than start
 from scratch:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/source<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/MY_PRODUCT.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">resume_existing</span><span class="o">=</span><span class="nb">true</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/source<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--target<span class="w"> </span>file:///data/products/MY_PRODUCT.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--storage-type<span class="w"> </span><span class="nb">local</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">resume_existing</span><span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <p>On retry, Firecube checks ChunkManager before writing. If an active run or
 conflicting span exists, Firecube blocks the command instead of guessing. Use
@@ -5476,10 +5562,10 @@ run, recover stale claims, or clean up records.</p>
 <p>Do not put object-storage credentials in commands. Export them in the runtime
 environment or inject them through the external job system, then keep the
 Firecube command explicit:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_ENDPOINT_URL</span><span class="o">=</span><span class="s2">&quot;https://your-s3-endpoint.example.com&quot;</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_REGION</span><span class="o">=</span><span class="s2">&quot;&lt;region&gt;&quot;</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_ACCESS_KEY</span><span class="o">=</span><span class="s2">&quot;&lt;access-key&gt;&quot;</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_SECRET_KEY</span><span class="o">=</span><span class="s2">&quot;&lt;secret-key&gt;&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_ENDPOINT_URL</span><span class="o">=</span><span class="s2">&quot;https://your-s3-endpoint.example.com&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_REGION</span><span class="o">=</span><span class="s2">&quot;&lt;region&gt;&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_ACCESS_KEY</span><span class="o">=</span><span class="s2">&quot;&lt;access-key&gt;&quot;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_SECRET_KEY</span><span class="o">=</span><span class="s2">&quot;&lt;secret-key&gt;&quot;</span>
 </code></pre></div>
 <p>The production command should change target URI and credentials, not plugin
 code.</p>
@@ -5499,26 +5585,25 @@ multiple jobs against one product.</p>
 <h2 id="control-workspace-cleanup">Control Workspace Cleanup</h2>
 <p>Staged writes need local scratch space. In containers, set an explicit workspace
 and clean it up on successful runs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/source<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--target<span class="w"> </span>s3://bucket/products/MY_PRODUCT.zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--storage-type<span class="w"> </span>s3<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--output-format<span class="w"> </span>zarr<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">workspace</span><span class="o">=</span>/tmp/firecube<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">cleanup_workspace</span><span class="o">=</span><span class="nb">true</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>firecube<span class="w"> </span>ingest<span class="w"> </span>&lt;plugin&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--input-data<span class="w"> </span>file:///data/source<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--target<span class="w"> </span>s3://bucket/products/MY_PRODUCT.zarr<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--product-name<span class="w"> </span>MY_PRODUCT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--storage-type<span class="w"> </span>s3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--storage-driver<span class="w"> </span>fsspec<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--write-mode<span class="w"> </span>staged<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">workspace</span><span class="o">=</span>/tmp/firecube<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span>--option<span class="w"> </span><span class="nv">cleanup_workspace</span><span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <p>Use <a href="../performance/">Performance Tuning</a> when you need to choose between direct
 and staged writes or size the workspace.</p>
 <h2 id="enable-observability-before-you-need-it">Enable Observability Before You Need It</h2>
 <p>Use JSON logs for production capture:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_LOG_FORMAT</span><span class="o">=</span>json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_LOG_FORMAT</span><span class="o">=</span>json
 </code></pre></div>
 <p>Configure metrics and traces where available:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_PUSHGATEWAY_URL</span><span class="o">=</span><span class="s2">&quot;http://pushgateway:9091&quot;</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span><span class="s2">&quot;http://otel-collector:4318/v1/traces&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">FIRECUBE_PUSHGATEWAY_URL</span><span class="o">=</span><span class="s2">&quot;http://pushgateway:9091&quot;</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OTEL_EXPORTER_OTLP_ENDPOINT</span><span class="o">=</span><span class="s2">&quot;http://otel-collector:4318/v1/traces&quot;</span>
 </code></pre></div>
 <p>Firecube creates an in-memory Prometheus registry for the ingest process when a
 Pushgateway URL is configured. Engine metrics and plugin <code>ctx.telemetry.emit(...)</code>

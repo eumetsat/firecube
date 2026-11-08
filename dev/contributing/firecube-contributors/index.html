@@ -4849,7 +4849,7 @@
   <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -4865,11 +4865,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/plugin-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -5070,6 +5098,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -5397,18 +5453,14 @@ storage drivers, ChunkManager, observability, tests, or documentation.</p>
   configuration, ChunkManager, and observability primitives.</li>
 <li><code>firecube.ingestor</code> owns the ingestion SDK, plugin base classes, runtime
   engine, batching, registry, and template implementations.</li>
-<li>plugins import public SDK symbols from <code>firecube.ingestor.api</code> and
-  <code>firecube.core.api</code>.</li>
+<li>plugins import public SDK symbols from <code>firecube.sdk</code>.</li>
 </ul>
 <p>Core must not import ingestor code. Ingestor code must not import installed
 plugin packages except through dynamic plugin discovery. External plugins must
 not deep-import runtime internals.</p>
 <h2 id="preserve-public-surfaces">Preserve Public Surfaces</h2>
-<p>Public plugin code relies on the API modules:</p>
-<ul>
-<li><code>firecube.ingestor.api</code></li>
-<li><code>firecube.core.api</code></li>
-</ul>
+<p>Public plugin code relies on the SDK module <code>firecube.sdk</code>. The modules
+<code>firecube.ingestor.api</code> and <code>firecube.core.api</code> are deprecated until v0.2.0.</p>
 <p>If a change moves or renames a public symbol, update the API reference and keep a
 compatibility path for the documented deprecation window.</p>
 <p>Do not document private module paths in user or plugin-author pages. Contributor

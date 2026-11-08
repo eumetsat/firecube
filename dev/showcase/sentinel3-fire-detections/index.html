@@ -2160,7 +2160,7 @@
 <span class="md-ellipsis">
     
   
-    Plugin API
+    Plugin SDK
   
 
     
@@ -2172,11 +2172,23 @@
 <span class="md-nav__icon md-icon"></span>
             
   
-    Plugin API
+    Plugin SDK
   
 
           </label>
 <ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../reference/plugin-sdk/">
+<span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+</a>
+</li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../../reference/templates/">
 <span class="md-ellipsis">
@@ -2263,6 +2275,18 @@
 </li>
 </ul>
 </nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../reference/operations/">
+<span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+</a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../../reference/core-utilities/">
@@ -3616,11 +3640,11 @@ print("Plugin source:", plugin_directory / "src/firecube_sentinel3_frp/ingestor.
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">firecube.core.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">local_path_from_target</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">firecube.ingestor.api</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">firecube.sdk</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">GenericParquetIngestor</span><span class="p">,</span>
     <span class="n">PipelineBatch</span><span class="p">,</span>
     <span class="n">PluginContext</span><span class="p">,</span>
+    <span class="n">local_path_from_target</span><span class="p">,</span>
     <span class="n">register_ingestor</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -3665,11 +3689,11 @@ from typing import ClassVar
 
 import pandas as pd
 
-from firecube.core.api import local_path_from_target
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericParquetIngestor,
     PipelineBatch,
     PluginContext,
+    local_path_from_target,
     register_ingestor,
 )
 
@@ -3900,7 +3924,6 @@ Options Sections:
     <span class="o">--</span><span class="nb">input</span><span class="o">-</span><span class="n">data</span> <span class="s2">"file://</span><span class="si">{source_directory}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">target</span> <span class="s2">"</span><span class="si">{product_uri}</span><span class="s2">"</span> \
     <span class="o">--</span><span class="n">product</span><span class="o">-</span><span class="n">name</span> <span class="n">sentinel3_frp</span> \
-    <span class="o">--</span><span class="n">output</span><span class="o">-</span><span class="nb">format</span> <span class="n">parquet</span> \
     <span class="o">--</span><span class="n">write</span><span class="o">-</span><span class="n">mode</span> <span class="n">direct</span> \
     <span class="o">--</span><span class="n">option</span> <span class="n">pipeline_workers</span><span class="o">=</span><span class="mi">1</span> \
     <span class="o">--</span><span class="n">option</span> <span class="n">pipeline_batch_size</span><span class="o">=</span><span class="mi">25</span> \
@@ -3920,7 +3943,6 @@ source_directory = str(input_directory.resolve())
     --input-data "file://{source_directory}" \
     --target "{product_uri}" \
     --product-name sentinel3_frp \
-    --output-format parquet \
     --write-mode direct \
     --option pipeline_workers=1 \
     --option pipeline_batch_size=25 \
