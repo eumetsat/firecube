@@ -21,10 +21,17 @@ import click
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import echo_rendered, exit_with_error, render
 from firecube.cli._exit_codes import ExitCode
+from firecube.cli._product import recorded_identity
+from firecube.cli._shared_options import (
+    storage_driver_option,
+    storage_type_option,
+    target_uri_option,
+)
 from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
+from firecube.core.storage.driver_config import StorageDriverConfig
 
 
 @click.command(
@@ -32,42 +39,16 @@ from firecube.cli._uri_policy import (
     epilog="""\b
 Examples:
   # Preview consolidation on an existing cube with chunked time coordinates
-  firecube zarr consolidate-time-coord --target file:///tmp/x.zarr \
-      --product-name x.zarr --storage-type local --storage-driver fsspec --dry-run
+  firecube zarr consolidate-time-coord --target file:///data/x.zarr --dry-run
 
 See also: firecube zarr preallocate, firecube zarr validate
 """,
 )
-@click.option(
-    "--target",
-    required=True,
-    help="URI of the Zarr cube to consolidate.",
+@target_uri_option(tier="write")
+@storage_type_option(
+    required=False, extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3)."
 )
-@click.option("--product-name", "product_name", required=True, help="Logical product name.")
-@click.option(
-    "--storage-type",
-    "storage_type",
-    required=True,
-    type=click.Choice(["local", "s3"], case_sensitive=False),
-    help="Storage backend type.",
-)
-@click.option(
-    "--storage-driver",
-    "storage_driver",
-    required=True,
-    type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
-    help="Storage driver.",
-)
-@click.option(
-    "--storage-anonymous",
-    "storage_anonymous",
-    is_flag=True,
-    default=None,
-    help=(
-        "Use anonymous access for public S3 buckets. Overrides any credentials "
-        "in the environment or config file."
-    ),
-)
+@storage_driver_option(required=False)
 @click.option(
     "--dry-run",
     "dry_run",
@@ -99,9 +80,8 @@ See also: firecube zarr preallocate, firecube zarr validate
 def consolidate_time_coord(
     ctx: click.Context,
     target: str,
-    product_name: str,
-    storage_type: str,
-    storage_driver: str,
+    storage_type: str | None,
+    storage_driver: str | None,
     storage_anonymous: bool | None,
     dry_run: bool,
     chunk_size: int | None,
@@ -149,10 +129,13 @@ def consolidate_time_coord(
         },
         cache=False,
     )
+    identity = recorded_identity(
+        target_uri, format="zarr", driver=StorageDriverConfig.from_storage_config(storage_config)
+    )
     try:
         summary = consolidate_time_coords(
             target=target,
-            product_name=product_name,
+            product_name=identity.product_name,
             storage_config=storage_config,
             chunk_size=chunk_size,
             time_dim=time_dim,

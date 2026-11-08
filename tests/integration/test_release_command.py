@@ -53,7 +53,8 @@ def _store(base: Path, fmt: int) -> Path:
 
 
 def _cli(store: Path, *args: str, exit_code: int = 0):
-    out = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), "--product-name", "p.zarr"])
+    label = ["--product-name", "p.zarr"] if args[:2] == ("migrate", "adopt") else []
+    out = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), *label])
     assert out.exit_code == exit_code, out.output
     return out
 
@@ -114,6 +115,7 @@ def test_release_producer_is_the_ingests_across_migrate(tmp_path, subtests, fmt,
     expected = None
     if ingested:  # one real, completed ingest; its producer is read back from its own run_started
         opts = ["--write-mode", "direct", "--input-data", tmp_path.as_uri()]
+        opts += ["--product-name", "p.zarr"]
         _cli(store, "ingest", "cli_test_plugin", *opts, "--option", "allow_empty_source=true")
         paths = (store / ".firecube/runs").glob("*/events-*.jsonl")  # read, not selected
         events = [json.loads(ln) for p in paths if p.parent.name != "ingest-1" for ln in p.open()]
@@ -430,7 +432,9 @@ def versioned(s3_client: Any) -> Any:
 
 
 def _s3_cli(client: Any, *args: str, exit_code: int = 0):
-    target = ["--target", f"s3://{_BUCKET}/p.zarr", "--product-name", "p.zarr"]
+    target = ["--target", f"s3://{_BUCKET}/p.zarr"]
+    if args[:2] == ("migrate", "adopt"):
+        target += ["--product-name", "p.zarr"]
     env = s3_env(
         client.meta.endpoint_url, access_key="testing", secret_key="testing", region="us-east-1"
     )

@@ -71,7 +71,7 @@ def _invoke(tmp_path: Path, product: str, group: str) -> Result:
     product_arg = product if "://" in product else (tmp_path / product).as_uri()
     with patch("firecube.cli.advise.get_storage_config", return_value=cfg):
         return runner.invoke(
-            cli, ["advise", "batch-size", "--product", product_arg, "--group", group]
+            cli, ["advise", "batch-size", "--target", product_arg, "--group", group]
         )
 
 

@@ -16,7 +16,8 @@
 
 `create_archive` writes a product or a plain Zarr store to one local archive file.
 `restore_archive` writes a local archive back to a product.
-Both hold the product's maintenance claim while they write.
+`read_restore_source` checks an archive and reads the product label it records.
+Both writers hold the product's maintenance claim while they write.
 Bookkeeping warnings go to the caller's `warn` callable.
 """
 
@@ -40,6 +41,7 @@ from firecube.core.errors import (
     ClaimConflictError,
     FirecubeError,
     Message,
+    ProductLabelMismatchError,
     ProductUnderMaintenanceError,
 )
 from firecube.ingestor.runtime.recording import SpanRecorder
@@ -52,6 +54,7 @@ from firecube.ingestor.types.context import (
 from firecube.ingestor.types.result_metrics import OutputPaths
 
 if TYPE_CHECKING:
+    from firecube.core.archive.zip.backup_chain import ChainBackup
     from firecube.core.storage.session import StorageSession
 
 _ARCHIVE_FORMATS = ("zip", "tensogram")
@@ -118,6 +121,27 @@ class ArchiveCreateResult:
     file_size_bytes: int
     run_id: str | None
     tgm_summary: Mapping[str, Any] | None
+
+
+@dataclass(frozen=True)
+class ArchiveRestoreSource:
+    """A local archive checked for `restore_archive`, and the product label it records.
+
+    Attributes:
+        archive_path: The absolute local path of the archive file.
+        archive_format: `"zip"` or `"tensogram"`.
+        product_label: The label the archive records, or `None` when it records none.
+        label_stamp: The bytes of the zip archive's `.firecube/product.json` entry, or
+            `None` when it holds none. A .tgm archive holds none.
+        backup_chain: The checked backup chain of an incremental zip backup, the full
+            backup first, or `None` for any other archive.
+    """
+
+    archive_path: str
+    archive_format: str
+    product_label: str | None
+    label_stamp: bytes | None
+    backup_chain: tuple[ChainBackup, ...] | None
 
 
 @dataclass(frozen=True)
@@ -532,6 +556,73 @@ def create_archive(
     )
 
 
+def read_restore_source(
+    *, archive: str, archive_path: str, archive_format: str
+) -> ArchiveRestoreSource:
+    """Check a local archive for `restore_archive` and read the product label it records.
+
+    Reads only. The call checks a zip archive's marker, and an incremental backup's whole
+    backup chain. A zip archive's `.firecube/product.json` entry names its label, else
+    its agreeing run records do. A backup chain takes its full backup's label. A .tgm
+    archive's control-plane message names its label.
+
+    Args:
+        archive: The archive reference the errors name.
+        archive_path: The absolute local path of the archive file.
+        archive_format: `"zip"` or `"tensogram"`.
+
+    Returns:
+        The checked archive and its label, `None` when it records none.
+
+    Raises:
+        ValueError: `archive_format` is unknown.
+        BackupChainError: A zip marker is unreadable or malformed, or the backup chain of
+            an incremental backup is broken or holds a backup with another label.
+        ArchiveConversionError: The label stamp or the control-plane message is malformed,
+            or the tensogram extras are missing.
+        ProductLabelConflictError: A zip archive without a label stamp holds run records
+            that name several labels.
+    """
+    if archive_format not in _ARCHIVE_FORMATS:
+        raise ValueError(f"archive_format must be 'zip' or 'tensogram', not {archive_format!r}")
+    # Call-time imports: callers and tests replace these functions on their modules.
+    from firecube.core.archive.tensogram.restore import tgm_product_label
+    from firecube.core.archive.zip.archive import zip_label_stamp, zip_product_label
+    from firecube.core.archive.zip.backup_chain import (
+        admit_marker,
+        backup_chain_label,
+        backup_chain_label_stamp,
+        resolve_backup_chain,
+    )
+    from firecube.core.archive.zip.marker import MODE_INCREMENTAL
+
+    # A present marker is checked, and an incremental backup with its whole backup chain,
+    # so a refusal comes before the restore writes anything. An invalid marker never reads
+    # as a full backup.
+    marker = admit_marker(archive_path) if archive_format == "zip" else None
+    backup_chain = None
+    stamp = None
+    try:
+        if archive_format == "tensogram":
+            label = tgm_product_label(archive_path)
+        elif marker is not None and marker["mode"] == MODE_INCREMENTAL:
+            backup_chain = tuple(resolve_backup_chain(archive_path))
+            label = backup_chain_label(backup_chain)
+            stamp = backup_chain_label_stamp(backup_chain)
+        else:
+            label = zip_product_label(archive_path)
+            stamp = zip_label_stamp(archive_path)
+    except (ImportError, ValueError) as exc:
+        raise ArchiveConversionError(_error_text(exc), archive=archive) from exc
+    return ArchiveRestoreSource(
+        archive_path=archive_path,
+        archive_format=archive_format,
+        product_label=label,
+        label_stamp=stamp,
+        backup_chain=backup_chain,
+    )
+
+
 def restore_archive(
     *,
     session: StorageSession,
@@ -542,6 +633,7 @@ def restore_archive(
     overwrite: bool = False,
     report: Callable[[str], None] = _ignore_line,
     warn: Callable[[str], None] = _ignore_line,
+    source: ArchiveRestoreSource | None = None,
 ) -> ArchiveRestoreResult:
     """Restore a local .zip or .tgm archive into the session's product.
 
@@ -559,6 +651,13 @@ def restore_archive(
     A zip archive's marker entry, when present, is checked before the claim and the run.
     A marker whose mode is full, and an archive without a marker, take the zip restore.
 
+    The session's label must equal the label the archive records, as
+    `read_restore_source` reads it; an archive that records none takes the session's.
+    The call refuses a session or a target with another label before the claim and the
+    run. No write
+    replaces the target's label stamp. An unstamped target takes the zip archive's stamp
+    before the claim.
+
     Args:
         session: The storage session bound to the target product.
         archive: The archive reference the run records.
@@ -568,44 +667,78 @@ def restore_archive(
         overwrite: Replace an existing store at `target`.
         report: Receives `"restored group: <group>"` after each tensogram group.
         warn: Receives each bookkeeping warning line, "Warning: " included.
+        source: The archive as `read_restore_source` read it from `archive_path`; the
+            call reads it itself when `None`.
 
     Returns:
         The recorded run id and the restore's summary.
 
     Raises:
-        ValueError: `archive_format` is unknown; the call reads and writes nothing.
+        ValueError: `archive_format` is unknown, or `source` was read from another path
+            or format; the call reads and writes nothing.
+        ProductLabelMismatchError: The archive or the target records another label than
+            the session; the call refuses it before the claim and records no run.
+        ProductLabelConflictError: The archive or an unstamped target holds run records
+            that name several labels; the call refuses it before the claim.
         ArchiveClaimError: The product's claims refuse the restore, or another owner holds
             its exclusive maintenance claim; the call tries to record the run as started and
             failed, once each.
-        ArchiveConversionError: The restore raises `FileExistsError`, `ImportError` or
-            `ValueError`, or produces no output; the call first tries to record the run as failed.
+        ArchiveConversionError: `read_restore_source` refuses the archive, before the claim;
+            or the restore raises `FileExistsError`, `ImportError` or `ValueError`, or
+            produces no output, and the call first tries to record the run as failed.
         BackupChainError: A zip marker is unreadable or malformed, the backup chain of an
-            incremental backup is broken, or a local target holds a symlink on a key's path;
-            the call refuses it before the claim and records no run. A backup chain check
-            that fails inside the run raises it after the call records the run failed.
+            incremental backup is broken or holds a backup with another label, or a local
+            target holds a symlink on a key's path; the call refuses it before the claim
+            and records no run. A backup chain check that fails inside the run raises it
+            after the call records the run failed.
     """
     if archive_format not in _ARCHIVE_FORMATS:
         raise ValueError(f"archive_format must be 'zip' or 'tensogram', not {archive_format!r}")
+    if source is not None and (source.archive_path, source.archive_format) != (
+        archive_path,
+        archive_format,
+    ):
+        raise ValueError(
+            f"source was read from {source.archive_path!r} as {source.archive_format!r}, "
+            f"not from {archive_path!r} as {archive_format!r}"
+        )
     is_zip = archive_format == "zip"
     # Call-time imports: callers and tests replace these converters on their modules.
+    from firecube.core.archive._common import refuse_other_product_label, seed_product_label
     from firecube.core.archive.tensogram.restore import tgm_to_zarr
     from firecube.core.archive.zip.archive import zip_to_zarr
     from firecube.core.archive.zip.backup_chain import (
-        admit_marker,
         refuse_symlinked_target,
-        resolve_backup_chain,
         restore_backup_chain,
     )
-    from firecube.core.archive.zip.marker import MODE_INCREMENTAL
 
-    # A present marker is checked before the claim and the run, and an incremental backup
-    # with its whole backup chain and the target's key paths, so a refusal writes nothing
-    # to the target, not even a run record. An invalid marker never reads as a full backup.
-    marker = admit_marker(archive_path) if is_zip else None
-    backup_chain = None
-    if marker is not None and marker["mode"] == MODE_INCREMENTAL:
-        backup_chain = resolve_backup_chain(archive_path)
+    # The archive, its backup chain, its label and the target's label and key paths are
+    # checked before the claim and the run, so a refusal writes nothing to the target, not
+    # even a run record.
+    if source is None:
+        source = read_restore_source(
+            archive=archive, archive_path=archive_path, archive_format=archive_format
+        )
+    if source.product_label is not None and source.product_label != session.product.product_name:
+        raise ProductLabelMismatchError(
+            Message(
+                "Product label {given!r} is refused: the archive {archive} records the "
+                "label {product!r}.",
+                given=session.product.product_name,
+                archive=archive,
+                product=source.product_label,
+            ),
+            given=session.product.product_name,
+            recorded=source.product_label,
+        )
+    refuse_other_product_label(session, session.product.product_name)
+    backup_chain = source.backup_chain
+    if backup_chain is not None:
         refuse_symlinked_target(backup_chain, session)
+    if source.product_label is not None and source.label_stamp is not None:
+        # The claim below stamps an unstamped target; the archive's stamp goes first, so
+        # the restored product keeps the stamp it was archived with.
+        seed_product_label(session, source.product_label, source.label_stamp)
 
     # Archive restore is recorded as a first-class WAL run, so the audit trail
     # shows when a product was restored from an archive, what the source archive

@@ -22,11 +22,11 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
-from firecube.cli._product import resolve_product_identity
+from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
-    product_name_option,
     storage_driver_option,
     storage_type_option,
+    target_uri_option,
 )
 from firecube.cli._uri_policy import (
     apply_smart_default,
@@ -44,31 +44,22 @@ from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
     epilog="""\b
 Examples:
   Default multi-resolution layers for a local Zarr product:
-  firecube zarr multires --target file:///p.zarr --product-name p \\
-      --storage-type local --storage-driver fsspec
+  firecube zarr multires --target file:///data/p.zarr
 
 \b
   Explicit resolution levels:
-  firecube zarr multires --target s3://b/p.zarr --product-name p \\
-      --storage-type s3 --storage-driver fsspec -r 1.0 -r 0.5
+  firecube zarr multires --target s3://b/p.zarr --resolutions 1.0 --resolutions 0.5
 
 \b
   Dataset in a group, with coordinates not named lat and lon:
-  firecube zarr multires --target file:///p.zarr --product-name p \\
-      --storage-type local --storage-driver fsspec -g data \\
+  firecube zarr multires --target file:///data/p.zarr --group data \\
       --lat-name latitude --lon-name longitude
 
 \b
 See also: firecube zarr validate
 """,
 )
-@click.option(
-    "-t",
-    "--target",
-    "target",
-    required=True,
-    help="Target product URI required (file:///abs/path or s3://bucket/key); scheme must match --storage-type.",
-)
+@target_uri_option(tier="write")
 @click.option(
     "--resolutions",
     "resolutions",
@@ -98,7 +89,6 @@ See also: firecube zarr validate
     show_default=True,
     help="Name of the 1-D longitude coordinate to coarsen.",
 )
-@product_name_option(required=True)
 @storage_type_option(
     required=False, extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3)."
 )
@@ -111,9 +101,8 @@ def multires(
     group: str | None,
     lat_name: str,
     lon_name: str,
-    product_name: str,
-    storage_type: str,
-    storage_driver: str,
+    storage_type: str | None,
+    storage_driver: str | None,
     storage_anonymous: bool | None,
 ) -> None:
     """Build multi-resolution Zarr pyramid for an existing product."""
@@ -129,11 +118,7 @@ def multires(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=product_name,
-    )
+    identity = recorded_identity(target_uri, format="zarr", driver=driver_config)
     session = StorageSession(
         StorageBinding(
             identity=identity,

@@ -24,7 +24,7 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
-from firecube.cli._product import resolve_product_identity
+from firecube.cli._product import recorded_identity, resolve_product_identity
 from firecube.cli._shared_options import (
     product_name_option,
     storage_driver_option,
@@ -76,11 +76,11 @@ def echo_progress(line: str) -> None:
     click.echo(render(line), err=True)
 
 
-def migrate_options(tier: Literal["write", "inspect"]) -> Any:
+def migrate_options(tier: Literal["write", "inspect"], *, product_name: bool = False) -> Any:
     """Return the decorator that adds the options every product-bound migrate command takes.
 
-    The options are ``--target``, ``--product-name``, ``--storage-type``,
-    ``--storage-driver``, ``--storage-anonymous`` and ``--format``.
+    The options are ``--target``, ``--storage-type``, ``--storage-driver``,
+    ``--storage-anonymous`` and ``--format``. With ``product_name``, ``--product-name`` joins them.
     """
 
     def decorator(func: Any) -> Any:
@@ -90,7 +90,8 @@ def migrate_options(tier: Literal["write", "inspect"]) -> Any:
             required=False,
             extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3).",
         )(func)
-        func = product_name_option(required=True)(func)
+        if product_name:
+            func = product_name_option(required=True)(func)
         return target_uri_option(tier)(func)
 
     return decorator
@@ -101,7 +102,7 @@ def open_session(
     *,
     command: str,
     target: str,
-    product_name: str,
+    product_name: str | None = None,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -109,10 +110,13 @@ def open_session(
 ) -> StorageSession:
     """Admit ``--target`` and return the storage session bound to the product.
 
+    The session carries ``product_name`` when given, else the label the store records.
+
     Raises:
         click.BadParameter: The target fails the URI rule.
         click.UsageError: The storage type contradicts the scheme, the resolver refuses the
-            URI, or a writing command is given anonymous access.
+            URI, the store records no label and none is given, or a writing command is given
+            anonymous access.
     """
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
@@ -130,17 +134,12 @@ def open_session(
             f"{command} writes under .firecube/ and needs write access; "
             "anonymous storage access is not supported."
         )
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=product_name,
-    )
-    return StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=StorageDriverConfig.from_storage_config(storage_config),
-        )
-    )
+    driver = StorageDriverConfig.from_storage_config(storage_config)
+    if product_name is None:
+        identity = recorded_identity(target_uri, format="zarr", driver=driver)
+    else:
+        identity = resolve_product_identity(target_uri, format="zarr", product_name=product_name)
+    return StorageSession(StorageBinding(identity=identity, driver=driver))
 
 
 def _split_pair(item: str, flag: str) -> tuple[str, str]:

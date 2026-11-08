@@ -24,29 +24,25 @@ from firecube.cli.main import cli
 
 
 def test_renamed_flags_show_replacement_hint(subtests) -> None:
+    tgt = ("--target (-t)", "product URI with --target")
+    out = ("Leave it out", "records the product label")
     rows = {
-        "ingest_source_shows_input_data_hint": (
-            ["ingest", "cli_test_plugin", "--source", "/tmp/data"],
-            "--source",
-            "--input-data (-i)",
-            "strict-URI refactor",
-        ),
-        "archive_create_target_shows_archive_hint": (
-            ["archive", "create", "--target", "/tmp/x.tgm", "--source", "file:///tmp/p.zarr"],
-            "--target",
-            "--archive (-a)",
-            "tgm artifact output",
-        ),
-        "archive_restore_source_shows_archive_hint": (
-            ["archive", "restore", "--source", "/tmp/x.tgm", "--target", "file:///tmp/p.zarr"],
-            "--source",
-            "--archive (-a)",
-            "tgm artifact path",
-        ),
+        "ingest_source": ("ingest cli_test_plugin --source /d", "--input-data (-i)", "strict-URI"),
+        "restore_source": ("archive restore --source /x.tgm", "--archive (-a)", "tgm artifact"),
+        "archive_create_source": ("archive create --source /p", *tgt),
+        "archive_create_short_s": ("archive create -s /p", *tgt),
+        "zarr_validate_product": ("zarr validate --product /p", *tgt),
+        "advise_short_p": ("advise batch-size -p /p", *tgt),
+        "chunks_short_n": ("chunks list -n /p", *tgt),
+        "chunks_product_name": ("chunks list --product-name /p", *tgt),
+        "ingest_short_n": ("ingest cli_test_plugin -n x", "--product-name", "no short form"),
+        "snapshot_product_name": ("snapshot take --product-name x", *out),
+        "chunks_quiet": ("chunks list --quiet", "Leave it out", "no longer take it"),
     }
-    for row_id, (args, flag, replacement, reason) in rows.items():
+    for row_id, (command, replacement, reason) in rows.items():
+        flag = next(word for word in command.split() if word.startswith("-"))
         with subtests.test(msg=row_id):
-            result = CliRunner().invoke(cli, args)
+            result = CliRunner().invoke(cli, command.split())
             assert result.exit_code == 2
             for expected in ("No such option", flag, "Hint:", replacement, reason):
                 assert expected in result.output
@@ -59,28 +55,32 @@ def test_unknown_flag_without_registry_entry_has_no_hint() -> None:
     assert "Hint:" not in result.output
 
 
-def test_chunks_product_still_uses_click_native_suggestion() -> None:
-    """--product -> --product-name is auto-suggested by Click; we don't override."""
-    runner = CliRunner()
-    result = runner.invoke(cli, ["chunks", "list", "--product", "x"])
+def test_chunks_product_has_no_registry_hint_and_gets_clicks_suggestion() -> None:
+    """The registry has no ``--product`` entry for ``chunks``, so Click's own suggestion shows.
+
+    Plan 2026-11-06 Decisions row "Product URI" says each removed ``-p/--product`` gets a hint;
+    ``chunks`` never took ``--product``, and the registry (``_rename_hints.py``) has no row for
+    it. The suggestion is Click's, ``--all-products``, which is not the replacement (``--target``).
+    """
+    result = CliRunner().invoke(cli, ["chunks", "list", "--product", "x"])
     assert result.exit_code == 2
     output = result.output
     assert "No such option" in output
     assert "--product" in output
     assert "Did you mean" in output
-    assert "--product-name" in output
+    assert "--all-products" in output
     assert "Hint:" not in output
 
 
 def test_valid_flags_on_archive_commands_get_no_hint(subtests) -> None:
-    """--target is valid on archive restore; --source is valid on archive create."""
+    """--target is valid on archive restore and archive create."""
     rows = {
-        "old_target_on_archive_restore_no_hint": (
+        "target_on_archive_restore_no_hint": (
             ["restore", "--archive", "file:///tmp/x.tgm", "--target", "file:///tmp/p.zarr"],
             "[dry-run] Would restore:",
         ),
-        "old_source_on_archive_create_no_hint": (
-            ["create", "--source", "file:///tmp/p.zarr", "--archive", "file:///tmp/x.tgm"],
+        "target_on_archive_create_no_hint": (
+            ["create", "--target", "file:///tmp/p.zarr", "--archive", "file:///tmp/x.tgm"],
             "[dry-run] Would archive:",
         ),
     }

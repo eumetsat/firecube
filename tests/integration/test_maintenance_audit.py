@@ -279,6 +279,8 @@ def test_archive_restore_emits_maintenance_lifecycle_events(tmp_path):
             archive_uri,
             "--target",
             restored_uri,
+            "--product-name",
+            "restored.zarr",
             "--storage-type",
             "local",
             "--storage-driver",
@@ -329,7 +331,7 @@ def _zip_create_args(tmp_path: Path) -> list[str]:
         manager.close()
     out = (tmp_path / "out.zip").as_uri()
     flags = "--archive-format zip --storage-type local --storage-driver fsspec"
-    return f"archive create --source {product.as_uri()} --archive {out} {flags}".split()
+    return f"archive create --target {product.as_uri()} --archive {out} {flags}".split()
 
 
 def test_archive_create_fails_when_record_cannot_be_written(tmp_path, monkeypatch):
@@ -378,6 +380,8 @@ def test_archive_restore_failure_emits_maintenance_failed(tmp_path):
             StorageUri.from_local_path(bogus_archive).to_str(),
             "--target",
             StorageUri.from_local_path(restored).to_str(),
+            "--product-name",
+            "restored.zarr",
             "--storage-type",
             "local",
             "--storage-driver",
@@ -429,6 +433,7 @@ def test_restore_error_survives_failing_bookkeeping(tmp_path, monkeypatch, faili
         monkeypatch.setattr(FsspecFilesystem, "compare_delete", compare_delete)
     args = ["archive", "restore", "--archive", archive.as_uri(), "--storage-type", "local"]
     args += ["--target", (tmp_path / "r.zarr").as_uri(), "--storage-driver", "fsspec"]
+    args += ["--product-name", "r.zarr"]
     result = CliRunner().invoke(cli, args, env=_local_env(tmp_path))
     assert result.exit_code != 0
     assert "No Zarr v3 root metadata found" in result.output

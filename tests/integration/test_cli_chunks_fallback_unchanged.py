@@ -12,35 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""T15: storage-config fallback stays GREEN for non-target chunks subcommands.
+"""The ``[storage]`` base URI serves ``--all-products`` scans, and only those.
 
-T8 added an early-return branch in
-``firecube.cli.chunks._manager.resolve_manager`` for the case where both
-``--target`` and ``--product-name`` are provided. The historical
-storage-config fallback path (no ``--target``) MUST remain unchanged.
+``chunks list``, ``chunks delete`` and ``chunks claims list`` read the
+configured base URI when given ``--all-products``; ``chunks compact status``
+takes ``--target`` and uses the configuration for driver settings only.
 
-These tests pin that contract for the five chunks subcommands that do NOT
-expose ``--target``:
-
-- ``chunks list``
-- ``chunks delete``
-- ``chunks compact status``
-- ``chunks claims list``
-
-Each test configures storage via a ``[storage]`` section in a temporary
-TOML, optionally pre-populates control-plane state under the resolved
-root using a binding pointing at the same on-disk location the fallback
-will pick, and invokes the subcommand without ``--target``. Assertions
-check a Firecube-visible effect (output content, control-plane state) —
-never just the exit code.
-
-Why share the resolved root? The fallback synthesises a binding at
-``<target_path>/__firecube_controlplane__`` whose ``_base_uri`` is
-``<target_path>``. ``_ControlRootResolver`` then routes any non-synthetic
-product through ``ensure_product_uri(<target_path>, product)``, which
-puts the per-product control root at ``<target_path>/<product>/.firecube``.
-The test pre-population uses ``make_test_binding(<target_path>,
-product=<product>)``, which lands at the same control root.
+Each test configures storage via a ``[storage]`` section in a temporary TOML,
+pre-populates control-plane state under ``<target_path>/<product>/.firecube/``
+with ``make_test_binding(<target_path>, product=<product>)``, and checks a
+Firecube-visible effect (output content, control-plane state), never just the
+exit code.
 """
 
 from __future__ import annotations
@@ -142,7 +124,7 @@ def _populate_completed_span(tmp_path: Path, *, product: str, workspace: Path) -
 
 
 def test_chunks_list_fallback_finds_chunks(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """``chunks list`` without ``--target`` reads the storage-config target."""
+    """``chunks list --all-products`` reads the storage-config base and reports the label."""
     product = "my_product"
     workspace = tmp_path / "ws"
     workspace.mkdir()
@@ -159,8 +141,7 @@ def test_chunks_list_fallback_finds_chunks(monkeypatch: pytest.MonkeyPatch, tmp_
             "--workspace",
             str(workspace),
             "list",
-            "--product-name",
-            product,
+            "--all-products",
             "--format",
             "json",
         ],
@@ -175,7 +156,7 @@ def test_chunks_list_fallback_finds_chunks(monkeypatch: pytest.MonkeyPatch, tmp_
 
 
 def test_chunks_delete_dry_run_fallback(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """``chunks delete --dry-run`` resolves chunks via the storage-config target."""
+    """``chunks delete --all-products --dry-run`` plans from the storage-config base."""
     product = "my_product"
     workspace = tmp_path / "ws"
     workspace.mkdir()
@@ -197,8 +178,7 @@ def test_chunks_delete_dry_run_fallback(monkeypatch: pytest.MonkeyPatch, tmp_pat
             "--workspace",
             str(workspace),
             "delete",
-            "--product-name",
-            product,
+            "--all-products",
             "--dry-run",
             "--yes-i-really-mean-it",
         ],
@@ -213,12 +193,13 @@ def test_chunks_delete_dry_run_fallback(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 
 def test_chunks_compact_status_fallback(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """``chunks compact status`` reports against the storage-config target."""
+    """``chunks compact status --target`` reports no snapshot on a product that has none."""
     product = "my_product"
     workspace = tmp_path / "ws"
     workspace.mkdir()
     _clean_storage_env(monkeypatch)
     config_file = _write_config(tmp_path)
+    _populate_completed_span(tmp_path, product=product, workspace=workspace)
 
     result = CliRunner().invoke(
         cli,
@@ -230,8 +211,8 @@ def test_chunks_compact_status_fallback(monkeypatch: pytest.MonkeyPatch, tmp_pat
             str(workspace),
             "compact",
             "status",
-            "--product-name",
-            product,
+            "--target",
+            (tmp_path / product).as_uri(),
             "--format",
             "json",
         ],
@@ -245,8 +226,7 @@ def test_chunks_compact_status_fallback(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 
 def test_chunks_claims_list_fallback(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """``chunks claims list`` enumerates claims at the storage-config target."""
-    product = "my_product"
+    """``chunks claims list --all-products`` over an empty base reports no claims."""
     workspace = tmp_path / "ws"
     workspace.mkdir()
     _clean_storage_env(monkeypatch)
@@ -262,8 +242,7 @@ def test_chunks_claims_list_fallback(monkeypatch: pytest.MonkeyPatch, tmp_path: 
             str(workspace),
             "claims",
             "list",
-            "--product-name",
-            product,
+            "--all-products",
             "--format",
             "json",
         ],

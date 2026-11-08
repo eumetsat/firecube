@@ -537,7 +537,7 @@ class ResumeGuard:
                 "{abandon}\nAbandoning the run also releases the write claims it alone owns.",
                 abandon=Operation(
                     "abandon_run",
-                    product_name=product_uri,
+                    target=product_uri,
                     run_id=run_id,
                     reason=Placeholder('"<reason>"'),
                 ),

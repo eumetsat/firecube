@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import click
 
@@ -31,6 +31,8 @@ from firecube.cli.migrate._common import (
     open_session,
 )
 from firecube.cli.plugins.registry import load_migration_steps
+from firecube.core.controlplane.product_label import check_product_label, stamp_product_label
+from firecube.core.filesystem import StorageFilesystemFull
 from firecube.ingestor.runtime.migrate import (
     AdoptionResult,
     MigrationResult,
@@ -79,15 +81,15 @@ def _adoption_payload(result: AdoptionResult) -> dict[str, Any]:
     epilog="""\b
 Examples:
   # show what setting one root attribute would change, and write nothing
-  firecube migrate run firecube:set-attrs --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --set title=Daily --dry-run
+  firecube migrate run firecube:set-attrs --target file:///data/products/MY_PRODUCT.zarr --set title=Daily --dry-run
 
 \b
   # set an attribute and remove another on the root group
-  firecube migrate run firecube:set-attrs --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --set title=Daily --remove comment
+  firecube migrate run firecube:set-attrs --target file:///data/products/MY_PRODUCT.zarr --set title=Daily --remove comment
 
 \b
   # run a step that a plugin installs, with one option of that step
-  firecube migrate run my-plugin:fix-units --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --option variable=temperature
+  firecube migrate run my-plugin:fix-units --target file:///data/products/MY_PRODUCT.zarr --option variable=temperature
 
 See also: firecube migrate list, firecube migrate status, firecube snapshot list
 """,
@@ -140,7 +142,6 @@ def run(
     ctx: click.Context,
     step_id: str,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -159,7 +160,7 @@ def run(
     a maintenance run. a store with no control plane is refused: run migrate
     adopt first. a step that already ran is not run again. an interrupted
     run of the step resumes. --dry-run prints the plan and the attribute classes
-    and writes nothing, also on a store with no control plane. pass --allow interpretation or --allow unknown to change
+    and writes nothing. a store that records no product label is refused: run migrate adopt first. pass --allow interpretation or --allow unknown to change
     attributes of that class. with --format json the progress lines go to stderr.
     """
     options = merge_step_options(
@@ -169,7 +170,6 @@ def run(
         ctx,
         command="migrate run",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
@@ -200,7 +200,7 @@ Examples:
 See also: firecube migrate run, firecube migrate status
 """,
 )
-@migrate_options(tier="write")
+@migrate_options(tier="write", product_name=True)
 @click.pass_context
 def adopt(
     ctx: click.Context,
@@ -215,9 +215,10 @@ def adopt(
 
     records the store as an imported product in one adopt run. no Zarr document
     and no chunk is written, and no span history is invented. a store that is
-    already a product stays as it is. adopting a Zarr format 2 store prints a
-    warning, because Firecube cannot append to it. with --format json the progress lines go
-    to stderr.
+    already a product stays as it is, and gets the product label if it records
+    none. a store that records another label is refused. adopting a Zarr format 2
+    store prints a warning, because Firecube cannot append to it. with --format
+    json the progress lines go to stderr.
     """
     session = open_session(
         ctx,
@@ -230,10 +231,16 @@ def adopt(
         writable=True,
     )
     json_out = output_format == "json"
-    result = adopt_product(
-        session=session,
-        report=echo_progress if json_out else echo_report,
-        warn=echo_warning,
-    )
+    report = echo_progress if json_out else echo_report
+    fs = cast(StorageFilesystemFull, session.fs())
+    control_root = session.product.control_root_uri
+    # Refuse another label before anything runs; the library leaves a stamped store untouched.
+    stamped = check_product_label(fs, control_root, product_name)
+    result = adopt_product(session=session, report=report, warn=echo_warning)
+    if result.outcome == "already-product" and stamped is None:
+        # A store with a control plane but no stamp (for example a lone schema.json) is not
+        # adopted again, so the label is recorded here.
+        stamp_product_label(fs, control_root, product_name)
+        report(f"recorded product label {product_name}")
     if json_out:
         echo_json(_adoption_payload(result))

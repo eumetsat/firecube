@@ -35,18 +35,10 @@ CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 @click.option(
     "--workspace", type=click.Path(path_type=Path), help="local workspace directory to use"
 )
-@click.option(
-    "--quiet",
-    "quiet",
-    is_flag=True,
-    default=False,
-    help="Suppress storage configuration banner.",
-)
 @click.pass_context
 def chunks(
     ctx: click.Context,
     workspace: Path | None,
-    quiet: bool,
 ) -> None:
     """inspect and manage chunk records
 
@@ -61,7 +53,6 @@ def chunks(
     ctx.ensure_object(dict)
     if workspace is not None:
         ctx.obj["workspace"] = workspace
-    ctx.obj["chunks_quiet"] = quiet
 
 
 chunks.add_command(list_cmd)

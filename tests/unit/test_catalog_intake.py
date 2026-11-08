@@ -119,7 +119,7 @@ def test_catalog_cli_reports_no_catalogable_groups(tmp_path: Path, monkeypatch) 
         [
             "intake",
             "dummy",
-            "--product",
+            "--target",
             StorageUri.from_local_path(store_root / product).to_str(),
             "--output",
             StorageUri.from_local_path(store_root / "catalog.yml").to_str(),
@@ -223,7 +223,7 @@ def test_catalog_cli_requires_collection_id() -> None:
     runner = CliRunner()
 
     result = runner.invoke(
-        catalog, ["intake", "dummy", "--product", "p.zarr", "--output", "catalog.yml"]
+        catalog, ["intake", "dummy", "--target", "p.zarr", "--output", "catalog.yml"]
     )
 
     assert result.exit_code != 0
@@ -276,7 +276,7 @@ def test_catalog_yaml_failure_fallback_writes_json_not_yml(
         [
             "intake",
             "dummy",
-            "--product",
+            "--target",
             StorageUri.from_local_path(store_root / product).to_str(),
             "--output",
             StorageUri.from_local_path(output).to_str(),

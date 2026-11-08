@@ -17,6 +17,7 @@ from __future__ import annotations
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from tests.helpers.chunks import bound
 
 
 class _FakeClaimsManager:
@@ -37,14 +38,19 @@ def test_clear_help_advertises_both_force_and_yes():
     assert "operational bypass" in r.output.lower() or "is_stale" in r.output.lower()
 
 
-def test_clear_force_alone_non_tty_exits_nonzero():
+def test_clear_force_alone_non_tty_exits_nonzero(monkeypatch):
+    manager = _FakeClaimsManager()
+    monkeypatch.setattr(
+        "firecube.cli.chunks._claims.target_product",
+        lambda *args, **kwargs: bound(manager),
+    )
     r = CliRunner().invoke(
         cli,
         [
             "chunks",
             "claims",
             "clear",
-            "-n",
+            "-t",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
             "--domain",
             "TEST_PRODUCT.zarr/maintenance/op",
@@ -54,13 +60,14 @@ def test_clear_force_alone_non_tty_exits_nonzero():
 
     assert r.exit_code != 0
     assert "yes-i-really-mean-it" in r.output.lower() or "confirmation" in r.output.lower()
+    assert manager.cleared == []
 
 
 def test_clear_with_force_and_yes_invokes_manager(monkeypatch):
     manager = _FakeClaimsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._claims.target_product",
+        lambda *args, **kwargs: bound(manager),
     )
 
     r = CliRunner().invoke(
@@ -69,7 +76,7 @@ def test_clear_with_force_and_yes_invokes_manager(monkeypatch):
             "chunks",
             "claims",
             "clear",
-            "-n",
+            "-t",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
             "--domain",
             "TEST_PRODUCT.zarr/maintenance/op",
@@ -86,8 +93,8 @@ def test_clear_with_force_and_yes_invokes_manager(monkeypatch):
 def test_clear_with_yes_only_invokes_manager_without_force(monkeypatch):
     manager = _FakeClaimsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._claims.target_product",
+        lambda *args, **kwargs: bound(manager),
     )
 
     r = CliRunner().invoke(
@@ -96,7 +103,7 @@ def test_clear_with_yes_only_invokes_manager_without_force(monkeypatch):
             "chunks",
             "claims",
             "clear",
-            "-n",
+            "-t",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
             "--domain",
             "TEST_PRODUCT.zarr/maintenance/op",

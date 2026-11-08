@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -23,6 +24,7 @@ from firecube.cli.main import cli
 from firecube.core.config import StorageConfig
 from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.multires import ZarrMultiresBuilder
+from tests.integration.test_cli_index_show import stamp_label
 
 
 def test_multires_subcommand_registered() -> None:
@@ -47,14 +49,14 @@ def test_multires_rejects_missing_target() -> None:
     assert "Missing option '-t' / '--target'" in result.output
 
 
-def test_multires_rejects_missing_product_name() -> None:
+def test_multires_unlabelled_store_refuses_with_adopt_recovery_command(tmp_path: Path) -> None:
     result = CliRunner().invoke(
         cli,
         [
             "zarr",
             "multires",
             "--target",
-            "file:///tmp/fake.zarr",
+            (tmp_path / "fake.zarr").as_uri(),
             "--storage-type",
             "local",
             "--storage-driver",
@@ -62,11 +64,12 @@ def test_multires_rejects_missing_product_name() -> None:
         ],
     )
 
-    assert result.exit_code != 0
-    assert "--product-name" in result.output
+    assert result.exit_code == 2, result.output
+    assert "firecube migrate adopt --target" in result.output
 
 
-def test_multires_invokes_builder() -> None:
+def test_multires_invokes_builder(tmp_path: Path) -> None:
+    stamp_label(tmp_path / "fake.zarr", "fake.zarr")
     with patch("firecube.core.zarr.multires.ZarrMultiresBuilder.build") as mock_build:
         mock_build.return_value = {"layers": ["0.5"]}
 
@@ -76,9 +79,7 @@ def test_multires_invokes_builder() -> None:
                 "zarr",
                 "multires",
                 "--target",
-                "file:///tmp/fake.zarr",
-                "--product-name",
-                "fake.zarr",
+                (tmp_path / "fake.zarr").as_uri(),
                 "--storage-type",
                 "local",
                 "--storage-driver",
@@ -96,8 +97,9 @@ def test_multires_invokes_builder() -> None:
     assert cfg.resolutions == [0.5]
 
 
-def test_multires_cli_passes_explicit_product_name_distinct_from_basename() -> None:
-    """CLI uses --product-name verbatim; URI basename is never inspected."""
+def test_multires_cli_passes_recorded_label_distinct_from_basename(tmp_path: Path) -> None:
+    """CLI uses the recorded label verbatim; URI basename is never inspected."""
+    stamp_label(tmp_path / "store_v2.zarr", "logical_name")
     with patch("firecube.core.zarr.multires.ZarrMultiresBuilder.build") as mock_build:
         mock_build.return_value = {"layers": ["0.5"]}
 
@@ -107,9 +109,7 @@ def test_multires_cli_passes_explicit_product_name_distinct_from_basename() -> N
                 "zarr",
                 "multires",
                 "--target",
-                "file:///data/store_v2.zarr",
-                "--product-name",
-                "logical_name",
+                (tmp_path / "store_v2.zarr").as_uri(),
                 "--storage-type",
                 "local",
                 "--storage-driver",

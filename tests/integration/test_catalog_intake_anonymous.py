@@ -136,7 +136,7 @@ def test_catalog_intake_storage_anonymous_controls_yaml_storage_options(
         "catalog",
         "intake",
         "cli_test_plugin",
-        "--product",
+        "--target",
         product_uri,
         "--output",
         output_path.as_uri(),

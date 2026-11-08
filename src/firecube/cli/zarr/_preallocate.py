@@ -22,11 +22,16 @@ from typing import TYPE_CHECKING, Any, cast
 
 import click
 
+from firecube.cli._command_schemas import check_recorded_label, resolve_product_name
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import echo_rendered, render
-from firecube.cli._input_filters import input_filters_option, resolve_input_filters
+from firecube.cli._input_filters import (
+    input_filters_option,
+    resolve_input_filters,
+)
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._product import resolve_product_identity
+from firecube.cli._shared_options import product_name_option
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import (
     apply_smart_default,
@@ -65,11 +70,12 @@ See also: firecube zarr slots, firecube zarr validate
 )
 @click.argument("plugin")
 @click.option(
+    "-t",
     "--target",
     required=True,
     help="Target product URI required (file:///abs/path or s3://bucket/key).",
 )
-@click.option("--product-name", "product_name", required=True, help="Logical product name.")
+@product_name_option(required=False)
 @click.option(
     "--storage-type",
     "storage_type",
@@ -141,7 +147,7 @@ def preallocate(
     ctx: click.Context,
     plugin: str,
     target: str,
-    product_name: str,
+    product_name: str | None,
     storage_type: str,
     storage_driver: str,
     storage_anonymous: bool | None,
@@ -193,18 +199,18 @@ def preallocate(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=product_name,
-    )
-    binding = StorageBinding(identity=identity, driver=driver_config)
-    session = StorageSession(binding)
-
     plugins = discover_ingestors()
     if plugin not in plugins:
         raise click.ClickException(f"Unknown plugin '{plugin}'.")
     ingestor_cls = cast(type[BaseIngestor], plugins[plugin])
+    identity = resolve_product_identity(
+        target_uri,
+        format="zarr",
+        product_name=resolve_product_name(ctx, plugin, ingestor_cls, product_name),
+    )
+    binding = StorageBinding(identity=identity, driver=driver_config)
+    session = StorageSession(binding)
+    check_recorded_label(binding)
 
     chunk_manager = ChunkManager(binding=binding)
     preallocate_run_id = f"preallocate:{uuid.uuid4().hex[:16]}"

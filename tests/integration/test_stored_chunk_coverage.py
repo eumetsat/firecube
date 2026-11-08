@@ -90,7 +90,7 @@ def _chunk_list(target: Path) -> list[dict[str, Any]]:
         _firecube_command(
             "chunks",
             "list",
-            "--product-name",
+            "--target",
             target.as_uri(),
             "--include-span",
             "--format",

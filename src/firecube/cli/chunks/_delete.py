@@ -16,14 +16,67 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
 from firecube.cli._errors import render
 from firecube.cli._exit_codes import ExitCode
+from firecube.cli._shared_options import all_products_flag, target_uri_option
+from firecube.core.controlplane.types import ChunkInfo, DeletionPlan
 
 from ._common import confirm_deletion, parse_datetime, parse_meta_filters, parse_time_range
-from ._manager import resolve_cli_product, resolve_manager, storage_config_from_ctx
+from ._manager import BoundProduct, require_one_scope, scoped_products, target_product
+
+# The execute_deletion result keys summed, and joined, across the stores of one command.
+_COUNTS = (
+    "would_delete_chunks",
+    "would_delete_size_bytes",
+    "deleted_chunks",
+    "deleted_size_bytes",
+    "records_without_storage",
+)
+_LISTS = ("products", "storage_errors", "manifest_errors")
+
+
+def _store_plan(
+    product: BoundProduct,
+    patterns: list[str | None],
+    selection: dict[str, Any],
+    *,
+    include_metadata: bool,
+) -> DeletionPlan | None:
+    """Plan the deletion in one store, its keys unique across patterns; `None` when none match.
+
+    Raises:
+        UnparseableSpanBoundsError: A `--time-range` filter meets a span whose bounds do not parse.
+    """
+    chunks: list[ChunkInfo] = []
+    manifests: set[str] = set()
+    seen: set[str] = set()
+    for p in patterns:
+        if selection["time_overlaps"] is not None:
+            # The deletion plan leaves unparseable spans out silently; this query makes
+            # the same selection, date window included, but refuses them.
+            product.manager.list_chunks(
+                pattern=p, product=product.label, refuse_unparseable=True, **selection
+            )
+        plan = product.manager.create_deletion_plan(
+            pattern=p, product=product.label, include_metadata=include_metadata, **selection
+        )
+        manifests.update(plan.manifest_files)
+        for chunk in plan.chunks:
+            if chunk.key not in seen:
+                seen.add(chunk.key)
+                chunks.append(chunk)
+    if not chunks:
+        return None
+    return DeletionPlan(
+        chunks=chunks,
+        total_size=sum(chunk.size for chunk in chunks),
+        products_affected={product.label},
+        manifest_files=manifests,
+    )
 
 
 def _no_match_message(*, record_time_options: list[str], time_range: str | None) -> str:
@@ -61,22 +114,22 @@ def _echo_records_without_storage(count: int) -> None:
     epilog="""\b
 Examples:
   # preview what would be deleted (always do this first)
-  firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --dry-run
+  firecube chunks delete -t file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # delete all chunks for a product
-  firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --yes-i-really-mean-it
+  firecube chunks delete -t file:///data/products/MY_PRODUCT.zarr --yes-i-really-mean-it
 
 \b
   # delete chunks in a record-time range
-  firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --range 2024-01-01,2024-03-31 --dry-run
+  firecube chunks delete -t file:///data/products/MY_PRODUCT.zarr --range 2024-01-01,2024-03-31 --dry-run
 
 \b
   # delete spans overlapping a data-time range
-  firecube chunks delete --product-name file:///data/products/MY_PRODUCT.zarr --time-range 2024-01-01:2024-03-31 --dry-run
+  firecube chunks delete -t file:///data/products/MY_PRODUCT.zarr --time-range 2024-01-01:2024-03-31 --dry-run
 
 \b
-  # preview deletions across all products
+  # preview deletions across all products under the [storage] base URI
   firecube chunks delete --all-products --dry-run
 
 \b
@@ -90,14 +143,8 @@ See also: firecube chunks list, firecube chunks delete-span,
 @click.option(
     "--pattern", multiple=True, help="glob pattern to match chunk keys (can specify multiple)"
 )
-@click.option("-n", "--product-name", "product_name", help="Full product URI to delete from.")
-@click.option(
-    "--all-products",
-    "all_products",
-    is_flag=True,
-    default=False,
-    help="Apply to all products (mutually exclusive with --product-name).",
-)
+@target_uri_option("inspect", required=False)
+@all_products_flag
 @click.option(
     "--end-date",
     "end_date",
@@ -147,7 +194,7 @@ See also: firecube chunks list, firecube chunks delete-span,
 def delete_cmd(
     ctx: click.Context,
     pattern,
-    product_name,
+    target: str | None,
     all_products: bool,
     end_date,
     start_date,
@@ -168,16 +215,7 @@ def delete_cmd(
     plane. CAUTION: this operation is destructive and cannot be undone -- it
     removes both control-plane records and the underlying storage files. use
     --dry-run to preview deletions before committing"""
-    if product_name and all_products:
-        raise click.UsageError(
-            "ConflictingScope: --product-name and --all-products are mutually exclusive. "
-            "Provide exactly one."
-        )
-    if not product_name and not all_products:
-        raise click.UsageError(
-            "MissingScope: provide --product-name PRODUCT to target a specific product, "
-            "or --all-products to target all products."
-        )
+    require_one_scope(target, all_products)
 
     if all_products and not dry_run and not yes_i_really_mean_it:
         if not sys.stdin.isatty():
@@ -195,10 +233,6 @@ def delete_cmd(
             "Metadata deletion requested. Re-run with --yes-i-really-mean-it to continue."
         )
 
-    product_name, product_uri = resolve_cli_product(product_name)
-    manager = resolve_manager(
-        ctx, workspace, product_uri, product_name=product_name, product_filesystem=True
-    )
     meta = parse_meta_filters(meta_filters) if meta_filters else None
 
     before_dt = parse_datetime(end_date)
@@ -214,37 +248,20 @@ def delete_cmd(
         after_dt = parse_datetime(start_str.strip())
         before_dt = parse_datetime(end_str.strip())
 
-    plans = []
-    patterns = pattern or [None]
-    for p in patterns:
-        if time_range_dt is not None:
-            # The deletion plan leaves unparseable spans out silently; this
-            # query makes the same selection, date window included, but
-            # refuses them.
-            manager.list_chunks(
-                pattern=p,
-                product=product_name,
-                before=before_dt,
-                after=after_dt,
-                chunk_type=chunk_type,
-                meta=meta,
-                time_overlaps=time_range_dt,
-                refuse_unparseable=True,
-            )
-        plan = manager.create_deletion_plan(
-            pattern=p,
-            product=product_name,
-            before=before_dt,
-            after=after_dt,
-            chunk_type=chunk_type,
-            include_metadata=include_metadata,
-            meta=meta,
-            time_overlaps=time_range_dt,
-        )
-        if plan.chunks:
-            plans.append(plan)
+    selection: dict[str, Any] = {
+        "before": before_dt,
+        "after": after_dt,
+        "chunk_type": chunk_type,
+        "meta": meta,
+        "time_overlaps": time_range_dt,
+    }
+    planned: list[tuple[BoundProduct, DeletionPlan]] = []
+    for product in scoped_products(ctx, workspace, target, all_products, product_filesystem=True):
+        plan = _store_plan(product, pattern or [None], selection, include_metadata=include_metadata)
+        if plan is not None:
+            planned.append((product, plan))
 
-    if not plans:
+    if not planned:
         click.echo(
             _no_match_message(
                 record_time_options=[
@@ -261,47 +278,39 @@ def delete_cmd(
         )
         return
 
-    all_chunks = []
-    affected_products = set()
-    all_manifests = set()
-    for plan in plans:
-        all_chunks.extend(plan.chunks)
-        affected_products.update(plan.products_affected)
-        all_manifests.update(plan.manifest_files)
+    def display(product: BoundProduct) -> str:
+        return f"{product.label} ({product.uri.to_str()})" if all_products else product.label
 
-    seen = set()
-    unique_chunks = []
-    for chunk in all_chunks:
-        key = (chunk.product, chunk.key)
-        if key not in seen:
-            seen.add(key)
-            unique_chunks.append(chunk)
-
-    combined_plan = manager.create_deletion_plan()
-    combined_plan.chunks = unique_chunks
-    combined_plan.total_size = sum(chunk.size for chunk in unique_chunks)
-    combined_plan.products_affected = affected_products
-    combined_plan.manifest_files = all_manifests
-
-    storage_cfg = None if manifest_only or product_uri is not None else storage_config_from_ctx(ctx)
-
+    summary = DeletionPlan(
+        chunks=[chunk for _product, plan in planned for chunk in plan.chunks],
+        total_size=sum(plan.total_size for _product, plan in planned),
+        products_affected={display(product) for product, _plan in planned},
+        manifest_files=set(),
+    )
     if (
         not yes_i_really_mean_it
         and not dry_run
-        and not confirm_deletion(
-            combined_plan, manifest_only=manifest_only, storage_only=storage_only
-        )
+        and not confirm_deletion(summary, manifest_only=manifest_only, storage_only=storage_only)
     ):
         click.echo("Aborted.")
         return
 
-    result = manager.execute_deletion(
-        combined_plan,
-        delete_storage=not manifest_only,
-        delete_manifest=not storage_only,
-        storage_config=storage_cfg,
-        dry_run=dry_run,
-    )
+    result: dict[str, Any] = dict.fromkeys(_COUNTS, 0) | {key: [] for key in _LISTS}
+    for product, plan in planned:
+        # The filesystem bound to the product deletes its objects; no [storage] base is used.
+        outcome = product.manager.execute_deletion(
+            plan,
+            delete_storage=not manifest_only,
+            delete_manifest=not storage_only,
+            storage_config=None,
+            dry_run=dry_run,
+        )
+        for key in _COUNTS:
+            result[key] += outcome.get(key, 0)
+        for key in _LISTS:
+            result[key].extend(outcome.get(key, []))
+        if outcome.get("products_affected"):
+            result["products"].append(display(product))
 
     if dry_run:
         click.echo("\nDRY RUN - Would delete:")
@@ -311,9 +320,8 @@ def delete_cmd(
             size_mb = bytes_count / (1024 * 1024)
             size_gb = bytes_count / (1024 * 1024 * 1024)
             click.echo(f"  Size: {size_gb:.1f} GB" if size_gb >= 1 else f"  Size: {size_mb:.1f} MB")
-        products = result.get("products_affected", [])
-        if products:
-            click.echo(f"  Products: {', '.join(products)}")
+        if result["products"]:
+            click.echo(f"  Products: {', '.join(result['products'])}")
         if not manifest_only:
             _echo_records_without_storage(result["records_without_storage"])
         return
@@ -343,26 +351,20 @@ def delete_cmd(
     epilog="""\b
 Examples:
   # preview span deletion for a product
-  firecube chunks delete-span -n file:///data/products/MY_PRODUCT.zarr --dry-run
+  firecube chunks delete-span -t file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # delete spans for a specific run
-  firecube chunks delete-span -n file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --yes-i-really-mean-it
+  firecube chunks delete-span -t file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --yes-i-really-mean-it
 
 \b
   # force-delete non-aligned spans
-  firecube chunks delete-span -n file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --force --yes-i-really-mean-it
+  firecube chunks delete-span -t file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --force --yes-i-really-mean-it
 
 See also: firecube chunks delete, firecube chunks runs list
 """,
 )
-@click.option(
-    "-n",
-    "--product-name",
-    "product_name",
-    required=True,
-    help="full product URI to delete spans from",
-)
+@target_uri_option("inspect")
 @click.option("--run-id", help="filter span records by run_id")
 @click.option("--batch-id", help="filter span records by batch_id")
 @click.option("-g", "--group", "group_name", help="filter by group (e.g. F120)")
@@ -393,7 +395,7 @@ See also: firecube chunks delete, firecube chunks runs list
 @click.pass_context
 def delete_span_cmd(
     ctx: click.Context,
-    product_name: str,
+    target: str,
     run_id: str | None,
     batch_id: str | None,
     group_name: str | None,
@@ -411,8 +413,8 @@ def delete_span_cmd(
     removes data written as part of a particular ingestion span or run.
     CAUTION: data removed from storage cannot be recovered -- use --dry-run
     first"""
-    product_name, product_uri = resolve_cli_product(product_name)
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
+    product = target_product(ctx, workspace, target)
+    manager, product_name = product.manager, product.label
     meta = parse_meta_filters(meta_filters) if meta_filters else {}
     if run_id:
         meta["run_id"] = run_id

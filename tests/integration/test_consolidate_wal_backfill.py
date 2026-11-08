@@ -46,6 +46,7 @@ from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr._sealing_markers import ATTR_CONSOLIDATED_AT, ATTR_PREALLOCATED
+from tests.integration.test_cli_index_show import stamp_label
 
 pytestmark = pytest.mark.integration
 
@@ -64,6 +65,7 @@ def _build_sealed_cube(
     stamp_consolidated_at: bool,
     count: int = 32,
     chunk_size: int = 16,
+    label: str | None = None,
 ) -> None:
     """Create a cube whose time coord already carries the sealing markers.
 
@@ -86,16 +88,15 @@ def _build_sealed_cube(
     arr.attrs[ATTR_PREALLOCATED] = True
     if stamp_consolidated_at:
         arr.attrs[ATTR_CONSOLIDATED_AT] = _SEALED_AT
+    stamp_label(cube, label or cube.name)
 
 
-def _consolidate_args(cube: Path, product_name: str | None = None) -> list[str]:
+def _consolidate_args(cube: Path) -> list[str]:
     return [
         "zarr",
         "consolidate-time-coord",
         "--target",
         f"file://{cube}",
-        "--product-name",
-        product_name if product_name is not None else cube.name,
         "--storage-type",
         "local",
         "--storage-driver",
@@ -219,20 +220,20 @@ def test_backfilled_seal_blocks_subsequent_ingest(tmp_path: Path) -> None:
     )
 
 
-def test_seal_binds_under_explicit_product_name_not_basename(tmp_path: Path) -> None:
-    """The seal must bind to the explicit ``--product-name``, not the target basename.
+def test_seal_binds_under_recorded_label_not_basename(tmp_path: Path) -> None:
+    """The seal must bind to the label the store records, not the target basename.
 
-    A product name that differs from the cube's directory name is the exact
-    shape the required flag exists for: were any basename inference left in
-    the consolidate path, the seal event would be recorded under the wrong
-    product and the subsequent ingest (using the explicit name) would slip
+    A label that differs from the cube's directory name is the exact shape
+    the recorded label exists for: were any basename inference left in the
+    consolidate path, the seal event would be recorded under the wrong
+    product and the subsequent ingest (using the recorded label) would slip
     past the seal check.
     """
     cube = tmp_path / "other_name.zarr"
     product = "my_product"
-    _build_sealed_cube(cube, stamp_consolidated_at=True)
+    _build_sealed_cube(cube, stamp_consolidated_at=True, label=product)
 
-    seal = CliRunner().invoke(cli, _consolidate_args(cube, product))
+    seal = CliRunner().invoke(cli, _consolidate_args(cube))
     assert seal.exit_code == 0, seal.output
 
     events = _list_seal_events(cube, product)

@@ -61,58 +61,6 @@ class TestBaseUriFromStorageConfig:
         assert _base_uri_from_storage_config(cfg) is None
 
 
-class TestStorageConfigFromCtx:
-    """T16: ``storage_config_from_ctx`` returns the typed ``StorageConfig`` from
-    ctx unchanged. Bridge attrs (``bucket``/``target_path``) are still attached
-    via the runtime resolver, but no fresh dict is materialised."""
-
-    def _ctx_with_storage(self, storage_config: StorageConfig) -> click.Context:
-        return click.Context(click.Command("chunks"), obj={"storage_config": storage_config})
-
-    def test_returns_typed_s3_storage_config_with_bridge_attrs(self) -> None:
-        from firecube.cli.chunks._manager import storage_config_from_ctx
-
-        cfg = StorageConfig(
-            storage_type="s3",
-            endpoint_url="https://s3.example.com",
-            access_key="AK",
-            secret_key="SK",
-            region="eu-central-1",
-        )
-        cfg.bucket = "my-bucket"  # type: ignore[attr-defined]
-
-        ctx = self._ctx_with_storage(cfg)
-        result = storage_config_from_ctx(ctx)
-
-        assert result is cfg
-        assert result.storage_type == "s3"
-        assert result.endpoint_url == "https://s3.example.com"
-        assert result.access_key == "AK"
-        assert result.secret_key == "SK"
-        assert result.region == "eu-central-1"
-        assert getattr(result, "bucket", None) == "my-bucket"
-
-    def test_returns_typed_local_storage_config_with_target_path(self) -> None:
-        from firecube.cli.chunks._manager import storage_config_from_ctx
-
-        cfg = StorageConfig(storage_type="local")
-        cfg.target_path = "/data/products"  # type: ignore[attr-defined]
-
-        ctx = self._ctx_with_storage(cfg)
-        result = storage_config_from_ctx(ctx)
-
-        assert result is cfg
-        assert result.storage_type == "local"
-        assert getattr(result, "target_path", None) == "/data/products"
-
-    def test_raises_when_storage_config_missing(self) -> None:
-        from firecube.cli.chunks._manager import storage_config_from_ctx
-
-        ctx = click.Context(click.Command("chunks"), obj={})
-        with pytest.raises(click.ClickException):
-            storage_config_from_ctx(ctx)
-
-
 class TestCtxDebugLogResolvesWithoutBridgeReads:
     """Smoke test: ``get_storage_config`` resolves and caches without raising
     AttributeError when the resolved ``StorageConfig`` carries the runtime

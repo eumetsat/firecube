@@ -1365,7 +1365,7 @@ def _resume_refusal(
             " To give up the interrupted run, abandon it:\n  {abandon}",
             abandon=Operation(
                 "abandon_run",
-                product_name=product_uri,
+                target=product_uri,
                 run_id=journal.run_id,
                 reason=Placeholder('"<reason>"'),
             ),

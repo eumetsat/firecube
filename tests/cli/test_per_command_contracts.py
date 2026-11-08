@@ -34,7 +34,7 @@ WRITE_STORAGE_CONTRACTS = [
 LOCAL_PRODUCT_CONTRACTS = [
     (path, entry)
     for path, entry in ALL_CONTRACT_CASES
-    if entry.tier in ("inspect", "artifact-output") and "--product" in entry.uri_roles
+    if entry.tier in ("inspect", "artifact-output") and "--target" in entry.uri_roles
 ]
 
 
@@ -57,14 +57,8 @@ def _write_args_without_storage(path: tuple[str, ...], tmp_path: Path) -> list[s
             return ["cli_test_plugin", "--target", target, "--product-name", "pn"]
         case ("zarr", "slots"):
             return ["cli_test_plugin", "--target", target, "--product-name", "pn"]
-        case ("zarr", "multires"):
-            return ["--target", target, "--product-name", "pn"]
-        case ("zarr", "consolidate-time-coord"):
-            return ["--target", target]
         case ("zarr", "preallocate"):
             return ["cli_test_plugin", "--target", target, "--product-name", "pn"]
-        case ("migrate", "run"):
-            return ["firecube:set-attrs", "--target", target]
         case ("migrate", "adopt"):
             return ["--target", target]
         case ("release", "create"):
@@ -104,28 +98,6 @@ def _write_args_with_required_storage(path: tuple[str, ...], tmp_path: Path) -> 
                 "--write-mode",
                 "direct",
             ]
-        case ("zarr", "multires"):
-            return [
-                "--target",
-                target,
-                "--product-name",
-                "pn",
-                "--storage-type",
-                "local",
-                "--storage-driver",
-                "fsspec",
-            ]
-        case ("zarr", "consolidate-time-coord"):
-            return [
-                "--target",
-                target,
-                "--product-name",
-                "pn",
-                "--storage-type",
-                "local",
-                "--storage-driver",
-                "fsspec",
-            ]
         case ("zarr", "preallocate"):
             return [
                 "cli_test_plugin",
@@ -140,7 +112,7 @@ def _write_args_with_required_storage(path: tuple[str, ...], tmp_path: Path) -> 
                 "--write-mode",
                 "direct",
             ]
-        case ("migrate", "run") | ("migrate", "adopt") | ("release", "create"):
+        case ("migrate", "adopt"):
             return [*_write_args_without_storage(path, tmp_path), "--product-name", "pn"]
         case _:
             raise AssertionError(f"unexpected write-tier command: {path!r}")
@@ -159,25 +131,25 @@ def _local_product_args(
     tmp_local_zarr: Path,
     tmp_path: Path,
 ) -> list[str]:
-    if "--product" not in entry.uri_roles:
+    if "--target" not in entry.uri_roles:
         raise AssertionError(f"command has no product input: {path!r}")
 
     product_uri = tmp_local_zarr.as_uri()
     match path:
         case ("zarr", "validate"):
-            return ["-p", product_uri, "-g", "g1"]
+            return ["-t", product_uri, "-g", "g1"]
         case ("parquet", "validate"):
             parquet_path = tmp_path / "x.parquet"
             _write_parquet(parquet_path)
-            return ["-p", parquet_path.as_uri()]
+            return ["-t", parquet_path.as_uri()]
         case ("parquet", "consolidate"):
             parquet_path = tmp_path / "x.parquet"
             _write_parquet(parquet_path)
-            return ["-p", parquet_path.as_uri(), "-o", (tmp_path / "out.parquet").as_uri()]
+            return ["-t", parquet_path.as_uri(), "-o", (tmp_path / "out.parquet").as_uri()]
         case ("catalog", "intake"):
             return [
                 "cli_test_plugin",
-                "-p",
+                "-t",
                 product_uri,
                 "-o",
                 (tmp_path / "catalog.yaml").as_uri(),
@@ -185,9 +157,9 @@ def _local_product_args(
                 "test-coll",
             ]
         case ("advise", "batch-size"):
-            return ["-p", product_uri, "-g", "g1"]
+            return ["-t", product_uri, "-g", "g1"]
         case ("advise", "compliance"):
-            return ["--profile", "cf-18", "-p", product_uri, "-g", "g1"]
+            return ["--profile", "cf-18", "-t", product_uri, "-g", "g1"]
         case _:
             raise AssertionError(f"unexpected inspect/artifact-output command: {path!r}")
 
@@ -240,7 +212,7 @@ def test_contract_help_mentions_declared_flags(path: tuple[str, ...], entry: Con
 def test_release_create_refuses_misused_retention_options(
     extra: list[str], refusal: str, tmp_path: Path
 ) -> None:
-    args = _write_args_with_required_storage(("release", "create"), tmp_path)
+    args = _write_args_without_storage(("release", "create"), tmp_path)
     result = CliRunner().invoke(cli, ["release", "create", *args, *extra])
 
     assert result.exit_code == 2, result.output
@@ -249,12 +221,14 @@ def test_release_create_refuses_misused_retention_options(
 
 @pytest.mark.contract
 def test_release_create_admits_a_file_uri_archive(tmp_path: Path) -> None:
-    args = _write_args_with_required_storage(("release", "create"), tmp_path)
+    args = _write_args_without_storage(("release", "create"), tmp_path)
     archive = tmp_path / "r.zip"
     result = CliRunner().invoke(cli, ["release", "create", *args, "--archive", archive.as_uri()])
 
-    assert result.exit_code == 1, result.output
-    assert "has no control plane; adopt it before creating a release" in result.output
+    # The archive option is admitted; the unlabelled store is then refused by the label read.
+    assert result.exit_code == 2, result.output
+    assert "Invalid value for '--archive'" not in result.output
+    assert "records no product label" in result.output
     assert not archive.exists()
     assert not (tmp_path / "out.zarr").exists()
 
@@ -262,9 +236,7 @@ def test_release_create_admits_a_file_uri_archive(tmp_path: Path) -> None:
 @pytest.mark.contract
 def test_release_verify_sample_refuses_zero(tmp_path: Path) -> None:
     target = (tmp_path / "out.zarr").as_uri()
-    result = CliRunner().invoke(
-        cli, ["release", "verify", "--target", target, "--product-name", "pn", "--sample", "0"]
-    )
+    result = CliRunner().invoke(cli, ["release", "verify", "--target", target, "--sample", "0"])
 
     assert result.exit_code == 2, result.output
     assert "Invalid value for '--sample'" in result.output

@@ -61,6 +61,7 @@ from firecube.core.zarr._sealing_markers import (
     ATTR_PREALLOCATED,
 )
 from firecube.core.zarr.coord_consolidation import consolidate_time_coords
+from tests.integration.test_cli_index_show import stamp_label
 
 pytestmark = pytest.mark.integration
 
@@ -135,13 +136,13 @@ def _write_drifted_reference(cube: Path, *, size: int) -> None:
 
 
 def _consolidate_args(cube: Path) -> list[str]:
+    """Return the CLI arguments; the cube records its directory name as its label first."""
+    stamp_label(cube, cube.name)
     return [
         "zarr",
         "consolidate-time-coord",
         "--target",
         f"file://{cube}",
-        "--product-name",
-        cube.name,
         "--storage-type",
         "local",
         "--storage-driver",
@@ -273,9 +274,10 @@ def test_live_consolidation_on_drifted_cube_raises_schema_drift(tmp_path: Path) 
     _create_legacy_cube(cube)
     _write_drifted_reference(cube, size=_LEGACY_SLOTS)
 
+    args = _consolidate_args(cube)  # records the label, so the snapshot below includes it
     before = _md5_of_files(cube)
 
-    result = CliRunner().invoke(cli, _consolidate_args(cube))
+    result = CliRunner().invoke(cli, args)
 
     assert result.exit_code != 0, (
         f"drift-refused consolidation must not exit 0; output:\n{result.output}"

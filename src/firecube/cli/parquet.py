@@ -26,11 +26,11 @@ import duckdb
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
 from firecube.cli._exit_codes import ExitCode
-from firecube.cli._product import resolve_product_identity
+from firecube.cli._product import session_identity
 from firecube.cli._shared_options import (
-    product_uri_option,
     storage_driver_option,
     storage_type_option,
+    target_uri_option,
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
 from firecube.core import observability
@@ -119,18 +119,18 @@ def _check_parquet_magic(fs: StorageFilesystem, path: StorageUri) -> tuple[bool,
     epilog="""\b
 Examples:
   # validate all Parquet files for a product
-  firecube parquet validate -p <product>
+  firecube parquet validate -t <target>
 
 See also: firecube parquet consolidate, firecube chunks list
 """,
 )
-@product_uri_option(tier="inspect")
+@target_uri_option(tier="inspect")
 @storage_type_option(required=False)
 @storage_driver_option(required=False)
 @click.pass_context
 def validate(
     ctx: click.Context,
-    product: str,
+    target: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -142,8 +142,8 @@ def validate(
     not modify any data. Exits 1 when a file is invalid or none is found, and
     4 when the target does not exist.
     """
-    product_uri = parse_and_validate_uri(product, param_hint="--product")
-    storage_type = apply_smart_default(product_uri, storage_type)
+    target_uri = parse_and_validate_uri(target, param_hint="--target")
+    storage_type = apply_smart_default(target_uri, storage_type)
     storage_config = get_storage_config(
         ctx,
         overrides={
@@ -154,9 +154,7 @@ def validate(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    identity = resolve_product_identity(
-        product_uri, format="parquet", product_name=product_uri.to_str()
-    )
+    identity = session_identity(target_uri, format="parquet", driver=driver_config)
     session = StorageSession(
         StorageBinding(
             identity=identity,
@@ -176,7 +174,7 @@ def validate(
         click.echo(
             json.dumps(
                 {
-                    "product": product,
+                    "product": target,
                     "resolved": {"store_uri": store_uri_str, "root": store_uri_str},
                     "valid": False,
                     "error": "Target does not exist"
@@ -195,7 +193,7 @@ def validate(
             bad.append({"path": path.to_str(), "reason": reason})
 
     payload = {
-        "product": product,
+        "product": target,
         "resolved": {"store_uri": store_uri_str, "root": store_uri_str},
         "valid": not bad,
         "files_checked": len(files),
@@ -212,16 +210,16 @@ def validate(
     epilog="""\b
 Examples:
   # consolidate a product into a single file with default zstd compression
-  firecube parquet consolidate -p <product> -o file:///tmp/consolidated.parquet
+  firecube parquet consolidate -t <target> -o file:///tmp/consolidated.parquet
 
 \b
   # consolidate with explicit codec
-  firecube parquet consolidate -p <product> -o file:///tmp/consolidated.parquet --codec snappy
+  firecube parquet consolidate -t <target> -o file:///tmp/consolidated.parquet --codec snappy
 
 See also: firecube parquet validate
 """,
 )
-@product_uri_option(tier="inspect")
+@target_uri_option(tier="inspect")
 @click.option(
     "-o",
     "--output",
@@ -235,7 +233,7 @@ See also: firecube parquet validate
 @click.pass_context
 def consolidate(
     ctx: click.Context,
-    product: str,
+    target: str,
     output: str,
     codec: str,
     storage_type: str | None,
@@ -249,8 +247,8 @@ def consolidate(
     single consolidated file with the specified codec. The source dataset
     is not modified.
     """
-    product_uri = parse_and_validate_uri(product, param_hint="--product")
-    storage_type = apply_smart_default(product_uri, storage_type)
+    target_uri = parse_and_validate_uri(target, param_hint="--target")
+    storage_type = apply_smart_default(target_uri, storage_type)
     output_uri = parse_and_validate_uri(output, param_hint="--output")
     if output_uri.is_remote():
         raise click.ClickException("Remote artifact output not yet supported")
@@ -264,9 +262,7 @@ def consolidate(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_conf)
-    identity = resolve_product_identity(
-        product_uri, format="parquet", product_name=product_uri.to_str()
-    )
+    identity = session_identity(target_uri, format="parquet", driver=driver_config)
     session = StorageSession(
         StorageBinding(
             identity=identity,
@@ -300,7 +296,7 @@ def consolidate(
             json.dumps(
                 {
                     "status": "success",
-                    "source": product,
+                    "source": target,
                     "resolved_source": source,
                     "output": output_path,
                     "duration_s": duration,

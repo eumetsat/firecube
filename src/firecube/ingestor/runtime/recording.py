@@ -153,7 +153,7 @@ class SpanRecorder:
                         prior_spans=len(prior_spans),
                         abandon=Operation(
                             "abandon_run",
-                            product_name=product_uri,
+                            target=product_uri,
                             run_id=run_id,
                             reason=Placeholder('"<reason>"'),
                         ),

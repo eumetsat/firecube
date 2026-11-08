@@ -33,7 +33,7 @@ def _invoke_compliance(args: list[str]):
 
 
 def test_bare_path_rejected_with_uri_required_error(tmp_local_zarr: Path) -> None:
-    result = _invoke_compliance(["--profile", "cf-18", "-p", str(tmp_local_zarr), "-g", "g1"])
+    result = _invoke_compliance(["--profile", "cf-18", "-t", str(tmp_local_zarr), "-g", "g1"])
 
     assert result.exit_code == 2
     assert "URI scheme required" in result.output
@@ -41,7 +41,7 @@ def test_bare_path_rejected_with_uri_required_error(tmp_local_zarr: Path) -> Non
 
 
 def test_file_uri_works_without_storage_flags(tmp_local_zarr: Path) -> None:
-    result = _invoke_compliance(["--profile", "cf-18", "-p", tmp_local_zarr.as_uri(), "-g", "g1"])
+    result = _invoke_compliance(["--profile", "cf-18", "-t", tmp_local_zarr.as_uri(), "-g", "g1"])
 
     assert "Missing option" not in result.output
     assert "Traceback" not in result.output
@@ -74,10 +74,11 @@ def test_s3_uri_infers_storage_type(monkeypatch, tmp_path: Path) -> None:
 
     monkeypatch.setattr(ZarrIO, "open_group", fake_open_group)
     monkeypatch.setattr(ZarrIO, "open_dataset", fake_open_dataset)
+    monkeypatch.setattr("firecube.cli._product._recorded_label", lambda *a, **k: None)
     monkeypatch.setitem(advise_module._COMPLIANCE_PROFILE_VALIDATORS, "cf-18", fake_validator)
 
     result = _invoke_compliance(
-        ["--profile", "cf-18", "-p", "s3://bucket/x.zarr", "-g", "g", "--format", "json"]
+        ["--profile", "cf-18", "-t", "s3://bucket/x.zarr", "-g", "g", "--format", "json"]
     )
 
     assert result.exit_code == 0, result.output
@@ -101,7 +102,7 @@ def test_file_uri_rejects_s3_storage_type(tmp_local_zarr: Path) -> None:
         [
             "--profile",
             "cf-18",
-            "-p",
+            "-t",
             tmp_local_zarr.as_uri(),
             "-g",
             "g1",
@@ -117,7 +118,7 @@ def test_file_uri_rejects_s3_storage_type(tmp_local_zarr: Path) -> None:
 
 def test_missing_group_is_clean_click_error(tmp_local_zarr: Path) -> None:
     result = _invoke_compliance(
-        ["--profile", "cf-18", "-p", tmp_local_zarr.as_uri(), "-g", "definitely-not-here"]
+        ["--profile", "cf-18", "-t", tmp_local_zarr.as_uri(), "-g", "definitely-not-here"]
     )
 
     assert result.exit_code == 1
@@ -136,7 +137,7 @@ def test_missing_local_store_is_clean_click_error(tmp_path: Path) -> None:
             "compliance",
             "--profile",
             "cf-18",
-            "-p",
+            "-t",
             missing_store.as_uri(),
             "-g",
             "NORDLIS",
@@ -158,7 +159,7 @@ def test_strict_warnings_exit_3(monkeypatch, tmp_path: Path) -> None:
     store = tmp_path / "cube.zarr"
     xr.Dataset({"x": ("t", [1, 2])}).to_zarr(store, group="g1", zarr_format=3)
     monkeypatch.setitem(advise_module._COMPLIANCE_PROFILE_VALIDATORS, "cf-18", warning_only)
-    args = ["--profile", "cf-18", "-p", store.as_uri(), "-g", "g1"]
+    args = ["--profile", "cf-18", "-t", store.as_uri(), "-g", "g1"]
 
     assert _invoke_compliance(args).exit_code == 0
     strict = _invoke_compliance([*args, "--strict"])

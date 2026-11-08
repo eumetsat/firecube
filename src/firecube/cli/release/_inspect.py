@@ -41,11 +41,11 @@ from firecube.ingestor.runtime.release_retention import verify_retention
     epilog="""\b
 Examples:
   # list the releases of a product, oldest first; the current one is marked *
-  firecube release list --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube release list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # list them as JSON
-  firecube release list --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube release list --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube release show, firecube release create
 """,
@@ -55,7 +55,6 @@ See also: firecube release show, firecube release create
 def list_cmd(
     ctx: click.Context,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -71,7 +70,6 @@ def list_cmd(
         ctx,
         command="release list",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
@@ -89,11 +87,11 @@ def list_cmd(
     epilog="""\b
 Examples:
   # show the current release
-  firecube release show --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube release show --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # show release 1.0.0 as JSON
-  firecube release show 1.0.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube release show 1.0.0 --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube release list, firecube release verify
 """,
@@ -105,7 +103,6 @@ def show(
     ctx: click.Context,
     version: str | None,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -122,7 +119,6 @@ def show(
         ctx,
         command="release show",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
@@ -140,11 +136,11 @@ def show(
     epilog="""\b
 Examples:
   # compare the metadata of a product with its current release
-  firecube release verify --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube release verify --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # compare it with release 1.0.0 and print the result as JSON
-  firecube release verify 1.0.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube release verify 1.0.0 --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube release show, firecube snapshot diff
 """,
@@ -166,7 +162,6 @@ def verify(
     ctx: click.Context,
     version: str | None,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -191,7 +186,6 @@ def verify(
         ctx,
         command="release verify",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,

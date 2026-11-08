@@ -168,8 +168,12 @@ def test_mismatch_target_and_storage_type_is_rejected(
             assert substring.lower() in output_lower, result.output
 
 
-def test_coherent_s3_target_and_s3_storage_type_passes_validation(tmp_path: Path) -> None:
+def test_coherent_s3_target_and_s3_storage_type_passes_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Negative control for test_mismatch_target_and_storage_type_is_rejected: a coherent s3://+--storage-type s3 invocation passes URI/storage-type validation and reaches the (mocked) ingestor."""
+    # Ingest reads the target's recorded label before `run`; no S3 here, so the read is stubbed.
+    monkeypatch.setattr("firecube.cli.main.check_recorded_label", lambda binding: None)
     args = [
         *_base_args(tmp_path),
         "--target",

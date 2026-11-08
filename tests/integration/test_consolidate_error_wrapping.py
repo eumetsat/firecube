@@ -26,6 +26,7 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.zarr import coord_consolidation
 from firecube.ingestor.errors import ConfigurationError
+from tests.integration.test_cli_index_show import stamp_label
 
 pytestmark = pytest.mark.integration
 
@@ -42,6 +43,7 @@ def _create_legacy_cube(cube: Path, total: int = 16) -> None:
         overwrite=True,
         dimension_names=("time",),
     )
+    stamp_label(cube, cube.name)
 
 
 def _args(cube: Path) -> list[str]:
@@ -50,8 +52,6 @@ def _args(cube: Path) -> list[str]:
         "consolidate-time-coord",
         "--target",
         f"file://{cube}",
-        "--product-name",
-        cube.name,
         "--storage-type",
         "local",
         "--storage-driver",

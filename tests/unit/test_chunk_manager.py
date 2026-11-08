@@ -723,7 +723,7 @@ def test_claim_conflict_names_owner_run_and_clear_command(temp_workspace):
             _claim(manager, stack, "grp:slot=0", "other")
         message, root = str(excinfo.value), manager.get_product_root(product)
         printed = render(excinfo.value)
-        clear = f"firecube chunks claims clear --product-name {root} --domain {domain}"
+        clear = f"firecube chunks claims clear --target {root} --domain {domain}"
         assert f"{clear} --force" in printed
         assert message.startswith(f"Write-domain claim conflict for {domain}")
         assert "run-r" in message and "started" in message

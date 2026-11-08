@@ -35,15 +35,15 @@ from firecube.ingestor.runtime.release import create_release_for_product
     epilog="""\b
 Examples:
   # name the current state of a product as release 1.0.0
-  firecube release create 1.0.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube release create 1.0.0 --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # add a note and print the new release as JSON
-  firecube release create 1.1.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --note "units fixed" -f json
+  firecube release create 1.1.0 --target file:///data/products/MY_PRODUCT.zarr --note "units fixed" -f json
 
 \b
   # retain the chunk bytes in a zip archive (a full backup first, incremental backups after)
-  firecube release create 1.2.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --archive file:///data/archives/MY_PRODUCT-1.2.0.zip
+  firecube release create 1.2.0 --target file:///data/products/MY_PRODUCT.zarr --archive file:///data/archives/MY_PRODUCT-1.2.0.zip
 
 See also: firecube release list, firecube release verify, firecube snapshot list
 """,
@@ -90,7 +90,6 @@ def create(
     ctx: click.Context,
     version: str,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -130,7 +129,6 @@ def create(
         ctx,
         command="release create",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,

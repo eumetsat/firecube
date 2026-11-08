@@ -20,13 +20,12 @@ from typing import Any, Literal
 import click
 
 __all__ = [
+    "all_products_flag",
     "archive_uri_option",
     "config_file_option",
     "dry_run_flag",
     "format_option",
-    "product_filter_option",
     "product_name_option",
-    "product_uri_option",
     "storage_driver_option",
     "storage_type_option",
     "target_uri_option",
@@ -134,7 +133,8 @@ def write_mode_option(
     return decorator
 
 
-def product_uri_option(tier: Literal["write", "inspect"]) -> Any:
+def _legacy_product_uri_option(tier: Literal["write", "inspect"]) -> Any:
+    """Add the retired `-p, --product` URI option; a command family drops it for `--target`."""
     help_text = (
         "Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme."
         if tier == "inspect"
@@ -155,7 +155,13 @@ def product_uri_option(tier: Literal["write", "inspect"]) -> Any:
     return decorator
 
 
-def target_uri_option(tier: Literal["write", "inspect"]) -> Any:
+def target_uri_option(tier: Literal["write", "inspect"], *, required: bool = True) -> Any:
+    """Add `-t, --target`, the product URI option, as parameter `target`.
+
+    Args:
+        tier: `inspect` says storage flags follow the URI scheme; `write` says they must match it.
+        required: Make Click refuse a call without the option.
+    """
     help_text = (
         "Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme."
         if tier == "inspect"
@@ -167,13 +173,24 @@ def target_uri_option(tier: Literal["write", "inspect"]) -> Any:
             "-t",
             "--target",
             "target",
-            required=True,
+            required=required,
             type=str,
             help=help_text,
             shell_complete=_uri_shell_complete,
         )(func)
 
     return decorator
+
+
+def all_products_flag(f: Any) -> Any:
+    """Add `--all-products`, which selects every product under the configured storage base."""
+    return click.option(
+        "--all-products",
+        "all_products",
+        is_flag=True,
+        default=False,
+        help="Act on every product under the [storage] base URI of the config file. Excludes --target.",
+    )(f)
 
 
 def archive_uri_option(tier: Literal["write", "inspect"]) -> Any:
@@ -212,7 +229,9 @@ def format_option(default: str = "table") -> Any:
     return decorator
 
 
-def product_filter_option(required: bool = False) -> Any:
+def _legacy_product_filter_option(required: bool = False) -> Any:
+    """Add the retired `-n, --product-name` filter option; `--target` replaces it."""
+
     def decorator(f: Any) -> Any:
         return click.option(
             "-n",
@@ -226,6 +245,8 @@ def product_filter_option(required: bool = False) -> Any:
 
 
 def product_name_option(required: bool = True) -> Any:
+    """Add the long-only `--product-name` option for a command that may record the label."""
+
     def decorator(f: Any) -> Any:
         return click.option(
             "--product-name",
@@ -255,3 +276,8 @@ def yes_flag(f: Any) -> Any:
         default=False,
         help="Skip confirmation prompts. Required for destructive operations in non-TTY.",
     )(f)
+
+
+# Transitional names, outside `__all__`: each goes once no module imports it.
+product_uri_option = _legacy_product_uri_option
+product_filter_option = _legacy_product_filter_option

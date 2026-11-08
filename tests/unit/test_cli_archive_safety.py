@@ -170,7 +170,7 @@ def test_create_overwrite_non_tty_without_yes_exits_nonzero(tmp_path):
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             f"file://{src}",
             "--archive",
             tgt.as_uri(),
@@ -215,8 +215,8 @@ def test_zip_restore_refuses_entry_outside_target(tmp_path):
         zf.writestr("zarr.json", json.dumps({"zarr_format": 3, "node_type": "group"}))
         zf.writestr("../escape.txt", "evil")
     args = ["archive", "restore", "--archive", archive.as_uri()]
-    args += ["--target", f"file://{tmp_path}/r.zarr", *_LOCAL_STORAGE_FLAGS]
-    r = CliRunner().invoke(cli, args)
+    args += ["--target", f"file://{tmp_path}/r.zarr", "--product-name", "r.zarr"]
+    r = CliRunner().invoke(cli, [*args, *_LOCAL_STORAGE_FLAGS])
     assert r.exit_code != 0, r.output
     assert "../escape.txt" in r.output + str(r.exception)
     assert not (tmp_path / "escape.txt").exists()
@@ -277,7 +277,7 @@ def test_validate_rejects_a_broken_child_the_snapshot_still_shows_valid(tmp_path
 def test_create_refuses_anonymous_storage(tmp_path, monkeypatch):
     monkeypatch.setenv("FIRECUBE_S3_ANONYMOUS", "false")  # the CLI exports it; teardown unsets
     u = tmp_path.as_uri()
-    cmd = f"archive create --source {u}/s --archive {u}/o.zip --storage-anonymous"
+    cmd = f"archive create --target {u}/s --archive {u}/o.zip --storage-anonymous"
     r = CliRunner().invoke(cli, cmd.split())
     assert r.exit_code == 2, r.output
     assert not (tmp_path / "o.zip").exists()
@@ -286,7 +286,10 @@ def test_create_refuses_anonymous_storage(tmp_path, monkeypatch):
 def test_zip_restore_cli_preserves_array_values(tmp_path):
     u = tmp_path.as_uri()
     zarr.open_group(str(tmp_path / "s"), mode="w").create_array("a", data=np.arange(6.0))
-    for cmd in (f"create --source {u}/s --archive-format zip", f"restore --target {u}/r"):
+    for cmd in (
+        f"create --target {u}/s --archive-format zip",
+        f"restore --target {u}/r --product-name r",
+    ):
         r = CliRunner().invoke(cli, ["archive", *cmd.split(), "--archive", f"{u}/a.zip"])
         assert r.exit_code == 0, r.output
     restored = zarr.open_group(str(tmp_path / "r"))["a"]
@@ -304,7 +307,7 @@ def test_create_without_overwrite_requires_no_confirmation(tmp_path, monkeypatch
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             f"file://{src}",
             "--archive",
             tgt.as_uri(),
@@ -323,12 +326,12 @@ def _release_backup_chain(base):
     (store / "a*b").write_text("star")
     (store / "aXb").write_text("sibling")
     full, incremental = base / "a1.zip", base / "a2.zip"
-    where = ["--target", store.as_uri(), "--product-name", "p.zarr"]
+    where = ["--target", store.as_uri()]
 
     def run(*args):
         assert CliRunner().invoke(cli, [*args, *where]).exit_code == 0
 
-    run("migrate", "adopt")
+    run("migrate", "adopt", "--product-name", "p.zarr")
     run("release", "create", "1.0", "--archive", full.as_uri())
     shutil.rmtree(store / "gone")
     (store / "a*b").unlink()

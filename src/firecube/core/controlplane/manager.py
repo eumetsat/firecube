@@ -93,6 +93,7 @@ from firecube.core.slot_index import (
     SlotIndexModel,
 )
 from firecube.core.storage.binding import StorageBinding
+from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.guard._unit_locks import _store_identity
 from firecube.core.zarr.guard.metadata_authority import (
     HeldClaim,
@@ -113,7 +114,6 @@ if TYPE_CHECKING:
         SnapshotRecord,
     )
     from firecube.core.controlplane.releases import ReleaseVerification, StoredRelease
-    from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.metadata_documents import MetadataDocument
 
 log = logging.getLogger(__name__)
@@ -725,6 +725,22 @@ class ChunkManager:
     def discover_manifests(self) -> list[str]:
         """Scan the workspace for products with control-plane roots."""
         return self.repo.discover_manifests()
+
+    def discover_products(self) -> list[tuple[StorageUri, str | None]]:
+        """Return the URI and recorded label of each product with a `.firecube/` under the base URI.
+
+        A product that records no label pairs with `None`. Writes nothing.
+
+        Raises:
+            ManifestError: A product's stamp, run record or claim record cannot be read.
+            ProductLabelConflictError: An unstamped product's records name several labels.
+        """
+        products: list[tuple[StorageUri, str | None]] = []
+        for control_uri in self.repo.discover_manifests():
+            root = StorageUri.parse(control_uri).parent()
+            fs = cast(StorageFilesystemFull, self.repo._fs)
+            products.append((root, recorded_product_label(fs, root)))
+        return products
 
     def parse_manifest(self, manifest_uri: str) -> Generator[ChunkInfo, None, None]:
         """Yield ChunkInfo records from a manifest URI."""
@@ -2786,13 +2802,13 @@ class ChunkManager:
 def _abandon_operation(product_uri: str, run_id: str) -> Operation:
     """Name the abandon of one run, its reason left as a placeholder."""
     return Operation(
-        "abandon_run", product_name=product_uri, run_id=run_id, reason=Placeholder('"<reason>"')
+        "abandon_run", target=product_uri, run_id=run_id, reason=Placeholder('"<reason>"')
     )
 
 
 def _clear_operation(product_uri: str, domain_id: str, *, force: bool) -> Operation:
     """Name the clear of one claim domain; pass `force=True` for a claim that is not stale."""
-    return Operation("clear_claim", product_name=product_uri, domain_id=domain_id, force=force)
+    return Operation("clear_claim", target=product_uri, domain_id=domain_id, force=force)
 
 
 def maintenance_refusal_message(

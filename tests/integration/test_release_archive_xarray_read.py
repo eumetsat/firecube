@@ -48,9 +48,9 @@ def test_release_archives_read_back_through_xarray_backup_chain(tmp_path, subtes
     xr.Dataset({"v": (("t", "x"), first)}, coords={"t": [0, 1], "x": [0, 1, 2, 3]}).to_zarr(
         product, zarr_format=3, consolidated=False, encoding={"v": {"chunks": (1, 4)}}
     )
-    target = ["--target", product.as_uri(), "--product-name", "P"]
+    target = ["--target", product.as_uri()]
     full, incremental = tmp_path / "P-1.0.0.zip", tmp_path / "P-1.1.0.zip"
-    _cli("migrate", "adopt", *target)
+    _cli("migrate", "adopt", *target, "--product-name", "P")
     _cli("release", "create", "1.0.0", *target, "--archive", full.as_uri())
     zarr.open_array(product / "v", mode="r+")[1, :] = 100.0
     _cli("release", "create", "1.1.0", *target, "--archive", incremental.as_uri())
@@ -77,9 +77,9 @@ def test_release_archives_read_back_through_xarray_backup_chain(tmp_path, subtes
         values = np.arange(4, dtype="float64")
         cons = tmp_path / "C.zarr"
         xr.Dataset({"v": ("x", values)}).to_zarr(cons, zarr_format=3, consolidated=True)
-        cons_target = ["--target", cons.as_uri(), "--product-name", "C"]
+        cons_target = ["--target", cons.as_uri()]
         cons_zip = tmp_path / "C-1.0.0.zip"
-        _cli("migrate", "adopt", *cons_target)
+        _cli("migrate", "adopt", *cons_target, "--product-name", "C")
         _cli("release", "create", "1.0.0", *cons_target, "--archive", cons_zip.as_uri())
         np.testing.assert_array_equal(
             _v(f"zip::{cons_zip}", **{**chain, "consolidated": True}), values

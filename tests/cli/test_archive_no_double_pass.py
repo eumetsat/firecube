@@ -56,7 +56,7 @@ def test_archive_create_passes_product_session_without_storage_config(
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             source.as_uri(),
             "--archive",
             archive.as_uri(),

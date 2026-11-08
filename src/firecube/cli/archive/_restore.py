@@ -28,6 +28,7 @@ from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     archive_uri_option,
     dry_run_flag,
+    product_name_option,
     target_uri_option,
     yes_flag,
 )
@@ -40,6 +41,7 @@ from firecube.cli.archive._common import (
     _local_archive,
     _require_overwrite_confirmation,
 )
+from firecube.core.errors import Message, ProductLabelMismatchError
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
@@ -62,11 +64,17 @@ Examples:
   firecube archive restore \\
     --archive file:///tmp/archive.zip \\
     --target file:///path/to/restored.zarr
+  # restore an archive without a control plane under a product label
+  firecube archive restore \\
+    --archive file:///tmp/data-only.tgm \\
+    --target file:///path/to/restored.zarr \\
+    --product-name <label>
 See also: firecube archive create, firecube archive info
 """,
 )
 @archive_uri_option(tier="write")
 @target_uri_option(tier="write")
+@product_name_option(required=False)
 @click.option(
     "--storage-type",
     "storage_type",
@@ -97,6 +105,7 @@ def restore(
     ctx: click.Context,
     archive: str,
     target: str,
+    product_name: str | None,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -109,7 +118,8 @@ def restore(
     decodes all encoded array groups from a .tgm archive, or copies every entry
     of a .zip archive, and writes them back to the target Zarr store. archive
     groups restore to their original paths. zip archives restore to local
-    targets only.
+    targets only. the restored product takes the label the archive records;
+    --product-name names it only when the archive records none.
     """
     is_zip = _is_zip_archive(archive)
 
@@ -144,11 +154,17 @@ def restore(
         cache=False,
     )
 
+    from firecube.ingestor.runtime.archive import read_restore_source, restore_archive
+
+    archive_format = "zip" if is_zip else "tensogram"
+    source = read_restore_source(
+        archive=archive, archive_path=archive_abs, archive_format=archive_format
+    )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
     restore_identity = resolve_product_identity(
         target_uri,
         format="zarr",
-        product_name=target.rstrip("/").rsplit("/", 1)[-1],
+        product_name=_restore_label(source.product_label, product_name, archive=archive),
     )
     session = StorageSession(
         StorageBinding(
@@ -157,17 +173,16 @@ def restore(
         )
     )
 
-    from firecube.ingestor.runtime.archive import restore_archive
-
     restored = restore_archive(
         session=session,
         archive=archive,
         archive_path=archive_abs,
-        archive_format="zip" if is_zip else "tensogram",
+        archive_format=archive_format,
         target=restore_identity.product_uri.to_str(),
         overwrite=overwrite,
         report=echo_rendered,
         warn=functools.partial(echo_rendered, err=True),
+        source=source,
     )
 
     result = restored.summary
@@ -181,3 +196,32 @@ def restore(
         if result.get("controlplane_restored")
         else "  Control-plane: not present"
     )
+
+
+def _restore_label(recorded: str | None, given: str | None, *, archive: str) -> str:
+    """Return the label the restore takes: the archive's, else the given one.
+
+    Raises:
+        click.UsageError: The archive records no label and none is given.
+        ProductLabelMismatchError: The given label differs from the archive's.
+    """
+    if recorded is None:
+        if given is None:
+            raise click.UsageError(
+                f"The archive {archive} records no product label. "
+                "Name the restored product with --product-name <label>."
+            )
+        return given
+    if given is not None and given != recorded:
+        raise ProductLabelMismatchError(
+            Message(
+                "Product label {given!r} is refused: the archive {archive} records the "
+                "label {product!r}.",
+                given=given,
+                archive=archive,
+                product=recorded,
+            ),
+            given=given,
+            recorded=recorded,
+        )
+    return recorded

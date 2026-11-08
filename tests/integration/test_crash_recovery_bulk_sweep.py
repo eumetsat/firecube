@@ -45,7 +45,7 @@ from tests.unit._helpers.counting_fs import CountingFilesystem, make_counting_lo
 pytestmark = pytest.mark.integration
 
 # MUST end in .zarr -- matches make_test_binding default naming convention and
-# the URI-form product_name the CLI resolves via resolve_cli_product().
+# the label the CLI reads from the store when it resolves `--target`.
 PRODUCT = "crashtest.zarr"
 
 
@@ -187,7 +187,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "compact",
             "rebuild",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,
@@ -208,7 +208,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "claims",
             "clear",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,
@@ -239,7 +239,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "runs",
             "abandon",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,
@@ -276,7 +276,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "compact",
             "rebuild",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,
@@ -316,7 +316,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "compact",
             "rebuild",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,

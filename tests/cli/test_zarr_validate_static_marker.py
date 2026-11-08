@@ -30,7 +30,7 @@ pytestmark = pytest.mark.unit
 
 
 def _invoke_validate(store: Path, group: str):
-    return CliRunner().invoke(cli, ["zarr", "validate", "-p", store.as_uri(), "-g", group])
+    return CliRunner().invoke(cli, ["zarr", "validate", "-t", store.as_uri(), "-g", group])
 
 
 def _store_with_array(tmp_path: Path, name: str, *, dimension_names: tuple[str, ...]) -> Path:
@@ -43,7 +43,7 @@ def _store_with_array(tmp_path: Path, name: str, *, dimension_names: tuple[str, 
 def _invoke_validate_with_time_dim(store: Path, group: str, time_dim: str = "timestamp"):
     return CliRunner().invoke(
         cli,
-        ["zarr", "validate", "-p", store.as_uri(), "-g", group, "--time-dim", time_dim],
+        ["zarr", "validate", "-t", store.as_uri(), "-g", group, "--time-dim", time_dim],
     )
 
 

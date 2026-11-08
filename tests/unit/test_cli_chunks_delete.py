@@ -22,6 +22,7 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.controlplane.types import ChunkInfo, DeletionPlan
+from tests.helpers.chunks import bound
 from tests.unit.test_chunk_manager_queries import feb_30_cli_args, stored_span_groups
 
 
@@ -90,8 +91,8 @@ class _FakeSpanManager:
 def _invoke_delete_span(monkeypatch, result: dict, *extra: str):
     manager = _FakeSpanManager(result)
     monkeypatch.setattr(
-        "firecube.cli.chunks._delete.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._delete.target_product",
+        lambda *args, **kwargs: bound(manager, "PRODUCT_A"),
     )
     r = CliRunner().invoke(
         cli,
@@ -100,7 +101,7 @@ def _invoke_delete_span(monkeypatch, result: dict, *extra: str):
             "--workspace",
             "/tmp/wk",
             "delete-span",
-            "--product-name",
+            "--target",
             "PRODUCT_A",
             "--yes-i-really-mean-it",
             *extra,
@@ -173,7 +174,7 @@ def test_delete_conflicting_scope_exits_nonzero():
         [
             "chunks",
             "delete",
-            "--product-name",
+            "--target",
             "X",
             "--all-products",
             "--workspace",
@@ -181,8 +182,8 @@ def test_delete_conflicting_scope_exits_nonzero():
         ],
     )
 
-    assert r.exit_code != 0
-    assert "ConflictingScope" in r.output or "mutually exclusive" in r.output.lower()
+    assert r.exit_code == 2
+    assert "Provide exactly one of --target or --all-products." in r.output
 
 
 def test_delete_all_products_non_tty_without_yes_exits_nonzero():
@@ -194,14 +195,8 @@ def test_delete_all_products_non_tty_without_yes_exits_nonzero():
 
 def test_delete_all_products_dry_run_no_confirmation_needed(monkeypatch):
     monkeypatch.setattr(
-        "firecube.cli.chunks._delete.resolve_manager",
-        lambda *args, **kwargs: _FakeDeleteManager(),
-    )
-    from firecube.core.config import StorageConfig
-
-    monkeypatch.setattr(
-        "firecube.cli.chunks._delete.storage_config_from_ctx",
-        lambda *args, **kwargs: StorageConfig(storage_type="local"),
+        "firecube.cli.chunks._delete.scoped_products",
+        lambda *args, **kwargs: [bound(_FakeDeleteManager(), "PRODUCT_A")],
     )
 
     r = CliRunner().invoke(
@@ -302,7 +297,7 @@ def _delete_args(product_uri: str, root: Path, *flags: str) -> list[str]:
         "--workspace",
         str(root / "ws"),
         "delete",
-        "-n",
+        "-t",
         product_uri,
         "--pattern",
         "G/*",

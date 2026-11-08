@@ -25,10 +25,14 @@ from typing import TYPE_CHECKING, Any, cast
 
 import click
 
+from firecube.cli._command_schemas import check_recorded_label, resolve_product_name
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import exit_with_error, render
 from firecube.cli._exit_codes import ExitCode
-from firecube.cli._input_filters import input_filters_option, resolve_input_filters
+from firecube.cli._input_filters import (
+    input_filters_option,
+    resolve_input_filters,
+)
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
@@ -149,11 +153,9 @@ Examples:
 )
 @click.argument("plugin")
 @click.option(
-    "--target",
-    required=True,
-    help="Target product URI required (file:///abs/path or s3://bucket/key).",
+    "-t", "--target", required=True, help="Target product URI (file:///path or s3://bucket/key)."
 )
-@product_name_option(required=True)
+@product_name_option(required=False)
 @storage_type_option(
     required=False, extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3)."
 )
@@ -212,7 +214,7 @@ def slots(
     ctx: click.Context,
     plugin: str,
     target: str,
-    product_name: str,
+    product_name: str | None,
     storage_type: str,
     storage_driver: str,
     storage_anonymous: bool | None,
@@ -254,17 +256,6 @@ def slots(
         cache=False,
     )
     resolved_storage_driver = storage_config.storage_driver
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=product_name,
-    )
-    binding = StorageBinding(
-        identity=identity,
-        driver=StorageDriverConfig.from_storage_config(storage_config),
-    )
-    chunk_manager = ChunkManager(binding=binding)
-
     plugins = (
         ingestor_loader.AVAILABLE_INGESTORS
         if plugin in ingestor_loader.AVAILABLE_INGESTORS
@@ -273,6 +264,17 @@ def slots(
     if plugin not in plugins:
         raise click.ClickException(f"Unknown plugin '{plugin}'.")
     ingestor_cls = cast(Any, plugins[plugin])
+    identity = resolve_product_identity(
+        target_uri,
+        format="zarr",
+        product_name=resolve_product_name(ctx, plugin, ingestor_cls, product_name),
+    )
+    binding = StorageBinding(
+        identity=identity,
+        driver=StorageDriverConfig.from_storage_config(storage_config),
+    )
+    check_recorded_label(binding)
+    chunk_manager = ChunkManager(binding=binding)
 
     ingestor = ingestor_cls(chunk_manager=chunk_manager) if sources else ingestor_cls()
 
@@ -331,7 +333,7 @@ def slots(
 
     header = {
         "schema_version": PLAN_SCHEMA_VERSION,
-        "product_name": product_name,
+        "product_name": identity.product_name,
         "target": target,
         "storage_type": storage_type,
         "storage_driver": resolved_storage_driver,
@@ -359,7 +361,7 @@ def _group_summary(plan: GroupSlotPlan) -> dict[str, Any]:
 def _blocked_refusal(exc: SlotPlanBlockedError, target: str) -> Message:
     """Build the refusal for a plan with blocked ranges, naming the recovery commands.
 
-    The `delete-span` preview carries `target` as its product name.
+    The `delete-span` preview carries `target` as the product URI.
     """
     details = "; ".join(
         f"group '{name}' has blocked ranges {[[s, e] for s, e in intervals]}"
@@ -375,7 +377,7 @@ def _blocked_refusal(exc: SlotPlanBlockedError, target: str) -> Message:
         details=details,
         preview=Operation(
             "delete_span",
-            product_name=target,
+            target=target,
             run_id=Placeholder("<id>"),
             dry_run=True,
             force=True,

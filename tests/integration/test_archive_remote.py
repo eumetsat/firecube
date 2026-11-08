@@ -53,7 +53,7 @@ def test_archive_remote_tgm_round_trip(tmp_path: Path) -> None:
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             StorageUri.from_local_path(source).to_str(),
             "--archive",
             _local_remote_uri(remote_tgm),
@@ -76,6 +76,8 @@ def test_archive_remote_tgm_round_trip(tmp_path: Path) -> None:
             _local_remote_uri(remote_tgm),
             "--target",
             StorageUri.from_local_path(restored).to_str(),
+            "--product-name",
+            "restored.zarr",
             *_LOCAL_STORAGE_FLAGS,
         ],
         env=env,

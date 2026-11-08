@@ -163,13 +163,92 @@ def test_chunks_delete_bracket_product_name_deletes_only_its_own_object(
     product_uri, bracket_obj = seed._seed_chunk_product(tmp_path, monkeypatch)
     monkeypatch.setenv("FIRECUBE_STORAGE_TYPE", "local")
     monkeypatch.setenv("FIRECUBE_STORAGE_DRIVER", driver)
-    args = ["chunks", "--workspace", str(tmp_path / "ws"), "delete", "-n", product_uri]
+    args = ["chunks", "--workspace", str(tmp_path / "ws"), "delete", "-t", product_uri]
 
     result = CliRunner().invoke(cli, [*args, "--pattern", "G/*", "--yes-i-really-mean-it"])
 
     assert result.exit_code == 0, result.output
     assert not bracket_obj.exists(), "object under prod[12] survived its own record's deletion"
     assert all(path.exists() for path in siblings), "glob expanded onto a sibling product"
+
+
+@pytest.mark.parametrize("driver", ["obstore", "fsspec"])
+@pytest.mark.parametrize("all_products", [False, True], ids=["target", "all-products"])
+def test_chunks_delete_removes_the_selected_stores_own_object_not_a_sibling_by_label(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, driver: str, all_products: bool
+) -> None:
+    """A store labelled dirB in directory dirA deletes under dirA, never under the sibling dirB."""
+    from click.testing import CliRunner
+
+    import tests.unit.test_cli_chunks_delete as seed
+    from firecube.cli.main import cli
+
+    monkeypatch.setattr(seed, "_CHUNK_PRODUCT", "dirB")
+    seed._seed_chunk_product(tmp_path / "moved", monkeypatch)
+    (tmp_path / "moved" / "dirB").rename(tmp_path / "dirA")
+    _, sibling_obj = seed._seed_chunk_product(tmp_path, monkeypatch)
+    monkeypatch.setenv("FIRECUBE_STORAGE_TYPE", "local")
+    monkeypatch.setenv("FIRECUBE_STORAGE_DRIVER", driver)
+    monkeypatch.setenv("FIRECUBE_TARGET_PATH", str(tmp_path))
+    scope = ["--all-products"] if all_products else ["-t", (tmp_path / "dirA").as_uri()]
+    flags = ["--pattern", "G/*", "--yes-i-really-mean-it"]
+
+    result = CliRunner().invoke(
+        cli,
+        ["chunks", "--workspace", str(tmp_path / "ws"), "delete", *scope, *flags],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert f"Deleted {2 if all_products else 1} chunks" in result.output
+    assert not (tmp_path / "dirA" / seed._CHUNK_KEY).exists(), "own object survived its deletion"
+    assert sibling_obj.exists() is not all_products, "sibling object wrongly kept or deleted"
+    assert seed._stored_chunk_keys(tmp_path) == (set() if all_products else {seed._CHUNK_KEY})
+
+
+@pytest.mark.parametrize("driver", ["obstore", "fsspec"])
+@pytest.mark.parametrize("span", [False, True], ids=["execute_deletion", "delete_spans"])
+def test_library_deletion_removes_the_stores_own_object_not_a_sibling_by_label(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, driver, span
+) -> None:
+    """Store dirA records label dirB; the sibling dirB holds the same key."""
+    import tests.integration.test_delete_span_region_nan_fill as spans
+    import tests.unit.test_cli_chunks_delete as chunks
+    from firecube.core.product.identity import ProductIdentity
+    from firecube.core.storage.binding import StorageBinding
+    from firecube.core.storage.session import StorageSession
+
+    monkeypatch.setattr(chunks, "_CHUNK_PRODUCT", "dirB")
+    monkeypatch.setattr(spans, "PRODUCT", "dirB")
+    for root in (tmp_path / "moved", tmp_path):
+        if span:
+            spans._seed_raw_store(root)
+        else:
+            chunks._seed_chunk_product(root, monkeypatch)
+        if root != tmp_path:
+            (root / "dirB").rename(tmp_path / "dirA")
+    key = "default/precipitation/c/0/0" if span else chunks._CHUNK_KEY
+    identity = ProductIdentity.from_uri(
+        StorageUri.from_local_path(tmp_path / "dirA"), "zarr", product_name="dirB"
+    )
+    binding = StorageBinding(
+        identity=identity, driver=make_test_binding(tmp_path, driver=driver).driver
+    )
+    fs = None if span else StorageSession(binding).fs()
+    manager = ChunkManager(binding=binding, workspace=tmp_path / "ws", filesystem=fs)
+    if span:
+        result = manager.delete_spans(
+            manager.list_chunks(product="dirB", chunk_type="span"), yes_i_really_mean_it=True
+        )
+        assert result["errors"] == [] and result["deleted_keys"] == 1
+    else:
+        result = manager.execute_deletion(manager.create_deletion_plan(product="dirB"))
+        assert result["deleted_chunks"] == 1 and result["storage_errors"] == []
+    manager.close()
+    assert not (tmp_path / "dirA" / key).exists(), "own object survived"
+    assert (tmp_path / "dirB" / key).exists(), "sibling object deleted by label"
+    sibling = ChunkManager(binding=make_test_binding(tmp_path, product="dirB"), workspace=tmp_path)
+    assert len(sibling.list_chunks(product="dirB", chunk_type="span" if span else "chunk")) == 1
+    sibling.close()
 
 
 def test_chunk_deletion_failure_reports_one_error_naming_the_uri(

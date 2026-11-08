@@ -120,7 +120,7 @@ def _runs_list(target: Path) -> list[dict[str, Any]]:
         "chunks",
         "runs",
         "list",
-        "--product-name",
+        "--target",
         target.as_uri(),
         "-f",
         "json",

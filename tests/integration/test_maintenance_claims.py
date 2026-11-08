@@ -145,7 +145,7 @@ def _assert_clear_hint_runs_without_abandon(message: str) -> None:
 
 
 def _assert_owner_abandon_hint_runs(message: str, root: str) -> None:
-    assert f"--product-name {root} --run-id running-ingest" in message
+    assert f"--target {root} --run-id running-ingest" in message
     assert "or abandon run running-ingest (status: started)," in message
     run_hint(message, "firecube chunks claims clear", "--yes-i-really-mean-it")
     run_hint(message, "firecube chunks runs abandon", "--dry-run")
@@ -159,7 +159,7 @@ def _assert_claim_facts(
         root.as_uri(), domain, owner,
     )  # fmt: skip
     assert [op.name for op in error.recovery] == recovery
-    assert {op.arguments["product_name"] for op in error.recovery} == {root.as_uri()}
+    assert {op.arguments["target"] for op in error.recovery} == {root.as_uri()}
     assert error.recovery[0].arguments["domain_id"] == domain
     assert all(op.arguments["run_id"] == run_id for op in error.recovery[1:])
 
@@ -303,6 +303,8 @@ def _restore_with_claimed_target(
                 StorageUri.from_local_path(archive_path).to_str(),
                 "--target",
                 StorageUri.from_local_path(restored).to_str(),
+                "--product-name",
+                "restored.zarr",
                 "--storage-type",
                 "local",
                 "--storage-driver",
@@ -332,7 +334,7 @@ def _zip_create_with_control_plane(tmp_path: Path):
     src = tmp_path / "s.zarr"
     (src / ".firecube").mkdir(parents=True, exist_ok=True)
     (src / ".firecube" / "schema.json").write_text("{}")
-    cmd = f"archive create --source {src.as_uri()} --archive {tmp_path.as_uri()}/out.zip"
+    cmd = f"archive create --target {src.as_uri()} --archive {tmp_path.as_uri()}/out.zip"
     cmd += " --archive-format zip"
     return CliRunner().invoke(cli, cmd.split(), env=_local_env(tmp_path))
 
@@ -425,6 +427,7 @@ def _overwrite_restore(
         )
     args = ["archive", "restore", "--archive", archive.as_uri(), "--target", target.as_uri()]
     args += ["--overwrite", "--yes-i-really-mean-it", "--storage-type", "local"]
+    args += ["--product-name", "restored.zarr"]
     return CliRunner().invoke(cli, [*args, "--storage-driver", "fsspec"], env=_local_env(tmp_path))
 
 
@@ -465,6 +468,7 @@ def test_restore_stops_its_claim_heartbeat(tmp_path, monkeypatch, lib):
     _make_archive(tmp_path / "source.zarr", tmp_path / "a.tgm")
     args = ["archive", "restore", "--archive", (tmp_path / "a.tgm").as_uri()]
     args += ["--target", (tmp_path / "r.zarr").as_uri(), "--storage-type", "local"]
+    args += ["--product-name", "r.zarr"]
     try:
         if lib:
             restore_archive(

@@ -26,9 +26,13 @@ from typing import Any
 
 import click
 
-from firecube.cli._command_schemas import IngestCommandConfig
+from firecube.cli._command_schemas import (
+    IngestCommandConfig,
+    check_recorded_label,
+    resolve_product_name,
+)
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import MissingProductNameError, enable_debug, render
+from firecube.cli._errors import enable_debug, render
 from firecube.cli._formatter import (
     COMMAND_GROUPS,
     OPTION_GROUPS,
@@ -122,7 +126,7 @@ OPTION_GROUPS.update(
         "firecube archive create": [
             {
                 "name": "Required",
-                "options": ["--source", "--archive"],
+                "options": ["--target", "--archive"],
             },
             {
                 "name": "Formats",
@@ -152,7 +156,7 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Behavior",
-                "options": ["--overwrite"],
+                "options": ["--overwrite", "--product-name"],
             },
             {
                 "name": "Storage",
@@ -163,7 +167,8 @@ OPTION_GROUPS.update(
             {
                 "name": "Filtering",
                 "options": [
-                    "--product-name",
+                    "--target",
+                    "--all-products",
                     "--start-date",
                     "--end-date",
                     "--time-range",
@@ -185,7 +190,7 @@ OPTION_GROUPS.update(
         "firecube chunks delete": [
             {
                 "name": "Scope",
-                "options": ["--product-name", "--all-products"],
+                "options": ["--target", "--all-products"],
             },
             {
                 "name": "Filters",
@@ -215,7 +220,7 @@ OPTION_GROUPS.update(
         "firecube chunks delete-span": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Filtering",
@@ -233,7 +238,7 @@ OPTION_GROUPS.update(
         "firecube chunks runs list": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Output",
@@ -243,7 +248,7 @@ OPTION_GROUPS.update(
         "firecube chunks runs abandon": [
             {
                 "name": "Required",
-                "options": ["--product-name", "--run-id", "--reason"],
+                "options": ["--target", "--run-id", "--reason"],
             },
             {
                 "name": "Safety",
@@ -261,7 +266,7 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Safety",
@@ -275,7 +280,7 @@ OPTION_GROUPS.update(
         "firecube catalog intake": [
             {
                 "name": "Required",
-                "options": ["--product", "--output", "--collection-id"],
+                "options": ["--target", "--output", "--collection-id"],
             },
             {
                 "name": "Optional",
@@ -291,7 +296,7 @@ OPTION_GROUPS.update(
         "firecube zarr validate": [
             {
                 "name": "Required",
-                "options": ["--product", "--group"],
+                "options": ["--target", "--group"],
             },
             {
                 "name": "Options",
@@ -310,7 +315,6 @@ OPTION_GROUPS.update(
                 "name": "Required",
                 "options": [
                     "--target",
-                    "--product-name",
                     "--storage-type",
                     "--storage-driver",
                     "--storage-anonymous",
@@ -319,7 +323,7 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Input",
-                "options": ["--input-data", "--input-filters"],
+                "options": ["--input-data", "--input-filters", "--product-name"],
             },
             {
                 "name": "Options",
@@ -331,7 +335,6 @@ OPTION_GROUPS.update(
                 "name": "Required",
                 "options": [
                     "--target",
-                    "--product-name",
                     "--storage-type",
                     "--storage-driver",
                     "--storage-anonymous",
@@ -347,7 +350,6 @@ OPTION_GROUPS.update(
                 "name": "Required",
                 "options": [
                     "--target",
-                    "--product-name",
                     "--storage-type",
                     "--storage-driver",
                     "--storage-anonymous",
@@ -356,7 +358,7 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Input",
-                "options": ["--input-data", "--input-filters"],
+                "options": ["--input-data", "--input-filters", "--product-name"],
             },
             {
                 "name": "Advanced",
@@ -366,7 +368,7 @@ OPTION_GROUPS.update(
         "firecube parquet validate": [
             {
                 "name": "Required",
-                "options": ["--product"],
+                "options": ["--target"],
             },
             {
                 "name": "Options",
@@ -376,7 +378,7 @@ OPTION_GROUPS.update(
         "firecube parquet consolidate": [
             {
                 "name": "Required",
-                "options": ["--product", "--output"],
+                "options": ["--target", "--output"],
             },
             {
                 "name": "Options",
@@ -415,7 +417,7 @@ OPTION_GROUPS.update(
         "firecube advise batch-size": [
             {
                 "name": "Required",
-                "options": ["--product", "--group"],
+                "options": ["--target", "--group"],
             },
             {
                 "name": "Options",
@@ -425,7 +427,7 @@ OPTION_GROUPS.update(
         "firecube advise compliance": [
             {
                 "name": "Required",
-                "options": ["--profile", "--product", "--group"],
+                "options": ["--profile", "--target", "--group"],
             },
             {
                 "name": "Options",
@@ -467,7 +469,7 @@ OPTION_GROUPS.update(
         "firecube chunks claims list": [
             {
                 "name": "Filtering",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Output",
@@ -481,7 +483,7 @@ OPTION_GROUPS.update(
         "firecube chunks compact rebuild": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Safety",
@@ -499,7 +501,7 @@ OPTION_GROUPS.update(
         "firecube chunks compact status": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Output",
@@ -590,13 +592,13 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
     help=("Target product URI required (file:///abs/path or s3://bucket/key); -t short available."),
 )
 @click.option(
-    "-n",
     "--product-name",
     "product_name",
     default=None,
     help=(
-        "Logical product name. Overrides the plugin class default and the "
-        "per-plugin config default."
+        "Logical product name. Overrides the per-plugin config default_product_name "
+        "and the plugin class PRODUCT_NAME. The store refuses a name that differs "
+        "from the one it records."
     ),
 )
 @click.option(
@@ -758,6 +760,7 @@ def ingest(
     explicit_config = ctx.obj.get("config_file")
     cfg = load_config_file(explicit_config, strict=explicit_config is not None)
     options = get_plugin_defaults(cfg, plugin)
+    options.pop("default_product_name", None)
     resolved_filters = resolve_input_filters(ctx, plugin, input_filters, defaults=options)
     if resolved_filters is not None:
         options["input_filters"] = resolved_filters
@@ -806,20 +809,16 @@ def ingest(
                 suppress_static_emission_for_non_owner
             )
             options["static_owner_slot_start"] = static_owner_slot_start
-            resolved_product_name = (
-                ingest_cfg.product_name
-                or get_plugin_defaults(cfg, plugin).get("default_product_name")
-                or getattr(ingestor_cls, "PRODUCT_NAME", None)
+            resolved_product_name = resolve_product_name(
+                ctx, plugin, ingestor_cls, ingest_cfg.product_name
             )
-            if not resolved_product_name:
-                raise MissingProductNameError(plugin)
 
             target_str = ingest_cfg.target
             try:
                 identity = ProductResolver.resolve(
                     target_str,
                     format=ingest_cfg.output_format,
-                    product_name=str(resolved_product_name),
+                    product_name=resolved_product_name,
                 )
             except ValueError as exc:
                 raise click.UsageError(render(exc)) from exc
@@ -834,6 +833,12 @@ def ingest(
             }
             storage_config = get_storage_config(ctx, overrides=storage_overrides, cache=False)
             options.setdefault("storage", {"type": storage_config.storage_type})
+            binding = StorageBinding(
+                identity=identity, driver=StorageDriverConfig.from_storage_config(storage_config)
+            )
+            # Before the ingestor exists: its constructor makes a temporary workspace directory.
+            check_recorded_label(binding)
+            session = StorageSession(binding)
 
             # Per HIGH-3 fix: read every option from the validated typed config, not raw Click params.
             # IngestCommandConfig has applied defaults and validation; the raw params are inputs to
@@ -867,13 +872,6 @@ def ingest(
             if upload_workers < 1:
                 raise click.BadParameter("upload_workers must be at least 1.")
 
-            driver_config = StorageDriverConfig.from_storage_config(storage_config)
-            session = StorageSession(
-                StorageBinding(
-                    identity=identity,
-                    driver=driver_config,
-                )
-            )
             plugin_target = identity.product_uri.to_str()
             log.debug(
                 "Ingest target wiring (target=%s plugin_target=%s product_name=%s resolved_product_name=%s write_mode=%s storage_type=%s)",

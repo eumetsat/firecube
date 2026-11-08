@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -552,7 +553,9 @@ def test_incremental_backup_chain_restore_equals_the_second_release_inventory(
         ).read_text()
     )
     target = tmp_path / "restored.zarr"
-    restore_session = _build_local_archive_session(str(target), tmp_path, driver)[1]
+    binding = make_test_binding(tmp_path, product=target.name, driver=driver)
+    labelled = replace(binding.identity, product_name="p.zarr")  # the archive's label
+    restore_session = StorageSession(StorageBinding(identity=labelled, driver=binding.driver))
     restore_archive(
         session=restore_session,
         archive=archives[1].as_uri(),

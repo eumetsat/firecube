@@ -728,7 +728,7 @@ def preallocate_product(
                         error=exception_text(exc),
                         abandon=Operation(
                             "abandon_run",
-                            product_name=product_uri,
+                            target=product_uri,
                             run_id=run_id,
                             reason=Placeholder('"<reason>"'),
                         ),
@@ -760,7 +760,7 @@ def preallocate_product(
                         error=exception_text(exc),
                         clear=Operation(
                             "clear_claim",
-                            product_name=product_uri,
+                            target=product_uri,
                             domain_id=claim_domain,
                             force=True,  # the claim is fresh until its heartbeat times out
                         ),

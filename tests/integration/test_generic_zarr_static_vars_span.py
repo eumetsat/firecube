@@ -141,9 +141,8 @@ def _spans(tmp_path: Path) -> list[dict[str, Any]]:
         cli,
         [
             "chunks",
-            "--quiet",
             "list",
-            "--product-name",
+            "--target",
             (tmp_path / _PRODUCT).as_uri(),
             "--include-span",
             "--format",

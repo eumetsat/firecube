@@ -28,15 +28,33 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from firecube.cli import index as index_cli
 from firecube.cli.main import cli
+from firecube.core.controlplane.product_label import stamp_product_label
 from firecube.core.controlplane.types import (
+    CONTROL_DIRNAME,
     INDEX_CURRENT_FILENAME,
     INDEX_DIRNAME,
     ResolvedIndexRecord,
     canonical_index_bytes,
 )
+from firecube.core.filesystem import create_filesystem
+from firecube.core.product.identity import ProductIdentity
+from firecube.core.storage.binding import StorageBinding
+from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.core.storage.uri import StorageUri
 
 pytestmark = pytest.mark.integration
+
+
+def stamp_label(cube: Path, label: str = "test_product") -> None:
+    """Record `label` in the store's `.firecube/product.json` through the real stamp writer."""
+    uri = StorageUri.from_local_path(cube)
+    identity = ProductIdentity.from_uri(uri, "zarr", product_name=label)
+    fs = create_filesystem(
+        StorageBinding(identity=identity, driver=StorageDriverConfig(driver="fsspec"))
+    )
+    stamp_product_label(fs, uri.join(CONTROL_DIRNAME), label)
 
 
 def _index_payload(size: int = 3) -> dict[str, object]:
@@ -66,6 +84,7 @@ def _seed_record(cube_dir: Path, run_id: str = "seed-run") -> ResolvedIndexRecor
     index_dir = cube_dir / ".firecube" / INDEX_DIRNAME
     index_dir.mkdir(parents=True, exist_ok=True)
     (index_dir / INDEX_CURRENT_FILENAME).write_bytes(record.to_json_bytes())
+    stamp_label(cube_dir)
     return record
 
 
@@ -86,20 +105,11 @@ def _seed_corrupt_record(cube_dir: Path) -> None:
     (index_dir / INDEX_CURRENT_FILENAME).write_bytes(
         json.dumps(tampered, sort_keys=True, separators=(",", ":")).encode("utf-8")
     )
+    stamp_label(cube_dir)
 
 
-def _show_args(cube_dir: Path, product_name: str = "test_product", *extras: str) -> list[str]:
-    args = [
-        "zarr",
-        "index",
-        "show",
-        "--target",
-        f"file://{cube_dir}",
-        "--product-name",
-        product_name,
-    ]
-    args.extend(extras)
-    return args
+def _show_args(cube_dir: Path, *extras: str) -> list[str]:
+    return ["zarr", "index", "show", "--target", f"file://{cube_dir}", *extras]
 
 
 def test_show_help_lists_required_flags() -> None:
@@ -107,13 +117,14 @@ def test_show_help_lists_required_flags() -> None:
 
     assert result.exit_code == 0, result.output
     assert "--target" in result.output
-    assert "--product-name" in result.output
+    assert "--product-name" not in result.output
     assert "--json" in result.output
 
 
 def test_show_fresh_cube_exits_one_with_message(tmp_path: Path) -> None:
     fresh_cube = tmp_path / "fresh_cube"
     fresh_cube.mkdir()
+    stamp_label(fresh_cube)
 
     result = CliRunner().invoke(cli, _show_args(fresh_cube))
 
@@ -121,13 +132,19 @@ def test_show_fresh_cube_exits_one_with_message(tmp_path: Path) -> None:
     assert "No index record found" in result.stderr
 
 
-def test_show_populated_cube_returns_human_readable_output(tmp_path: Path) -> None:
+def test_show_populated_cube_returns_human_readable_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     cube = tmp_path / "populated_cube"
     cube.mkdir()
     record = _seed_record(cube)
+    labels: list[str] = []
+    real = index_cli._manager
+    monkeypatch.setattr(index_cli, "_manager", lambda t, p: labels.append(p) or real(t, p))
 
     result = CliRunner().invoke(cli, _show_args(cube))
 
+    assert labels == ["test_product"]  # the recorded label, not "populated_cube"
     assert result.exit_code == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     # Human-readable format must mention the identity_hash label and a group table hint.
     assert "identity_hash" in result.stdout
@@ -141,7 +158,7 @@ def test_show_populated_cube_json_has_five_keys(tmp_path: Path) -> None:
     cube.mkdir()
     record = _seed_record(cube)
 
-    result = CliRunner().invoke(cli, _show_args(cube, "test_product", "--json"))
+    result = CliRunner().invoke(cli, _show_args(cube, "--json"))
 
     assert result.exit_code == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     parsed = json.loads(result.stdout)
@@ -168,24 +185,25 @@ def test_show_corrupt_record_exits_one(tmp_path: Path) -> None:
     assert "identity-hash mismatch" in result.stderr
 
 
-def test_show_missing_product_name_raises_click_usage_error(tmp_path: Path) -> None:
+def test_show_unlabelled_store_refuses_with_adopt_recovery_command(tmp_path: Path) -> None:
     cube = tmp_path / "any_cube"
     cube.mkdir()
-    # Do NOT include --product-name; Click must reject before command body runs.
-    args = ["zarr", "index", "show", "--target", f"file://{cube}"]
 
-    result = CliRunner().invoke(cli, args)
+    result = CliRunner().invoke(cli, _show_args(cube))
 
-    # Click's UsageError uses exit code 2 (distinct from our 1=error and 3=not-found).
     assert result.exit_code == 2, f"stdout={result.stdout!r} stderr={result.stderr!r}"
-    assert "--product-name" in result.stderr
+    assert "records no product label" in result.stderr
+    assert "firecube migrate adopt --target" in result.stderr
+    assert "--product-name <label>" in result.stderr
 
 
 @pytest.mark.contract
 @pytest.mark.parametrize("cmd", [["show"], ["verify"], ["rebuild", "--plugin", "p"]])
 @pytest.mark.parametrize("pre", ["", "FILE://"])
 def test_index_commands_refuse_a_target_the_uri_rule_refuses(tmp_path, cmd, pre) -> None:
-    args = ["zarr", "index", *cmd, "--target", f"{pre}{tmp_path}", "--product-name", "p"]
+    args = ["zarr", "index", *cmd, "--target", f"{pre}{tmp_path}"]
+    if cmd[0] == "rebuild":
+        args += ["--product-name", "p"]
     result = CliRunner().invoke(cli, args)
     assert result.exit_code == 2 and "Invalid value for '--target'" in result.stderr, result.stderr
     assert ("must be lowercase" if pre else "scheme required (file:// or s3://)") in result.stderr

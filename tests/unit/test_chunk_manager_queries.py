@@ -271,14 +271,17 @@ def stored_span_groups(root: Path) -> set[str]:
 
 
 def feb_30_cli_args(monkeypatch, root: Path, command: str, *args: str, recorded_at=None):
-    """Record the spans under a local config; return the `firecube chunks` argv."""
+    """Record the spans; return the `firecube chunks` argv that targets that store."""
     for name in ("FIRECUBE_STORAGE_TYPE", "FIRECUBE_TARGET_PATH", "FIRECUBE_CONFIG"):
         monkeypatch.delenv(name, raising=False)
     record_feb_30_spans(root, recorded_at=recorded_at).close()
-    config = root / "cfg.toml"
-    config.write_text(f'[storage]\ntype = "local"\ntarget_path = "{root}"\n', encoding="utf-8")
-    base = ["--config-file", str(config), "chunks", f"--workspace={root}/ws"]
-    return [*base, command, *args, "--product-name=cal"]
+    return [
+        "chunks",
+        f"--workspace={root}/ws",
+        command,
+        *args,
+        f"--target={(root / 'cal').as_uri()}",
+    ]
 
 
 @pytest.mark.parametrize(

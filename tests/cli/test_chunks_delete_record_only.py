@@ -80,7 +80,7 @@ def test_delete_reports_span_records_without_storage(
         [
             "chunks",
             "delete",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             str(tmp_path),

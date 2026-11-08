@@ -27,11 +27,11 @@ from firecube.cli.snapshot._render import echo_json, echo_record, record_payload
     epilog="""\b
 Examples:
   # take a snapshot of the metadata of a local product
-  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # print the new snapshot record as JSON
-  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube snapshot list, firecube snapshot diff
 """,
@@ -41,7 +41,6 @@ See also: firecube snapshot list, firecube snapshot diff
 def take(
     ctx: click.Context,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -57,7 +56,6 @@ def take(
     manager, product = open_manager(
         ctx,
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,

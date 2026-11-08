@@ -36,14 +36,19 @@ import zarr
 from zarr.buffer import default_buffer_prototype
 from zarr.storage import MemoryStore
 
-from firecube.core.archive._common import clear_target
+from firecube.core.archive._common import (
+    PRODUCT_LABEL_KEY,
+    clear_target,
+    refuse_other_product_label,
+)
 from firecube.core.archive.zip.marker import (
     MARKER_ENTRY,
     MODE_INCREMENTAL,
     marker_problem,
     read_zip_marker,
 )
-from firecube.core.controlplane.types import CLAIMS_DIRNAME, CONTROL_DIRNAME
+from firecube.core.controlplane.types import CLAIMS_DIRNAME, CONTROL_DIRNAME, RUNS_DIRNAME
+from firecube.core.errors import Message, ProductLabelConflictError
 from firecube.core.filesystem.store_factory import create_zip_store
 from firecube.core.storage.session import StorageSession
 from firecube.core.uris import is_remote_target, local_path_from_target, require_target_is_product
@@ -51,6 +56,91 @@ from firecube.core.zarr._zarr_compat import sync
 
 _CLAIMS_PREFIX = f"{CONTROL_DIRNAME}/{CLAIMS_DIRNAME}/"
 _CONTROL_PREFIX = f"{CONTROL_DIRNAME}/"
+_RUNS_PREFIX = f"{CONTROL_DIRNAME}/{RUNS_DIRNAME}/"
+
+
+def archived_product_label(zf: zipfile.ZipFile, archive: str) -> str | None:
+    """Return the product label a zip archive records, or `None` when it records none.
+
+    The `.firecube/product.json` entry decides. Without one, the label every readable
+    `.firecube/runs/<run>/run.json` entry names decides.
+
+    Raises:
+        ValueError: The stamp entry is not JSON or names no label.
+        ProductLabelConflictError: The run entries name more than one label.
+    """
+    names = set(zf.namelist())
+    if PRODUCT_LABEL_KEY in names:
+        raw = zf.read(PRODUCT_LABEL_KEY)
+        try:
+            payload = json.loads(raw)
+        except ValueError as exc:
+            raise ValueError(
+                f"Entry {PRODUCT_LABEL_KEY!r} in archive {archive} is not JSON: {exc}"
+            ) from exc
+        label = payload.get("product") if isinstance(payload, dict) else None
+        if not isinstance(label, str) or not label:
+            raise ValueError(
+                f"Entry {PRODUCT_LABEL_KEY!r} in archive {archive} names no product label"
+            )
+        return label
+    labels: set[str] = set()
+    for name in names:
+        if not name.startswith(_RUNS_PREFIX):
+            continue
+        run, _, leaf = name.removeprefix(_RUNS_PREFIX).partition("/")
+        if not run or leaf != "run.json":
+            continue
+        try:
+            payload = json.loads(zf.read(name))
+        except ValueError:
+            continue  # an unreadable run record names no label, as in a live product
+        label = payload.get("product") if isinstance(payload, dict) else None
+        if isinstance(label, str) and label:
+            labels.add(label)
+    if len(labels) > 1:
+        ordered = sorted(labels)
+        raise ProductLabelConflictError(
+            Message(
+                "The run records of the archive {archive} name more than one label, "
+                "{labels}, and the archive has no label stamp.",
+                archive=archive,
+                labels=", ".join(repr(label) for label in ordered),
+            ),
+            labels=ordered,
+        )
+    return next(iter(labels), None)
+
+
+def zip_product_label(archive: str) -> str | None:
+    """Return the product label the zip archive at `archive` records, or `None`.
+
+    A missing file, or one that is not a zip archive, returns `None`; the zip restore
+    refuses it.
+
+    Raises:
+        ValueError: The stamp entry is not JSON or names no label.
+        ProductLabelConflictError: The run entries name more than one label.
+    """
+    try:
+        zf = zipfile.ZipFile(local_path_from_target(archive))
+    except (zipfile.BadZipFile, OSError):
+        return None
+    with zf:
+        return archived_product_label(zf, archive)
+
+
+def zip_label_stamp(archive: str) -> bytes | None:
+    """Return the bytes of the zip archive's `.firecube/product.json` entry, or `None` without one.
+
+    A missing file, or one that is not a zip archive, returns `None`.
+    """
+    try:
+        zf = zipfile.ZipFile(local_path_from_target(archive))
+    except (zipfile.BadZipFile, OSError):
+        return None
+    with zf:
+        return zf.read(PRODUCT_LABEL_KEY) if PRODUCT_LABEL_KEY in zf.namelist() else None
 
 
 @dataclass(frozen=True)
@@ -278,10 +368,12 @@ def zip_to_zarr(
     archive before it touches the target. It refuses an entry name that is
     absolute, holds a backslash, or has an empty, ``.`` or ``..`` segment.
     It then refuses a corrupt entry and a missing root ``zarr.json``. Last, it
-    parses every ``zarr.json`` entry on its own as Zarr v3 metadata.
+    parses every ``zarr.json`` entry on its own as Zarr v3 metadata. It refuses a
+    target that records another product label than the archive before any write.
 
     An overwrite then removes the existing store. It keeps ``.firecube/claims/``,
-    ``.firecube/schema.json`` and ``.firecube/runs/<keep_run_id>/``.
+    ``.firecube/schema.json``, ``.firecube/product.json`` and
+    ``.firecube/runs/<keep_run_id>/``. The copy never replaces a target's label stamp.
 
     Args:
         archive: Local path or ``file://`` URI of the zip archive.
@@ -300,8 +392,11 @@ def zip_to_zarr(
             overwrite finds a symlink at the target or on a kept path.
         FileNotFoundError: If ``archive`` is not a file.
         ValueError: If the archive is corrupt, has no root metadata, holds
-            invalid Zarr metadata or a marker that is not a JSON object, or
-            holds an entry name outside the target.
+            invalid Zarr metadata, a marker that is not a JSON object or a
+            malformed label stamp, or holds an entry name outside the target.
+        ProductLabelConflictError: If the archive has no label stamp and its run
+            records name several labels, or the target's do.
+        ProductLabelMismatchError: If the target records another product label.
         FileExistsError: If ``target`` holds a Zarr store and ``overwrite`` is False.
     """
     require_target_is_product(target, session.product.product_uri)
@@ -326,13 +421,19 @@ def zip_to_zarr(
         if "zarr.json" not in keys and not is_incremental:
             raise ValueError(f"No Zarr v3 root metadata found in archive: {archive}")
         _refuse_invalid_metadata(zf, keys, archive)
+        label = archived_product_label(zf, archive)
+    if label is not None:
+        refuse_other_product_label(session, label)
 
     _prepare_target(target_path, overwrite=overwrite, keep_run_id=keep_run_id)
 
     product_uri = session.product.product_uri
+    # A target stamp records the archive's label, checked above, and is create-only: it stays.
+    kept_stamp = PRODUCT_LABEL_KEY in keys and session.exists(product_uri.join(PRODUCT_LABEL_KEY))
     with zipfile.ZipFile(archive_path) as zf:
         for key in keys:
-            session.put_bytes(product_uri.join(key), zf.read(key))
+            if not (kept_stamp and key == PRODUCT_LABEL_KEY):
+                session.put_bytes(product_uri.join(key), zf.read(key))
 
     # verify: the restored store opens and lists the same groups and arrays; an incremental
     # backup without a root document has no hierarchy of its own to open

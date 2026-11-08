@@ -29,6 +29,8 @@ import click
 from firecube.cli._errors import echo_rendered, render
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._formatter import FirecubeGroup
+from firecube.cli._product import recorded_identity
+from firecube.cli._shared_options import product_name_option, target_uri_option
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.core.controlplane import ChunkManager
@@ -68,6 +70,18 @@ def _manager(target: str, product_name: str) -> ChunkManager:
     if product_uri.protocol == "file":
         workspace = Path(product_uri.path).parent
     return ChunkManager(binding=binding, workspace=workspace)
+
+
+def _recorded_manager(target: str) -> tuple[ChunkManager, str]:
+    """Return the manager of the product at `target` and the label its store records.
+
+    Raises:
+        click.UsageError: The store records no label.
+    """
+    uri = parse_and_validate_uri(target, param_hint="--target")
+    driver = StorageDriverConfig.from_storage_config_or_default(None)
+    label = recorded_identity(uri, format="zarr", driver=driver).product_name
+    return _manager(target, label), label
 
 
 def _load_record(manager: ChunkManager, product_name: str) -> Any | None:
@@ -230,9 +244,21 @@ def _derived_coordinates_label_for_group(
     return f"{label}:"
 
 
-@index.command("show")
-@click.option("--target", required=True, help="Product Zarr URI to inspect.")
-@click.option("--product-name", required=True, help="Logical product name.")
+@index.command(
+    "show",
+    epilog="""\b
+Examples:
+  # show the resolved-index record
+  firecube zarr index show --target file:///data/p.zarr
+
+\b
+  # also compute derived coordinates of regular time axes
+  firecube zarr index show --target file:///data/p.zarr --derived
+
+See also: firecube zarr index verify, firecube zarr index rebuild
+""",
+)
+@target_uri_option(tier="inspect")
 @click.option("--json", "as_json", is_flag=True, help="Emit the raw record as JSON.")
 @click.option(
     "--derived/--no-derived",
@@ -244,10 +270,10 @@ def _derived_coordinates_label_for_group(
         "NEVER persists anything."
     ),
 )
-def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> None:
+def show_cmd(target: str, as_json: bool, derived: bool) -> None:
     """Show the current resolved-index record."""
 
-    manager = _manager(target, product_name)
+    manager, product_name = _recorded_manager(target)
     try:
         record = _load_record(manager, product_name)
         if record is None:
@@ -292,9 +318,21 @@ def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> No
         manager.close()
 
 
-@index.command("verify")
-@click.option("--target", required=True, help="Product Zarr URI to inspect.")
-@click.option("--product-name", required=True, help="Logical product name.")
+@index.command(
+    "verify",
+    epilog="""\b
+Examples:
+  # check the record against the root attr
+  firecube zarr index verify --target file:///data/p.zarr
+
+\b
+  # also compare the record with a plugin's declaration
+  firecube zarr index verify --target file:///data/p.zarr --plugin my_plugin
+
+See also: firecube zarr index show, firecube zarr index rebuild
+""",
+)
+@target_uri_option(tier="inspect")
 @click.option("--plugin", required=False, help="Optional plugin name to compare against.")
 @click.option(
     "--option",
@@ -303,16 +341,14 @@ def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> No
     type=TypedOptionsParam(),
     help="Plugin option in key=value form. Requires --plugin.",
 )
-def verify_cmd(
-    target: str, product_name: str, plugin: str | None, option: tuple[tuple[str, object], ...]
-) -> None:
+def verify_cmd(target: str, plugin: str | None, option: tuple[tuple[str, object], ...]) -> None:
     """Verify the current resolved-index record and mirrored root attr."""
 
     from firecube.ingestor.runtime.index_record import IndexRecordError, verify_index_record
 
     if option and plugin is None:
         raise click.UsageError("--option requires --plugin")
-    manager = _manager(target, product_name)
+    manager, product_name = _recorded_manager(target)
     try:
         load_plugin = (
             functools.partial(_load_plugin, plugin, manager) if plugin is not None else None
@@ -394,10 +430,24 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
     click.echo(f"VERIFIED resolved index {identity_hash[:16]}")
 
 
-@index.command("rebuild")
-@click.option("--target", required=True, help="Product Zarr URI to rebuild the index for.")
+@index.command(
+    "rebuild",
+    epilog="""\b
+Examples:
+  # rebuild the record from a plugin's declaration
+  firecube zarr index rebuild --target file:///data/p.zarr --plugin my_plugin --product-name p
+
+\b
+  # pass a plugin option
+  firecube zarr index rebuild --target file:///data/p.zarr --plugin my_plugin --product-name p \\
+      --option key=value
+
+See also: firecube zarr index verify, firecube zarr index show
+""",
+)
+@target_uri_option(tier="write")
 @click.option("--plugin", required=True, help="Plugin name used to resolve the index spec.")
-@click.option("--product-name", required=True, help="Logical product name.")
+@product_name_option(required=True)
 @click.option(
     "--option",
     "option",

@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""T16: ``chunks runs list`` still honors the storage-config fallback path.
+"""``chunks runs list --target`` reads the store at the target while a ``[storage]`` base is set.
 
-This pins the historical ``resolve_manager`` behavior for the runs
-subcommand when ``--target`` is omitted: the CLI must resolve the product
-from the storage config and surface control-plane state under that base.
+The configured base supplies driver settings only. It never redirects a command that
+names its store.
 """
 
 from __future__ import annotations
@@ -85,7 +84,7 @@ def _write_run_json(root: Path, *, product: str, run_id: str) -> Path:
     return run_json
 
 
-def test_runs_list_storage_config_fallback_finds_run(
+def test_runs_list_reads_the_target_store_not_the_storage_config_base(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     product_name = "my_product"
@@ -105,8 +104,8 @@ def test_runs_list_storage_config_fallback_finds_run(
             str(workspace),
             "runs",
             "list",
-            "--product-name",
-            product_name,
+            "--target",
+            (tmp_path / product_name).as_uri(),
             "--format",
             "json",
         ],

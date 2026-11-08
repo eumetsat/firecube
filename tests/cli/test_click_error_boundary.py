@@ -23,9 +23,11 @@ CLI boundary contract:
 
 from __future__ import annotations
 
+import ast
 import inspect
 import os
 from pathlib import Path
+from typing import Any
 
 import click
 import pytest
@@ -42,6 +44,7 @@ from firecube.cli._slot_env import _parse_int
 from firecube.cli.main import cli
 from firecube.core import errors as err
 from firecube.core.archive.zip.backup_chain import BackupChainError
+from firecube.core.zarr.guard.engine_owned import preallocate_operation
 from firecube.ingestor import errors as ingestor_errors
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
 from firecube.ingestor.runtime.preflight import StoragePreflightError
@@ -165,7 +168,7 @@ def test_debug_flag_and_env_print_the_traceback_and_restore_the_environment(
 
 
 def test_message_error_prints_the_cli_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
-    first, op = (err.Operation("rebuild_compact", product_name=n) for n in "qp")
+    first, op = (err.Operation("rebuild_compact", target=n) for n in "qp")
     inner = err.Message(
         "{slot_window} {o} {first}", slot_window=(1, 5), o=err.Param("time_dim"), first=first
     )
@@ -180,7 +183,7 @@ def test_message_error_prints_the_cli_rendering(monkeypatch: pytest.MonkeyPatch)
 
     result = CliRunner().invoke(cli, ["zarr", "validate"])
 
-    cmd = "firecube chunks compact rebuild --product-name"
+    cmd = "firecube chunks compact rebuild --target"
     assert result.exit_code == 2
     assert result.stderr == f"Error: g (1, 5) --time-dim {cmd} q r {cmd} p\n"
 
@@ -194,7 +197,7 @@ def test_storage_resolution_exit_code_follows_the_exception_kind(
 
     monkeypatch.setattr("firecube.cli._ctx.resolve_storage_config", fail)
 
-    args = ["--profile", "cf-18", "-p", tmp_local_zarr.as_uri(), "-g", "g1"]
+    args = ["--profile", "cf-18", "-t", tmp_local_zarr.as_uri(), "-g", "g1"]
 
     result = CliRunner().invoke(cli, ["advise", "compliance", *args])
 
@@ -207,7 +210,7 @@ def test_missing_tensogram_extra_under_archive_conversion_exits_4(
 ) -> None:
     monkeypatch.setattr("firecube.core.archive.tensogram._compat.HAS_TENSOGRAM", False)
     out = tmp_path / "out.tgm"
-    args = ["--source", tmp_local_zarr.as_uri(), "--archive", out.as_uri()]
+    args = ["--target", tmp_local_zarr.as_uri(), "--archive", out.as_uri()]
 
     result = CliRunner().invoke(
         cli,
@@ -266,10 +269,10 @@ def test_every_firecube_error_has_an_exit_code_below_internal(
 P, M, Op, F = err.Param, err.Message, err.Operation, err.OPERATION_FUNCTIONS
 U, R = "file:///a b", err.Placeholder('"<reason>"')
 SAMPLES = {
-    "abandon_run": ({"product_name": "p", "reason": R}, f"--product-name p --reason {R}"),
-    "clear_claim": ({"product_name": "p", "yes_i_really_mean_it": 1}, "--product-name p"),
-    "rebuild_compact": ({"product_name": "p"}, "--product-name p"),
-    "delete_span": ({"product_name": "p", "force": 1, "dry_run": 0}, "--product-name p --force"),
+    "abandon_run": ({"target": "p", "reason": R}, f"--target p --reason {R}"),
+    "clear_claim": ({"target": "p", "yes_i_really_mean_it": 1}, "--target p"),
+    "rebuild_compact": ({"target": "p"}, "--target p"),
+    "delete_span": ({"target": "p", "force": 1, "dry_run": 0}, "--target p --force"),
     "preallocate": (
         {"target": U, "product_name": "n", "write_mode": "staged", "dry_run": 0},
         f"<plugin> --target {U!r} --product-name n --write-mode staged --no-dry-run",
@@ -278,7 +281,7 @@ SAMPLES = {
         {"target": U, "plugin": "p"},
         f"--target {U!r} --plugin p --product-name <product_name>",
     ),
-    "validate": ({"product": U, "group_path": "g"}, f"--product {U!r} --group g"),
+    "validate": ({"target": U, "group_path": "g"}, f"--target {U!r} --group g"),
 }
 _ROOT = click.Context(_command(()), info_name="firecube")
 _ZARR = click.Context(_command(("zarr",)), info_name="zarr", parent=_ROOT)
@@ -309,6 +312,41 @@ def test_operation_renders_command_that_parses_against_the_real_cli(name: str) -
     assert name not in ("abandon_run", "clear_claim") or F[name].endswith("." + name)
 
 
+def _operation_call_sites() -> list[Any]:
+    """One param per `Operation(...)` or `preallocate_operation(...)` call in src/.
+
+    A `**mapping` argument is not enumerable, so the preallocate defaults are read from the factory.
+    """
+    defaults = frozenset(preallocate_operation().arguments)
+    sites = [pytest.param("preallocate", defaults, id="preallocate_operation-defaults")]
+    root = Path(__file__).resolve().parents[2] / "src"
+    for path in sorted(root.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.Call):
+                continue
+            callee = getattr(node.func, "id", getattr(node.func, "attr", ""))
+            first = node.args[0] if node.args else None
+            if callee == "Operation" and isinstance(first, ast.Constant):
+                name = first.value
+            elif callee == "preallocate_operation":
+                name = "preallocate"
+            else:
+                continue
+            keywords = frozenset(k.arg for k in node.keywords if k.arg)
+            site = f"{path.relative_to(root)}:{node.lineno}"
+            sites.append(pytest.param(name, keywords, id=site))
+    return sites
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize(("name", "keywords"), _operation_call_sites())
+def test_operation_call_site_names_only_declared_command_parameters(
+    name: str, keywords: frozenset[str]
+) -> None:
+    declared = {param.name for param in _command(OPERATIONS[name]).params}
+    assert keywords <= declared, sorted(keywords - declared)
+
+
 @pytest.mark.contract
 @pytest.mark.parametrize(("part", "library", "cli"), _PARTS)
 def test_part_renders_library_text_and_cli_command(part, library: str, cli: str) -> None:
@@ -326,7 +364,7 @@ def test_every_part_kind_the_library_renders_has_a_case_here() -> None:
 @pytest.mark.contract
 @pytest.mark.parametrize("args", [(), ("more",)])
 def test_error_exposes_message_parts_facts_and_recovery(args) -> None:
-    first, op = (Op("rebuild_compact", product_name=n) for n in "qp")
+    first, op = (Op("rebuild_compact", target=n) for n in "qp")
     inner = M("{slot_window} {o} {first}", slot_window=(1, 5), o=P("time_dim"), first=first)
     message = M("{group} {i} {run_id} {op}", group="g", i=inner, run_id="r", op=op)
     error = err.ConfigurationError(message, *args)

@@ -65,7 +65,7 @@ def list_cmd(output_format: str) -> None:
     epilog="""\b
 Examples:
   # list the migration runs recorded for a product
-  firecube migrate status --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube migrate status --target file:///data/products/MY_PRODUCT.zarr
 
 See also: firecube migrate run, firecube migrate list
 """,
@@ -75,7 +75,6 @@ See also: firecube migrate run, firecube migrate list
 def status(
     ctx: click.Context,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -91,7 +90,6 @@ def status(
         ctx,
         command="migrate status",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,

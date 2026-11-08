@@ -80,27 +80,41 @@ def check_product_label(
     return stamped
 
 
-def stamp_product_label(fs: StorageFilesystemFull, control_root: StorageUri, product: str) -> str:
+def stamp_product_label(
+    fs: StorageFilesystemFull,
+    control_root: StorageUri,
+    product: str,
+    *,
+    content: bytes | None = None,
+) -> str:
     """Refuse a label the store does not record, then create the stamp if the store has none.
 
-    A creator that loses the race re-reads the stamp and proceeds only when it records
-    `product`. Returns `product`, which the stamp now records.
+    With `content`, the stamp is those exact bytes, such as an archived stamp. A creator
+    that loses the race re-reads the stamp and proceeds only when it records `product`.
+    Returns `product`, which the stamp now records.
 
     Raises:
         ProductLabelMismatchError: The store records another label.
         ManifestError: The stamp, a run or claim record, or the `runs/` or `claims/`
-            listing cannot be read, or the stamp is malformed.
+            listing cannot be read, the stamp is malformed, or `content` is not a stamp
+            that records `product`.
         ProductLabelConflictError: The run records and held claims name more than one label.
     """
+    stamp_uri = control_root.join(PRODUCT_LABEL_FILENAME)
+    if content is not None and _stamp_label(content, stamp_uri) != product:
+        raise ManifestError(
+            f"product label stamp for {stamp_uri.to_str()} does not record {product!r}: "
+            f"{content[:200]!r}"
+        )
     if check_product_label(fs, control_root, product) is not None:
         return product
-    stamp_uri = control_root.join(PRODUCT_LABEL_FILENAME)
-    payload = {"product": product, "stamped_at": time.time()}
+    if content is None:
+        content = json.dumps({"product": product, "stamped_at": time.time()}).encode("utf-8")
     with suppress(Exception):
         # A local create-only write needs the directory; an object store has none to make.
         fs.makedirs(control_root, exist_ok=True)
     try:
-        fs.atomic_writer.write_atomic(stamp_uri, json.dumps(payload).encode("utf-8"))
+        fs.atomic_writer.write_atomic(stamp_uri, content)
     except FileExistsError:
         winner = _read_stamp(fs, control_root)
         if winner is None:
@@ -128,6 +142,15 @@ def _read_stamp(fs: StorageFilesystemFull, control_root: StorageUri) -> str | No
         return None
     except Exception as exc:
         raise ManifestError(f"product label stamp {uri.to_str()} cannot be read: {exc}") from exc
+    return _stamp_label(raw, uri)
+
+
+def _stamp_label(raw: bytes, uri: StorageUri) -> str:
+    """Return the label the stamp bytes `raw`, meant for `uri`, record.
+
+    Raises:
+        ManifestError: The bytes are not JSON or name no label.
+    """
     try:
         payload = json.loads(raw)
     except ValueError as exc:

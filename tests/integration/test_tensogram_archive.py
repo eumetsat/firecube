@@ -40,6 +40,7 @@ def _local_env(tmp_path: str) -> dict[str, str]:
 
 
 _LOCAL_STORAGE_FLAGS = ["--storage-type", "local", "--storage-driver", "fsspec"]
+_RESTORE_FLAGS = [*_LOCAL_STORAGE_FLAGS, "--product-name", "restored.zarr"]  # label-less archives
 
 
 def assert_restored_dataset_matches_source(source: xr.Dataset, restored: xr.Dataset) -> None:
@@ -113,7 +114,7 @@ def test_full_archive_restore_cycle(tmp_path):
     tgm_uri = f"file://{tgm}"
     result = runner.invoke(
         cli,
-        ["archive", "create", "--source", src_uri, "--archive", tgm_uri, *_LOCAL_STORAGE_FLAGS],
+        ["archive", "create", "--target", src_uri, "--archive", tgm_uri, *_LOCAL_STORAGE_FLAGS],
         env=env,
     )
     assert result.exit_code == 0, f"archive create failed: {result.output}"
@@ -137,7 +138,7 @@ def test_full_archive_restore_cycle(tmp_path):
 
     result = runner.invoke(
         cli,
-        ["archive", "restore", "--archive", tgm_uri, "--target", rest_uri, *_LOCAL_STORAGE_FLAGS],
+        ["archive", "restore", "--archive", tgm_uri, "--target", rest_uri, *_RESTORE_FLAGS],
         env=env,
     )
     assert result.exit_code == 0, f"restore failed: {result.output}"
@@ -187,7 +188,7 @@ def test_archive_time_range_subsetting(tmp_path):
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             src_uri,
             "--archive",
             f"file://{tgm}",
@@ -231,7 +232,7 @@ def test_archive_variable_selection(tmp_path):
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             src_uri,
             "--archive",
             f"file://{tgm}",
@@ -270,7 +271,7 @@ def test_multigroup_archive_restore_cycle(tmp_path):
     tgm_uri = f"file://{tgm}"
     result = runner.invoke(
         cli,
-        ["archive", "create", "--source", src_uri, "--archive", tgm_uri, *_LOCAL_STORAGE_FLAGS],
+        ["archive", "create", "--target", src_uri, "--archive", tgm_uri, *_LOCAL_STORAGE_FLAGS],
         env=env,
     )
     assert result.exit_code == 0, result.output
@@ -279,7 +280,7 @@ def test_multigroup_archive_restore_cycle(tmp_path):
 
     result = runner.invoke(
         cli,
-        ["archive", "restore", "--archive", tgm_uri, "--target", rest_uri, *_LOCAL_STORAGE_FLAGS],
+        ["archive", "restore", "--archive", tgm_uri, "--target", rest_uri, *_RESTORE_FLAGS],
         env=env,
     )
     assert result.exit_code == 0, result.output
@@ -315,7 +316,7 @@ def test_group_filter_archives_single_group(tmp_path):
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             src_uri,
             "--archive",
             f"file://{tgm}",
@@ -367,14 +368,14 @@ def test_chunk_fidelity_preserved_on_restore(tmp_path):
     tgm_uri = f"file://{tgm}"
     create_result = runner.invoke(
         cli,
-        ["archive", "create", "--source", src_uri, "--archive", tgm_uri, *_LOCAL_STORAGE_FLAGS],
+        ["archive", "create", "--target", src_uri, "--archive", tgm_uri, *_LOCAL_STORAGE_FLAGS],
         env=env,
     )
     assert create_result.exit_code == 0, create_result.output
 
     restore_result = runner.invoke(
         cli,
-        ["archive", "restore", "--archive", tgm_uri, "--target", rest_uri, *_LOCAL_STORAGE_FLAGS],
+        ["archive", "restore", "--archive", tgm_uri, "--target", rest_uri, *_RESTORE_FLAGS],
         env=env,
     )
     assert restore_result.exit_code == 0, restore_result.output
@@ -385,9 +386,8 @@ def test_chunk_fidelity_preserved_on_restore(tmp_path):
 
 
 def _archive_cli(tmp_path, *args):
-    result = CliRunner().invoke(
-        cli, ["archive", *args, *_LOCAL_STORAGE_FLAGS], env=_local_env(tmp_path)
-    )
+    flags = _RESTORE_FLAGS if args[0] == "restore" else _LOCAL_STORAGE_FLAGS
+    result = CliRunner().invoke(cli, ["archive", *args, *flags], env=_local_env(tmp_path))
     assert result.exit_code == 0, result.output
 
 
@@ -396,7 +396,7 @@ def test_restore_creates_no_root_snapshot(tmp_path):
     src, rest = tmp_path / "src.zarr", tmp_path / "rest.zarr"
     _make_test_dataset().to_zarr(src, consolidated=False)
     tgm = (tmp_path / "a.tgm").as_uri()
-    _archive_cli(tmp_path, "create", "--source", src.as_uri(), "--archive", tgm)
+    _archive_cli(tmp_path, "create", "--target", src.as_uri(), "--archive", tgm)
     _archive_cli(tmp_path, "restore", "--archive", tgm, "--target", rest.as_uri())
 
     assert json.loads((rest / "zarr.json").read_text()).get("consolidated_metadata") is None
@@ -410,7 +410,7 @@ def test_remote_grouped_restore_refreshes_existing_root_snapshot(tmp_path):
     ds.to_zarr(src, group="g1", mode="a", consolidated=False)
     ds.rename(FWI="OLD").to_zarr(rest, group="g1", mode="a")  # root snapshot lists g1/OLD
     tgm = (tmp_path / "a.tgm").as_uri()
-    _archive_cli(tmp_path, "create", "--source", src.as_uri(), "--archive", tgm, "--group", "g1")
+    _archive_cli(tmp_path, "create", "--target", src.as_uri(), "--archive", tgm, "--group", "g1")
     with mock.patch(
         "firecube.core.archive.tensogram.restore.is_remote_target", lambda target: True
     ):
@@ -446,7 +446,7 @@ def test_archive_without_controlplane_warns_and_succeeds(
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             src_uri,
             "--archive",
             f"file://{tgm}",
@@ -488,7 +488,7 @@ def test_archive_info_shows_groups(tmp_path):
     tgm_uri = f"file://{tgm}"
     create_result = runner.invoke(
         cli,
-        ["archive", "create", "--source", src_uri, "--archive", tgm_uri, *_LOCAL_STORAGE_FLAGS],
+        ["archive", "create", "--target", src_uri, "--archive", tgm_uri, *_LOCAL_STORAGE_FLAGS],
         env=env,
     )
     assert create_result.exit_code == 0, create_result.output
@@ -513,7 +513,7 @@ def test_repro_tgm_restore_keeps_compressor(tmp_path):
         compressors=GzipCodec(level=3),
     )
     tgm = (tmp_path / "c.tgm").as_uri()
-    _archive_cli(tmp_path, "create", "--source", src.as_uri(), "--archive", tgm)
+    _archive_cli(tmp_path, "create", "--target", src.as_uri(), "--archive", tgm)
     _archive_cli(tmp_path, "restore", "--archive", tgm, "--target", rest.as_uri())
 
     source_codecs = cast(Any, zarr.open_group(src, mode="r", path="Data")["v"]).compressors
@@ -532,7 +532,7 @@ def test_repro_tgm_root_label(tmp_path):
 
     created = runner.invoke(
         cli,
-        ["archive", "create", "--source", src.as_uri(), "--archive", tgm, *_LOCAL_STORAGE_FLAGS],
+        ["archive", "create", "--target", src.as_uri(), "--archive", tgm, *_LOCAL_STORAGE_FLAGS],
         env=env,
     )
     assert created.exit_code == 0, created.output

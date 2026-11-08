@@ -18,22 +18,21 @@ from importlib import import_module
 from typing import Any, cast
 
 import click
+import pytest
 
 from firecube.cli.main import cli as _root_cli
 from tests.cli._cli_introspection import enumerate_commands
 
 _command_contracts = import_module("tests.cli._command_contracts")
 CLI_COMMAND_CONTRACTS = cast(Any, _command_contracts).CLI_COMMAND_CONTRACTS
+pytestmark = pytest.mark.contract
 
 
 CANONICAL_SHORT_FLAGS: dict[str, str] = {
-    "-p": "--product",
     "-t": "--target",
-    "-s": "--source",
     "-a": "--archive",
     "-o": "--output",
     "-i": "--input-data",
-    "-n": "--product-name",
     "-g": "--group",
     "-w": "--write-mode",
     "-f": "--format",
@@ -44,13 +43,14 @@ SHORT_FLAG_ALLOWLIST: dict[tuple[str, ...], dict[str, str]] = {
 }
 
 
-def _walk_leaves(
-    cmd: click.Command, path: tuple[str, ...]
+def _walk_commands(
+    cmd: click.Command, path: tuple[str, ...], groups: bool = False
 ) -> list[tuple[tuple[str, ...], click.Command]]:
+    """Return the leaves under ``cmd``; with ``groups``, also ``cmd`` and every group."""
     if isinstance(cmd, click.Group):
-        result: list[tuple[tuple[str, ...], click.Command]] = []
+        result: list[tuple[tuple[str, ...], click.Command]] = [(path, cmd)] if groups else []
         for name, child in cmd.commands.items():
-            result.extend(_walk_leaves(child, (*path, name)))
+            result.extend(_walk_commands(child, (*path, name), groups))
         return result
     return [(path, cmd)]
 
@@ -81,8 +81,46 @@ def test_manifest_entries_match_actual_command_options() -> None:
             )
 
 
+_ROWS = list(CLI_COMMAND_CONTRACTS.items())
+_LABELLED_ROWS = [(path, entry) for path, entry in _ROWS if entry.label_source != "none"]
+
+
+def _ids(rows: list[tuple[tuple[str, ...], Any]]) -> list[str]:
+    return [".".join(path) for path, _entry in rows]
+
+
+def _options(path: tuple[str, ...]) -> frozenset[str]:
+    spec = next(s for s in enumerate_commands() if s.path == path)
+    return spec.required_options | spec.optional_options
+
+
+@pytest.mark.parametrize("short", ["-n", "-p", "-s"])
+def test_dropped_short_flags_are_not_reused(short: str) -> None:
+    bound = [
+        ".".join(path) or "<root>"
+        for path, cmd in _walk_commands(_root_cli, (), groups=True)
+        for param in cmd.params
+        if isinstance(param, click.Option) and short in (*param.opts, *param.secondary_opts)
+    ]
+    assert bound == []
+
+
+@pytest.mark.parametrize(("path", "entry"), _LABELLED_ROWS, ids=_ids(_LABELLED_ROWS))
+def test_product_commands_bind_target(path: tuple[str, ...], entry: Any) -> None:
+    options = _options(path)
+    assert "--target" in options
+    assert not options & {"--product", "--source"}
+    command = dict(_walk_commands(_root_cli, ()))[path]
+    assert any({"-t", "--target"} <= set(param.opts) for param in command.params)
+
+
+@pytest.mark.parametrize(("path", "entry"), _ROWS, ids=_ids(_ROWS))
+def test_product_name_exists_iff_label_is_cli_owned(path: tuple[str, ...], entry: Any) -> None:
+    assert ("--product-name" in _options(path)) == (entry.label_source == "cli")
+
+
 def test_short_flags_match_canonical_registry() -> None:
-    for path, cmd in _walk_leaves(_root_cli, ()):
+    for path, cmd in _walk_commands(_root_cli, ()):
         allow = SHORT_FLAG_ALLOWLIST.get(path, {})
         for param in cmd.params:
             if not isinstance(param, click.Option):

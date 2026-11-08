@@ -31,10 +31,15 @@ def _invoke_create(args: list[str]):
     return CliRunner().invoke(cli, ["archive", "create", *args])
 
 
+def test_create_names_target_for_the_removed_source_flag() -> None:
+    result = _invoke_create(["-s", "file:///tmp/x.zarr", "--archive", "file:///tmp/x.tgm"])
+    assert result.exit_code == 2 and "Use --target" in result.output
+
+
 def test_create_rejects_storage_type_source_uri_mismatch() -> None:
     result = _invoke_create(
         [
-            "--source",
+            "--target",
             "file:///tmp/x.zarr",
             "--archive",
             "file:///tmp/x.tgm",
@@ -57,7 +62,7 @@ def test_create_writes_nothing_for_a_refused_archive_uri(
     cwd = tmp_path / "cwd"
     cwd.mkdir()
     monkeypatch.chdir(cwd)
-    args = ["--source", f"file://{tmp_local_zarr}", "--archive", f"FILE://{tmp_path}/out.tgm"]
+    args = ["--target", f"file://{tmp_local_zarr}", "--archive", f"FILE://{tmp_path}/out.tgm"]
 
     def snapshot() -> dict[str, bytes | None]:
         return {
@@ -77,7 +82,7 @@ def test_create_writes_nothing_for_a_refused_archive_uri(
 def test_create_rejects_bare_archive_path() -> None:
     result = _invoke_create(
         [
-            "--source",
+            "--target",
             "file:///tmp/x.zarr",
             "--archive",
             "/tmp/foo.tgm",
@@ -96,7 +101,7 @@ def test_create_rejects_bare_archive_path() -> None:
 def test_create_rejects_remote_tgm_archive() -> None:
     result = _invoke_create(
         [
-            "--source",
+            "--target",
             "file:///tmp/x.zarr",
             "--archive",
             "s3://bucket/x.tgm",
@@ -133,7 +138,7 @@ def test_create_resolves_file_uri_archive(tmp_path: Path, monkeypatch) -> None:
     archive_path = tmp_path / "archive.tgm"
     result = _invoke_create(
         [
-            "--source",
+            "--target",
             "file:///tmp/x.zarr",
             "--archive",
             f"file://{archive_path}",
@@ -164,7 +169,7 @@ def test_create_refuses_a_360_day_time_coordinate_and_records_the_run_failed(
         )  # fmt: skip
     finally:
         manager.close()
-    args = ["--source", src.as_uri(), "--archive", (tmp_path / "out.tgm").as_uri()]
+    args = ["--target", src.as_uri(), "--archive", (tmp_path / "out.tgm").as_uri()]
     args += ["--storage-type", "local", "--storage-driver", "fsspec"]
     env = {"FIRECUBE_STORAGE_TYPE": "local", "FIRECUBE_TARGET_PATH": str(tmp_path)}
 

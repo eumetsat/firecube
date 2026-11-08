@@ -181,7 +181,7 @@ def test_non_terminal_run_blocks_and_names_abandon_command(tmp_path: Path) -> No
     root = manager.get_product_root(_PRODUCT)
     printed = render(excinfo.value)
     assert (
-        f'firecube chunks runs abandon --product-name {root} --run-id run-alive --reason "<reason>"'
+        f'firecube chunks runs abandon --target {root} --run-id run-alive --reason "<reason>"'
     ) in printed
     run_hint(printed, "firecube chunks runs abandon", "--dry-run")
 
