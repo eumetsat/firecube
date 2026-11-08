@@ -329,7 +329,7 @@ def test_rebuild_refuses_on_drifted_legacy_attr(
 
     result = CliRunner().invoke(cli, _args(cube, plugin="index-rebuild-regular"))
 
-    assert result.exit_code == 1, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert result.exit_code == 2, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     assert drifted_hash[:16] in result.output
     assert declared_hash[:16] in result.output
     assert "Refusing to rebuild" in result.output
@@ -477,7 +477,7 @@ def test_rebuild_none_spec_clear_error(tmp_path: Path, monkeypatch: pytest.Monke
 
     result = CliRunner().invoke(cli, _args(cube, plugin="index-rebuild-none"))
 
-    assert result.exit_code == 1, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert result.exit_code == 2, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     assert "does not opt into parallel ingestion" in result.output
     assert "index_spec() returned None" in result.output
     current_json = cube / ".firecube" / INDEX_DIRNAME / INDEX_CURRENT_FILENAME
@@ -509,12 +509,12 @@ def test_load_plugin_real_typeerror_propagates(
 
     result = CliRunner().invoke(cli, _args(cube, plugin="index-rebuild-broken"))
 
-    assert result.exit_code != 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
-    assert isinstance(result.exception, TypeError), (
-        f"Real plugin-side TypeError must not be masked; got: {result.exception!r}"
+    assert result.exit_code == 70, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert "TypeError" in result.stderr, (
+        f"Real plugin-side TypeError must not be masked; got: {result.stderr!r}"
     )
-    assert "my_custom_message" in str(result.exception), (
-        f"TypeError message must survive; got: {result.exception!r}"
+    assert "my_custom_message" in result.stderr, (
+        f"TypeError message must survive; got: {result.stderr!r}"
     )
 
 

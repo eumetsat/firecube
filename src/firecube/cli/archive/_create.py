@@ -23,7 +23,7 @@ import functools
 import click
 
 from firecube.cli._ctx import get_config, get_storage_config
-from firecube.cli._errors import echo_rendered, render
+from firecube.cli._errors import echo_rendered
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     archive_uri_option,
@@ -214,31 +214,23 @@ def create(
             "Zip archive does not support --group, --start-date, --end-date, or --variables"
         )
 
-    from firecube.ingestor.runtime.archive import (
-        ArchiveClaimError,
-        ArchiveConversionError,
-        ArchiveRecordError,
-        create_archive,
-    )
+    from firecube.ingestor.runtime.archive import create_archive
 
-    try:
-        created = create_archive(
-            session=session,
-            archive=archive,
-            archive_path=archive_abs,
-            archive_format=archive_format,
-            overwrite=overwrite,
-            group=group,
-            variables=variable_list,
-            start_date=start_date,
-            end_date=end_date,
-            compression=compression,
-            allow_nan=allow_nan,
-            allow_inf=allow_inf,
-            warn=functools.partial(echo_rendered, err=True),
-        )
-    except (ArchiveClaimError, ArchiveConversionError, ArchiveRecordError) as exc:
-        raise click.ClickException(render(exc)) from exc
+    created = create_archive(
+        session=session,
+        archive=archive,
+        archive_path=archive_abs,
+        archive_format=archive_format,
+        overwrite=overwrite,
+        group=group,
+        variables=variable_list,
+        start_date=start_date,
+        end_date=end_date,
+        compression=compression,
+        allow_nan=allow_nan,
+        allow_inf=allow_inf,
+        warn=functools.partial(echo_rendered, err=True),
+    )
 
     click.echo(f"Archive created: {created.target}")
     tgm_result = created.tgm_summary

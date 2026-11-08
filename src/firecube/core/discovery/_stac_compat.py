@@ -22,18 +22,21 @@ from __future__ import annotations
 
 import importlib.util
 
+from firecube.core.errors import OptionalExtraMissingError
+
 # Read by `require_stac` at call time, so a test can set it to simulate the missing extra.
 HAS_PYSTAC_CLIENT = importlib.util.find_spec("pystac_client") is not None
 
 
 def require_stac(operation: str) -> None:
-    """Raise ImportError with install instructions if pystac-client is not available.
+    """Raise `OptionalExtraMissingError` with install instructions if pystac-client is missing.
 
     Args:
         operation: What needs the extra, named first in the message, for example
             the command a CLI is running.
     """
     if not HAS_PYSTAC_CLIENT:
-        raise ImportError(
-            f"{operation} requires the stac extra. Install with: uv pip install 'firecube[stac]'"
+        raise OptionalExtraMissingError(
+            f"{operation} requires the stac extra. Install with: uv pip install 'firecube[stac]'",
+            extra="stac",
         )

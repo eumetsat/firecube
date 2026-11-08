@@ -142,7 +142,7 @@ def test_repro_multires_missing_coordinate(tmp_path: Path) -> None:
     flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "45"]
     result = _invoke_multires(["--target", store.as_uri(), "--product-name", "pn", *flags])
 
-    assert result.exit_code == 1, result.output
+    assert result.exit_code == 2, result.output
     assert isinstance(result.exception, SystemExit), repr(result.exception)
     assert "Traceback" not in result.output
     lines = [line for line in result.output.splitlines() if line.strip()]
@@ -180,7 +180,7 @@ def test_repro_multires_2d_coordinates(tmp_path: Path) -> None:
         ]
     )
 
-    assert result.exit_code == 1, result.output
+    assert result.exit_code == 2, result.output
     assert isinstance(result.exception, SystemExit), repr(result.exception)
     assert "Traceback" not in result.output
     lines = [line for line in result.output.splitlines() if line.strip()]

@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any, cast
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import echo_rendered, render, wrap_user_facing_errors
+from firecube.cli._errors import echo_rendered, render
 from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._product import resolve_product_identity
@@ -137,7 +137,6 @@ See also: firecube zarr slots, firecube zarr validate
     ),
 )
 @click.pass_context
-@wrap_user_facing_errors
 def preallocate(
     ctx: click.Context,
     plugin: str,

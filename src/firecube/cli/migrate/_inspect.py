@@ -20,10 +20,8 @@ import datetime
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli.migrate._common import echo_json, format_option, migrate_options, open_session
 from firecube.cli.plugins.registry import load_migration_steps
-from firecube.core.errors import FirecubeError
 from firecube.ingestor.runtime.migrate import list_migrations
 
 
@@ -101,10 +99,7 @@ def status(
     )
     manager = session.control_plane()
     ctx.call_on_close(manager.close)
-    try:
-        runs = list_migrations(manager=manager, product=session.product.product_name)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    runs = list_migrations(manager=manager, product=session.product.product_name)
 
     if output_format == "json":
         echo_json(

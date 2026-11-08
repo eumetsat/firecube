@@ -104,6 +104,25 @@ def test_compare_missing_store_uri_exit_nonzero(tmp_path: Path) -> None:
     assert "Traceback" not in result.output
 
 
+def test_compare_reports_changed_removed_and_added_attr_keys(tmp_path: Path) -> None:
+    a = _make_store(tmp_path / "a.zarr")
+    b = _make_store(tmp_path / "b.zarr")
+    zarr.open_array(store=str(a), path="data/values", mode="r+").attrs.update(
+        {"units": "K", "only_in_a": 1}
+    )
+    zarr.open_array(store=str(b), path="data/values", mode="r+").attrs.update(
+        {"units": "C", "only_in_b": [1, 2]}
+    )
+
+    result = _invoke_compare(_required_args(a, b))
+
+    assert result.exit_code == 1
+    assert "attrs[units] 'K' != 'C'" in result.stderr
+    assert "attrs[only_in_a] 1 != <missing>" in result.stderr
+    assert "attrs[only_in_b] <missing> != [1, 2]" in result.stderr
+    assert "attrs differ" not in result.stderr
+
+
 def test_compare_help_lists_required_flags() -> None:
     result = _invoke_compare(["--help"])
 

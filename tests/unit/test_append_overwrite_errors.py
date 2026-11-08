@@ -19,8 +19,10 @@ import numpy as np
 import pytest
 import xarray as xr
 import zarr
+from click.testing import CliRunner
 
-from firecube.cli._errors import wrap_user_facing_errors
+from firecube.cli._exit_codes import ExitCode
+from firecube.cli._formatter import FirecubeGroup
 from firecube.core.filesystem.store_factory import ZarrStoreHandle
 from firecube.core.zarr.time_decode import decode_time_array
 from firecube.ingestor.errors import (
@@ -74,15 +76,19 @@ def test_public_ingestor_error_subclasses_produce_user_facing_exit(
 ) -> None:
     assert isinstance(exc, IngestorError)
 
-    @wrap_user_facing_errors
+    @click.group(cls=FirecubeGroup)
+    def root() -> None:
+        pass
+
+    @root.command()
     def failing() -> None:
         raise exc
 
-    with pytest.raises(click.ClickException) as excinfo:
-        failing()
+    result = CliRunner().invoke(root, ["failing"])
 
-    assert excinfo.value.__cause__ is exc
-    assert str(exc) == excinfo.value.message
+    assert result.exit_code == ExitCode.CHECK_FAILED
+    assert str(exc) in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 @pytest.mark.parametrize("incoming_day", [2, 1], ids=["equal-to-maximum", "before-maximum"])

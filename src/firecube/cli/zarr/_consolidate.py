@@ -19,7 +19,8 @@ from __future__ import annotations
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import echo_rendered, render, wrap_user_facing_errors
+from firecube.cli._errors import echo_rendered, exit_with_error, render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
@@ -95,7 +96,6 @@ See also: firecube zarr preallocate, firecube zarr validate
     ),
 )
 @click.pass_context
-@wrap_user_facing_errors
 def consolidate_time_coord(
     ctx: click.Context,
     target: str,
@@ -123,9 +123,8 @@ def consolidate_time_coord(
     it, and preserves the coordinate values.
 
     Use it for existing cubes with chunks=(1,) on the time coordinate.
-    Always run with --dry-run first.
+    Always run with --dry-run first. Exits 1 when no group has a time coordinate.
     """
-    from firecube.core.errors import ProductUnderMaintenanceError
     from firecube.core.zarr.coord_consolidation import (
         ProductIdentityError,
         consolidate_time_coords,
@@ -162,8 +161,6 @@ def consolidate_time_coord(
         )
     except ProductIdentityError as exc:
         raise click.UsageError(render(exc)) from exc
-    except ProductUnderMaintenanceError as exc:
-        raise click.ClickException(render(exc)) from exc
 
     if dry_run:
         click.echo("Summary:")
@@ -172,4 +169,9 @@ def consolidate_time_coord(
         click.echo(f"  Groups already sealed: {summary.already_sealed}")
         click.echo(f"  Groups blocked by drift: {summary.blocked_by_drift}")
         if summary.blocked_by_drift > 0:
-            raise click.exceptions.Exit(1)
+            raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
+    if summary.eligible == 0 and summary.already_sealed == 0 and summary.blocked_by_drift == 0:
+        exit_with_error(
+            "no group has a time coordinate; pass --time-dim to name the time dimension.",
+            ExitCode.CHECK_FAILED,
+        )

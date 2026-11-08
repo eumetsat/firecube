@@ -28,7 +28,7 @@ import click
 
 from firecube.cli._command_schemas import IngestCommandConfig
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import MissingProductNameError, render, wrap_user_facing_errors
+from firecube.cli._errors import MissingProductNameError, enable_debug, render
 from firecube.cli._formatter import (
     COMMAND_GROUPS,
     OPTION_GROUPS,
@@ -521,8 +521,11 @@ OPTION_GROUPS.update(
     type=click.Path(path_type=Path),
     help="Firecube TOML config file (default: ~/.config/firecube/config.toml)",
 )
+@click.option(
+    "--debug", is_flag=True, help="Print the traceback of an error; sets FIRECUBE_DEBUG=1."
+)
 @click.pass_context
-def cli(ctx: click.Context, config_file: Path | None) -> None:
+def cli(ctx: click.Context, config_file: Path | None, debug: bool) -> None:
     """A plugin-driven batch ingestion engine for building and maintaining operational analysis-ready data cubes
 
     Firecube handles the operational work of building and maintaining cubes,
@@ -532,6 +535,8 @@ def cli(ctx: click.Context, config_file: Path | None) -> None:
     storage management and diagnostics.
     """
     ctx.ensure_object(dict)
+    if debug:
+        enable_debug(ctx)
     if config_file is not None:
         ctx.obj["config_file"] = config_file
 
@@ -676,7 +681,6 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
     help="show available options for the specified plugin and exit",
 )
 @click.pass_context
-@wrap_user_facing_errors
 def ingest(
     ctx: click.Context,
     plugin: str,

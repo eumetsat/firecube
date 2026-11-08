@@ -23,7 +23,7 @@ import numpy as np
 import zarr
 from click.testing import CliRunner, Result
 
-from firecube.cli.advise import advise
+from firecube.cli.main import cli
 from tests.helpers.rows import table_row
 
 
@@ -70,7 +70,9 @@ def _invoke(tmp_path: Path, product: str, group: str) -> Result:
     cfg = _FakeStorageConfig(base_uri=str(tmp_path))
     product_arg = product if "://" in product else (tmp_path / product).as_uri()
     with patch("firecube.cli.advise.get_storage_config", return_value=cfg):
-        return runner.invoke(advise, ["batch-size", "--product", product_arg, "--group", group])
+        return runner.invoke(
+            cli, ["advise", "batch-size", "--product", product_arg, "--group", group]
+        )
 
 
 def test_advise_batch_size(subtests: Any, tmp_path: Path) -> None:
@@ -99,6 +101,6 @@ def test_advise_batch_size(subtests: Any, tmp_path: Path) -> None:
 
     with table_row(subtests, "batch_size_nonexistent_store", tmp_path) as (workdir, _):
         result = _invoke(workdir, "nonexistent.zarr", "FOO")
-        assert result.exit_code != 0
-        assert "Error opening store:" in result.output
+        assert result.exit_code == 4
+        assert "Error:" in result.output
         assert "nonexistent.zarr does not exist" in result.output

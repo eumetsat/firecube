@@ -21,6 +21,7 @@ from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
@@ -96,6 +97,23 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any) -> None:
         "info_uri": "s3://bucket/x.parquet",
         "open_uri": "s3://bucket/x.parquet",
     }
+
+
+def test_invalid_product_exits_1(tmp_path: Path) -> None:
+    (tmp_path / "bad.parquet").write_bytes(b"not a parquet file")
+
+    result = _invoke_validate(["-p", tmp_path.as_uri()])
+
+    assert json.loads(result.output)["valid"] is False
+    assert result.exit_code == 1, result.output
+
+
+@pytest.mark.parametrize("name", ["absent", "absent.parquet"])
+def test_missing_product_exits_4(tmp_path: Path, name: str) -> None:
+    result = _invoke_validate(["-p", (tmp_path / name).as_uri()])
+
+    assert result.exit_code == 4, result.output
+    assert "Traceback" not in result.output
 
 
 def test_coherence_mismatch_rejected(tmp_path: Path) -> None:

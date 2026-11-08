@@ -73,7 +73,8 @@ def test_equal_slots_fail(tmp_path: Path) -> None:
     )
 
     assert result.exit_code != 0, result.output
-    assert "slot_start must be < slot_end" in str(result.exception)
+    assert "slot_start must be < slot_end" in result.stderr
+    assert "Traceback" not in result.output
 
 
 def test_negative_slot_start_fails(tmp_path: Path) -> None:
@@ -83,7 +84,8 @@ def test_negative_slot_start_fails(tmp_path: Path) -> None:
     )
 
     assert result.exit_code != 0, result.output
-    assert "non-negative" in str(result.exception)
+    assert "non-negative" in result.stderr
+    assert "Traceback" not in result.output
 
 
 def test_valid_slot_range_accepted(tmp_path: Path) -> None:

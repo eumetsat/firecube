@@ -206,14 +206,14 @@ def test_verify_legacy_only_cube_exits_one_with_rebuild_guidance(tmp_path: Path)
     assert "firecube zarr index rebuild" in result.stderr
 
 
-def test_verify_no_record_exits_3(tmp_path: Path) -> None:
+def test_verify_no_record_exits_1(tmp_path: Path) -> None:
     fresh = tmp_path / "fresh_cube"
     fresh.mkdir()
 
     result = CliRunner().invoke(cli, _verify_args(fresh))
 
-    # Exit 3 distinguishes "no record" from "error" (1) and Click UsageError (2).
-    assert result.exit_code == 3, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    # Exit 1 is a failed check; exit 3 is reserved for `--strict` warnings.
+    assert result.exit_code == 1, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     assert "No index record" in result.stderr
 
 

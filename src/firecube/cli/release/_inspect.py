@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import click
 
-from firecube.cli._errors import render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli.release._common import echo_json, open_session, release_options
 from firecube.cli.release._render import (
     echo_listing,
@@ -28,7 +28,6 @@ from firecube.cli.release._render import (
     release_payload,
     verification_payload,
 )
-from firecube.core.errors import FirecubeError
 from firecube.ingestor.runtime.release import (
     list_releases_for_product,
     read_release_for_product,
@@ -78,10 +77,7 @@ def list_cmd(
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        listing = list_releases_for_product(session=session)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    listing = list_releases_for_product(session=session)
     if output_format == "json":
         echo_json(listing_payload(listing))
         return
@@ -132,10 +128,7 @@ def show(
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        record = read_release_for_product(session=session, version=version)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    record = read_release_for_product(session=session, version=version)
     if output_format == "json":
         echo_json(release_payload(record))
         return
@@ -204,14 +197,11 @@ def verify(
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        verification = verify_release_for_product(session=session, version=version)
-        check = verify_retention(session, verification.version, sample=sample)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    verification = verify_release_for_product(session=session, version=version)
+    check = verify_retention(session, verification.version, sample=sample)
     if output_format == "json":
         echo_json(verification_payload(verification, check))
     else:
         echo_verification(verification, check)
     if not (verification.matches and check.holds):
-        ctx.exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)

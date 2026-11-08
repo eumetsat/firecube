@@ -539,6 +539,18 @@ def test_consolidate_time_coord_on_calendar_store_is_a_safe_noop(tmp_path: Path)
     assert _md5_of_files(cube / "data") == before
 
 
+def test_no_time_coord_anywhere_exits_1(tmp_path: Path) -> None:
+    """A cube with no time coordinate in any group fails with exit 1 and names --time-dim."""
+    cube = tmp_path / "cube.zarr"
+    group = zarr.open_group(str(cube), mode="w", zarr_format=3).require_group("data")
+    group.create_array("lat", data=np.arange(4, dtype=np.float64), dimension_names=("lat",))
+
+    result = CliRunner().invoke(cli, _consolidate_args(cube))
+
+    assert result.exit_code == 1, result.output + result.stderr
+    assert "--time-dim" in result.stderr, result.stderr
+
+
 def test_consolidate_time_coord_refused_under_exclusive_maintenance(tmp_path: Path) -> None:
     """A held exclusive maintenance claim refuses the command and leaves the store as it was."""
     from firecube.core.controlplane import ChunkManager

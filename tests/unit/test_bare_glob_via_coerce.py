@@ -21,7 +21,8 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from firecube.cli._errors import wrap_user_facing_errors
+from firecube.cli._exit_codes import ExitCode
+from firecube.cli._formatter import FirecubeGroup
 from firecube.ingestor.config.coercion import coerce_cli_value
 from firecube.ingestor.errors import ConfigurationError
 
@@ -74,12 +75,17 @@ def test_valid_json_list_unchanged() -> None:
 
 
 def test_repro_option_hint_with_single_quote_parses_back_to_the_value() -> None:
-    @click.command()
-    @wrap_user_facing_errors
+    @click.group(cls=FirecubeGroup)
+    def root() -> None:
+        pass
+
+    @root.command()
     def coerce() -> None:
         coerce_cli_value("[it's.csv]", list[str] | None, "example_list")
 
-    output = CliRunner().invoke(coerce).output
+    result = CliRunner().invoke(root, ["coerce"])
+    assert result.exit_code == ExitCode.USAGE
+    output = result.output
     tokens = shlex.split(output[output.index("--option") :])
     assert tokens[0] == "--option"
     assert coerce_cli_value(tokens[1].partition("=")[2], list[str] | None, "x") == ["it's.csv"]

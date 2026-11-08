@@ -244,19 +244,13 @@ def test_preallocate_release_failure_reraises_on_success(
         f"{release_call_count['n']!r} coord_materialization calls, "
         f"output={result.output!r}"
     )
-    assert result.exit_code != 0, (
-        "success-path release failure must propagate to a non-zero exit "
-        "(a silent swallow leaves a stale claim on the control-plane); "
+    assert result.exit_code == 70, (
+        "the injected OSError is unclassified and ends the command with the internal code; "
         f"got exit_code={result.exit_code!r}, output={result.output!r}"
     )
-    assert isinstance(result.exception, OSError), (
+    assert "Error: OSError: simulated release failure" in result.stderr, (
         "the propagated exception must be the underlying OSError from the "
-        "release stub, not an unrelated failure; "
-        f"got {type(result.exception).__name__}: {result.exception!r}\n"
-        f"output={result.output!r}"
-    )
-    assert "simulated release failure" in str(result.exception), (
-        f"OSError message must match the injected text: {result.exception!r}"
+        f"release stub, not an unrelated failure; stderr={result.stderr!r}"
     )
     error_messages = [record.getMessage() for record in log_records]
     assert any("failed to release materialization claim" in msg for msg in error_messages), (

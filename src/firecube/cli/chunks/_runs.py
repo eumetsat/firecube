@@ -21,11 +21,9 @@ from typing import Any
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli._shared_options import dry_run_flag, yes_flag
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.core.controlplane.types import AbandonSweepResult
-from firecube.core.errors import ManifestError
 
 from ._manager import resolve_cli_product, resolve_manager
 
@@ -307,14 +305,11 @@ def abandon_cmd(
             ctx, workspace, product_uri=product_uri, product_name=product_name
         )
         effective_dry_run = dry_run or not yes_i_really_mean_it
-        try:
-            result = manager.abandon_stale_runs(
-                product=product_name,
-                reason=reason,
-                dry_run=effective_dry_run,
-            )
-        except ManifestError as exc:
-            raise click.ClickException(render(exc)) from exc
+        result = manager.abandon_stale_runs(
+            product=product_name,
+            reason=reason,
+            dry_run=effective_dry_run,
+        )
         _echo_abandon_sweep_result(
             product_name=product_name,
             result=result,
@@ -339,9 +334,6 @@ def abandon_cmd(
         return
 
     manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    try:
-        result = manager.abandon_run(product=product_name, run_id=run_id, reason=reason)
-    except ManifestError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = manager.abandon_run(product=product_name, run_id=run_id, reason=reason)
 
     _echo_abandon_run_result(product_name=product_name, run_id=run_id, result=result)

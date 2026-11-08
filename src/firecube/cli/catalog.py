@@ -23,7 +23,6 @@ from pathlib import Path
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import render
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     product_uri_option,
@@ -152,10 +151,7 @@ def intake(
 
     # Instantiate ingestor and let Firecube discover/annotate catalog groups.
     ingestor = ingestor_cls()
-    try:
-        groups = discover_catalog_groups(store_uri, storage_session=session)
-    except Exception as exc:
-        raise click.ClickException(render(exc)) from exc
+    groups = discover_catalog_groups(store_uri, storage_session=session)
     source_specs = build_catalog_source_specs(
         plugin_name=plugin,
         product=product_uri.to_str(),

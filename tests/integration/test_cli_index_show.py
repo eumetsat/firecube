@@ -111,13 +111,13 @@ def test_show_help_lists_required_flags() -> None:
     assert "--json" in result.output
 
 
-def test_show_fresh_cube_exits_three_with_message(tmp_path: Path) -> None:
+def test_show_fresh_cube_exits_one_with_message(tmp_path: Path) -> None:
     fresh_cube = tmp_path / "fresh_cube"
     fresh_cube.mkdir()
 
     result = CliRunner().invoke(cli, _show_args(fresh_cube))
 
-    assert result.exit_code == 3, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert result.exit_code == 1, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     assert "No index record found" in result.stderr
 
 

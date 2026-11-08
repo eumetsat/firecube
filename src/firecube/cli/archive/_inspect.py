@@ -24,7 +24,8 @@ from typing import Any
 
 import click
 
-from firecube.cli._errors import render
+from firecube.cli._errors import exit_with_error
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._shared_options import (
     archive_uri_option,
 )
@@ -117,19 +118,15 @@ def info(ctx: click.Context, archive: str, output_format: str) -> None:
         try:
             info_dict = zip_info(local_path)
         except (ValueError, zipfile.BadZipFile) as exc:
-            raise click.ClickException(str(exc)) from exc
+            exit_with_error(str(exc), ExitCode.CHECK_FAILED)
         _echo_archive_info(
             info_dict, as_json=output_format == "json", format_label=info_dict["format"]
         )
         return
 
-    from firecube.core.archive.tensogram.inspection import TensogramArchiveError, tgm_info
+    from firecube.core.archive.tensogram.inspection import tgm_info
 
-    try:
-        info_dict = tgm_info(local_path, operation="firecube archive info")
-    except TensogramArchiveError as exc:
-        raise click.ClickException(render(exc)) from exc
-
+    info_dict = tgm_info(local_path, operation="firecube archive info")
     _echo_archive_info(
         info_dict,
         as_json=output_format == "json",
@@ -179,7 +176,7 @@ def validate(ctx: click.Context, archive: str, quick: bool) -> None:
         click.echo(f"INVALID: {local_path} ({len(zip_issues)} issue(s))")
         for zip_issue in zip_issues:
             click.echo(f"  {zip_issue}")
-        raise SystemExit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
     from firecube.core.archive.tensogram.inspection import validate_tgm
 
@@ -197,7 +194,7 @@ def validate(ctx: click.Context, archive: str, quick: bool) -> None:
                 )
             else:
                 click.echo(f"  [{scope}] {issue}")
-        raise SystemExit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
 
 @click.command(

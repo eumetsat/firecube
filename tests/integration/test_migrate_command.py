@@ -255,7 +255,8 @@ def test_interrupted_migration_resumes_under_its_run_or_refuses_a_hand_edit(
             crash.setattr(ChunkManager, "take_snapshot", snapshot)
         else:
             crash.setattr(metadata_authority, "publish_raw", publish)
-        _migrate(store, RETITLE, exit_code=1)
+        # The injected KeyboardInterrupt ends the run with 130; a lost claim (claim-swap) is a refusal, 1.
+        _migrate(store, RETITLE, exit_code=1 if checkpoint == "claim-swap" else 130)
     ((run_id, meta),) = _runs(store).items()
     assert meta["status"] == ("failed" if checkpoint == "claim-swap" else "started")
     assert _chunks(store) == chunks
@@ -308,7 +309,7 @@ def test_crash_left_claim_blocks_the_rerun_until_claims_clear(tmp_path, monkeypa
     with monkeypatch.context() as crash:
         crash.setattr(metadata_authority, "publish_raw", publish)
         crash.setattr(ClaimHandle, "release", lambda self: self._stop.set())  # a killed process
-        _migrate(store, RETITLE, exit_code=1)
+        _migrate(store, RETITLE, exit_code=130)
     ((run_id, _),) = _runs(store).items()
     assert len(_claim_files(store)) == 1
 

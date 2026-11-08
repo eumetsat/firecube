@@ -540,6 +540,22 @@ class IndexedWriteCompilationError(ValueError):
         )
 
 
+class OptionalExtraMissingError(FirecubeError, ImportError):
+    """An optional dependency is not installed, so the operation that needs it cannot run.
+
+    Attributes:
+        extra: The `firecube` extra that installs the dependency, for example `stac`.
+    """
+
+    def __init__(self, message: object, *, extra: str) -> None:
+        self.extra = extra
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        fields = {"extra": self.extra}
+        return (_restore_with_fields, (type(self), self.args[0], fields), self.__dict__)
+
+
 class SchemaDriftError(FirecubeError):
     """Existing Zarr array metadata drifted from the declared schema.
 
@@ -671,6 +687,40 @@ class ProductUnderMaintenanceError(FirecubeError):
 
     def __reduce__(self) -> tuple[Any, ...]:
         fields = {"product": self.product, "owner_id": self.owner_id, "stale": self.stale}
+        return (_restore_with_fields, (type(self), self.args[0], fields), self.__dict__)
+
+
+class ProductLabelMismatchError(ConfigurationError):
+    """The product records another label than the one given, so the call is refused.
+
+    Attributes:
+        given: The label the caller gave.
+        recorded: The label the product records.
+    """
+
+    def __init__(self, message: object, *, given: str, recorded: str) -> None:
+        self.given = given
+        self.recorded = recorded
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        fields = {"given": self.given, "recorded": self.recorded}
+        return (_restore_with_fields, (type(self), self.args[0], fields), self.__dict__)
+
+
+class ProductLabelConflictError(FirecubeError):
+    """The run records and held claims of a product without a label stamp name several labels.
+
+    Attributes:
+        labels: The labels the records name, sorted.
+    """
+
+    def __init__(self, message: object, *, labels: Iterable[str]) -> None:
+        self.labels = tuple(sorted(labels))
+        super().__init__(message)
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        fields = {"labels": self.labels}
         return (_restore_with_fields, (type(self), self.args[0], fields), self.__dict__)
 
 

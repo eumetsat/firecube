@@ -19,9 +19,7 @@ from pathlib import Path
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli._shared_options import dry_run_flag
-from firecube.core.errors import ManifestError
 
 from ._manager import resolve_cli_product, resolve_manager
 
@@ -156,10 +154,7 @@ def status_cmd(
     when it was last rebuilt. use to decide whether a rebuild is needed"""
     product_name, product_uri = resolve_cli_product(product_name)
     manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    try:
-        result = manager.compact_status(product_name)
-    except ManifestError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = manager.compact_status(product_name)
 
     if output_format == "json":
         click.echo(json.dumps(result, indent=2))

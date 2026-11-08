@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.cli.release._common import (
     echo_json,
@@ -28,7 +27,6 @@ from firecube.cli.release._common import (
     release_options,
 )
 from firecube.cli.release._render import create_payload, echo_record
-from firecube.core.errors import FirecubeError
 from firecube.ingestor.runtime.release import create_release_for_product
 
 
@@ -139,19 +137,16 @@ def create(
         writable=True,
     )
     json_out = output_format == "json"
-    try:
-        result = create_release_for_product(
-            session=session,
-            version=version,
-            note=note,
-            report=echo_progress if json_out else click.echo,
-            warn=echo_warning,
-            archive=archive_uri,
-            archive_full=archive_full,
-            retain_versions=retain_versions,
-        )
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = create_release_for_product(
+        session=session,
+        version=version,
+        note=note,
+        report=echo_progress if json_out else click.echo,
+        warn=echo_warning,
+        archive=archive_uri,
+        archive_full=archive_full,
+        retain_versions=retain_versions,
+    )
     if json_out:
         echo_json(create_payload(result))
         return

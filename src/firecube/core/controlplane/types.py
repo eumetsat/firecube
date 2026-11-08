@@ -44,6 +44,7 @@ METADATA_DIRNAME = "metadata"
 RELEASES_DIRNAME = "releases"
 INVENTORIES_DIRNAME = "inventories"
 SCHEMA_FILENAME = "schema.json"
+PRODUCT_LABEL_FILENAME = "product.json"
 DEFAULT_RUN_STALE_THRESHOLD_S = 3600
 EVENT_RUN_STARTED_WITH_REPLACEMENT = "run_started_with_replacement"
 EVENT_REPLACEMENT_COMMITTED = "replacement_committed"

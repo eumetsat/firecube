@@ -21,7 +21,8 @@ import json
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import render, wrap_user_facing_errors
+from firecube.cli._errors import render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     product_uri_option,
@@ -98,7 +99,6 @@ See also: firecube chunks list, firecube parquet validate
 @storage_driver_option(required=False)
 @storage_type_option(required=False)
 @click.pass_context
-@wrap_user_facing_errors
 def validate(
     ctx: click.Context,
     product: str,
@@ -158,7 +158,7 @@ def validate(
     report_dict["info_notes"] = [render(note) for note in report_dict["info_notes"]]
     click.echo(json.dumps(report_dict, indent=2))
     if not report.is_valid:
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
 
 @click.command(
@@ -199,7 +199,6 @@ Examples:
         "in the environment or config file."
     ),
 )
-@wrap_user_facing_errors
 def compare(
     a_uri: str,
     b_uri: str,
@@ -238,7 +237,7 @@ def compare(
     if report.content_mismatches:
         for mismatch in report.content_mismatches:
             click.echo(mismatch, err=True)
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     # Layout-only differences: values are equivalent, warn and exit 0.
     layout_detail = "\n".join(report.layout_mismatches)
     click.echo(

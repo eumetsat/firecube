@@ -23,7 +23,7 @@ import functools
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import echo_rendered, render
+from firecube.cli._errors import echo_rendered
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     archive_uri_option,
@@ -157,26 +157,18 @@ def restore(
         )
     )
 
-    from firecube.core.archive.zip.backup_chain import BackupChainError
-    from firecube.ingestor.runtime.archive import (
-        ArchiveClaimError,
-        ArchiveConversionError,
-        restore_archive,
-    )
+    from firecube.ingestor.runtime.archive import restore_archive
 
-    try:
-        restored = restore_archive(
-            session=session,
-            archive=archive,
-            archive_path=archive_abs,
-            archive_format="zip" if is_zip else "tensogram",
-            target=restore_identity.product_uri.to_str(),
-            overwrite=overwrite,
-            report=echo_rendered,
-            warn=functools.partial(echo_rendered, err=True),
-        )
-    except (ArchiveClaimError, ArchiveConversionError, BackupChainError) as exc:
-        raise click.ClickException(render(exc)) from exc
+    restored = restore_archive(
+        session=session,
+        archive=archive,
+        archive_path=archive_abs,
+        archive_format="zip" if is_zip else "tensogram",
+        target=restore_identity.product_uri.to_str(),
+        overwrite=overwrite,
+        report=echo_rendered,
+        warn=functools.partial(echo_rendered, err=True),
+    )
 
     result = restored.summary
     click.echo(f"Zarr restored: {result['target']}")

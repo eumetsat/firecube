@@ -269,18 +269,13 @@ def test_preallocate_terminal_failure_releases_claim(
         f"be exercised by the success-path cleanup; observed "
         f"{terminal_call_count['n']!r} calls, output={result.output!r}"
     )
-    assert result.exit_code != 0, (
-        "terminal-record failure on the success path must propagate; "
+    assert result.exit_code == 70, (
+        "the injected OSError is unclassified and ends the command with the internal code; "
         f"got exit_code={result.exit_code!r}, output={result.output!r}"
     )
-    assert isinstance(result.exception, OSError), (
+    assert "Error: OSError: simulated terminal-record failure" in result.stderr, (
         "the propagated exception must be the injected OSError, not an "
-        "unrelated failure; "
-        f"got {type(result.exception).__name__}: {result.exception!r}\n"
-        f"output={result.output!r}"
-    )
-    assert "simulated terminal-record failure" in str(result.exception), (
-        f"OSError message must match the injected text: {result.exception!r}"
+        f"unrelated failure; stderr={result.stderr!r}"
     )
     error_messages = [record.getMessage() for record in log_records]
     assert any(
@@ -348,19 +343,15 @@ def test_preallocate_both_failures_propagate_terminal_error(
         f"exercised for coord_materialization; observed "
         f"{release_failure_count['n']!r} calls, output={result.output!r}"
     )
-    assert result.exit_code != 0, (
-        f"either failure must propagate to a non-zero exit; "
+    assert result.exit_code == 70, (
+        f"the unclassified failure ends the command with the internal code; "
         f"got exit_code={result.exit_code!r}, output={result.output!r}"
     )
-    assert isinstance(result.exception, RuntimeError), (
+    assert "Error: RuntimeError: simulated terminal-record failure" in result.stderr, (
         "the terminal-record RuntimeError (root cause) must win over the "
-        "release OSError; "
-        f"got {type(result.exception).__name__}: {result.exception!r}\n"
-        f"output={result.output!r}"
+        f"release OSError; stderr={result.stderr!r}"
     )
-    assert "simulated terminal-record failure" in str(result.exception), (
-        f"propagated exception message must be the terminal-record one: {result.exception!r}"
-    )
+    assert "Error: OSError" not in result.stderr
     error_messages = [record.getMessage() for record in log_records]
     assert any(
         "failed to record terminal state for preallocate run" in msg for msg in error_messages

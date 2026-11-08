@@ -20,7 +20,6 @@ from typing import Any
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli._shared_options import dry_run_flag
 from firecube.cli.migrate._common import (
     echo_json,
@@ -32,7 +31,6 @@ from firecube.cli.migrate._common import (
     open_session,
 )
 from firecube.cli.plugins.registry import load_migration_steps
-from firecube.core.errors import FirecubeError
 from firecube.ingestor.runtime.migrate import (
     AdoptionResult,
     MigrationResult,
@@ -178,19 +176,16 @@ def run(
         writable=True,
     )
     json_out = output_format == "json"
-    try:
-        result = migrate_product(
-            session=session,
-            step_id=step_id,
-            load_steps=load_migration_steps,
-            step_options=options,
-            allow=tuple(a.lower() for a in allow),
-            dry_run=dry_run,
-            report=echo_progress if json_out else echo_report,
-            warn=echo_warning,
-        )
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = migrate_product(
+        session=session,
+        step_id=step_id,
+        load_steps=load_migration_steps,
+        step_options=options,
+        allow=tuple(a.lower() for a in allow),
+        dry_run=dry_run,
+        report=echo_progress if json_out else echo_report,
+        warn=echo_warning,
+    )
     if json_out:
         echo_json(_result_payload(result))
 
@@ -235,13 +230,10 @@ def adopt(
         writable=True,
     )
     json_out = output_format == "json"
-    try:
-        result = adopt_product(
-            session=session,
-            report=echo_progress if json_out else echo_report,
-            warn=echo_warning,
-        )
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = adopt_product(
+        session=session,
+        report=echo_progress if json_out else echo_report,
+        warn=echo_warning,
+    )
     if json_out:
         echo_json(_adoption_payload(result))

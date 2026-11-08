@@ -44,6 +44,7 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from typing import Any, Literal, NoReturn, Protocol, cast
 
+from firecube.core.controlplane.product_label import check_product_label, stamp_product_label
 from firecube.core.controlplane.types import (
     CLAIM_STATE_HELD,
     CLAIM_STATE_RELEASED,
@@ -665,15 +666,19 @@ class FilesystemClaimService:
         """Create the claim record, or take over a released one; refuse a held one.
 
         The handle reports its loss to the latch that `reporting_claim_loss` installed, if any.
+        A store without a label stamp gets one for `product` before the claims directory.
 
         Raises:
             ClaimConflictError: A held record exists, stale or not, or another writer won
                 the record first.
             ControlPlaneCorruptionError: The existing record cannot be read or parsed.
             ConfigurationError: The driver does not report `ConditionalWrite`.
+            ProductLabelMismatchError: The store records another product label; nothing
+                is written.
         """
         fs = _conditional(self._fs)
         control_path, _control_uri = self._control_root_resolver(product)
+        self._require_label(control_path, product, stamp=True)
         claims_dir = control_path.join(CLAIMS_DIRNAME)
         with suppress(Exception):
             self._fs.makedirs(claims_dir, exist_ok=True)
@@ -760,7 +765,8 @@ class FilesystemClaimService:
 
         Uses targeted claim-name derivation to avoid listing the claims directory. A
         released record reads as no claim. Raises ControlPlaneCorruptionError on a
-        malformed claim file.
+        malformed claim file, and ProductLabelMismatchError when the store records
+        another product label.
         """
         record = self._read_record(
             product=product, claim_path=self._claim_path_for(product=product, domain_id=domain)
@@ -854,10 +860,30 @@ class FilesystemClaimService:
         return "changed"
 
     def _claim_path_for(self, *, product: str, domain_id: str) -> StorageUri:
+        """Return the record path of `domain_id`; refuse a label the store does not record.
+
+        A claim filed under another label has another name, so a read under `product`
+        would miss it.
+        """
         domain_product, category, name = domain_id.split(":", 2)
         control_path, _control_uri = self._control_root_resolver(product)
+        self._require_label(control_path, product, stamp=False)
         claim_name = WriteDomain(product=domain_product, category=category, name=name).claim_name
         return control_path.join(CLAIMS_DIRNAME).join(claim_name)
+
+    def _require_label(self, control_path: StorageUri, product: str, *, stamp: bool) -> None:
+        """Refuse `product` unless the store records it or no label; with `stamp`, stamp it.
+
+        Reads the stamp on every call: a store deleted and recreated under the same URI
+        can record another label.
+
+        Raises:
+            ProductLabelMismatchError: The store records another label.
+        """
+        if stamp:
+            stamp_product_label(self._fs, control_path, product)
+        else:
+            check_product_label(self._fs, control_path, product)
 
     def _list_products(self) -> set[str]:
         """List the product names under the base URI; an absent base lists none."""

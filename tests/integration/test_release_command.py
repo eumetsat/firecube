@@ -163,7 +163,7 @@ def test_release_resume_rewrites_nothing(tmp_path, monkeypatch, subtests, fmt, m
     store = _store(tmp_path, fmt)
     args = ("release", "create", "0.1.1") if mode == "standalone" else ("migrate", "run", RELEASING)
     monkeypatch.setattr(ChunkManager, failing, Mock(side_effect=RuntimeError("injected")))
-    _cli(store, *args, exit_code=1)
+    _cli(store, *args, exit_code=70)  # an injected RuntimeError is unclassified
     monkeypatch.undo()
     kept = {part: _hashes(store, ".firecube", part) for part in ("releases", "metadata")}
     _cli(store, *args)
@@ -191,7 +191,7 @@ def test_versions_with_slash_percent_and_dot_round_trip_under_escaped_keys(tmp_p
 def test_version_the_storage_cannot_hold_is_refused_before_anything_is_written(tmp_path, version):
     store = _store(tmp_path, 3)
     before = _hashes(store)
-    _cli(store, "release", "create", version, exit_code=1)
+    _cli(store, "release", "create", version, exit_code=2)
     assert _hashes(store) == before
 
 
@@ -253,7 +253,7 @@ def test_interrupted_release_archive_is_refused_on_rerun_and_rebuilt_from_one_ru
     archive = tmp_path / "full.zip"
     args = ("release", "create", "1.0", "--archive", archive.as_uri())
     monkeypatch.setattr(ChunkManager, "create_release", Mock(side_effect=RuntimeError("injected")))
-    _cli(store, *args, exit_code=1)
+    _cli(store, *args, exit_code=70)  # an injected RuntimeError is unclassified
     monkeypatch.undo()
     assert archive.is_file()  # the failure came after the archive write
 

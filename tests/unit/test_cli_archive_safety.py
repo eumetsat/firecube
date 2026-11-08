@@ -152,7 +152,9 @@ def test_list_prints_earlier_messages_before_a_late_decode_failure(tmp_path, mon
     archive = tmp_path / "archive.tgm"
     archive.write_bytes(b"fake")
     result = CliRunner().invoke(cli, ["archive", "list", "--archive", archive.as_uri()])
-    assert (result.exit_code, str(result.exception)) == (1, "late decode failure")
+    assert result.exit_code != 0
+    assert "late decode failure" in result.stderr
+    assert "Traceback" not in result.output
     assert result.stdout == (
         "Messages: 2\n\nGroup: F024\n  Source:  file:///tmp/product.zarr\n"
         "  Codec:   zstd\n  Objects: 0\n"

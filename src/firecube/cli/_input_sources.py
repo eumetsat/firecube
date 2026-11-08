@@ -107,7 +107,8 @@ def admit_sources(
         click.BadParameter: A value breaks the source URI rule (exit 2).
         click.UsageError: The configured search is invalid, or a search was given and no source
             is ``stac://`` (exit 2).
-        click.ClickException: A source is ``stac://`` and the ``stac`` extra is missing.
+        OptionalExtraMissingError: A source is ``stac://`` and the ``stac`` extra is missing
+            (exit 4).
     """
     sources, has_stac = admit_input_sources(values, param_hint="--input-data")
     from_config = stac_search is None
@@ -125,8 +126,5 @@ def admit_sources(
             f"{origin} applies to stac:// sources only, and no --input-data names one."
         )
     if has_stac:
-        try:
-            require_stac(command)
-        except ImportError as exc:
-            raise click.ClickException(str(exc)) from exc
+        require_stac(command)
     return sources, stac_search

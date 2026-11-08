@@ -550,7 +550,7 @@ def test_missing_stac_extra_names_the_command_before_any_access(tmp_path, apis, 
 
     result = CliRunner().invoke(cli, _ingest(tmp_path, "--input-data", SRC_A))
 
-    assert result.exit_code == 1, result.output
+    assert result.exit_code == 4, result.output
     assert "firecube ingest requires the stac extra" in result.output
     assert "firecube[stac]" in result.output
     assert _no_requests(*apis)

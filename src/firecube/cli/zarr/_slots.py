@@ -26,7 +26,8 @@ from typing import TYPE_CHECKING, Any, cast
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import render
+from firecube.cli._errors import exit_with_error, render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._product import resolve_product_identity
@@ -320,11 +321,9 @@ def slots(
             warn=_warn_stderr,
         )
     except slot_plan.SlotPlanBlockedError as exc:
-        raise click.ClickException(render(_blocked_refusal(exc, target))) from exc
+        exit_with_error(render(_blocked_refusal(exc, target)), ExitCode.CHECK_FAILED)
     except slot_plan.SlotPlanCeilingError as exc:
-        raise click.ClickException(render(_ceiling_refusal(exc))) from exc
-    except slot_plan.SlotPlanError as exc:
-        raise click.ClickException(render(exc)) from exc
+        exit_with_error(render(_ceiling_refusal(exc)), ExitCode.CHECK_FAILED)
 
     range_count = sum(plan.range_count for plan in plans)
     if range_count > PLAN_RANGE_HINT:

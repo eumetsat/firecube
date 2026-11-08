@@ -18,10 +18,8 @@ from __future__ import annotations
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli.snapshot._common import open_manager, snapshot_options
 from firecube.cli.snapshot._render import echo_json, echo_record, record_payload
-from firecube.core.errors import FirecubeError
 
 
 @click.command(
@@ -65,12 +63,7 @@ def take(
         storage_anonymous=storage_anonymous,
         writable=True,
     )
-    try:
-        record = manager.take_snapshot(
-            product, run_id=None, trigger="cli", consistency="observation"
-        )
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    record = manager.take_snapshot(product, run_id=None, trigger="cli", consistency="observation")
 
     if output_format == "json":
         echo_json(record_payload(record))

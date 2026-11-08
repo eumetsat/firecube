@@ -268,9 +268,8 @@ def test_preallocate_all_unbounded_axes_hard_fails_with_configuration_error(
 
     Silent success on an all-unbounded config would masquerade as a
     completed preallocate run and mask the misconfiguration until a much
-    later ingest failure.     The failure must be a ``ConfigurationError`` (routed through the
-    ``isinstance(exc, FirecubeError)`` branch of ``_is_known_user_error``
-    at the CLI boundary) whose message names the actionable remediation.
+    later ingest failure.     The failure must be a ``ConfigurationError`` (given exit
+    code 2 by ``classify`` at the CLI boundary) whose message names the actionable remediation.
     """
     target = tmp_path / "all-unbounded.zarr"
 
@@ -281,8 +280,8 @@ def test_preallocate_all_unbounded_axes_hard_fails_with_configuration_error(
         f"the misconfiguration), got exit_code={result.exit_code!r}, "
         f"output={result.output!r}, stderr={result.stderr!r}"
     )
-    # @wrap_user_facing_errors converts ConfigurationError to a clean CLI error
-    # message (SystemExit(1)) — no raw traceback should appear in stderr.
+    # The CLI error boundary prints ConfigurationError as one `Error:` line
+    # (exit code 2) — no raw traceback should appear in stderr.
     assert "Traceback" not in result.stderr, (
         f"failure must not surface as a raw traceback; stderr={result.stderr!r}"
     )

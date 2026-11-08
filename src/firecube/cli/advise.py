@@ -17,14 +17,13 @@
 from __future__ import annotations
 
 import json as _json
-import sys
 from collections.abc import Callable
 
 import click
 import zarr
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import wrap_user_facing_errors
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     product_uri_option,
@@ -81,7 +80,6 @@ See also: firecube ingest, firecube zarr validate
 @storage_driver_option(required=False)
 @storage_type_option(required=False)
 @click.pass_context
-@wrap_user_facing_errors
 def batch_size(
     ctx: click.Context,
     product: str,
@@ -119,16 +117,16 @@ def batch_size(
         )
     )
 
+    root = session.zarr.open_group(identity.product_uri, mode="r")
     try:
-        root = session.zarr.open_group(identity.product_uri, mode="r")
         grp = root[group_path]
-    except Exception as exc:
+    except KeyError as exc:
         click.echo(f"Error opening store: {exc}", err=True)
-        sys.exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED) from exc
 
     if not isinstance(grp, zarr.Group):
         click.echo(f"Path '{group_path}' is not a Zarr group.", err=True)
-        sys.exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
     time_chunk_size = _find_time_chunk_size(grp)
 
@@ -202,12 +200,11 @@ See also: firecube zarr validate
     "--strict",
     is_flag=True,
     default=False,
-    help="treat any warning or info finding as a non-zero exit (code 2)",
+    help="treat any warning or info finding as a non-zero exit (code 3)",
 )
 @storage_driver_option(required=False)
 @storage_type_option(required=False)
 @click.pass_context
-@wrap_user_facing_errors
 def compliance(
     ctx: click.Context,
     profile: str,
@@ -224,7 +221,7 @@ def compliance(
     Opens a Zarr cube and runs the selected compliance profile. Findings are
     emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
     (or warnings/info without --strict), 1 if any error finding is reported,
-    2 if warnings/info appear under --strict.
+    3 if warnings/info appear under --strict.
     """
     product_uri = parse_and_validate_uri(product, param_hint="--product")
     storage_type = apply_smart_default(product_uri, storage_type)
@@ -279,9 +276,9 @@ def compliance(
 
     summary = report.summary
     if summary.errors > 0:
-        sys.exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if strict and (summary.warnings > 0 or summary.info > 0):
-        sys.exit(2)
+        raise click.exceptions.Exit(ExitCode.STRICT_WARNINGS)
 
 
 def _render_compliance_text(report: CFReport, *, profile: str) -> None:

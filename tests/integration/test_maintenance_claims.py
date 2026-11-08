@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import time
 import zipfile
@@ -51,12 +52,14 @@ from firecube.core.controlplane.types import (
 )
 from firecube.core.errors import (
     ExclusiveMaintenanceRefusedError,
+    FirecubeError,
     ManifestError,
     ProductUnderMaintenanceError,
 )
 from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
 from firecube.core.index_spec import IndexSpec, IntegerAxis, RegularTimeAxis
+from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.scrub import run_scrub
@@ -1046,8 +1049,9 @@ def test_holder_run_id_on_a_plain_store_is_refused_and_writes_nothing(tmp_path, 
     zarr.open_group(str(root), mode="w").create_array("a", data=np.arange(3.0))
     tree = lambda: {p: p.read_bytes() for p in root.rglob("*") if p.is_file() and "claims" not in p.parts}  # fmt: skip  # noqa: E731
     create = lambda **kw: create_archive(session=make_test_session(tmp_path, product="plain.zarr"), archive=out.as_uri(), archive_path=str(out), archive_format="zip", **kw)  # fmt: skip  # noqa: E731
-    manager, before = _claiming_manager(tmp_path, "plain.zarr"), tree()
+    manager = _claiming_manager(tmp_path, "plain.zarr")
     claim = manager.acquire_exclusive_maintenance(product="plain.zarr", run_id=owner) if owner else None  # fmt: skip
+    before = tree()  # taken after the acquire, which stamps .firecube/product.json
     try:
         with pytest.raises(ArchiveClaimError):
             create(holder_run_id=MAINT)
@@ -1056,3 +1060,59 @@ def test_holder_run_id_on_a_plain_store_is_refused_and_writes_nothing(tmp_path, 
         claim and claim.release()  # type: ignore[unused-expression]
         manager.close()
     assert create().run_id is None and out.exists()
+
+
+def _label_managers(tmp_path: Path) -> tuple[ChunkManager, ChunkManager]:
+    """Two managers over one store URI that differ only in the product label."""
+    base = make_test_binding(tmp_path, product="cube.zarr")
+    uri = StorageUri.from_local_path(tmp_path / "cube.zarr")
+    managers = []
+    for label in ("alpha", "beta"):
+        identity = ProductIdentity.from_uri(uri, "zarr", product_name=label)
+        workspace = tmp_path / f"ws-{label}"
+        workspace.mkdir()
+        managers.append(
+            ChunkManager(binding=dataclasses.replace(base, identity=identity), workspace=workspace)
+        )
+    return managers[0], managers[1]
+
+
+def _start_beta(beta: ChunkManager) -> None:
+    beta.record_run_started(
+        product="beta", run_id="rb", output_path="", output_format="zarr", size=0, meta={}
+    )
+
+
+def _assert_beta_left_nothing(tmp_path: Path, beta: ChunkManager, claims_before: list[str]) -> None:
+    assert not (tmp_path / "cube.zarr" / ".firecube" / "runs" / "rb" / "run.json").exists()
+    assert [c.domain for c in beta.list_claims(product="beta")] == claims_before
+
+
+def test_second_label_is_refused_while_exclusive_claim_is_held(tmp_path: Path) -> None:
+    alpha, beta = _label_managers(tmp_path)
+    claim = alpha.acquire_exclusive_maintenance(product="alpha", run_id=MAINT)
+    try:
+        before = [c.domain for c in alpha.list_claims(product="alpha")]
+        with pytest.raises(FirecubeError):
+            beta.check_exclusive_maintenance(product="beta", owner_id="w")
+        with pytest.raises(FirecubeError):
+            _start_beta(beta)
+        _assert_beta_left_nothing(tmp_path, beta, before)
+    finally:
+        claim.release()
+        alpha.close()
+        beta.close()
+
+
+def test_run_under_a_second_label_is_refused(tmp_path: Path) -> None:
+    alpha, beta = _label_managers(tmp_path)
+    try:
+        alpha.record_run_started(
+            product="alpha", run_id="ra", output_path="", output_format="zarr", size=0, meta={}
+        )
+        with pytest.raises(FirecubeError):
+            _start_beta(beta)
+        _assert_beta_left_nothing(tmp_path, beta, [])
+    finally:
+        alpha.close()
+        beta.close()

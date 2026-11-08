@@ -24,7 +24,7 @@ from click.testing import CliRunner
 
 import firecube.cli.advise as advise_module
 from firecube.cli.main import cli
-from firecube.core.cf import CFReport
+from firecube.core.cf import CFFinding, CFReport, CFSeverity
 from firecube.core.zarr.io import ZarrIO
 
 
@@ -144,7 +144,23 @@ def test_missing_local_store_is_clean_click_error(tmp_path: Path) -> None:
         catch_exceptions=False,
     )
 
-    assert result.exit_code == 1
+    assert result.exit_code == 4
     assert "Error:" in result.output
     assert "does not exist" in result.output
     assert "Traceback" not in result.output
+
+
+def test_strict_warnings_exit_3(monkeypatch, tmp_path: Path) -> None:
+    def warning_only(ds: xr.Dataset, *, product: str, group: str) -> CFReport:
+        finding = CFFinding("CF-W", CFSeverity.warning, "x", "a warning")
+        return CFReport(product=product, group=group, findings=[finding])
+
+    store = tmp_path / "cube.zarr"
+    xr.Dataset({"x": ("t", [1, 2])}).to_zarr(store, group="g1", zarr_format=3)
+    monkeypatch.setitem(advise_module._COMPLIANCE_PROFILE_VALIDATORS, "cf-18", warning_only)
+    args = ["--profile", "cf-18", "-p", store.as_uri(), "-g", "g1"]
+
+    assert _invoke_compliance(args).exit_code == 0
+    strict = _invoke_compliance([*args, "--strict"])
+    assert strict.exit_code == 3, strict.output
+    assert "a warning" in strict.output

@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli.snapshot._common import open_manager, snapshot_options
 from firecube.cli.snapshot._render import (
     diff_payload,
@@ -29,7 +28,6 @@ from firecube.cli.snapshot._render import (
     record_payload,
     snapshot_payload,
 )
-from firecube.core.errors import FirecubeError
 
 
 @click.command(
@@ -72,10 +70,7 @@ def list_cmd(
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        records = manager.list_snapshots(product)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    records = manager.list_snapshots(product)
 
     if output_format == "json":
         echo_json([record_payload(record) for record in records])
@@ -129,10 +124,7 @@ def show(
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        snapshot = manager.read_snapshot(product, snapshot_id)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    snapshot = manager.read_snapshot(product, snapshot_id)
 
     if output_format == "json":
         echo_json(snapshot_payload(snapshot))
@@ -185,10 +177,7 @@ def diff(
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        result = manager.diff_snapshots(product, before, after)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = manager.diff_snapshots(product, before, after)
 
     if output_format == "json":
         echo_json(diff_payload(result))

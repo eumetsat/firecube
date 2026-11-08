@@ -16,12 +16,15 @@
 
 from __future__ import annotations
 
+import functools
 import shutil
 from collections.abc import Iterable
 from inspect import cleandoc
 from typing import Any
 
 import click
+
+from firecube.cli._errors import invoke_with_boundary
 
 MAX_WIDTH = 100
 
@@ -75,7 +78,13 @@ class FirecubeFormatter(click.HelpFormatter):
 
 
 class FirecubeGroup(click.Group):
-    """Click Group with COMMAND_GROUPS section rendering."""
+    """Click Group with COMMAND_GROUPS section rendering and, at the root, the error boundary."""
+
+    def invoke(self, ctx: click.Context) -> Any:
+        """Invoke the subcommand; the top context runs it inside the CLI error boundary."""
+        if ctx.parent is not None:
+            return super().invoke(ctx)
+        return invoke_with_boundary(ctx, functools.partial(super().invoke, ctx))
 
     def format_help_text(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         if self.help is None:

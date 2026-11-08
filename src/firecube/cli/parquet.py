@@ -25,6 +25,7 @@ import duckdb
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     product_uri_option,
@@ -138,7 +139,8 @@ def validate(
 
     Checks PAR1 magic bytes at head and tail. Scans all .parquet files under
     the product path and reports any missing or corrupt files. Read-only; does
-    not modify any data.
+    not modify any data. Exits 1 when a file is invalid or none is found, and
+    4 when the target does not exist.
     """
     product_uri = parse_and_validate_uri(product, param_hint="--product")
     storage_type = apply_smart_default(product_uri, storage_type)
@@ -167,7 +169,9 @@ def validate(
     fs = session.fs()
 
     start = time.time()
-    files = _list_parquet_files(fs, store_uri)
+    # Discovery treats any `.parquet` root as a file, so existence is checked first.
+    missing = not fs.exists(store_uri)
+    files = [] if missing else _list_parquet_files(fs, store_uri)
     if not files:
         click.echo(
             json.dumps(
@@ -175,12 +179,14 @@ def validate(
                     "product": product,
                     "resolved": {"store_uri": store_uri_str, "root": store_uri_str},
                     "valid": False,
-                    "error": "No .parquet files found under target",
+                    "error": "Target does not exist"
+                    if missing
+                    else "No .parquet files found under target",
                 },
                 indent=2,
             )
         )
-        return
+        raise click.exceptions.Exit(ExitCode.RUNTIME_ERROR if missing else ExitCode.CHECK_FAILED)
 
     bad: list[dict[str, str]] = []
     for path in files:
@@ -197,6 +203,8 @@ def validate(
         "duration_s": round(time.time() - start, 3),
     }
     click.echo(json.dumps(payload, indent=2))
+    if bad:
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
 
 @parquet.command(

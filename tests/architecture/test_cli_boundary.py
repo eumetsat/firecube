@@ -393,6 +393,49 @@ def test_cli_parses_uris_only_in_uri_policy() -> None:
     _fail("URI parsing outside cli/_uri_policy.py", sorted(found - _URI_PARSE_ROWS.keys()), stale)
 
 
+def _is_exit_code_member(node: ast.expr) -> bool:
+    return (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "ExitCode"
+    )
+
+
+def _exit_argument_is_typed(path: Path, node: ast.expr) -> bool:
+    """Return whether an exit argument is an `ExitCode` member or a form that stays typed."""
+    if _is_exit_code_member(node):
+        return True
+    if isinstance(node, ast.IfExp):  # parquet.py chooses between two members
+        return _is_exit_code_member(node.body) and _is_exit_code_member(node.orelse)
+    # _errors.py passes its `code: ExitCode` parameter
+    return path.name == "_errors.py" and isinstance(node, ast.Name) and node.id == "code"
+
+
+def _exit_sites(path: Path) -> Iterator[tuple[int, str]]:
+    for node in ast.walk(_parse(path)):
+        if isinstance(node, ast.Name) and node.id in {"SystemExit", "exit", "quit"}:
+            yield node.lineno, f"uses {node.id}"
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        if name == "exit":
+            yield node.lineno, "calls .exit()"
+        elif name == "Exit" and not (node.args and _exit_argument_is_typed(path, node.args[0])):
+            yield node.lineno, "Exit() argument is not an ExitCode member"
+        elif name == "exit_with_error" and not _is_exit_code_member(node.args[-1]):
+            yield node.lineno, "exit_with_error() code is not an ExitCode member"
+
+
+def test_cli_exits_only_through_exit_code() -> None:
+    offenders = [
+        f"{_rel(path)}:{line} {what}"
+        for path in _py_files(_CLI_ROOT)
+        for line, what in _exit_sites(path)
+    ]
+    _fail("cli/ must end a command with click.exceptions.Exit(ExitCode.X)", offenders, [])
+
+
 def test_allowlist_tags_are_well_formed() -> None:
     tags = [
         *_CLICK_ROWS.values(),

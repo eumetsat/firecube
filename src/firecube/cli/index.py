@@ -26,7 +26,8 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import click
 
-from firecube.cli._errors import echo_rendered, render, wrap_user_facing_errors
+from firecube.cli._errors import echo_rendered, render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._formatter import FirecubeGroup
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import parse_and_validate_uri
@@ -35,7 +36,6 @@ from firecube.core.errors import (
     ManifestError,
     Message,
     Operation,
-    ResolvedIndexAttrsConflictError,
     ResolvedIndexConflictError,
 )
 from firecube.core.product.identity import ProductIdentity
@@ -75,12 +75,12 @@ def _load_record(manager: ChunkManager, product_name: str) -> Any | None:
         return manager.get_resolved_index(product=product_name)
     except ManifestError as exc:
         click.echo(render(exc), err=True)
-        raise click.exceptions.Exit(1) from exc
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED) from exc
 
 
 def _exit_no_record() -> NoReturn:
     click.echo("No index record found", err=True)
-    raise click.exceptions.Exit(3)
+    raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
 
 def _load_plugin(plugin: str, manager: ChunkManager) -> Any:
@@ -331,7 +331,7 @@ def verify_cmd(
             cause = exc.__cause__
             if isinstance(cause, click.ClickException):
                 raise cause  # noqa: B904 - re-raise the plugin's exception as it was raised
-            raise click.ClickException(render(exc)) from exc
+            raise
         _render_verification(
             verification,
             rebuild=Operation(
@@ -343,7 +343,7 @@ def verify_cmd(
 
 
 def _render_verification(verification: IndexVerification, *, rebuild: Operation) -> None:
-    """Echo a verification verdict; exit 1 on drift or an unusable record, 3 without one.
+    """Echo a verification verdict; exit 1 on drift, an unusable record or no record.
 
     `rebuild` is the `zarr index rebuild` call, with this invocation's values, that the
     attrs advice prints.
@@ -352,7 +352,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
     if outcome in ("unreadable-record", "legacy-record"):
         detail = verification.detail
         click.echo(str(detail) if detail is None else render(detail), err=True)
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if outcome == "attrs-without-record":
         advice = Message(
             "attrs drift — root attr has resolved-index identity hash but no "
@@ -363,7 +363,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
             rebuild=rebuild,
         )
         click.echo(render(advice), err=True)
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if outcome == "no-record":
         _exit_no_record()
     identity_hash = str(verification.identity_hash)
@@ -374,7 +374,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
             f"{identity_hash[:8]}",
             err=True,
         )
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if outcome == "attrs-drift":
         advice = Message(
             "attrs drift — root attr diverges from on-disk record; "
@@ -385,7 +385,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
             rebuild=rebuild,
         )
         click.echo(render(advice), err=True)
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if verification.attrs_hash is None:
         click.echo(
             "root attr will be re-mirrored on next `ensure` — this is the "
@@ -405,13 +405,12 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
     type=TypedOptionsParam(),
     help="Plugin option in key=value form.",
 )
-@wrap_user_facing_errors
 def rebuild_cmd(
     target: str, plugin: str, product_name: str, option: tuple[tuple[str, object], ...]
 ) -> None:
     """Rebuild the resolved-index record from a plugin declaration."""
 
-    from firecube.ingestor.runtime.index_record import IndexRecordError, rebuild_index_record
+    from firecube.ingestor.runtime.index_record import rebuild_index_record
 
     manager = _manager(target, product_name)
     try:
@@ -428,13 +427,9 @@ def rebuild_cmd(
                 warn=functools.partial(echo_rendered, err=True),
                 configure=_configurer(target, option),
             )
-        except IndexRecordError as exc:
-            raise click.ClickException(render(exc)) from exc
         except ResolvedIndexConflictError as exc:
             # The library has already echoed the conflict through ``warn``.
-            raise click.exceptions.Exit(1) from exc
-        except ResolvedIndexAttrsConflictError as exc:
-            raise click.ClickException(render(exc)) from exc
+            raise click.exceptions.Exit(ExitCode.CHECK_FAILED) from exc
     finally:
         with contextlib.suppress(Exception):
             manager.close()

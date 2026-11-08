@@ -20,10 +20,8 @@ from pathlib import Path
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli._shared_options import dry_run_flag, yes_flag
 from firecube.core.controlplane.types import ClearSweepResult
-from firecube.core.errors import ClaimConflictError
 
 from ._manager import resolve_cli_product, resolve_manager
 
@@ -202,10 +200,7 @@ def clear_cmd(
 
     if domain_id is None:
         raise click.UsageError("Provide --domain when not using --all-stale.")
-    try:
-        cleared = manager.clear_claim(product=product_name, domain_id=domain_id, force=force)
-    except ClaimConflictError as exc:
-        raise click.ClickException(render(exc)) from exc
+    cleared = manager.clear_claim(product=product_name, domain_id=domain_id, force=force)
 
     if not cleared:
         raise click.ClickException(f"No claim found for product={product_name} domain={domain_id}")
