@@ -17,11 +17,11 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.config import StorageConfig
+from firecube.core.product.open import open_product
 from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.multires import ZarrMultiresBuilder
 from tests.integration.test_cli_index_show import stamp_label
@@ -124,34 +124,22 @@ def test_multires_cli_passes_recorded_label_distinct_from_basename(tmp_path: Pat
     assert cfg.product == "logical_name"
 
 
-def test_multires_builder_store_uri_uses_explicit_product_name() -> None:
+def test_multires_builder_store_uri_uses_explicit_product_name(tmp_path: Path) -> None:
     """Regression guard: URI basename must NOT influence store-URI resolution."""
     storage_config = StorageConfig(storage_type="local", storage_driver="fsspec")
-    product_uri = StorageUri.parse("file:///data/store_v2.zarr")
+    product_uri = StorageUri.from_local_path(tmp_path / "store_v2.zarr")
     explicit_name = "logical_name"
+    root = tmp_path.as_uri()
 
-    builder = ZarrMultiresBuilder(
-        storage_config,
-        product_name=explicit_name,
-        product_uri=product_uri,
-    )
+    with open_product(
+        product_uri, format="zarr", product_name=explicit_name, require_label=False
+    ) as product:
+        builder = ZarrMultiresBuilder(product, storage_config=storage_config)
 
-    assert builder._store_uri_for(explicit_name) == "file:///data/store_v2.zarr"
+        assert builder._store_uri_for(explicit_name) == f"{root}/store_v2.zarr"
 
-    sibling_uri = builder._store_uri_for("other_product")
-    assert sibling_uri == "file:///data/other_product"
+        sibling_uri = builder._store_uri_for("other_product")
+        assert sibling_uri == f"{root}/other_product"
 
-    matched_basename = builder._store_uri_for("store_v2.zarr")
-    assert matched_basename == "file:///data/store_v2.zarr"
-
-
-def test_multires_builder_rejects_empty_product_name() -> None:
-    storage_config = StorageConfig(storage_type="local", storage_driver="fsspec")
-    product_uri = StorageUri.parse("file:///data/store.zarr")
-
-    with pytest.raises(ValueError, match="product_name"):
-        ZarrMultiresBuilder(
-            storage_config,
-            product_name="",
-            product_uri=product_uri,
-        )
+        matched_basename = builder._store_uri_for("store_v2.zarr")
+        assert matched_basename == f"{root}/store_v2.zarr"

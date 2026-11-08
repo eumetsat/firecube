@@ -26,11 +26,7 @@ from typing import Any
 
 import click
 
-from firecube.cli._command_schemas import (
-    IngestCommandConfig,
-    check_recorded_label,
-    resolve_product_name,
-)
+from firecube.cli._command_schemas import IngestCommandConfig, resolve_product_name
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import enable_debug, render
 from firecube.cli._exit_codes import ExitCode
@@ -58,13 +54,14 @@ from firecube.cli._typed_options import (
 from firecube.cli._uri_policy import parse_and_validate_source_uri
 from firecube.core.config import get_plugin_defaults, load_config_file
 from firecube.core.observability import set_current_span_attribute, span
+from firecube.core.product.open import open_product
 from firecube.core.product.resolver import ProductResolver
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.runtime import resolve_slot_window
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.api import BaseIngestor, ExecutionParams, IngestContext, StorageContext
 from firecube.ingestor.registry.loader import discover_ingestors
+from firecube.ingestor.runtime.configure import ensure_run_id
 
 log = logging.getLogger("firecube.cli")
 
@@ -736,9 +733,6 @@ def ingest(
     if not show_options and target is None:
         raise click.ClickException("Missing option '--target'.")
 
-    if (slot_start is None) ^ (slot_end is None):
-        raise click.UsageError("--slot-start and --slot-end must be provided together")
-
     plugins = discover_ingestors()
     if plugin not in plugins:
         raise click.ClickException(f"Unknown plugin: {plugin}")
@@ -786,15 +780,8 @@ def ingest(
             },
         ):
             assert ingest_cfg is not None
-            from firecube.cli._slot_env import resolve_slot_range_from_env
-
-            resolved_slot_start, resolved_slot_end, resolved_slot_group = (
-                resolve_slot_range_from_env(
-                    slot_start,
-                    slot_end,
-                    slot_size,
-                    slot_group,
-                )
+            resolved_slot_start, resolved_slot_end, resolved_slot_group = resolve_slot_window(
+                slot_start, slot_end, slot_size, slot_group, env=os.environ
             )
             execution = ExecutionParams(
                 write_mode=str(ingest_cfg.write_mode),
@@ -833,12 +820,16 @@ def ingest(
             }
             storage_config = get_storage_config(ctx, overrides=storage_overrides, cache=False)
             options.setdefault("storage", {"type": storage_config.storage_type})
-            binding = StorageBinding(
-                identity=identity, driver=StorageDriverConfig.from_storage_config(storage_config)
-            )
             # Before the ingestor exists: its constructor makes a temporary workspace directory.
-            check_recorded_label(binding)
-            session = StorageSession(binding)
+            session = ctx.with_resource(
+                open_product(
+                    identity.product_uri,
+                    format=output_format,
+                    driver=StorageDriverConfig.from_storage_config(storage_config),
+                    product_name=resolved_product_name,
+                    require_label=False,
+                )
+            ).session
 
             # Instantiate the ingestor *after* setting the global storage config so
             # BaseIngestor can initialise ChunkManager with the correct output base.
@@ -865,14 +856,6 @@ def ingest(
                 storage_config.storage_type,
             )
 
-            # Generate Run ID (Engine-owned)
-            run_id = str(options.get("run_id") or options.get("manifest_run_id") or "")
-            if not run_id:
-                import uuid
-
-                hostname = os.getenv("HOSTNAME", "host")
-                run_id = f"{plugin}-{hostname}-{uuid.uuid4().hex}"
-
             ingest_ctx = IngestContext(
                 sources=tuple(sources),
                 target=plugin_target,
@@ -880,9 +863,9 @@ def ingest(
                 output_format=output_format,
                 options=options,
                 storage=StorageContext(output=session),
-                run_id=run_id,
                 execution=execution,
             )
+            ingest_ctx.run_id = ensure_run_id(ctx=ingest_ctx, plugin_name=plugin)
             result = ingestor.run(ingest_ctx)
 
             if result.manifest:

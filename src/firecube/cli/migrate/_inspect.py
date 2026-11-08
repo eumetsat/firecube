@@ -21,8 +21,8 @@ import datetime
 import click
 
 from firecube.cli._shared_options import format_option
-from firecube.cli.migrate._common import echo_json, migrate_options, open_session
-from firecube.cli.plugins.registry import load_migration_steps
+from firecube.cli.migrate._common import echo_json, migrate_options, open_target
+from firecube.ingestor.registry.loader import load_migration_steps
 from firecube.ingestor.runtime.migrate import list_migrations
 
 
@@ -87,7 +87,7 @@ def status(
     version, its outcome (executed or adopted) and its status. reads the
     maintenance records and changes nothing.
     """
-    session = open_session(
+    product = open_target(
         ctx,
         command="migrate status",
         target=target,
@@ -96,9 +96,7 @@ def status(
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    manager = session.control_plane()
-    ctx.call_on_close(manager.close)
-    runs = list_migrations(manager=manager, product=session.product.product_name)
+    runs = list_migrations(product)
 
     if output_format == "json":
         echo_json(

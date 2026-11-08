@@ -261,22 +261,29 @@ def test_library_multires_checks_written_store_when_name_differs(
     from firecube.core.config import StorageConfig
     from firecube.core.controlplane import ChunkManager
     from firecube.core.errors import ProductUnderMaintenanceError
+    from firecube.core.product.open import open_product
     from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
-    from tests.helpers.storage import make_test_binding, make_test_session
+    from tests.helpers.storage import make_test_binding
 
     store = tmp_path / (claimed if other else "physical.zarr")
     xr.Dataset({"v": (["lat", "lon"], np.ones((4, 4)))}, coords={"lat": range(4), "lon": range(4)}).to_zarr(store, zarr_format=3, consolidated=False)  # fmt: skip
     held = make_test_binding(tmp_path, product=store.name)
     held = replace(held, identity=replace(held.identity, product_name=claimed))
     holder = ChunkManager(binding=held, workspace=tmp_path)
-    builder = ZarrMultiresBuilder(
-        StorageConfig(storage_type="local", storage_driver="fsspec"),
-        product_name=other or claimed,
-        product_uri=StorageUri.from_local_path(tmp_path / (other or store.name)),
-        session=make_test_session(tmp_path, product=other) if other else None,
-    )
     claim = holder.acquire_exclusive_maintenance(product=claimed, run_id="other-run")
-    with claim, pytest.raises(ProductUnderMaintenanceError):
+    with (
+        open_product(
+            StorageUri.from_local_path(tmp_path / (other or store.name)),
+            format="zarr",
+            product_name=other or claimed,
+            require_label=False,
+        ) as product,
+        claim,
+        pytest.raises(ProductUnderMaintenanceError),
+    ):
+        builder = ZarrMultiresBuilder(
+            product, storage_config=StorageConfig(storage_type="local", storage_driver="fsspec")
+        )
         builder.build(MultiresConfig(product=claimed, group="", resolutions=[2.0]))
     assert not (store / "multires").exists()

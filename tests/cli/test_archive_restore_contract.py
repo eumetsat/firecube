@@ -89,6 +89,23 @@ def test_restore_onto_a_target_stamped_with_another_label_is_refused_untouched(t
 
 
 @pytest.mark.contract
+def test_restore_dry_run_refuses_a_label_conflict_as_the_real_run_does(tmp_path) -> None:
+    target, archive = _archive(tmp_path / "o", label="OTHER")[0], _archive(tmp_path)[1]
+    files = lambda: {p: p.read_bytes() for p in target.rglob("*") if p.is_file()}  # noqa: E731
+    before = files()
+    args = ["--archive", archive.as_uri(), "--target", target.as_uri()]
+    args += ["--overwrite", "--yes-i-really-mean-it"]
+
+    real = _invoke_restore(args)
+    dry = _invoke_restore([*args, "--dry-run"])
+
+    assert real.exit_code == 2 and "OTHER" in real.output
+    assert dry.exit_code == real.exit_code, dry.output
+    assert "OTHER" in dry.output and "[dry-run] Would restore" not in dry.output
+    assert files() == before
+
+
+@pytest.mark.contract
 @pytest.mark.parametrize("fmt", ["zip", "tensogram"])
 def test_overwrite_restore_keeps_the_targets_stamp_of_the_same_label(tmp_path, fmt) -> None:
     archive = _archive(tmp_path, fmt)[1]

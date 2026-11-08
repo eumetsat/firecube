@@ -37,6 +37,7 @@ from firecube.core.errors import (
 
 OPERATIONS: Mapping[str, tuple[str, ...]] = MappingProxyType(
     {
+        "adopt_product": ("migrate", "adopt"),
         "abandon_run": ("chunks", "runs", "abandon"),
         "clear_claim": ("chunks", "claims", "clear"),
         "rebuild_compact": ("chunks", "compact", "rebuild"),

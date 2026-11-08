@@ -30,9 +30,6 @@ from firecube.ingestor.types.context import (
     IngestResult,
     OutputPaths,
     ResultMetrics,
-    RuntimeFlags,
-    RuntimeIdentity,
-    RuntimeIngestContext,
 )
 from firecube.ingestor.types.result_metrics import PipelineMetrics, StorageMetrics
 from tests.helpers.cli_hints import run_hint
@@ -40,18 +37,6 @@ from tests.helpers.rows import table_row
 from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.integration
-
-
-def _make_runtime_ctx(*, run_id: str, target: str, force_reingest: bool) -> RuntimeIngestContext:
-    return RuntimeIngestContext(
-        source="source",
-        target=target,
-        output_format="zarr",
-        options={"run_id": run_id},
-        run_id=run_id,
-        identity=RuntimeIdentity(run_id=run_id),
-        flags=RuntimeFlags(force_reingest=force_reingest),
-    )
 
 
 def _record_completed_span_run(
@@ -230,13 +215,11 @@ def test_force_reingest_with_empty_coverage_refuses_and_keeps_prior_span(
 
             with pytest.raises(ManifestError, match="new coverage is empty") as excinfo:
                 recorder.register_run(
-                    ctx=_make_runtime_ctx(
-                        run_id="run-new", target=output_path, force_reingest=True
-                    ),
                     result=_make_empty_coverage_result(output_path=output_path),
                     run_id="run-new",
                     product=product,
                     slice_meta={"plugin": "test_product", "group": "F024"},
+                    force_reingest=True,
                     record_spans=record_spans,
                 )
             assert "ChunkManager.abandon_run" in str(excinfo.value)
@@ -275,7 +258,6 @@ def test_force_reingest_with_run_level_zarr_coverage_commits_replacement(temp_wo
     _start_run(manager, product=product, run_id="run-new", output_path=output_path)
 
     recorder.register_run(
-        ctx=_make_runtime_ctx(run_id="run-new", target=output_path, force_reingest=True),
         result=_make_run_level_result(
             output_path=output_path,
             group="F024",
@@ -285,6 +267,7 @@ def test_force_reingest_with_run_level_zarr_coverage_commits_replacement(temp_wo
         run_id="run-new",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
         record_spans=False,
     )
 
@@ -348,7 +331,6 @@ def test_force_reingest_first_time_no_prior_spans_does_not_raise(temp_workspace)
     _start_run(manager, product=product, run_id="run-new", output_path=output_path)
 
     recorder.register_run(
-        ctx=_make_runtime_ctx(run_id="run-new", target=output_path, force_reingest=True),
         result=_make_result(
             output_path=output_path,
             group="F024",
@@ -358,6 +340,7 @@ def test_force_reingest_first_time_no_prior_spans_does_not_raise(temp_workspace)
         run_id="run-new",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
     )
 
     current = _current_state(manager, product=product)
@@ -381,7 +364,6 @@ def test_force_reingest_with_coverage_records_spans_before_replacement(temp_work
     _start_run(manager, product=product, run_id="run-new", output_path=output_path)
 
     recorder.register_run(
-        ctx=_make_runtime_ctx(run_id="run-new", target=output_path, force_reingest=True),
         result=_make_result(
             output_path=output_path,
             group="F024",
@@ -391,6 +373,7 @@ def test_force_reingest_with_coverage_records_spans_before_replacement(temp_work
         run_id="run-new",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
     )
 
     event_types = [
@@ -462,7 +445,6 @@ def test_success_replaces_prior_spans(temp_workspace):
     _start_run(manager, product=product, run_id="run-new", output_path=output_path)
 
     recorder.register_run(
-        ctx=_make_runtime_ctx(run_id="run-new", target=output_path, force_reingest=True),
         result=_make_result(
             output_path=output_path,
             group="F024",
@@ -472,6 +454,7 @@ def test_success_replaces_prior_spans(temp_workspace):
         run_id="run-new",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
     )
     manager.close()
     manager = ChunkManager(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
@@ -506,21 +489,20 @@ def test_replacement_idempotent(temp_workspace):
         time_min="2024-01-01T00:00:00Z",
         time_max="2024-01-02T00:00:00Z",
     )
-    ctx = _make_runtime_ctx(run_id="run-new", target=output_path, force_reingest=True)
 
     recorder.register_run(
-        ctx=ctx,
         result=result,
         run_id="run-new",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
     )
     recorder.register_run(
-        ctx=ctx,
         result=result,
         run_id="run-new",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
     )
 
     replacement_events = [
@@ -601,7 +583,6 @@ def test_replacement_only_at_terminal(temp_workspace):
         pytest.raises(StorageError, match="simulated terminal write failure"),
     ):
         recorder.register_run(
-            ctx=_make_runtime_ctx(run_id="run-new", target=output_path, force_reingest=True),
             result=_make_result(
                 output_path=output_path,
                 group="F024",
@@ -611,6 +592,7 @@ def test_replacement_only_at_terminal(temp_workspace):
             run_id="run-new",
             product=product,
             slice_meta={"plugin": "test_product", "group": "F024"},
+            force_reingest=True,
         )
 
     manager.close()
@@ -638,7 +620,6 @@ def test_idempotent_replay(temp_workspace):
     _start_run(manager, product=product, run_id="run-new", output_path=output_path)
 
     recorder.register_run(
-        ctx=_make_runtime_ctx(run_id="run-new", target=output_path, force_reingest=True),
         result=_make_result(
             output_path=output_path,
             group="F024",
@@ -648,6 +629,7 @@ def test_idempotent_replay(temp_workspace):
         run_id="run-new",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
     )
     manager.record_replacement_committed(
         product=product,
@@ -691,7 +673,6 @@ def test_full_state_machine(temp_workspace):
     assert _replacement_events(temp_workspace, product=product, run_id="run-new") == []
 
     recorder.register_run(
-        ctx=_make_runtime_ctx(run_id="run-new", target=output_path, force_reingest=True),
         result=_make_result(
             output_path=output_path,
             group="F024",
@@ -701,6 +682,7 @@ def test_full_state_machine(temp_workspace):
         run_id="run-new",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
     )
     manager.close()
     manager = ChunkManager(binding=make_test_binding(temp_workspace), workspace=temp_workspace)
@@ -753,7 +735,6 @@ def test_replacement_independent_of_run_id_ordering(temp_workspace):
 
     _start_run(manager, product=product, run_id="aaa-newer", output_path=output_path)
     recorder.register_run(
-        ctx=_make_runtime_ctx(run_id="aaa-newer", target=output_path, force_reingest=True),
         result=_make_result(
             output_path=output_path,
             group="F024",
@@ -763,6 +744,7 @@ def test_replacement_independent_of_run_id_ordering(temp_workspace):
         run_id="aaa-newer",
         product=product,
         slice_meta={"plugin": "test_product", "group": "F024"},
+        force_reingest=True,
     )
 
     replacement_events = _replacement_events(temp_workspace, product=product, run_id="aaa-newer")

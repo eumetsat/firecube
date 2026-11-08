@@ -16,8 +16,11 @@
 
 from __future__ import annotations
 
+import zipfile
+
 import click
 import pytest
+import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
@@ -72,15 +75,36 @@ def test_chunks_product_has_no_registry_hint_and_gets_clicks_suggestion() -> Non
     assert "Hint:" not in output
 
 
-def test_valid_flags_on_archive_commands_get_no_hint(subtests) -> None:
+def test_valid_flags_on_archive_commands_get_no_hint(subtests, tmp_path) -> None:
     """--target is valid on archive restore and archive create."""
+    store = tmp_path / "p.zarr"
+    zarr.open_group(str(store), mode="w")
+    (store / ".firecube").mkdir()
+    (store / ".firecube" / "product.json").write_text('{"product": "LBL"}')
+    zip_args = ["--archive-format", "zip"]
+    with zipfile.ZipFile(tmp_path / "made.zip", "w") as archive:  # a minimal labelled archive
+        archive.writestr("zarr.json", '{"zarr_format": 3, "node_type": "group", "attributes": {}}')
+        archive.writestr(".firecube/product.json", '{"product": "LBL"}')
     rows = {
         "target_on_archive_restore_no_hint": (
-            ["restore", "--archive", "file:///tmp/x.tgm", "--target", "file:///tmp/p.zarr"],
+            [
+                "restore",
+                "--archive",
+                (tmp_path / "made.zip").as_uri(),
+                "--target",
+                (tmp_path / "restored.zarr").as_uri(),
+            ],
             "[dry-run] Would restore:",
         ),
         "target_on_archive_create_no_hint": (
-            ["create", "--target", "file:///tmp/p.zarr", "--archive", "file:///tmp/x.tgm"],
+            [
+                "create",
+                "--target",
+                store.as_uri(),
+                "--archive",
+                (tmp_path / "x.zip").as_uri(),
+                *zip_args,
+            ],
             "[dry-run] Would archive:",
         ),
     }

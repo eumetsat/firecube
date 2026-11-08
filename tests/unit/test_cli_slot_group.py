@@ -21,8 +21,8 @@ from unittest.mock import patch
 import pytest
 from click.testing import CliRunner
 
-from firecube.cli._slot_env import resolve_slot_range_from_env
 from firecube.cli.main import cli
+from firecube.core.runtime import resolve_slot_window
 from firecube.ingestor.api import ExecutionParams, IngestContext, IngestResult, OutputPaths
 
 
@@ -96,20 +96,20 @@ def test_cli_passes_slot_group_to_execution_params(tmp_path: Path) -> None:
     assert "slot_group" not in captured["ctx"].options
 
 
-def test_env_slot_group_used_when_cli_absent(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FIRECUBE_SLOT_GROUP", "data_1km")
+def test_env_slot_group_used_when_cli_absent() -> None:
+    env = {"FIRECUBE_SLOT_GROUP": "data_1km"}
 
-    assert resolve_slot_range_from_env(None, None, None, None) == (
+    assert resolve_slot_window(None, None, None, None, env=env) == (
         None,
         None,
         "data_1km",
     )
 
 
-def test_cli_slot_group_overrides_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FIRECUBE_SLOT_GROUP", "from_env")
+def test_cli_slot_group_overrides_env() -> None:
+    env = {"FIRECUBE_SLOT_GROUP": "from_env"}
 
-    assert resolve_slot_range_from_env(None, None, None, "from_cli") == (
+    assert resolve_slot_window(None, None, None, "from_cli", env=env) == (
         None,
         None,
         "from_cli",

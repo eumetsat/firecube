@@ -1496,11 +1496,11 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 # 8. Recording
                 if not execution_result.registered:
                     self._span_recorder.register_run(
-                        ctx=runtime_ctx,
                         result=execution_result,
                         run_id=run_id,
                         product=product,
                         slice_meta=slice_meta,
+                        force_reingest=runtime_ctx.force_reingest,
                         record_spans=not execution_result.spans_recorded,
                     )
 

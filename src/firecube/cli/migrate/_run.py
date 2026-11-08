@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 import click
 
@@ -28,11 +28,9 @@ from firecube.cli.migrate._common import (
     echo_warning,
     merge_step_options,
     migrate_options,
-    open_session,
+    open_target,
 )
-from firecube.cli.plugins.registry import load_migration_steps
-from firecube.core.controlplane.product_label import check_product_label, stamp_product_label
-from firecube.core.filesystem import StorageFilesystemFull
+from firecube.ingestor.registry.loader import load_migration_steps
 from firecube.ingestor.runtime.migrate import (
     AdoptionResult,
     MigrationResult,
@@ -170,7 +168,7 @@ def run(
     options = merge_step_options(
         step_id, options=step_options, sets=sets, removes=removes, node=node
     )
-    session = open_session(
+    product = open_target(
         ctx,
         command="migrate run",
         target=target,
@@ -182,7 +180,7 @@ def run(
     require_confirmation("migrate run", confirmed=yes_i_really_mean_it, dry_run=dry_run)
     json_out = output_format == "json"
     result = migrate_product(
-        session=session,
+        product,
         step_id=step_id,
         load_steps=load_migration_steps,
         step_options=options,
@@ -235,7 +233,8 @@ def adopt(
     it would record and writes nothing. adopt asks for confirmation in a terminal
     and needs --yes-i-really-mean-it elsewhere.
     """
-    session = open_session(
+    # Opening refuses a store that records another label, before the confirmation.
+    product = open_target(
         ctx,
         command="migrate adopt",
         target=target,
@@ -246,30 +245,20 @@ def adopt(
         writable=True,
     )
     json_out = output_format == "json"
-    report = echo_progress if json_out else echo_report
-    fs = cast(StorageFilesystemFull, session.fs())
-    control_root = session.product.control_root_uri
-    # Refuse another label before anything runs; the library leaves a stamped store untouched.
-    stamped = check_product_label(fs, control_root, product_name)
     require_confirmation("migrate adopt", confirmed=yes_i_really_mean_it, dry_run=dry_run)
-    result = adopt_product(session=session, report=report, warn=echo_warning, dry_run=dry_run)
-    if dry_run:
-        label = "is recorded" if stamped is not None else "would be recorded"
-        report(f"product label {product_name} {label}")
-        if json_out:
-            echo_json(
-                {
-                    **_adoption_payload(result),
-                    "dry_run": True,
-                    "product_label": product_name,
-                    "label_recorded": stamped is not None,
-                }
-            )
+    result = adopt_product(
+        product,
+        report=echo_progress if json_out else echo_report,
+        warn=echo_warning,
+        dry_run=dry_run,
+    )
+    if not json_out:
         return
-    if result.outcome == "already-product" and stamped is None:
-        # A store with a control plane but no stamp (for example a lone schema.json) is not
-        # adopted again, so the label is recorded here.
-        stamp_product_label(fs, control_root, product_name)
-        report(f"recorded product label {product_name}")
-    if json_out:
-        echo_json(_adoption_payload(result))
+    payload = _adoption_payload(result)
+    if dry_run:
+        payload |= {
+            "dry_run": True,
+            "product_label": product.label,
+            "label_recorded": result.label_recorded,
+        }
+    echo_json(payload)

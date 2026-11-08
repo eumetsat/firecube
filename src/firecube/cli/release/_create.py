@@ -24,7 +24,7 @@ from firecube.cli.release._common import (
     echo_json,
     echo_progress,
     echo_warning,
-    open_session,
+    open_target,
     release_options,
 )
 from firecube.cli.release._render import create_payload, echo_plan, echo_record, plan_payload
@@ -139,7 +139,7 @@ def create(
             raise click.UsageError(
                 "Invalid value for '--archive': a release archive is a local file:// URI."
             )
-    session = open_session(
+    product = open_target(
         ctx,
         command="release create",
         target=target,
@@ -152,7 +152,7 @@ def create(
     json_out = output_format == "json"
     if dry_run:
         plan = create_release_for_product(
-            session=session,
+            product,
             version=version,
             note=note,
             report=echo_progress if json_out else click.echo,
@@ -168,7 +168,7 @@ def create(
         echo_plan(plan)
         return
     result = create_release_for_product(
-        session=session,
+        product,
         version=version,
         note=note,
         report=echo_progress if json_out else click.echo,

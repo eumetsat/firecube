@@ -25,16 +25,12 @@ It handles:
 from __future__ import annotations
 
 import importlib.metadata
-from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from firecube.ingestor.api import PluginConfig, TemplateConfig
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.registry.loader import discover_ingestors, get_ingestor
-
-if TYPE_CHECKING:
-    from firecube.ingestor.runtime.migrate import InstalledStep
 
 
 @dataclass
@@ -122,44 +118,6 @@ def get_plugin_cli_command(plugin_name: str) -> Any | None:
                 raise ImportError(f"Failed to load plugin CLI '{plugin_name}': {exc}") from exc
 
     return None
-
-
-def load_migration_steps() -> list[InstalledStep]:
-    """List the migration steps that installed distributions register.
-
-    Reads the `firecube.migrations` entry-point group without importing any step.
-    The step class loads when its `create` is called and receives the step options
-    as one mapping. An entry point with no distribution gets `None` for the
-    distribution and the version, and the executor refuses it. Two entry points
-    with one name are both listed, and the executor refuses the id.
-
-    Returns:
-        One `InstalledStep` per entry point, sorted by id.
-    """
-
-    from firecube.ingestor.runtime.migrate import InstalledStep
-
-    steps = [
-        InstalledStep(
-            id=ep.name,
-            create=_step_factory(ep),
-            distribution=ep.dist.name if ep.dist is not None else None,
-            version=ep.dist.version if ep.dist is not None else None,
-        )
-        for ep in importlib.metadata.entry_points(group="firecube.migrations")
-    ]
-    return sorted(steps, key=lambda step: step.id)
-
-
-def _step_factory(ep: importlib.metadata.EntryPoint) -> Callable[[Mapping[str, Any]], Any]:
-    def create(options: Mapping[str, Any]) -> Any:
-        try:
-            step_cls = ep.load()
-        except Exception as exc:
-            raise ImportError(f"Failed to load migration step '{ep.name}': {exc}") from exc
-        return step_cls(options)
-
-    return create
 
 
 def list_plugin_cli_names() -> list[str]:

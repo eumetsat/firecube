@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Options, session construction and step-option merging for ``firecube migrate``."""
+"""Options, product opening and step-option merging for ``firecube migrate``."""
 
 from __future__ import annotations
 
@@ -24,7 +24,6 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
-from firecube.cli._product import recorded_identity, resolve_product_identity
 from firecube.cli._shared_options import (
     format_option,
     product_name_option,
@@ -33,9 +32,9 @@ from firecube.cli._shared_options import (
     target_uri_option,
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.errors import Message, Param
+from firecube.core.product.open import Product, open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 
 SET_ATTRS_ID = "firecube:set-attrs"
 """The built-in step that the ``--set``, ``--remove`` and ``--node`` flags belong to."""
@@ -85,7 +84,7 @@ def migrate_options(tier: Literal["write", "inspect"], *, product_name: bool = F
     return decorator
 
 
-def open_session(
+def open_target(
     ctx: click.Context,
     *,
     command: str,
@@ -95,16 +94,18 @@ def open_session(
     storage_driver: str | None,
     storage_anonymous: bool | None,
     writable: bool,
-) -> StorageSession:
-    """Admit ``--target`` and return the storage session bound to the product.
+) -> Product:
+    """Admit ``--target`` and open its product until the command's context closes.
 
-    The session carries ``product_name`` when given, else the label the store records.
+    Without ``product_name`` the store must record a label. With it, a store that records
+    none opens under ``product_name``.
 
     Raises:
         click.BadParameter: The target fails the URI rule.
-        click.UsageError: The storage type contradicts the scheme, the resolver refuses the
-            URI, the store records no label and none is given, or a writing command is given
-            anonymous access.
+        click.UsageError: The storage type contradicts the scheme, ``product_name`` is
+            empty, or a writing command is given anonymous access.
+        ProductLabelMissingError: The store records no label and none is given.
+        ProductLabelMismatchError: The store records a label other than ``product_name``.
     """
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
@@ -122,12 +123,20 @@ def open_session(
             f"{command} writes under .firecube/ and needs write access; "
             "anonymous storage access is not supported."
         )
+    if product_name == "":
+        raise click.UsageError(
+            render(Message("{name} must not be empty.", name=Param("product_name")))
+        )
     driver = StorageDriverConfig.from_storage_config(storage_config)
-    if product_name is None:
-        identity = recorded_identity(target_uri, format="zarr", driver=driver)
-    else:
-        identity = resolve_product_identity(target_uri, format="zarr", product_name=product_name)
-    return StorageSession(StorageBinding(identity=identity, driver=driver))
+    return ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=driver,
+            product_name=product_name,
+            require_label=product_name is None,
+        )
+    )
 
 
 def _split_pair(item: str, flag: str) -> tuple[str, str]:

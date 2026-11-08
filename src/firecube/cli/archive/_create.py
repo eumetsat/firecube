@@ -24,7 +24,6 @@ import click
 
 from firecube.cli._ctx import get_config, get_storage_config
 from firecube.cli._errors import echo_rendered
-from firecube.cli._product import session_identity
 from firecube.cli._shared_options import (
     archive_uri_option,
     dry_run_flag,
@@ -37,9 +36,8 @@ from firecube.cli._uri_policy import (
 )
 from firecube.cli.archive._common import _require_overwrite_confirmation
 from firecube.core.config import get_archive_defaults
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 
 
 @click.command(
@@ -190,34 +188,22 @@ def create(
 
     _require_overwrite_confirmation(overwrite=overwrite, yes_i_really_mean_it=yes_i_really_mean_it)
 
-    if dry_run:
-        click.echo(f"[dry-run] Would archive: {target} -> {archive_abs}")
-        if group:
-            click.echo(f"  Group: {group}")
-        if start_date or end_date:
-            click.echo(f"  Time range: {start_date or '*'} -> {end_date or '*'}")
-        click.echo(f"  Compression: {compression or 'zstd'}")
-        return
-
     variable_list = [v.strip() for v in variables.split(",")] if variables else None
 
-    driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    session = StorageSession(
-        StorageBinding(
-            identity=session_identity(target_uri, format="zarr", driver=driver_config),
-            driver=driver_config,
+    # A store that records no label opens under its normalised URI.
+    product = ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=StorageDriverConfig.from_storage_config(storage_config),
+            require_label=False,
         )
     )
 
-    if archive_format == "zip" and (group or start_date or end_date or variable_list):
-        raise click.ClickException(
-            "Zip archive does not support --group, --start-date, --end-date, or --variables"
-        )
-
-    from firecube.ingestor.runtime.archive import create_archive
+    from firecube.ingestor.runtime.archive import ArchiveCreatePlan, create_archive
 
     created = create_archive(
-        session=session,
+        product,
         archive=archive,
         archive_path=archive_abs,
         archive_format=archive_format,
@@ -230,7 +216,16 @@ def create(
         allow_nan=allow_nan,
         allow_inf=allow_inf,
         warn=functools.partial(echo_rendered, err=True),
+        dry_run=dry_run,
     )
+    if isinstance(created, ArchiveCreatePlan):
+        click.echo(f"[dry-run] Would archive: {target} -> {created.archive_path}")
+        if created.group:
+            click.echo(f"  Group: {created.group}")
+        if created.start_date or created.end_date:
+            click.echo(f"  Time range: {created.start_date or '*'} -> {created.end_date or '*'}")
+        click.echo(f"  Compression: {created.compression or 'zstd'}")
+        return
 
     click.echo(f"Archive created: {created.target}")
     tgm_result = created.tgm_summary

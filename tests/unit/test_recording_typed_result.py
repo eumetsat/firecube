@@ -14,14 +14,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from firecube.core.controlplane import SpanCoverage
 from firecube.ingestor.runtime.recording import SpanRecorder, _extract_timestamps_skipped
-from firecube.ingestor.types.context import IngestResult, RuntimeIngestContext
+from firecube.ingestor.types.context import IngestResult
 from firecube.ingestor.types.result_metrics import (
     OutputPaths,
     PipelineMetrics,
@@ -37,32 +36,26 @@ def _make_recorder() -> tuple[SpanRecorder, MagicMock]:
     return SpanRecorder(chunk_manager), chunk_manager
 
 
-def _make_context(tmp_path: Path) -> RuntimeIngestContext:
-    return RuntimeIngestContext(source=str(tmp_path), options={})
-
-
-def test_recording_handles_empty_metrics(tmp_path) -> None:
+def test_recording_handles_empty_metrics() -> None:
     recorder, chunk_manager = _make_recorder()
-    ctx = _make_context(tmp_path)
     result = IngestResult(
         output_format="test", outputs=OutputPaths(primary="/tmp/empty"), metrics=ResultMetrics()
     )
 
     recorder.register_run(
-        ctx=ctx,
         result=result,
         run_id="run",
         product="product",
         slice_meta={"plugin": "test"},
+        force_reingest=False,
         record_spans=False,
     )
 
     assert chunk_manager.record_run_terminal.call_args.kwargs["size"] == 0
 
 
-def test_recording_reads_coverage_from_typed_metrics(tmp_path) -> None:
+def test_recording_reads_coverage_from_typed_metrics() -> None:
     recorder, chunk_manager = _make_recorder()
-    ctx = _make_context(tmp_path)
     coverage = [
         SpanCoverage(
             group="g1",
@@ -78,20 +71,19 @@ def test_recording_reads_coverage_from_typed_metrics(tmp_path) -> None:
     )
 
     recorder.register_run(
-        ctx=ctx,
         result=result,
         run_id="run",
         product="product",
         slice_meta={"plugin": "test"},
+        force_reingest=False,
     )
 
     assert chunk_manager.record_span.call_count == 1
     assert chunk_manager.record_span.call_args.kwargs["coverage"] == coverage[0]
 
 
-def test_recording_reads_storage_from_typed_metrics(tmp_path) -> None:
+def test_recording_reads_storage_from_typed_metrics() -> None:
     recorder, chunk_manager = _make_recorder()
-    ctx = _make_context(tmp_path)
     result = IngestResult(
         output_format="test",
         outputs=OutputPaths(primary="/tmp/storage"),
@@ -99,20 +91,19 @@ def test_recording_reads_storage_from_typed_metrics(tmp_path) -> None:
     )
 
     recorder.register_run(
-        ctx=ctx,
         result=result,
         run_id="run",
         product="product",
         slice_meta={"plugin": "test"},
+        force_reingest=False,
         record_spans=False,
     )
 
     assert chunk_manager.record_run_terminal.call_args.kwargs["size"] == 100
 
 
-def test_recording_reads_outputs_primary(tmp_path) -> None:
+def test_recording_reads_outputs_primary() -> None:
     recorder, chunk_manager = _make_recorder()
-    ctx = _make_context(tmp_path)
     result = IngestResult(
         output_format="test",
         outputs=OutputPaths(primary="/tmp/x"),
@@ -120,11 +111,11 @@ def test_recording_reads_outputs_primary(tmp_path) -> None:
     )
 
     recorder.register_run(
-        ctx=ctx,
         result=result,
         run_id="run",
         product="product",
         slice_meta={"plugin": "test"},
+        force_reingest=False,
         record_spans=False,
     )
 
@@ -132,9 +123,8 @@ def test_recording_reads_outputs_primary(tmp_path) -> None:
 
 
 @pytest.mark.unit
-def test_timestamps_skipped_stored_in_run_meta_when_nonzero(tmp_path) -> None:
+def test_timestamps_skipped_stored_in_run_meta_when_nonzero() -> None:
     recorder, chunk_manager = _make_recorder()
-    ctx = _make_context(tmp_path)
     metrics = ResultMetrics(pipeline=PipelineMetrics(timestamps_skipped=5))
     result = IngestResult(
         output_format="zarr",
@@ -143,11 +133,11 @@ def test_timestamps_skipped_stored_in_run_meta_when_nonzero(tmp_path) -> None:
     )
 
     recorder.register_run(
-        ctx=ctx,
         result=result,
         run_id="run-ts",
         product="product",
         slice_meta={"plugin": "test"},
+        force_reingest=False,
         record_spans=False,
     )
 
@@ -156,9 +146,8 @@ def test_timestamps_skipped_stored_in_run_meta_when_nonzero(tmp_path) -> None:
 
 
 @pytest.mark.unit
-def test_timestamps_skipped_not_stored_in_run_meta_when_zero(tmp_path) -> None:
+def test_timestamps_skipped_not_stored_in_run_meta_when_zero() -> None:
     recorder, chunk_manager = _make_recorder()
-    ctx = _make_context(tmp_path)
     result = IngestResult(
         output_format="zarr",
         outputs=OutputPaths(primary="/tmp/out.zarr"),
@@ -166,11 +155,11 @@ def test_timestamps_skipped_not_stored_in_run_meta_when_zero(tmp_path) -> None:
     )
 
     recorder.register_run(
-        ctx=ctx,
         result=result,
         run_id="run-ts-zero",
         product="product",
         slice_meta={"plugin": "test"},
+        force_reingest=False,
         record_spans=False,
     )
 

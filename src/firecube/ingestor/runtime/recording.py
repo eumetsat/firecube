@@ -39,7 +39,6 @@ from firecube.ingestor.types.context import (
     PipelineBatch,
     PipelineResult,
     PluginContext,
-    RuntimeIngestContext,
 )
 from firecube.ingestor.types.result_metrics import ResultMetrics
 
@@ -80,17 +79,17 @@ class SpanRecorder:
 
     def register_run(
         self,
-        ctx: RuntimeIngestContext,
         result: IngestResult,
         run_id: str,
         product: str,
         slice_meta: dict[str, Any],
+        *,
+        force_reingest: bool,
         record_spans: bool = True,
         slot_range: tuple[int, int] | None = None,
         slot_group: str | None = None,
     ) -> None:
         """Record the terminal run event and any final span coverage through ChunkManager."""
-        _ = ctx
         if threading.current_thread() is not threading.main_thread():
             raise ManifestError("Run registration must occur on the main thread.")
 
@@ -135,7 +134,7 @@ class SpanRecorder:
         replaced_span_keys: list[str] = []
         overwrites_by_coverage: dict[int, list[list[int]]] = {}
 
-        if ctx.force_reingest:
+        if force_reingest:
             prior_spans = _list_prior_active_spans_for_replacement(
                 self._chunk_manager,
                 product=product,
@@ -199,7 +198,7 @@ class SpanRecorder:
                 or post_terminal_events_recorded
             )
 
-        if ctx.force_reingest and replaced_span_keys:
+        if force_reingest and replaced_span_keys:
             self._chunk_manager.record_replacement_committed(  # pyright: ignore[reportAttributeAccessIssue]
                 product=product,
                 run_id=run_id,

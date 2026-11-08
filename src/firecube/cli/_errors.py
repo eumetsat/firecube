@@ -213,16 +213,6 @@ class UnknownOptionError(click.BadParameter):
         super().__init__(msg)
 
 
-class MissingProductNameError(click.UsageError):
-    def __init__(self, plugin: str) -> None:
-        super().__init__(
-            f"Missing product name for plugin '{plugin}'. Provide one of:\n"
-            f"  1. CLI flag:  --product-name <name>\n"
-            f"  2. Config file:  [plugins.{plugin}]\n  default_product_name = '<name>'\n"
-            f"  3. Plugin class attr:  {plugin}.PRODUCT_NAME = '<name>'  (preferred; declared at plugin source)"
-        )
-
-
 class MissingStorageDriverError(click.UsageError):
     def __init__(self, target_uri: str) -> None:
         super().__init__(

@@ -25,7 +25,8 @@ never a chunk. Layout below .firecube/metadata/:
 Blobs, manifests and records are created once and never rewritten. Records and
 refs name other files by id, never by an absolute path. Only the ChunkManager
 facade writes through the functions here; read-only previews also call
-`latest_snapshot_id` and `plan_snapshot`.
+`latest_snapshot_id` and `plan_snapshot`. `take_snapshot_for_product` is the
+one door for taking or previewing a snapshot of an open product.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ import posixpath
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 
 from firecube.core.controlplane._content_addressed import (
     HEX_ID,
@@ -45,6 +46,7 @@ from firecube.core.controlplane._content_addressed import (
     require_id,
     sha256_hex,
 )
+from firecube.core.controlplane.product_label import check_product_label
 from firecube.core.controlplane.types import (
     CONTROL_DIRNAME,
     METADATA_DIRNAME,
@@ -61,6 +63,9 @@ from firecube.core.zarr.metadata_documents import (
     enumerate_metadata_documents,
     parse_node_document,
 )
+
+if TYPE_CHECKING:
+    from firecube.core.product.open import Product
 
 SnapshotConsistency = Literal["observation", "coherent"]
 """How a snapshot was taken: ``observation`` on a live store, ``coherent`` under the exclusive claim."""
@@ -352,6 +357,86 @@ def plan_snapshot(
         blobs=len({document.digest for document in documents}),
         manifest_recorded=any(record.manifest == manifest_id for record in records),
     )
+
+
+@dataclass(frozen=True)
+class SnapshotPreview:
+    """The outcome of a dry-run snapshot take: what it would write, and the label state.
+
+    Attributes:
+        plan: What the snapshot would write.
+        label_recorded: Whether the store records its product label already. A store
+            without the stamp gets it from a real take.
+    """
+
+    plan: SnapshotPlan
+    label_recorded: bool
+
+
+@overload
+def take_snapshot_for_product(
+    product: Product,
+    *,
+    dry_run: Literal[False] = ...,
+    trigger: str,
+    consistency: SnapshotConsistency,
+) -> SnapshotRecord: ...
+
+
+@overload
+def take_snapshot_for_product(
+    product: Product,
+    *,
+    dry_run: Literal[True],
+    trigger: str,
+    consistency: SnapshotConsistency,
+) -> SnapshotPreview: ...
+
+
+def take_snapshot_for_product(
+    product: Product,
+    *,
+    dry_run: bool = False,
+    trigger: str,
+    consistency: SnapshotConsistency,
+) -> SnapshotRecord | SnapshotPreview:
+    """Snapshot the metadata documents of an open product, or preview the snapshot.
+
+    Refuse a store that records another label before anything is read or written. A dry
+    run returns the plan and writes nothing. A real run takes no maintenance claim and
+    records the snapshot with no run id, so only an ``observation`` fits.
+
+    Args:
+        product: The open product, bound to the label its store records.
+        dry_run: Return a `SnapshotPreview` and write nothing.
+        trigger: Why the snapshot is taken; a non-empty string stored in the record.
+        consistency: ``observation``; a ``coherent`` snapshot needs a run id and is
+            refused here.
+
+    Returns:
+        The new `SnapshotRecord`, or the `SnapshotPreview` of a dry run.
+
+    Raises:
+        ValueError: *trigger* is empty, or *consistency* does not fit a snapshot with no run id.
+        ProductLabelMismatchError: The store records another label.
+        ManifestError: The label stamp, a run or claim record cannot be read.
+        ControlPlaneCorruptionError: ``refs/latest.json`` does not parse.
+    """
+    _check_take(run_id=None, trigger=trigger, consistency=consistency)
+    fs = cast(StorageFilesystemFull, product.session.fs())
+    stamped = check_product_label(fs, product.identity.control_root_uri, product.label)
+    manager = product.manager
+    if not dry_run:
+        return manager.take_snapshot(
+            product.label, run_id=None, trigger=trigger, consistency=consistency
+        )
+    plan = plan_snapshot(
+        fs,
+        product.identity.product_uri,
+        manager.enumerate_metadata_documents(product.label),
+        records=manager.list_snapshots(product.label),
+    )
+    return SnapshotPreview(plan=plan, label_recorded=stamped is not None)
 
 
 def _check_take(*, run_id: str | None, trigger: str, consistency: str) -> None:

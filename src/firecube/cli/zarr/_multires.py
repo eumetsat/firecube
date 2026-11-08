@@ -22,7 +22,6 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
-from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
     dry_run_flag,
     storage_driver_option,
@@ -33,9 +32,8 @@ from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.core.zarr.layers import DEFAULT_MULTIRES_RESOLUTIONS
 from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
 
@@ -129,27 +127,18 @@ def multires(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    identity = recorded_identity(target_uri, format="zarr", driver=driver_config)
-    session = StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=driver_config,
-        )
-    )
+    product = ctx.with_resource(open_product(target_uri, format="zarr", driver=driver_config))
     config = MultiresConfig(
-        product=identity.product_name,
+        product=product.label,
         group=(group or "").strip("/"),
         resolutions=list(resolutions) or list(DEFAULT_MULTIRES_RESOLUTIONS),
         lat_name=lat_name,
         lon_name=lon_name,
     )
     try:
-        result = ZarrMultiresBuilder(
-            storage_config,
-            product_name=identity.product_name,
-            product_uri=identity.product_uri,
-            session=session,
-        ).build(config, dry_run=dry_run)
+        result = ZarrMultiresBuilder(product, storage_config=storage_config).build(
+            config, dry_run=dry_run
+        )
     except ValueError as exc:
         raise click.ClickException(render(exc)) from exc
 

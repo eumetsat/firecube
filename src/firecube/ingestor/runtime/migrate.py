@@ -29,8 +29,9 @@ import uuid
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast
 
+from firecube.core.controlplane.product_label import check_product_label, stamp_product_label
 from firecube.core.controlplane.types import (
     CONTROL_DIRNAME,
     LAST_MODIFIER_ATTR,
@@ -51,6 +52,7 @@ from firecube.core.errors import (
     Placeholder,
     ProductUnderMaintenanceError,
 )
+from firecube.core.filesystem import StorageFilesystemFull
 from firecube.core.zarr._reserved_attrs import RESERVED_ARRAY_ATTRS
 from firecube.core.zarr._reserved_root_attrs import RESERVED_ROOT_ATTRS
 from firecube.core.zarr.metadata_documents import (
@@ -75,6 +77,7 @@ if TYPE_CHECKING:
     from zarr.abc.store import Store
 
     from firecube.core.controlplane.manager import ChunkManager
+    from firecube.core.product.open import Product
     from firecube.core.storage.session import StorageSession
     from firecube.core.zarr.guard.metadata_authority import MetadataScope
 
@@ -365,11 +368,14 @@ class AdoptionResult:
             `"dry-run"` when a preview found a store it would adopt.
         run_id: The recorded `adopt` run, or `None`.
         zarr_format: The format of the store, `2` or `3`, or `None` when nothing was adopted.
+        label_recorded: Whether the store records the product label on return. A dry run
+            reports `False` when a real run would record it.
     """
 
     outcome: Literal["adopted", "already-product", "dry-run"]
     run_id: str | None
     zarr_format: int | None
+    label_recorded: bool
 
 
 @dataclass(frozen=True)
@@ -996,57 +1002,73 @@ def _adopt(
     return run_id, zarr_format
 
 
-def _close(manager: ChunkManager, warn: Callable[[str], None]) -> None:
-    try:
-        manager.close()
-    except Exception as exc:
-        warn(Message("Warning: control plane not closed: {error}", error=_error_text(exc)))
-
-
 def adopt_product(
+    product: Product,
     *,
-    session: StorageSession,
     report: Callable[[str], None] = _ignore_line,
     warn: Callable[[str], None] = _ignore_line,
     dry_run: bool = False,
 ) -> AdoptionResult:
     """Give a Zarr store that Firecube did not write a control plane, as one recorded `adopt` run.
 
-    A store with `.firecube/schema.json` or recorded runs is already a product and
-    stays as it is. The run records the store as imported, with chunks unverified,
-    and invents no span history. It writes no Zarr document. Adopting a Zarr format 2
-    store succeeds and warns that Firecube cannot append to it.
+    The store gets the handle's label. A store that records another label is refused
+    before anything is written. A store with `.firecube/schema.json` or recorded runs
+    is already a product and stays as it is; it gets the label if it records none.
+    The run records the store as imported, with chunks unverified, and invents no
+    span history. It writes no Zarr document. Adopting a Zarr format 2 store succeeds
+    and warns that Firecube cannot append to it.
 
     Args:
-        session: The storage session bound to the store.
-        report: Receives the line that names the run.
+        product: The open product, from `open_product`; its label is the one to record.
+        report: Receives the line that names the run, and the line about the label.
         warn: Receives each warning line, "Warning: " included. A Zarr format 2 store gets one.
-        dry_run: Read the store and report the run it would record; write nothing.
+        dry_run: Read the store and report the run and the label it would record; write nothing.
 
     Returns:
-        The outcome, the run id and the store's Zarr format.
+        The outcome, the run id, the store's Zarr format and whether the label is recorded.
 
     Raises:
+        ProductLabelMismatchError: The store records another label; nothing is written.
+        ProductLabelConflictError: The records of an unstamped store name several labels.
+        ManifestError: The label stamp or a control-plane record cannot be read.
         MigrationPlanError: The store has no root group document.
     """
-    manager = session.control_plane()
-    product = session.product.product_name
-    try:
-        if manager.has_control_plane(product):
-            report(f"product {product} already has a control plane; nothing to adopt")
-            return AdoptionResult(outcome="already-product", run_id=None, zarr_format=None)
-        documents = manager.enumerate_metadata_documents(product)
-        if dry_run:
-            zarr_format = _zarr_format({document.path: document for document in documents})
-            report(
-                f"would adopt the store as product {product} in one adopt run "
-                f"(Zarr format {zarr_format}); nothing is written"
-            )
-            return AdoptionResult(outcome="dry-run", run_id=None, zarr_format=zarr_format)
-        run_id, zarr_format = _adopt(manager, product, documents, report, warn)
-        return AdoptionResult(outcome="adopted", run_id=run_id, zarr_format=zarr_format)
-    finally:
-        _close(manager, warn)
+    label = product.label
+    manager = product.manager
+    fs = cast(StorageFilesystemFull, product.session.fs())
+    control_root = product.identity.control_root_uri
+    label_recorded = check_product_label(fs, control_root, label) is not None
+    if manager.has_control_plane(label):
+        report(f"product {label} already has a control plane; nothing to adopt")
+        if not label_recorded and not dry_run:
+            # Such a store, for example a lone schema.json, is not adopted again; stamp it here.
+            stamp_product_label(fs, control_root, label)
+            report(f"recorded product label {label}")
+            label_recorded = True
+        result = AdoptionResult(
+            outcome="already-product", run_id=None, zarr_format=None, label_recorded=label_recorded
+        )
+    elif dry_run:
+        documents = manager.enumerate_metadata_documents(label)
+        zarr_format = _zarr_format({document.path: document for document in documents})
+        report(
+            f"would adopt the store as product {label} in one adopt run "
+            f"(Zarr format {zarr_format}); nothing is written"
+        )
+        result = AdoptionResult(
+            outcome="dry-run", run_id=None, zarr_format=zarr_format, label_recorded=label_recorded
+        )
+    else:
+        documents = manager.enumerate_metadata_documents(label)
+        # The run's event writer stamps the label before its first record.
+        run_id, zarr_format = _adopt(manager, label, documents, report, warn)
+        return AdoptionResult(
+            outcome="adopted", run_id=run_id, zarr_format=zarr_format, label_recorded=True
+        )
+    if dry_run:
+        state = "is recorded" if label_recorded else "would be recorded"
+        report(f"product label {label} {state}")
+    return result
 
 
 @dataclass(frozen=True)
@@ -1085,8 +1107,11 @@ def _history(manager: ChunkManager, product: str) -> list[tuple[Any, _Journal]]:
     return sorted(history, key=lambda item: (item[0].started_at, item[0].run_id))
 
 
-def list_migrations(*, manager: ChunkManager, product: str) -> tuple[MigrationRunInfo, ...]:
+def list_migrations(product: Product) -> tuple[MigrationRunInfo, ...]:
     """Return every recorded migration run of the product that has a journal, oldest first.
+
+    Args:
+        product: The open product, from `open_product`.
 
     Raises:
         MigrationRefusedError: A migration run or its journal cannot be read.
@@ -1101,7 +1126,7 @@ def list_migrations(*, manager: ChunkManager, product: str) -> tuple[MigrationRu
             outcome=journal.outcome,
             started_at=run.started_at,
         )
-        for run, journal in _history(manager, product)
+        for run, journal in _history(product.manager, product.label)
         if not isinstance(run, _JournaledRun)
     )
 
@@ -1455,8 +1480,8 @@ def _prior_runs(
 
 
 def migrate_product(
+    product: Product,
     *,
-    session: StorageSession,
     step_id: str,
     load_steps: Callable[[], Iterable[InstalledStep]],
     step_options: Mapping[str, Any] | None = None,
@@ -1466,7 +1491,7 @@ def migrate_product(
     report: Callable[[str], None] = _ignore_line,
     warn: Callable[[str], None] = _ignore_line,
 ) -> MigrationResult:
-    """Run one migration step on the session's product as a recorded maintenance run.
+    """Run one migration step on the product as a recorded maintenance run.
 
     The run holds the product's exclusive maintenance claim. It takes a coherent
     snapshot, plans against it and journals every planned document before the first
@@ -1476,7 +1501,7 @@ def migrate_product(
     interrupted, unrecorded or failed run of the step resumes from its journal.
 
     Args:
-        session: The storage session bound to the product.
+        product: The open product, from `open_product`.
         step_id: The id of the step to run.
         load_steps: Returns the installed steps with their distributions and versions.
         step_options: The options the step is built with.
@@ -1523,64 +1548,61 @@ def migrate_product(
 
         create_release = release_in_run
     identity = (distribution, version)
-    product = session.product.product_name
-    product_uri = session.product.product_uri.to_str()
-    manager = session.control_plane()
-    try:
-        if step.to_release is not None:
-            # Before the control-plane refusal, the journal and the dry run: the stamp must never lack its record.
-            manager.check_release_version(product, step.to_release)
-        is_product = manager.has_control_plane(product)
-        if not is_product:
-            if not dry_run:
-                raise MigrationRefusedError(
-                    Message(
-                        "the store of product {product} has no control plane; adopt it with "
-                        "{adopt} before running a migration",
-                        product=product,
-                        adopt=_ADOPT_COMMAND,
-                    ),
-                    step_id=step_id,
-                )
-            report(
+    label = product.label
+    product_uri = product.identity.product_uri.to_str()
+    manager = product.manager
+    if step.to_release is not None:
+        # Before the control-plane refusal, the journal and the dry run: the stamp must never lack its record.
+        manager.check_release_version(label, step.to_release)
+    is_product = manager.has_control_plane(label)
+    if not is_product:
+        if not dry_run:
+            raise MigrationRefusedError(
                 Message(
-                    "the store of product {product} has no control plane; a real run needs "
-                    "{adopt} first",
-                    product=product,
+                    "the store of product {product} has no control plane; adopt it with "
+                    "{adopt} before running a migration",
+                    product=label,
                     adopt=_ADOPT_COMMAND,
-                )
+                ),
+                step_id=step_id,
             )
-        history = _history(manager, product) if is_product else []
-        live = _digests(manager.enumerate_metadata_documents(product))
-        applied, resume = _prior_runs(history, live, step_id, identity, product_uri)
-        if applied is not None:
-            return _already_applied(applied, step_id=step_id, identity=identity, report=report)
-        if dry_run:
-            return _dry_run(
-                manager=manager,
-                product=product,
-                step=step,
-                identity=identity,
-                history=history,
-                resume=resume,
-                allow=allowed,
-                report=report,
+        report(
+            Message(
+                "the store of product {product} has no control plane; a real run needs "
+                "{adopt} first",
+                product=label,
+                adopt=_ADOPT_COMMAND,
             )
-        return _run(
-            session=session,
+        )
+    history = _history(manager, label) if is_product else []
+    live = _digests(manager.enumerate_metadata_documents(label))
+    applied, resume = _prior_runs(history, live, step_id, identity, product_uri)
+    if applied is not None:
+        return _already_applied(applied, step_id=step_id, identity=identity, report=report)
+    if dry_run:
+        return _dry_run(
             manager=manager,
-            product=product,
-            product_uri=product_uri,
+            product=label,
             step=step,
             identity=identity,
+            history=history,
             resume=resume,
             allow=allowed,
-            create_release=create_release,
             report=report,
-            warn=warn,
         )
-    finally:
-        _close(manager, warn)
+    return _run(
+        session=product.session,
+        manager=manager,
+        product=label,
+        product_uri=product_uri,
+        step=step,
+        identity=identity,
+        resume=resume,
+        allow=allowed,
+        create_release=create_release,
+        report=report,
+        warn=warn,
+    )
 
 
 def _dry_run(

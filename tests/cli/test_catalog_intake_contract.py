@@ -98,7 +98,7 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any, tmp_path: Path) -> None:
         catalog_module, "build_catalog_source_specs", fake_build_catalog_source_specs
     )
 
-    monkeypatch.setattr("firecube.cli._product._recorded_label", lambda *a, **k: None)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
     catalog_path = tmp_path / "catalog.yaml"
     result = _invoke_intake(
         [

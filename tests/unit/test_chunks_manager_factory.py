@@ -19,7 +19,6 @@ import importlib
 import click
 
 from firecube.core.config import StorageConfig
-from firecube.core.product.identity import ProductIdentity
 
 manager_module = importlib.import_module("firecube.cli.chunks._manager")
 StorageDriverConfig = importlib.import_module(
@@ -37,8 +36,8 @@ class _FakeChunkManager:
         pass
 
 
-def _recorded_identity(uri, *, format, driver):
-    return ProductIdentity.from_uri(uri, format, product_name="TEST_PRODUCT.zarr")
+def _recorded_label(uri, *, format, driver):
+    return "TEST_PRODUCT.zarr"
 
 
 def _make_ctx(workspace):
@@ -61,7 +60,7 @@ def test_target_product_uses_default_driver_when_storage_config_missing(
         classmethod(_recording_factory),
     )
     monkeypatch.setattr(manager_module, "ChunkManager", _FakeChunkManager)
-    monkeypatch.setattr(manager_module, "recorded_identity", _recorded_identity)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", _recorded_label)
     monkeypatch.setattr(manager_module, "get_config", lambda ctx: {})
     monkeypatch.setattr(manager_module, "get_storage_config", lambda *args, **kwargs: None)
 
@@ -98,7 +97,7 @@ def test_target_product_uses_storage_config_driver_when_present(
         classmethod(_recording_factory),
     )
     monkeypatch.setattr(manager_module, "ChunkManager", _FakeChunkManager)
-    monkeypatch.setattr(manager_module, "recorded_identity", _recorded_identity)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", _recorded_label)
     monkeypatch.setattr(manager_module, "get_config", lambda ctx: {"storage": True})
     monkeypatch.setattr(
         manager_module,

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Options, session construction and output helpers shared by the ``firecube release`` commands."""
+"""Options, product opening and output helpers shared by the ``firecube release`` commands."""
 
 from __future__ import annotations
 
@@ -23,7 +23,6 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
-from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
     format_option,
     storage_driver_option,
@@ -31,9 +30,8 @@ from firecube.cli._shared_options import (
     target_uri_option,
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import Product, open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 
 
 def echo_json(payload: Any) -> None:
@@ -70,7 +68,7 @@ def release_options(tier: Literal["write", "inspect"]) -> Any:
     return decorator
 
 
-def open_session(
+def open_target(
     ctx: click.Context,
     *,
     command: str,
@@ -79,15 +77,14 @@ def open_session(
     storage_driver: str | None,
     storage_anonymous: bool | None,
     writable: bool,
-) -> StorageSession:
-    """Admit ``--target`` and return the storage session bound to the product.
-
-    The session carries the label the store records.
+) -> Product:
+    """Admit ``--target`` and open its product, under the recorded label, until the context closes.
 
     Raises:
         click.BadParameter: The target fails the URI rule.
-        click.UsageError: The storage type contradicts the scheme, the store records no
-            product label, or a writing command is given anonymous access.
+        click.UsageError: The storage type contradicts the scheme, or a writing command is
+            given anonymous access.
+        ProductLabelMissingError: The store records no product label.
     """
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
@@ -106,5 +103,4 @@ def open_session(
             "anonymous storage access is not supported."
         )
     driver = StorageDriverConfig.from_storage_config(storage_config)
-    identity = recorded_identity(target_uri, format="zarr", driver=driver)
-    return StorageSession(StorageBinding(identity=identity, driver=driver))
+    return ctx.with_resource(open_product(target_uri, format="zarr", driver=driver))

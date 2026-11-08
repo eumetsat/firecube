@@ -16,12 +16,10 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import click
 
 from firecube.cli._shared_options import dry_run_flag
-from firecube.cli.snapshot._common import open_session, snapshot_options
+from firecube.cli.snapshot._common import open_target, snapshot_options
 from firecube.cli.snapshot._render import (
     echo_json,
     echo_plan,
@@ -29,9 +27,7 @@ from firecube.cli.snapshot._render import (
     plan_payload,
     record_payload,
 )
-from firecube.core.controlplane.metadata_snapshots import plan_snapshot
-from firecube.core.controlplane.product_label import check_product_label
-from firecube.core.filesystem import StorageFilesystemFull
+from firecube.core.controlplane.metadata_snapshots import take_snapshot_for_product
 
 
 @click.command(
@@ -72,7 +68,7 @@ def take(
     it mix states. it takes no maintenance claim. --dry-run prints the documents,
     the manifest and the parent the snapshot would record, and writes nothing.
     """
-    session = open_session(
+    opened = open_target(
         ctx,
         target=target,
         storage_type=storage_type,
@@ -80,25 +76,16 @@ def take(
         storage_anonymous=storage_anonymous,
         writable=True,
     )
-    manager = session.control_plane()
-    ctx.call_on_close(manager.close)
-    product = session.product.product_name
     if dry_run:
-        fs = cast(StorageFilesystemFull, session.fs())
-        plan = plan_snapshot(
-            fs,
-            session.product.product_uri,
-            manager.enumerate_metadata_documents(product),
-            records=manager.list_snapshots(product),
+        preview = take_snapshot_for_product(
+            opened, dry_run=True, trigger="cli", consistency="observation"
         )
-        # A store without the stamp gets it from a real take.
-        stamped = check_product_label(fs, session.product.control_root_uri, product) is not None
         if output_format == "json":
-            echo_json(plan_payload(plan, label_recorded=stamped))
+            echo_json(plan_payload(preview.plan, label_recorded=preview.label_recorded))
             return
-        echo_plan(plan, label=product, label_recorded=stamped)
+        echo_plan(preview.plan, label=opened.label, label_recorded=preview.label_recorded)
         return
-    record = manager.take_snapshot(product, run_id=None, trigger="cli", consistency="observation")
+    record = take_snapshot_for_product(opened, trigger="cli", consistency="observation")
 
     if output_format == "json":
         echo_json(record_payload(record))

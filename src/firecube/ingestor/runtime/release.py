@@ -19,7 +19,8 @@ snapshot, optionally retains the product's objects in a local zip archive or as 
 version ids, writes the release record and makes it current, under the product's
 exclusive maintenance claim.
 `release_in_run` does the same inside a migration's claim and run, without an archive.
-`verify_release_for_product` compares the live metadata with a release.
+`verify_release_for_product` compares the live metadata with a release, checks what the
+release retains and returns both with the joined verdict.
 """
 
 from __future__ import annotations
@@ -47,10 +48,12 @@ if TYPE_CHECKING:
     from firecube.core.controlplane.manager import ChunkManager
     from firecube.core.controlplane.releases import ReleaseVerification, StoredRelease
     from firecube.core.filesystem import StorageFilesystemFull
+    from firecube.core.product.open import Product
     from firecube.core.storage.session import StorageSession
     from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.metadata_documents import MetadataDocument
     from firecube.ingestor.runtime.migrate import PlannedDocument
+    from firecube.ingestor.runtime.release_retention import RetentionVerification
 
 _RUN_PREFIX: Final = "release-"
 _SNAPSHOT_TRIGGER: Final = "release-create"
@@ -154,6 +157,24 @@ class ReleaseListing:
 
     releases: tuple[ReleaseRecord, ...]
     current: str | None
+
+
+@dataclass(frozen=True)
+class ReleaseCheck:
+    """The result of `verify_release_for_product`.
+
+    Attributes:
+        verification: The comparison of the live metadata with the release snapshot.
+        retention: The check of what the release retains.
+    """
+
+    verification: ReleaseVerification
+    retention: RetentionVerification
+
+    @property
+    def holds(self) -> bool:
+        """Whether the metadata matches the snapshot and the retention holds."""
+        return self.verification.matches and self.retention.holds
 
 
 def _frozen(value: Any) -> Any:
@@ -572,8 +593,8 @@ def _new_plan(
 
 @overload
 def create_release_for_product(
+    product: Product,
     *,
-    session: StorageSession,
     version: str,
     note: str | None = ...,
     report: Callable[[str], None] = ...,
@@ -587,8 +608,8 @@ def create_release_for_product(
 
 @overload
 def create_release_for_product(
+    product: Product,
     *,
-    session: StorageSession,
     version: str,
     note: str | None = ...,
     report: Callable[[str], None] = ...,
@@ -601,8 +622,8 @@ def create_release_for_product(
 
 
 def create_release_for_product(
+    product: Product,
     *,
-    session: StorageSession,
     version: str,
     note: str | None = None,
     report: Callable[[str], None] = _ignore_line,
@@ -612,7 +633,7 @@ def create_release_for_product(
     retain_versions: bool = False,
     dry_run: bool = False,
 ) -> ReleaseCreateResult | ReleasePlan:
-    """Create release `version` of the session's product as one recorded maintenance run.
+    """Create release `version` of an open product as one recorded maintenance run.
 
     Under the exclusive maintenance claim, the run writes `firecube_release` and
     `firecube_last_modifier` on the root group, the root consolidated image last. It
@@ -629,7 +650,7 @@ def create_release_for_product(
     changed since that release, every metadata document, and the deleted keys in its marker.
 
     Args:
-        session: The storage session bound to the product.
+        product: The open product, from `open_product`.
         version: The release name, stored verbatim; only uniqueness is required.
         note: Free text kept in the record.
         report: Receives progress lines.
@@ -671,19 +692,21 @@ def create_release_for_product(
     _check_version(version, note)
     _admit_retain_versions(version, archive, retain_versions)
     archive_path = _admit_archive(version, archive, archive_full)
+    # An operation-local manager, closed in `finally`: the handle's own manager lives on.
+    session = product.session
     manager = session.control_plane()
-    product = session.product.product_name
+    label = session.product.product_name
     versions_plan: Mapping[str, Any] | None = None
     try:
         # Refuse an unstorable record name before a driver reads it or the root is stamped.
-        manager.check_release_version(product, version)
-        if not manager.has_control_plane(product):
+        manager.check_release_version(label, version)
+        if not manager.has_control_plane(label):
             raise ReleaseRefusedError(
-                f"the store of product {product} has no control plane; adopt it before "
+                f"the store of product {label} has no control plane; adopt it before "
                 "creating a release",
                 version=version,
             )
-        existing = manager.find_release(product, version)
+        existing = manager.find_release(label, version)
         if existing is None:
             from firecube.core.controlplane.metadata_snapshots import latest_snapshot_id
 
@@ -703,12 +726,12 @@ def create_release_for_product(
             versions_plan = preflight_version_retention(session, version=version)
         if existing is not None:
             # Read-only refusal or no-op before any claim or run.
-            _require_match(manager, product, existing)
+            _require_match(manager, label, existing)
             if archive is not None:
                 _require_recorded_archive(existing, archive)
             if retain_versions:
                 _require_recorded_versions(existing)
-            current = manager.current_release(product)
+            current = manager.current_release(label)
             if current is not None and current.version == version:
                 report(f"release {version!r} is current already")
                 if dry_run:
@@ -720,13 +743,13 @@ def create_release_for_product(
                     documents=(),
                 )
         if dry_run:
-            _refuse_held_maintenance(manager, product)
+            _refuse_held_maintenance(manager, label)
             if existing is not None:
                 report(f"would make release {version!r} current; no other file is written")
                 return _existing_plan(existing, "resume")
             return _new_plan(
                 manager=manager,
-                product=product,
+                product=label,
                 version=version,
                 note=note,
                 archive=archive,
@@ -735,12 +758,12 @@ def create_release_for_product(
                 report=report,
             )
         run_id = f"{_RUN_PREFIX}{uuid.uuid4()}"
-        handle = manager.acquire_exclusive_maintenance(product=product, run_id=run_id)
+        handle = manager.acquire_exclusive_maintenance(product=label, run_id=run_id)
         try:
             return _run(
-                session=session,
+                opened=product,
                 manager=manager,
-                product=product,
+                product=label,
                 version=version,
                 note=note,
                 run_id=run_id,
@@ -767,7 +790,7 @@ def create_release_for_product(
 
 def _run(
     *,
-    session: StorageSession,
+    opened: Product,
     manager: ChunkManager,
     product: str,
     version: str,
@@ -780,6 +803,7 @@ def _run(
     retain_versions: bool = False,
 ) -> ReleaseCreateResult:
     """Record the run, finish the release from its checkpoints, and record the outcome."""
+    session = opened.session
     scope_meta: dict[str, Any] = {
         "run_kind": MAINTENANCE_OP_RELEASE_CREATE,
         "version": version,
@@ -791,7 +815,7 @@ def _run(
 
         scope_meta.update(archive=archive.to_str(), archive_full=archive_full)
         retain = zip_retention(
-            session=session,
+            opened=opened,
             manager=manager,
             product=product,
             version=version,
@@ -896,52 +920,70 @@ def _run(
 
 
 def verify_release_for_product(
-    *, session: StorageSession, version: str | None = None
-) -> ReleaseVerification:
-    """Compare the live metadata documents of the product with a release's snapshot.
+    product: Product, *, version: str | None = None, sample: int | None = None
+) -> ReleaseCheck:
+    """Compare a release with the live metadata and check what the release retains.
 
-    It detects metadata drift only: added, removed and changed documents. An edit of
+    The metadata comparison detects added, removed and changed documents only. An edit of
     chunk bytes is not detected. The call writes nothing and takes no claim.
 
     Args:
-        session: The storage session bound to the product.
-        version: The release to compare; `None` names the current release.
+        product: The open product, from `open_product`.
+        version: The release to check; `None` names the current release.
+        sample: Check this many randomly chosen object versions instead of all; applies
+            to a release made with `--retain-versions` only.
 
     Raises:
+        ValueError: `sample` is less than 1.
         ReleaseNotFoundError: No such release, or no current release.
+        ReleaseRefusedError: The release retains object versions and the driver lists none.
+        ControlPlaneCorruptionError: The release's retention object is malformed.
     """
+    from firecube.ingestor.runtime.release_retention import verify_retention
+
+    # An operation-local manager, closed before `verify_retention` builds its own.
+    session = product.session
     manager = session.control_plane()
     try:
-        return manager.verify_release(session.product.product_name, version)
+        verification = manager.verify_release(session.product.product_name, version)
     finally:
         manager.close()
+    retention = verify_retention(product, verification.version, sample=sample)
+    return ReleaseCheck(verification=verification, retention=retention)
 
 
-def list_releases_for_product(*, session: StorageSession) -> ReleaseListing:
+def list_releases_for_product(product: Product) -> ReleaseListing:
     """Return every release of the product, oldest first, and the current version.
 
     The call writes nothing and takes no claim.
+
+    Args:
+        product: The open product, from `open_product`.
     """
+    session = product.session
     manager = session.control_plane()
-    product = session.product.product_name
+    label = session.product.product_name
     try:
-        current = manager.current_release(product)
+        current = manager.current_release(label)
         return ReleaseListing(
-            releases=tuple(to_release_record(item) for item in manager.list_releases(product)),
+            releases=tuple(to_release_record(item) for item in manager.list_releases(label)),
             current=None if current is None else current.version,
         )
     finally:
         manager.close()
 
 
-def read_release_for_product(
-    *, session: StorageSession, version: str | None = None
-) -> ReleaseRecord:
+def read_release_for_product(product: Product, *, version: str | None = None) -> ReleaseRecord:
     """Return release `version` of the product; `None` names the current release.
+
+    Args:
+        product: The open product, from `open_product`.
+        version: The release to read; `None` names the current release.
 
     Raises:
         ReleaseNotFoundError: No such release, or no current release.
     """
+    session = product.session
     manager = session.control_plane()
     try:
         return to_release_record(manager.read_release(session.product.product_name, version))

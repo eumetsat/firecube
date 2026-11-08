@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import pytest
 
+from firecube.core.errors import ConfigurationError
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.runtime.configure import ExecutionMode, determine_execution_mode
 
@@ -52,6 +53,12 @@ def test_invalid_pipeline_batch_size_rejected_at_construction() -> None:
 def test_invalid_extract_workers_rejected_at_construction() -> None:
     with pytest.raises(ValueError, match="extract_workers must be >= 1"):
         EngineConfig(extract_workers=0)
+
+
+@pytest.mark.parametrize("write_mode", ["direct", None])
+def test_engine_config_write_mode_points_to_execution_params(write_mode: str | None) -> None:
+    with pytest.raises(ConfigurationError, match=r"ExecutionParams\(write_mode="):
+        EngineConfig(write_mode=write_mode)  # type: ignore[call-arg]
 
 
 def test_extract_workers_does_not_affect_execution_mode() -> None:

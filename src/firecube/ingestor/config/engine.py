@@ -21,6 +21,7 @@ the user input.
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 from dataclasses import dataclass, fields
@@ -32,8 +33,11 @@ from firecube.core.discovery import (
     validate_input_filters,
     validate_stac_search,
 )
+from firecube.core.errors import ConfigurationError
 
 T = TypeVar("T", bound="EngineConfig")
+
+_UNSET: object = object()
 
 SYSTEM_KEYS = {
     "run_id",
@@ -66,6 +70,27 @@ def _parse_stac_search(value: Any) -> dict[str, Any] | None:
     return validate_stac_search(value)
 
 
+def _refuse_write_mode[C](cls: type[C]) -> type[C]:
+    """Tombstone: make the constructor refuse `write_mode`, which `ExecutionParams` now holds.
+
+    A wrapper, not an `InitVar`: an `InitVar` default stays readable as `EngineConfig().write_mode`.
+    """
+    init = cls.__init__
+
+    @functools.wraps(init)
+    def __init__(self: C, *args: Any, write_mode: object = _UNSET, **kwargs: Any) -> None:
+        if write_mode is not _UNSET:
+            raise ConfigurationError(
+                "EngineConfig takes no write_mode: write mode is now a field of "
+                "ExecutionParams, so pass ExecutionParams(write_mode=...) instead."
+            )
+        init(self, *args, **kwargs)
+
+    cls.__init__ = __init__  # type: ignore[method-assign]
+    return cls
+
+
+@_refuse_write_mode
 @dataclass
 class EngineConfig:
     """Configuration for the Firecube Engine (Runtime & Workspace).

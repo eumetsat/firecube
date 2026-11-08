@@ -34,6 +34,8 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.filesystem import fsspec_backend
+from firecube.core.product.open import open_product
+from firecube.ingestor.runtime.release import verify_release_for_product
 from tests.helpers.storage import make_test_session
 from tests.integration._staged_helpers import s3_env
 
@@ -110,6 +112,16 @@ def test_snapshot_diff_names_exactly_the_hand_edited_attribute(tmp_path, fmt):
     assert ARRAY_DOC[fmt] in json.dumps(_json(store, "snapshot", "show", after))
     assert "not a snapshot id" in _cli(store, "snapshot", "show", "zz", exit_code=1).output
     _cli(store, "snapshot", "show", "0" * 64, exit_code=1)  # well formed, but none exists
+
+
+def test_snapshot_take_dry_run_plan_carries_the_label_and_writes_no_snapshot(tmp_path):
+    store = _store(tmp_path, 3)
+    known = _json(store, "snapshot", "list")
+    plan = _json(store, "snapshot", "take", "--dry-run")
+    assert plan["dry_run"] is True and plan["label_recorded"] is True
+    assert {"parent", "manifest", "documents", "blobs", "manifest_recorded"} <= plan.keys()
+    assert _json(store, "snapshot", "list") == known  # no snapshot was written
+    assert not (store / ".firecube" / "metadata" / "refs" / "latest.json").exists()
 
 
 @FORMATS
@@ -383,6 +395,28 @@ def test_release_verify_reports_a_deleted_previous_backup_as_a_broken_backup_cha
     )
     assert check["retention"]["broken_at"] == "1.0"
     assert "backup chain: broken at 1.0" in _cli(store, "release", "verify", exit_code=1).output
+
+
+@pytest.mark.parametrize("damage", ["backup", "metadata"])
+def test_verify_release_for_product_fails_when_either_check_fails(tmp_path, damage):
+    store = _store(tmp_path, 3)
+    _archived(store, "1.0", tmp_path / "one.zip")
+    _archived(store, "2.0", tmp_path / "two.zip")
+    with open_product(store.as_uri(), format="zarr") as product:
+        clean = verify_release_for_product(product)
+        if damage == "backup":
+            (tmp_path / "one.zip").unlink()
+        else:
+            _hand_edit(store, "temp/zarr.json")
+        result = verify_release_for_product(product)
+    assert (clean.verification.matches, clean.retention.holds, clean.holds) == (True, True, True)
+    assert clean.retention.version == clean.verification.version == "2.0"
+    assert (result.verification.matches, result.retention.holds, result.holds) == (
+        damage == "backup",
+        damage == "metadata",
+        False,
+    )
+    assert result.retention.version == result.verification.version == "2.0"
 
 
 @FORMATS

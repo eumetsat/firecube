@@ -45,7 +45,7 @@ from firecube.ingestor.runtime.release import ReleaseRefusedError
 if TYPE_CHECKING:
     from firecube.core.controlplane.manager import ChunkManager
     from firecube.core.controlplane.releases import StoredRelease
-    from firecube.core.storage.session import StorageSession
+    from firecube.core.product.open import Product
 
 RETENTION_KIND_ZIP: Final = "zip"
 RETENTION_KIND_VERSIONS: Final = INVENTORY_KIND_S3_VERSIONS
@@ -353,7 +353,7 @@ def plan_zip_retention(
 
 def zip_retention(
     *,
-    session: StorageSession,
+    opened: Product,
     manager: ChunkManager,
     product: str,
     version: str,
@@ -406,8 +406,9 @@ def zip_retention(
             "metadata_manifest": manager.read_snapshot(product, snapshot_id).record.manifest,
             "deleted_keys": deleted_keys,
         }
+        # create_archive builds and closes its own manager, so the caller's handle serves.
         created = create_archive(
-            session=session,
+            opened,
             archive=archive.to_str(),
             archive_path=archive_path,
             archive_format="zip",
@@ -499,7 +500,7 @@ def _first_broken_previous_backup(
 
 
 def verify_retention(
-    session: StorageSession, version: str | None = None, *, sample: int | None = None
+    product: Product, version: str | None = None, *, sample: int | None = None
 ) -> RetentionVerification:
     """Check what a release retains: its backup chain, or its listed object versions.
 
@@ -509,7 +510,7 @@ def verify_retention(
     HEAD that fails counts as a lost version. The call writes nothing and takes no claim.
 
     Args:
-        session: The storage session bound to the product.
+        product: The open product, from `open_product`.
         version: The release to check; `None` names the current release.
         sample: Check this many randomly chosen versions instead of all; a zip release
             ignores it.
@@ -525,10 +526,11 @@ def verify_retention(
 
     if sample is not None and sample < 1:
         raise ValueError(f"sample must be at least 1, not {sample}")
+    session = product.session
     manager = session.control_plane()
-    product = session.product.product_name
+    label = session.product.product_name
     try:
-        release = manager.read_release(product, version)
+        release = manager.read_release(label, version)
         if release.retention is None:
             return RetentionVerification(version=release.version, kind=None)
         kind = release.retention.get("kind")
@@ -539,7 +541,7 @@ def verify_retention(
                 f"release {release.version!r} names retention kind {kind!r}, which is not known"
             )
         archive = _archive_state(release)
-        broken_at = _first_broken_previous_backup(manager, product, release)
+        broken_at = _first_broken_previous_backup(manager, label, release)
         return RetentionVerification(
             version=release.version,
             kind=kind,

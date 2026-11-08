@@ -65,6 +65,7 @@ def get_storage_config(
         storage_config = resolve_storage_config(
             config_file=get_config_file(ctx),
             overrides=dict(overrides) if overrides is not None else None,
+            export_env=True,
             set_global=set_global,
         )
     except FirecubeError:

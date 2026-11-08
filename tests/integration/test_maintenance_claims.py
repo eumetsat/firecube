@@ -60,6 +60,8 @@ from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
 from firecube.core.index_spec import IndexSpec, IntegerAxis, RegularTimeAxis
 from firecube.core.product.identity import ProductIdentity
+from firecube.core.product.open import open_product
+from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.scrub import run_scrub
@@ -67,7 +69,7 @@ from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.runtime.archive import ArchiveClaimError, create_archive, restore_archive
 from firecube.ingestor.runtime.index_record import rebuild_index_record
 from tests.helpers.cli_hints import run_hint
-from tests.helpers.storage import make_test_binding, make_test_session
+from tests.helpers.storage import make_test_binding, make_test_session, stamp_test_label
 
 pytestmark = pytest.mark.integration
 
@@ -78,6 +80,16 @@ def _claim_records(root: Path) -> list[Path]:  # the permanent guard file is no 
 
 def _local_env(tmp_path: Path) -> dict[str, str]:
     return {"FIRECUBE_STORAGE_TYPE": "local", "FIRECUBE_TARGET_PATH": str(tmp_path)}
+
+
+def _open(tmp_path: Path, name: str):
+    return open_product(
+        (tmp_path / name).as_uri(),
+        format="zarr",
+        driver=StorageDriverConfig(driver="fsspec"),
+        product_name=name,
+        require_label=False,
+    )
 
 
 def _claim_domain(product: str, group: str = "F024") -> WriteDomain:
@@ -334,6 +346,7 @@ def _zip_create_with_control_plane(tmp_path: Path):
     src = tmp_path / "s.zarr"
     (src / ".firecube").mkdir(parents=True, exist_ok=True)
     (src / ".firecube" / "schema.json").write_text("{}")
+    (src / "zarr.json").write_text('{"zarr_format": 3, "node_type": "group"}')
     cmd = f"archive create --target {src.as_uri()} --archive {tmp_path.as_uri()}/out.zip"
     cmd += " --archive-format zip"
     return CliRunner().invoke(cli, cmd.split(), env=_local_env(tmp_path))
@@ -354,11 +367,17 @@ def test_archive_create_aborts_when_product_has_active_writer_claim(tmp_path: Pa
 def test_archive_refusal_after_a_lost_race_names_clear_once(tmp_path, monkeypatch):
     manager = _claiming_manager(tmp_path, product="s.zarr")
     domain = WriteDomain(product="s.zarr", category="maintenance", name="archive_create")
-    claim = manager.acquire_claim(product="s.zarr", domain=domain, owner_id="other-archive")
-    held = manager.list_claims(product="s.zarr")
-    monkeypatch.setattr(ChunkManager, "list_claims", Mock(side_effect=[[], held]))
+    stamp_test_label(tmp_path / "s.zarr", "s.zarr")  # the rival's first claim would stamp it
+    rival: list[Any] = []
+
+    def rival_arrives(_self, *_a, **_k):
+        if not rival:
+            rival.append(None)
+            rival[0] = manager.acquire_claim(product="s.zarr", domain=domain, owner_id="other")
+
+    _wrap(monkeypatch, ManifestRepository, "acquire_claim", before=rival_arrives)
     result = _zip_create_with_control_plane(tmp_path)
-    claim.release()
+    rival[0].release()
     assert result.output.count(f"--domain {domain.identifier}") == 1, result.output
 
 
@@ -417,14 +436,14 @@ def _overwrite_restore(
     for owner, name in (writer, entry):
         monkeypatch.setattr(owner, name, spy_on(getattr(owner, name)))
     if library:
-        return restore_archive(
-            session=make_test_session(tmp_path, product="restored.zarr"),
-            archive=archive.as_uri(),
-            archive_path=str(archive),
-            archive_format="zip" if kind == "zip" else "tensogram",
-            target=target.as_uri(),
-            overwrite=True,
-        )
+        with _open(tmp_path, "restored.zarr") as product:
+            return restore_archive(
+                product,
+                archive=archive.as_uri(),
+                archive_path=str(archive),
+                archive_format="zip" if kind == "zip" else "tensogram",
+                overwrite=True,
+            )
     args = ["archive", "restore", "--archive", archive.as_uri(), "--target", target.as_uri()]
     args += ["--overwrite", "--yes-i-really-mean-it", "--storage-type", "local"]
     args += ["--product-name", "restored.zarr"]
@@ -471,13 +490,13 @@ def test_restore_stops_its_claim_heartbeat(tmp_path, monkeypatch, lib):
     args += ["--product-name", "r.zarr"]
     try:
         if lib:
-            restore_archive(
-                session=make_test_session(tmp_path, product="r.zarr"),
-                archive=(tmp_path / "a.tgm").as_uri(),
-                archive_path=str(tmp_path / "a.tgm"),
-                archive_format="tensogram",
-                target=(tmp_path / "r.zarr").as_uri(),
-            )
+            with _open(tmp_path, "r.zarr") as product:
+                restore_archive(
+                    product,
+                    archive=(tmp_path / "a.tgm").as_uri(),
+                    archive_path=str(tmp_path / "a.tgm"),
+                    archive_format="tensogram",
+                )
         else:
             result = CliRunner().invoke(
                 cli, [*args, "--storage-driver", "fsspec"], env=_local_env(tmp_path)
@@ -504,13 +523,12 @@ def test_create_archive_refuses_an_active_writer_claim_and_records_no_run(tmp_pa
     (tmp_path / "s.zarr" / ".firecube").mkdir(parents=True)
     (tmp_path / "s.zarr" / ".firecube" / "schema.json").write_text("{}")
     out = tmp_path / "out.zip"
-    session = make_test_session(tmp_path, product="s.zarr")
     manager = _claiming_manager(tmp_path, product="s.zarr")
     claim = manager.acquire_claim(product="s.zarr", domain=_claim_domain("s.zarr"), owner_id="w")
     try:
-        with pytest.raises(ArchiveClaimError) as refused:
+        with pytest.raises(ArchiveClaimError) as refused, _open(tmp_path, "s.zarr") as product:
             create_archive(
-                session=session, archive=out.as_uri(), archive_path=str(out), archive_format="zip"
+                product, archive=out.as_uri(), archive_path=str(out), archive_format="zip"
             )
         runs = manager.list_runs(product="s.zarr")
     finally:
@@ -532,13 +550,12 @@ def test_restore_archive_refusal_carries_claim_facts_and_recovery(tmp_path):
     owner = "running-ingest:F024"
     claim = manager.acquire_claim(product="r.zarr", domain=_claim_domain("r.zarr"), owner_id=owner)
     try:
-        with pytest.raises(ArchiveClaimError) as refused:
+        with pytest.raises(ArchiveClaimError) as refused, _open(tmp_path, "r.zarr") as product:
             restore_archive(
-                session=make_test_session(tmp_path, product="r.zarr"),
+                product,
                 archive=(tmp_path / "a.zip").as_uri(),
                 archive_path=str(tmp_path / "a.zip"),
                 archive_format="zip",
-                target=(tmp_path / "r.zarr").as_uri(),
             )
     finally:
         claim.release()
@@ -554,11 +571,11 @@ def test_create_archive_of_a_plain_store_takes_no_claim_and_writes_nothing_to_it
     source = tmp_path / "plain.zarr"
     zarr.open_group(str(source), mode="w").create_array("a", data=np.arange(6.0))
     out = tmp_path / "out.zip"
-    session = make_test_session(tmp_path, product="plain.zarr")
     tree = {p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()}
-    result = create_archive(
-        session=session, archive=out.as_uri(), archive_path=str(out), archive_format="zip"
-    )
+    with _open(tmp_path, "plain.zarr") as product:
+        result = create_archive(
+            product, archive=out.as_uri(), archive_path=str(out), archive_format="zip"
+        )
     assert result.run_id is None and out.exists() and not (source / ".firecube").exists()
     assert {p.relative_to(source): p.read_bytes() for p in source.rglob("*") if p.is_file()} == tree
 
@@ -772,13 +789,15 @@ def test_restore_refused_at_its_run_start_records_one_start_and_one_failure(
 
     _wrap(monkeypatch, ManifestRepository, "record_run_started", before=exclusive_claim_appears)
     try:
-        with pytest.raises((ProductUnderMaintenanceError, ArchiveClaimError)):
+        with (
+            pytest.raises((ProductUnderMaintenanceError, ArchiveClaimError)),
+            _open(tmp_path, GATED) as product,
+        ):
             restore_archive(
-                session=make_test_session(tmp_path, product=GATED),
+                product,
                 archive=archive.as_uri(),
                 archive_path=str(archive),
                 archive_format="zip",
-                target=(tmp_path / GATED).as_uri(),
             )
         assert list(_run_events(tmp_path, "archive-restore-").values()) == [
             ["run_started", "run_failed"]
@@ -799,11 +818,10 @@ def test_refused_index_rebuild_leaves_no_run_record_and_releases_the_index_claim
 
     claim = pair[1].acquire_exclusive_maintenance(product=GATED, run_id=MAINT)
     try:
-        with pytest.raises(ProductUnderMaintenanceError):
+        with pytest.raises(ProductUnderMaintenanceError), _open(tmp_path, GATED) as product:
             rebuild_index_record(
-                ingestor=Plugin(), plugin_name="gate-plugin", chunk_manager=pair[0],
-                target=(tmp_path / GATED).as_uri(), product_name=GATED,
-            )  # fmt: skip
+                product, Plugin(), plugin_name="gate-plugin", chunk_manager=pair[0]
+            )
         assert [c.domain for c in pair[1].list_claims(product=GATED)] == [_exclusive()]
     finally:
         claim.release()
@@ -813,12 +831,13 @@ def test_refused_index_rebuild_leaves_no_run_record_and_releases_the_index_claim
 
 @pytest.mark.contract
 @pytest.mark.parametrize("operation", ["create", "delete"])
-def test_archive_create_and_delete_refuse_when_the_claim_appears_after_their_list(
+def test_archive_create_and_delete_refuse_when_the_claim_appears_before_their_acquire(
     tmp_path, monkeypatch, operation
 ):
     holder, manager = _claiming_manager(tmp_path, "s.zarr"), _claiming_manager(tmp_path, "s.zarr")
     (tmp_path / "s.zarr" / ".firecube").mkdir(parents=True)
     (tmp_path / "s.zarr" / ".firecube" / "schema.json").write_text("{}")
+    (tmp_path / "s.zarr" / "zarr.json").write_text('{"zarr_format": 3, "node_type": "group"}')
     held: list[Any] = []
 
     def appears(_self, *_a, **_k):
@@ -828,15 +847,14 @@ def test_archive_create_and_delete_refuse_when_the_claim_appears_after_their_lis
                 product="s.zarr", domain=exclusive_maintenance_domain("s.zarr"), owner_id=MAINT
             )
 
-    _wrap(monkeypatch, ManifestRepository, "list_claims", after=appears)
+    _wrap(monkeypatch, ManifestRepository, "acquire_claim", before=appears)
     out = tmp_path / "out.zip"
     try:
         if operation == "create":
-            with pytest.raises(ArchiveClaimError):
+            with pytest.raises(ArchiveClaimError), _open(tmp_path, "s.zarr") as product:
                 create_archive(
-                    session=make_test_session(tmp_path, product="s.zarr"), archive=out.as_uri(),
-                    archive_path=str(out), archive_format="zip",
-                )  # fmt: skip
+                    product, archive=out.as_uri(), archive_path=str(out), archive_format="zip"
+                )
         else:
             plan = DeletionPlan([_sample_chunk("s.zarr")], 1, {"s.zarr"}, set())
             with pytest.raises(ManifestError):
@@ -978,6 +996,13 @@ def test_cli_index_rebuild_under_exclusive_maintenance_exits_1_and_leaves_the_ro
     assert after == before
 
 
+def _create_zip(tmp_path: Path, name: str, out: Path, **kw):
+    with _open(tmp_path, name) as product:
+        return create_archive(
+            product, archive=out.as_uri(), archive_path=str(out), archive_format="zip", **kw
+        )
+
+
 def _holder_product(tmp_path: Path, op: str):
     root, out = tmp_path / "s.zarr", tmp_path / "out.zip"
     zarr.open_group(str(root), mode="w").create_group("F024").create_array("FWI", data=np.arange(8.0).reshape(2, 2, 2), chunks=(1, 2, 2), dimension_names=("timestamp", "lat", "lon"))  # fmt: skip
@@ -991,7 +1016,7 @@ def _holder_product(tmp_path: Path, op: str):
     records = lambda: [c.key for c in manager.list_chunks(product="s.zarr", chunk_type="chunk")]  # noqa: E731
     spans = lambda: manager.list_chunks(product="s.zarr", chunk_type="span")  # noqa: E731
     calls = {
-        "create": lambda **kw: create_archive(session=make_test_session(tmp_path, product="s.zarr"), archive=out.as_uri(), archive_path=str(out), archive_format="zip", **kw),
+        "create": lambda **kw: _create_zip(tmp_path, "s.zarr", out, **kw),
         "delete_chunks": lambda **kw: manager.execute_deletion(DeletionPlan([_sample_chunk("s.zarr")], 1, {"s.zarr"}, set()), **kw),
         "delete_spans": lambda **kw: manager.delete_spans(spans(), **kw),
     }  # fmt: skip
@@ -1052,7 +1077,7 @@ def test_holder_run_id_on_a_plain_store_is_refused_and_writes_nothing(tmp_path, 
     root, out = tmp_path / "plain.zarr", tmp_path / "out.zip"
     zarr.open_group(str(root), mode="w").create_array("a", data=np.arange(3.0))
     tree = lambda: {p: p.read_bytes() for p in root.rglob("*") if p.is_file() and "claims" not in p.parts}  # fmt: skip  # noqa: E731
-    create = lambda **kw: create_archive(session=make_test_session(tmp_path, product="plain.zarr"), archive=out.as_uri(), archive_path=str(out), archive_format="zip", **kw)  # fmt: skip  # noqa: E731
+    create = lambda **kw: _create_zip(tmp_path, "plain.zarr", out, **kw)  # noqa: E731
     manager = _claiming_manager(tmp_path, "plain.zarr")
     claim = manager.acquire_exclusive_maintenance(product="plain.zarr", run_id=owner) if owner else None  # fmt: skip
     before = tree()  # taken after the acquire, which stamps .firecube/product.json

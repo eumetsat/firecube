@@ -21,10 +21,14 @@ import click
 from click.testing import CliRunner
 
 from firecube.cli._errors import (  # pyright: ignore[reportMissingImports]
-    MissingProductNameError,
     MissingStorageDriverError,
     UnknownOptionError,
+    classify,
+    render,
 )
+from firecube.cli._exit_codes import ExitCode
+from firecube.cli._recovery import _command
+from firecube.core.errors import ConfigurationError, MissingProductNameError
 from tests.helpers.rows import table_row
 
 
@@ -42,10 +46,10 @@ def test_cli_error_messages_and_exit_codes(subtests: Any, tmp_path: Path) -> Non
     with table_row(subtests, "missing_product_name_error_message_and_type", tmp_path):
         err = MissingProductNameError("test_product")
 
-        assert isinstance(err, click.UsageError)
-        msg = str(err)
+        assert isinstance(err, ConfigurationError)
+        msg = render(err.args[0], click.Context(_command(("ingest",)), info_name="ingest"))
         assert "test_product" in msg
-        assert "--product-name" in msg
+        assert "Option:  --product-name <name>" in msg
         assert "default_product_name" in msg
         assert "PRODUCT_NAME" in msg
 
@@ -69,12 +73,4 @@ def test_cli_error_messages_and_exit_codes(subtests: Any, tmp_path: Path) -> Non
         assert result.exit_code == 2
 
     with table_row(subtests, "missing_product_name_error_exit_code_2", tmp_path):
-        runner = CliRunner()
-
-        @click.command()
-        def cmd() -> None:
-            raise MissingProductNameError("test_product")
-
-        result = runner.invoke(cmd)
-
-        assert result.exit_code == 2
+        assert classify(MissingProductNameError("test_product")) is ExitCode.USAGE

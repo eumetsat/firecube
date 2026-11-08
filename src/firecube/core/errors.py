@@ -31,6 +31,7 @@ from typing import Any, Literal
 
 OPERATION_FUNCTIONS: Mapping[str, str] = MappingProxyType(
     {
+        "adopt_product": "firecube.ingestor.runtime.migrate.adopt_product",
         "abandon_run": "firecube.core.controlplane.manager.ChunkManager.abandon_run",
         "clear_claim": "firecube.core.controlplane.manager.ChunkManager.clear_claim",
         "rebuild_compact": "firecube.core.controlplane.manager.ChunkManager.rebuild_compact",
@@ -706,6 +707,63 @@ class ProductLabelMismatchError(ConfigurationError):
     def __reduce__(self) -> tuple[Any, ...]:
         fields = {"given": self.given, "recorded": self.recorded}
         return (_restore_with_fields, (type(self), self.args[0], fields), self.__dict__)
+
+
+class ProductLabelMissingError(ConfigurationError):
+    """The store records no product label, so the call is refused.
+
+    The message names the command that records one, as an `Operation` part.
+
+    Attributes:
+        product_uri: The URI of the product.
+    """
+
+    def __init__(self, product_uri: str) -> None:
+        self.product_uri = product_uri
+        super().__init__(
+            Message(
+                "The product at {product_uri} records no product label. Record one with {adopt}.",
+                product_uri=product_uri,
+                adopt=Operation(
+                    "adopt_product", target=product_uri, product_name=Placeholder("<label>")
+                ),
+            )
+        )
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (type(self), (self.product_uri,), self.__dict__)
+
+
+class MissingProductNameError(ConfigurationError):
+    """No product name came from a flag, the config file or the plugin.
+
+    Attributes:
+        plugin: The plugin name.
+    """
+
+    def __init__(self, plugin: str) -> None:
+        self.plugin = plugin
+        super().__init__(
+            Message(
+                "Missing product name for plugin '{plugin}'. Provide one of:\n"
+                "  1. Option:  {name}\n"
+                "  2. Config file:  [plugins.{plugin}]\n  default_product_name = '<name>'\n"
+                "  3. Plugin class attr:  {plugin}.PRODUCT_NAME = '<name>'  "
+                "(preferred; declared at plugin source)",
+                plugin=plugin,
+                name=Param("product_name", Placeholder("<name>")),
+            )
+        )
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        return (type(self), (self.plugin,), self.__dict__)
+
+
+class SlotWindowError(ConfigurationError):
+    """A slot window is invalid or only half given.
+
+    The message says which bound or value is wrong.
+    """
 
 
 class ProductLabelConflictError(FirecubeError):

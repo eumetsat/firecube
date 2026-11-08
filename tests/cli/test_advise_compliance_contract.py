@@ -74,7 +74,7 @@ def test_s3_uri_infers_storage_type(monkeypatch, tmp_path: Path) -> None:
 
     monkeypatch.setattr(ZarrIO, "open_group", fake_open_group)
     monkeypatch.setattr(ZarrIO, "open_dataset", fake_open_dataset)
-    monkeypatch.setattr("firecube.cli._product._recorded_label", lambda *a, **k: None)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
     monkeypatch.setitem(advise_module._COMPLIANCE_PROFILE_VALIDATORS, "cf-18", fake_validator)
 
     result = _invoke_compliance(

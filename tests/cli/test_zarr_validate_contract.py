@@ -82,7 +82,7 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(StorageSession, "fs", fake_fs)
     monkeypatch.setattr(zarr_cli, "validate_group_with_fs", fake_validate_group_with_fs)
-    monkeypatch.setattr("firecube.cli._product._recorded_label", lambda *a, **k: None)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
 
     result = _invoke_validate(["-t", "s3://bucket/x.zarr", "-g", "g1"])
 

@@ -29,7 +29,6 @@ import click
 from firecube.cli._errors import echo_rendered, render
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._formatter import FirecubeGroup
-from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
     dry_run_flag,
     format_option,
@@ -45,9 +44,7 @@ from firecube.core.errors import (
     Operation,
     ResolvedIndexConflictError,
 )
-from firecube.core.product.identity import ProductIdentity
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.core.product.open import open_product
 from firecube.core.time.calendar import is_gregorian_like
 from firecube.ingestor.registry import loader as ingestor_loader
 
@@ -67,26 +64,14 @@ def index() -> None:
 
 def _manager(target: str, product_name: str) -> ChunkManager:
     product_uri = parse_and_validate_uri(target, param_hint="--target")
-    binding = StorageBinding(
-        identity=ProductIdentity.from_uri(product_uri, "zarr", product_name=product_name),
-        driver=StorageDriverConfig.from_storage_config_or_default(None),
-    )
+    with open_product(
+        product_uri, format="zarr", product_name=product_name, require_label=False
+    ) as product:
+        binding = product.session.binding
     workspace = Path.cwd()
     if product_uri.protocol == "file":
         workspace = Path(product_uri.path).parent
     return ChunkManager(binding=binding, workspace=workspace)
-
-
-def _recorded_manager(target: str) -> tuple[ChunkManager, str]:
-    """Return the manager of the product at `target` and the label its store records.
-
-    Raises:
-        click.UsageError: The store records no label.
-    """
-    uri = parse_and_validate_uri(target, param_hint="--target")
-    driver = StorageDriverConfig.from_storage_config_or_default(None)
-    label = recorded_identity(uri, format="zarr", driver=driver).product_name
-    return _manager(target, label), label
 
 
 def _load_record(manager: ChunkManager, product_name: str) -> Any | None:
@@ -278,7 +263,10 @@ See also: firecube zarr index verify, firecube zarr index rebuild
 def show_cmd(target: str, output_format: str, derived: bool) -> None:
     """Show the current resolved-index record; `-f json` emits the raw record."""
 
-    manager, product_name = _recorded_manager(target)
+    uri = parse_and_validate_uri(target, param_hint="--target")
+    with open_product(uri, format="zarr") as product:
+        product_name = product.label
+    manager = _manager(target, product_name)
     try:
         record = _load_record(manager, product_name)
         if record is None:
@@ -353,34 +341,35 @@ def verify_cmd(target: str, plugin: str | None, option: tuple[tuple[str, object]
 
     if option and plugin is None:
         raise click.UsageError("--option requires --plugin")
-    manager, product_name = _recorded_manager(target)
-    try:
-        load_plugin = (
-            functools.partial(_load_plugin, plugin, manager) if plugin is not None else None
-        )
+    uri = parse_and_validate_uri(target, param_hint="--target")
+    with open_product(uri, format="zarr") as product:
+        manager, product_name = _manager(target, product.label), product.label
         try:
-            verification = verify_index_record(
-                chunk_manager=manager,
-                product_name=product_name,
-                target=target,
-                plugin_name=plugin,
-                load_plugin=load_plugin,
-                configure=_configurer(target, option),
+            load_plugin = (
+                functools.partial(_load_plugin, plugin, manager) if plugin is not None else None
             )
-        except IndexRecordError as exc:
-            # A plugin's own ClickException reaches the operator unchanged.
-            cause = exc.__cause__
-            if isinstance(cause, click.ClickException):
-                raise cause  # noqa: B904 - re-raise the plugin's exception as it was raised
-            raise
-        _render_verification(
-            verification,
-            rebuild=Operation(
-                "rebuild_index", target=target, plugin=plugin, product_name=product_name
-            ),
-        )
-    finally:
-        manager.close()
+            try:
+                verification = verify_index_record(
+                    product,
+                    chunk_manager=manager,
+                    plugin_name=plugin,
+                    load_plugin=load_plugin,
+                    configure=_configurer(target, option),
+                )
+            except IndexRecordError as exc:
+                # A plugin's own ClickException reaches the operator unchanged.
+                cause = exc.__cause__
+                if isinstance(cause, click.ClickException):
+                    raise cause  # noqa: B904 - re-raise the plugin's exception as it was raised
+                raise
+            _render_verification(
+                verification,
+                rebuild=Operation(
+                    "rebuild_index", target=target, plugin=plugin, product_name=product_name
+                ),
+            )
+        finally:
+            manager.close()
 
 
 def _render_verification(verification: IndexVerification, *, rebuild: Operation) -> None:
@@ -476,25 +465,28 @@ def rebuild_cmd(
 
     from firecube.ingestor.runtime.index_record import rebuild_index_record
 
-    manager = _manager(target, product_name)
-    try:
-        ingestor = _load_plugin(plugin, manager)
+    uri = parse_and_validate_uri(target, param_hint="--target")
+    with open_product(
+        uri, format="zarr", product_name=product_name, require_label=False
+    ) as product:
+        manager = _manager(target, product_name)
         try:
-            rebuild_index_record(
-                ingestor=ingestor,
-                plugin_name=plugin,
-                chunk_manager=manager,
-                target=target,
-                product_name=product_name,
-                logger=logger,
-                report=echo_rendered,
-                warn=functools.partial(echo_rendered, err=True),
-                configure=_configurer(target, option),
-                dry_run=dry_run,
-            )
-        except ResolvedIndexConflictError as exc:
-            # The library has already echoed the conflict through ``warn``.
-            raise click.exceptions.Exit(ExitCode.CHECK_FAILED) from exc
-    finally:
-        with contextlib.suppress(Exception):
-            manager.close()
+            ingestor = _load_plugin(plugin, manager)
+            try:
+                rebuild_index_record(
+                    product,
+                    ingestor,
+                    plugin_name=plugin,
+                    chunk_manager=manager,
+                    logger=logger,
+                    report=echo_rendered,
+                    warn=functools.partial(echo_rendered, err=True),
+                    configure=_configurer(target, option),
+                    dry_run=dry_run,
+                )
+            except ResolvedIndexConflictError as exc:
+                # The library has already echoed the conflict through ``warn``.
+                raise click.exceptions.Exit(ExitCode.CHECK_FAILED) from exc
+        finally:
+            with contextlib.suppress(Exception):
+                manager.close()

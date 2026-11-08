@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -27,6 +28,8 @@ from click.testing import CliRunner
 import firecube.cli.zarr._common as zarr_common
 import firecube.ingestor.api as api
 from firecube.cli.main import cli
+from firecube.core.errors import ConfigurationError, MissingProductNameError
+from firecube.core.product.identity import resolve_product_name
 from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
 from tests.helpers.storage import make_test_context
 
@@ -108,6 +111,59 @@ def test_unimplemented_time_encoding_is_rejected_before_writing(tmp_path: Path) 
     assert not (tmp_path / "qa.zarr").exists()
 
 
+@pytest.mark.parametrize(
+    ("flag", "config", "expected"),
+    [
+        ("from_flag", "from_config", "from_flag"),
+        (None, "from_config", "from_config"),
+        (None, None, "cli_test_product"),
+    ],
+    ids=["flag-beats-config", "config-beats-plugin", "plugin-name-last"],
+)
+def test_product_name_order_is_flag_then_config_then_plugin(
+    tmp_path: Path, flag: str | None, config: str | None, expected: str
+) -> None:
+    captured: dict[str, IngestContext] = {}
+
+    def fake_run(self: Any, ctx: IngestContext) -> IngestResult:
+        captured["ctx"] = ctx
+        return IngestResult(outputs=OutputPaths(primary=str(ctx.target)), output_format="zarr")
+
+    args = _required_args(tmp_path)
+    i = args.index("--product-name")
+    args[i : i + 2] = ["--product-name", flag] if flag else []
+    if config:
+        Path(args[1]).write_text(
+            f'[plugins.cli_test_plugin]\ndefault_product_name = "{config}"\n', encoding="utf-8"
+        )
+    with patch("cli_test_plugin.CliTestIngestor.run", autospec=True, side_effect=fake_run):
+        result = CliRunner().invoke(cli, args)
+
+    assert result.exit_code == 0, result.output
+    storage = captured["ctx"].storage
+    assert storage is not None and storage.output is not None
+    assert storage.output.product.product_name == expected
+
+
+def test_ingest_onto_a_store_labelled_otherwise_exits_2_and_writes_nothing(tmp_path: Path) -> None:
+    source = tmp_path / "src"
+    source.mkdir()
+    args = [*_required_args(tmp_path), "--input-data", source.as_uri()]
+    args += ["--option", "allow_empty_source=true"]
+    store = tmp_path / "qa.zarr" / ".firecube"
+    assert CliRunner().invoke(cli, args).exit_code == 0  # stamps the label `qa`
+    stamp = (store / "product.json").read_bytes()
+    runs = sorted(p.name for p in (store / "runs").iterdir())
+
+    args[args.index("qa")] = "other"
+    result = CliRunner().invoke(cli, args)
+
+    assert result.exit_code == 2, result.output
+    assert "records the label 'qa'" in result.output
+    assert (store / "product.json").read_bytes() == stamp
+    assert sorted(p.name for p in (store / "runs").iterdir()) == runs
+
+
 def test_empty_product_name_is_rejected_at_config_boundary(tmp_path: Path) -> None:
     args = _required_args(tmp_path)
     args[args.index("qa")] = ""
@@ -116,6 +172,21 @@ def test_empty_product_name_is_rejected_at_config_boundary(tmp_path: Path) -> No
 
     assert result.exit_code == 2, result.output
     assert "--product-name was provided but is empty" in result.output
+
+
+@pytest.mark.parametrize(
+    ("sources", "expected"),
+    [
+        (("f", "c", "p"), "f"),
+        ((None, "c", "p"), "c"),
+        ((None, None, "p"), "p"),
+        (("", "c", "p"), ConfigurationError),
+        ((None, None, None), MissingProductNameError),
+    ],
+)
+def test_resolve_product_name_order_and_refusals(sources: Any, expected: Any) -> None:
+    with pytest.raises(expected) if isinstance(expected, type) else nullcontext():
+        assert resolve_product_name(*sources, plugin="plug") == expected
 
 
 def test_unknown_option_key_reports_plugin_and_valid_keys(tmp_path: Path) -> None:
@@ -212,7 +283,7 @@ def test_coherent_s3_target_and_s3_storage_type_passes_validation(
 ) -> None:
     """Negative control for test_mismatch_target_and_storage_type_is_rejected: a coherent s3://+--storage-type s3 invocation passes URI/storage-type validation and reaches the (mocked) ingestor."""
     # Ingest reads the target's recorded label before `run`; no S3 here, so the read is stubbed.
-    monkeypatch.setattr("firecube.cli.main.check_recorded_label", lambda binding: None)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
     args = [
         *_base_args(tmp_path),
         "--target",

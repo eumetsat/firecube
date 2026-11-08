@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 from typing import Any, ClassVar, cast
@@ -27,16 +28,13 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis, ResolvedIndex
-from firecube.core.controlplane import ChunkManager
-from firecube.core.product.resolver import ProductResolver
+from firecube.core.product.open import open_product
 from firecube.core.runtime import resolve_storage_config
-from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.ingestor.api import ConfigurationError, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.contracts.interfaces import PreallocateHost
 from firecube.ingestor.registry import loader as _loader
-from firecube.ingestor.runtime.configure import configure_ingestor
+from firecube.ingestor.runtime.configure import configure_ingestor, ensure_run_id
 from firecube.ingestor.runtime.preallocate import (
     PreallocateDryRunGroup,
     SlotWindowError,
@@ -44,7 +42,7 @@ from firecube.ingestor.runtime.preallocate import (
 )
 from firecube.ingestor.templates.config import TemplateConfig
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
-from firecube.ingestor.types.context import PluginContext
+from firecube.ingestor.types.context import IngestContext, PluginContext
 from tests.helpers.rows import table_row
 
 pytestmark = pytest.mark.unit
@@ -238,8 +236,12 @@ def test_preallocate_mismatched_existing_array_errors(subtests: Any, tmp_path: P
 
 def _preallocate_as_a_python_caller(
     target_path: Path, host: Callable[[Any], PreallocateHost] | None = None, **kwargs: Any
-) -> None:
-    """Run ``preallocate_product`` with no Click: configure, bind, call, close."""
+) -> list[str]:
+    """Run ``preallocate_product`` with no Click: configure, bind, call, close.
+
+    Returns the run ids the control plane recorded. ``run_id`` defaults to ``py-caller``;
+    ``run_id=None`` omits the keyword.
+    """
     import direct_zarr_capable_test_plugin as plugin_module
 
     uri = f"file://{target_path}"
@@ -248,28 +250,29 @@ def _preallocate_as_a_python_caller(
         overrides={"storage_type": "local", "storage_driver": "fsspec"},
         set_global=False,
     )
-    identity = ProductResolver.resolve(uri, format="zarr", product_name="python_caller_product")
-    binding = StorageBinding(
-        identity=identity, driver=StorageDriverConfig.from_storage_config(storage_config)
-    )
-    chunk_manager = ChunkManager(binding=binding)
-    try:
-        ingestor = plugin_module.DirectZarrCapableTestIngestor(chunk_manager=chunk_manager)
+    with open_product(
+        uri,
+        format="zarr",
+        driver=StorageDriverConfig.from_storage_config(storage_config),
+        product_name="python_caller_product",
+        require_label=False,
+    ) as product:
+        ingestor = plugin_module.DirectZarrCapableTestIngestor(chunk_manager=product.manager)
         assert isinstance(ingestor, DirectZarrIngestor)
         plugin_ctx = configure_ingestor(ingestor, target=uri, options={}, run_id="py-caller")
+        kwargs = {"run_id": "py-caller", **kwargs}
+        if kwargs["run_id"] is None:  # None omits the keyword, as the CLI does
+            del kwargs["run_id"]
         preallocate_product(
-            ingestor=ingestor if host is None else host(ingestor),
+            product,
+            ingestor if host is None else host(ingestor),
             plugin_ctx=plugin_ctx,
             plugin_name="direct_zarr_capable_test_plugin",
-            chunk_manager=chunk_manager,
-            session=StorageSession(binding),
             storage_config=storage_config,
-            run_id="py-caller",
             write_mode="direct",
             **kwargs,
         )
-    finally:
-        chunk_manager.close()
+        return [run.run_id for run in product.manager.list_runs(product=product.label)]
 
 
 @pytest.mark.contract
@@ -302,6 +305,35 @@ def test_preallocate_product_reports_through_callbacks_only(
     assert len(warned) == 1 and "skipping unbounded group 'open_ended'" in warned[0]
     captured = capsys.readouterr()
     assert (captured.out, captured.err) == ("", "")
+
+
+@pytest.mark.contract
+@pytest.mark.integration
+def test_preallocate_product_mints_a_prefixed_run_id_when_none_is_given(tmp_path: Path) -> None:
+    named = _preallocate_as_a_python_caller(tmp_path / "named.zarr", run_id="caller-chosen")
+    first = _preallocate_as_a_python_caller(tmp_path / "first.zarr", run_id=None)
+    second = _preallocate_as_a_python_caller(tmp_path / "second.zarr", run_id=None)
+
+    assert named == ["caller-chosen"]
+    assert len(first) == len(second) == 1 and first != second
+    assert all(re.fullmatch(r"preallocate:[0-9a-f]{16}", r) for r in (*first, *second))
+
+
+@pytest.mark.parametrize("key", [None, "run_id", "manifest_run_id"])
+def test_ingest_run_id_shape_is_plugin_host_and_32_hex(
+    key: str | None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOSTNAME", "h")
+    ctx = IngestContext(source=".", target=".", options={key: "given-id"} if key else {})
+
+    run_id = ensure_run_id(ctx=ctx, plugin_name="mock")
+
+    if key:
+        assert run_id == "given-id"
+    else:
+        other = ensure_run_id(ctx=ctx, plugin_name="mock")
+        assert run_id != other
+        assert all(re.fullmatch(r"mock-h-[0-9a-f]{32}", r) for r in (run_id, other))
 
 
 @pytest.mark.contract

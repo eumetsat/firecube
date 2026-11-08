@@ -39,7 +39,9 @@ from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.types import exclusive_maintenance_domain
+from firecube.core.errors import ProductLabelMismatchError
 from firecube.core.filesystem.conditional import GUARD_FILE_NAME
+from firecube.core.product.open import open_product
 from firecube.core.zarr.guard import metadata_authority
 from tests.helpers.cli_hints import run_hint
 from tests.helpers.storage import make_test_session
@@ -531,6 +533,63 @@ def test_adopt_stamps_the_label_and_refuses_a_different_one(tmp_path):
     result = CliRunner().invoke(cli, other)
     assert result.exit_code == 2 and "records the label 'p.zarr'" in result.output
     assert _tree(store) == before  # the refusal writes nothing
+
+
+def test_adopt_of_an_already_product_store_without_a_stamp_records_the_label(tmp_path):
+    store = _store(tmp_path, 3)
+    stamp = store / ".firecube" / "product.json"
+    stamp.unlink()  # a control plane with no stamp, as a lone schema.json leaves it
+    result = _cli(store, "migrate", "adopt")
+    assert "nothing to adopt" in result.output
+    assert "p.zarr" in stamp.read_text()
+    assert len(_runs(store, "adopt-")) == 1  # the store was not adopted a second time
+
+
+def _open(store: Path):
+    """Open the store under the label ``p.zarr``, also when it records none."""
+    return open_product(store.as_uri(), format="zarr", product_name="p.zarr", require_label=False)
+
+
+def test_adopt_product_library_refuses_another_label_on_an_already_product_store(tmp_path):
+    store = _store(tmp_path, 3)  # adopted and stamped with p.zarr
+    stamp = store / ".firecube" / "product.json"
+    with _open(store) as product:
+        stamp.write_text(json.dumps({**json.loads(stamp.read_text()), "product": "other"}))
+        before = _tree(store)
+        with pytest.raises(ProductLabelMismatchError):
+            migrate_module.adopt_product(product)
+    assert _tree(store) == before  # the refusal writes nothing
+
+
+def test_adopt_product_library_stamps_the_label_on_an_already_product_store(tmp_path):
+    store = _store(tmp_path, 3)
+    stamp = store / ".firecube" / "product.json"
+    stamp.unlink()  # a control plane with no stamp, as a lone schema.json leaves it
+    with _open(store) as product:
+        result = migrate_module.adopt_product(product)
+    assert result.outcome == "already-product"
+    assert stamp.exists()
+    assert json.loads(stamp.read_text())["product"] == "p.zarr"
+
+
+@pytest.mark.parametrize("stamped", [False, True], ids=["unstamped", "stamped"])
+def test_adopt_product_library_dry_run_reports_the_label_and_writes_nothing(tmp_path, stamped):
+    store = _store(tmp_path, 3)
+    if not stamped:
+        (store / ".firecube" / "product.json").unlink()
+    before = _tree(store)
+    with _open(store) as product:
+        result = migrate_module.adopt_product(product, dry_run=True)
+    assert result.outcome == "already-product"
+    assert result.label_recorded is stamped
+    assert _tree(store) == before
+
+
+def test_migrate_list_prints_the_installed_needs_retitle_step(tmp_path):
+    result = CliRunner().invoke(cli, ["migrate", "list", "-f", "json"])
+    assert result.exit_code == 0, result.output
+    assert "cli-test:needs-retitle" in result.output
+    assert "cli-test:retitle" in result.output
 
 
 def test_ingest_during_a_running_migration_is_refused_and_the_migration_finishes(

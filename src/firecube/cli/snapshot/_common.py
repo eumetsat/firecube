@@ -21,7 +21,6 @@ from typing import Any, Literal
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
     format_option,
     storage_driver_option,
@@ -30,9 +29,8 @@ from firecube.cli._shared_options import (
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
 from firecube.core.controlplane import ChunkManager
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import Product, open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 
 
 def snapshot_options(tier: Literal["write", "inspect"]) -> Any:
@@ -69,10 +67,11 @@ def open_manager(
 
     Raises:
         click.BadParameter: The target fails the URI rule.
-        click.UsageError: The storage type contradicts the scheme, the store records no
-            product label, or a writing command is given anonymous access.
+        click.UsageError: The storage type contradicts the scheme, or a writing command is
+            given anonymous access.
+        ProductLabelMissingError: The store records no product label.
     """
-    session = open_session(
+    product = open_target(
         ctx,
         target=target,
         storage_type=storage_type,
@@ -80,12 +79,10 @@ def open_manager(
         storage_anonymous=storage_anonymous,
         writable=writable,
     )
-    manager = session.control_plane()
-    ctx.call_on_close(manager.close)
-    return manager, session.product.product_name
+    return product.manager, product.label
 
 
-def open_session(
+def open_target(
     ctx: click.Context,
     *,
     target: str,
@@ -93,13 +90,14 @@ def open_session(
     storage_driver: str | None,
     storage_anonymous: bool | None,
     writable: bool,
-) -> StorageSession:
-    """Admit ``--target`` and return the storage session bound to the recorded product label.
+) -> Product:
+    """Admit ``--target`` and open its product, under the recorded label, until the context closes.
 
     Raises:
         click.BadParameter: The target fails the URI rule.
-        click.UsageError: The storage type contradicts the scheme, the store records no
-            product label, or a writing command is given anonymous access.
+        click.UsageError: The storage type contradicts the scheme, or a writing command is
+            given anonymous access.
+        ProductLabelMissingError: The store records no product label.
     """
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
@@ -118,5 +116,4 @@ def open_session(
             "anonymous storage access is not supported."
         )
     driver = StorageDriverConfig.from_storage_config(storage_config)
-    identity = recorded_identity(target_uri, format="zarr", driver=driver)
-    return StorageSession(StorageBinding(identity=identity, driver=driver))
+    return ctx.with_resource(open_product(target_uri, format="zarr", driver=driver))

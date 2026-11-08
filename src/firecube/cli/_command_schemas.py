@@ -20,45 +20,11 @@ from typing import Any
 
 import click
 
-from firecube.cli._errors import MissingProductNameError
+from firecube.cli._errors import render
 from firecube.cli._input_filters import load_plugin_defaults
 from firecube.cli._uri_policy import parse_and_validate_uri, validate_uri_storage_coherence
-from firecube.core.controlplane import ChunkManager
-from firecube.core.errors import Message, ProductLabelMismatchError
-from firecube.core.storage.binding import StorageBinding
-
-
-def check_recorded_label(binding: StorageBinding) -> None:
-    """Refuse the bound label when the store records another, before the command works.
-
-    Reads through a `ChunkManager` bound like the command's own. Writes nothing and creates no
-    directory: reads resolve through the binding, so the manager gets the current directory as its
-    workspace instead of a temporary one. The first control-plane write refuses the same label
-    later, after the workspace and the source discovery.
-
-    Raises:
-        ProductLabelMismatchError: The store records another label.
-        ManifestError: The stamp or a control-plane record cannot be read.
-        ProductLabelConflictError: An unstamped store's records name several labels.
-    """
-    manager = ChunkManager(binding=binding, workspace=Path.cwd())
-    try:
-        recorded = manager.recorded_product_label()
-    finally:
-        manager.close()
-    given = binding.identity.product_name
-    if recorded is not None and recorded != given:
-        raise ProductLabelMismatchError(
-            Message(
-                "Product label {given!r} is refused: the product at {product_uri} records "
-                "the label {product!r}.",
-                given=given,
-                product=recorded,
-                product_uri=binding.identity.product_uri.to_str(),
-            ),
-            given=given,
-            recorded=recorded,
-        )
+from firecube.core.errors import ConfigurationError
+from firecube.core.product.identity import resolve_product_name as core_resolve_product_name
 
 
 def resolve_product_name(
@@ -70,21 +36,22 @@ def resolve_product_name(
     plugin class `PRODUCT_NAME`. The store refuses a label that differs from the one it records.
 
     Raises:
-        click.UsageError: The flag is empty, no source names a label, or the config is unreadable.
+        ConfigurationError: The flag is empty, or no source names a label.
+        click.UsageError: The config is unreadable.
     """
-    if given == "":
-        raise click.UsageError(
-            "--product-name was provided but is empty. Either omit it (use plugin "
-            "PRODUCT_NAME or config default_product_name), or provide a non-empty value."
-        )
-    name = (
-        given
-        or load_plugin_defaults(ctx, plugin).get("default_product_name")
-        or getattr(ingestor_cls, "PRODUCT_NAME", None)
+    config_value = (
+        None if given is not None else load_plugin_defaults(ctx, plugin).get("default_product_name")
     )
-    if not name:
-        raise MissingProductNameError(plugin)
-    return str(name)
+    return core_resolve_product_name(
+        given, config_value, getattr(ingestor_cls, "PRODUCT_NAME", None), plugin
+    )
+
+
+def _ingest_context() -> click.Context:
+    """Return a context of the `ingest` command, so a config built outside Click renders its flags."""
+    from firecube.cli._recovery import _command
+
+    return click.Context(_command(("ingest",)), info_name="ingest")
 
 
 @dataclass(slots=True)
@@ -112,11 +79,12 @@ class IngestCommandConfig:
         """Aggregate all validation errors into a single Click usage error."""
         errors: list[str] = []
 
-        if self.product_name is not None and self.product_name == "":
-            errors.append(
-                "--product-name was provided but is empty. Either omit it (use plugin "
-                "PRODUCT_NAME or config default_product_name), or provide a non-empty value."
-            )
+        if self.product_name == "":
+            try:
+                core_resolve_product_name("", None, None, self.plugin)
+            except ConfigurationError as exc:
+                ctx = click.get_current_context(silent=True) or _ingest_context()
+                errors.append(render(exc, ctx))
 
         if not self.target:
             errors.append("--target is required.")

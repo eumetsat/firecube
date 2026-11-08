@@ -22,20 +22,18 @@ from pathlib import Path
 import click
 
 from firecube.cli._ctx import get_config, get_storage_config
-from firecube.cli._product import recorded_identity
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane import ChunkManager
 from firecube.core.product.identity import ProductIdentity
+from firecube.core.product.open import Product, open_product
 from firecube.core.runtime import identity_from_storage_config
-from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 
 log = logging.getLogger("firecube.cli")
 
-# The label of the binding that lists the base URI; it names no product.
+# The path under the base URI that the scanning binding opens; it names no product.
 _SCAN_LABEL = "__firecube_controlplane__"
 
 
@@ -91,14 +89,14 @@ def target_product(
 
     Raises:
         click.BadParameter: `target` is not an admitted product URI.
-        click.UsageError: The store records no product label.
+        ProductLabelMissingError: The store records no product label.
     """
     uri = parse_and_validate_uri(target, param_hint="--target")
     driver = StorageDriverConfig.from_storage_config_or_default(_optional_storage_config(ctx))
-    identity = recorded_identity(uri, format="zarr", driver=driver)
-    manager = _bound_manager(ctx, workspace, identity, driver, product_filesystem)
+    product = ctx.with_resource(open_product(uri, format="zarr", driver=driver))
+    manager = _product_manager(ctx, workspace, product, product_filesystem)
     log.debug("Chunks using product URI target (product_uri=%s)", uri.to_str())
-    return BoundProduct(manager=manager, label=identity.product_name, uri=uri)
+    return BoundProduct(manager=manager, label=product.label, uri=uri)
 
 
 def scan_products(
@@ -122,12 +120,11 @@ def scan_products(
     base_uri = _storage_uri_from_base(base.to_str())
     click.echo(f"[chunks] scanning base {base_uri.to_str()}", err=True)
     driver = StorageDriverConfig.from_storage_config_or_default(storage_config)
-    scanner = _bound_manager(
-        ctx,
-        workspace,
-        ProductIdentity.from_uri(base_uri.join(_SCAN_LABEL), "zarr", product_name=_SCAN_LABEL),
-        driver,
+    # The scan root names no product, so no label is expected of whatever is stored there.
+    scan_root = ctx.with_resource(
+        open_product(base_uri.join(_SCAN_LABEL), format="zarr", driver=driver, require_label=False)
     )
+    scanner = _product_manager(ctx, workspace, scan_root, product_filesystem=False)
     products: list[BoundProduct] = []
     for uri, label in scanner.discover_products():
         if label is None:
@@ -157,12 +154,35 @@ def _bound_manager(
 
     With `product_filesystem`, the manager deletes objects through a filesystem bound to
     `identity`.
+
+    Raises:
+        ProductLabelMismatchError: The store records a label other than `identity`'s.
+    """
+    product = ctx.with_resource(
+        open_product(
+            identity.product_uri,
+            format=identity.format,
+            driver=driver,
+            product_name=identity.product_name,
+            require_label=False,
+        )
+    )
+    return _product_manager(ctx, workspace, product, product_filesystem)
+
+
+def _product_manager(
+    ctx: click.Context, workspace: Path | None, product: Product, product_filesystem: bool
+) -> ChunkManager:
+    """Return a ChunkManager bound like `product`'s session that closes with the command.
+
+    With `product_filesystem`, the manager deletes objects through the session's filesystem.
     """
     ctx.ensure_object(dict)
     base_workspace = workspace if workspace is not None else ctx.obj.get("workspace")
-    binding = StorageBinding(identity=identity, driver=driver)
-    filesystem = StorageSession(binding).fs() if product_filesystem else None
-    manager = ChunkManager(binding=binding, workspace=base_workspace, filesystem=filesystem)
+    filesystem = product.session.fs() if product_filesystem else None
+    manager = ChunkManager(
+        binding=product.session.binding, workspace=base_workspace, filesystem=filesystem
+    )
     ctx.call_on_close(manager.close)
     return manager
 

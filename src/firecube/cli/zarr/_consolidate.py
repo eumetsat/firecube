@@ -21,7 +21,6 @@ import click
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import echo_rendered, exit_with_error
 from firecube.cli._exit_codes import ExitCode
-from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
     storage_driver_option,
     storage_type_option,
@@ -31,6 +30,7 @@ from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
+from firecube.core.product.open import open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
 
 
@@ -126,18 +126,17 @@ def consolidate_time_coord(
         },
         cache=False,
     )
-    identity = recorded_identity(
+    with open_product(
         target_uri, format="zarr", driver=StorageDriverConfig.from_storage_config(storage_config)
-    )
-    summary = consolidate_time_coords(
-        target=target,
-        product_name=identity.product_name,
-        storage_config=storage_config,
-        chunk_size=chunk_size,
-        time_dim=time_dim,
-        dry_run=dry_run,
-        report=echo_rendered,
-    )
+    ) as product:
+        summary = consolidate_time_coords(
+            product,
+            storage_config=storage_config,
+            chunk_size=chunk_size,
+            time_dim=time_dim,
+            dry_run=dry_run,
+            report=echo_rendered,
+        )
 
     if dry_run:
         click.echo("Summary:")

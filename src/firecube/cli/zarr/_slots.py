@@ -25,13 +25,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 import click
 
-from firecube.cli._command_schemas import check_recorded_label, resolve_product_name
+from firecube.cli._command_schemas import resolve_product_name
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import exit_with_error, render
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
-from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     format_option,
     product_name_option,
@@ -44,9 +43,8 @@ from firecube.cli._uri_policy import (
     parse_and_validate_uri,
 )
 from firecube.cli.zarr._common import _configure_ingestor_for_cli
-from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import Message, Operation, Placeholder
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.ingestor.api import ExecutionParams
 from firecube.ingestor.registry import loader as ingestor_loader
@@ -264,17 +262,17 @@ def slots(
     if plugin not in plugins:
         raise click.ClickException(f"Unknown plugin '{plugin}'.")
     ingestor_cls = cast(Any, plugins[plugin])
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=resolve_product_name(ctx, plugin, ingestor_cls, product_name),
+    product = ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=StorageDriverConfig.from_storage_config(storage_config),
+            product_name=resolve_product_name(ctx, plugin, ingestor_cls, product_name),
+            require_label=False,
+        )
     )
-    binding = StorageBinding(
-        identity=identity,
-        driver=StorageDriverConfig.from_storage_config(storage_config),
-    )
-    check_recorded_label(binding)
-    chunk_manager = ChunkManager(binding=binding)
+    identity = product.identity
+    chunk_manager = product.manager
 
     ingestor = ingestor_cls(chunk_manager=chunk_manager) if sources else ingestor_cls()
 
@@ -308,12 +306,10 @@ def slots(
 
     try:
         plans = slot_plan.plan_slots(
-            ingestor=ingestor,
+            product,
+            ingestor,
             plugin_ctx=plugin_ctx,
             plugin_name=plugin,
-            chunk_manager=chunk_manager,
-            identity=identity,
-            target=target,
             storage_config=storage_config,
             coverage_storage_config=coverage_storage_config,
             input_data=sources or None,

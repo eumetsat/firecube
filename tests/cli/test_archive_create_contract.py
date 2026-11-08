@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import xarray as xr
+import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
@@ -131,10 +132,11 @@ def test_create_resolves_file_uri_archive(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(converter, "zarr_to_tgm", fake_zarr_to_tgm)
 
     archive_path = tmp_path / "archive.tgm"
+    zarr.open_group(str(tmp_path / "x.zarr"), mode="w")
     result = _invoke_create(
         [
             "--target",
-            "file:///tmp/x.zarr",
+            (tmp_path / "x.zarr").as_uri(),
             "--archive",
             f"file://{archive_path}",
             "--storage-type",
@@ -146,6 +148,28 @@ def test_create_resolves_file_uri_archive(tmp_path: Path, monkeypatch) -> None:
 
     assert result.exit_code == 0, result.output
     assert seen["target"] == str(archive_path)
+
+
+@pytest.mark.contract
+def test_create_dry_run_refuses_zip_only_options_as_the_real_run_does(tmp_path: Path) -> None:
+    store = tmp_path / "s.zarr"
+    zarr.open_group(str(store), mode="w").create_array("a", shape=(3,), dtype="f8")
+    adopt = ["migrate", "adopt", "--target", store.as_uri(), "--product-name", "LBL"]
+    assert CliRunner().invoke(cli, [*adopt, "--yes-i-really-mean-it"]).exit_code == 0
+    archive = tmp_path / "a.zip"
+    args = ["--target", store.as_uri(), "--archive", archive.as_uri(), "--archive-format", "zip"]
+    args += ["--group", "F024"]
+    files = lambda: {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}  # noqa: E731
+    before = files()
+
+    real = _invoke_create(args)
+    dry = _invoke_create([*args, "--dry-run"])
+
+    assert real.exit_code != 0 and "Zip archive does not support" in real.output
+    assert dry.exit_code == real.exit_code, dry.output
+    assert "Zip archive does not support" in dry.output
+    assert "[dry-run] Would archive" not in dry.output
+    assert files() == before and not archive.exists()
 
 
 def test_create_refuses_a_360_day_time_coordinate_and_records_the_run_failed(

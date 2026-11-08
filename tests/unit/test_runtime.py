@@ -169,6 +169,14 @@ class TestResolveStorageConfigEnvExport:
         assert os.environ.get("FIRECUBE_TARGET_URI") == "s3://my-bucket"
         assert os.environ.get("AWS_ACCESS_KEY_ID") == "AK"
 
+    def test_resolve_exports_nothing_by_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import os
+
+        monkeypatch.delenv("FIRECUBE_BUCKET", raising=False)
+        env = {"FIRECUBE_STORAGE_TYPE": "s3", "FIRECUBE_BUCKET": "my-bucket"}
+        resolve_storage_config(env=env, set_global=False)
+        assert "FIRECUBE_BUCKET" not in os.environ
+
     def test_local_resolve_exports_target_path(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:

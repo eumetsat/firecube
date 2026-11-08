@@ -50,7 +50,7 @@ def test_s3_uri_infers_storage_type(monkeypatch, tmp_path: Path) -> None:
         return backing_store
 
     monkeypatch.setattr(ZarrIO, "open_group", fake_open_group)
-    monkeypatch.setattr("firecube.cli._product._recorded_label", lambda *a, **k: None)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
 
     result = _invoke_batch_size(["-t", "s3://bucket/x.zarr", "-g", "g1"])
 

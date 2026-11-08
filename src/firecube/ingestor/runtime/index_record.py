@@ -25,7 +25,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from firecube.core import observability
 from firecube.core.controlplane import ChunkManager
@@ -43,6 +43,9 @@ from firecube.core.index_resolve import ExtentUnknownError, ResolvedIndex, resol
 from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.types.context import IngestContext, PluginContext, RuntimeIngestContext
+
+if TYPE_CHECKING:
+    from firecube.core.product.open import Product
 
 _log = logging.getLogger(__name__)
 
@@ -239,12 +242,11 @@ def _preview_rebuild(
 
 
 def rebuild_index_record(
-    *,
+    product: Product,
     ingestor: Any,
+    *,
     plugin_name: str,
-    chunk_manager: ChunkManager,
-    target: str,
-    product_name: str,
+    chunk_manager: ChunkManager | None = None,
     logger: logging.Logger = _log,
     report: Callable[[str], None] = lambda _message: None,
     warn: Callable[[str], None] = lambda _message: None,
@@ -255,16 +257,17 @@ def rebuild_index_record(
 
     Every refusal comes before the record is written. Once the control plane holds
     the run, the call tries to record it as complete or failed before returning or
-    raising; a failure of that record is logged, not raised. The caller closes
-    `chunk_manager`. With `dry_run`, the call makes the refusals from reads only,
-    reports what it would write and writes nothing: no claim, record, attribute or run.
+    raising; a failure of that record is logged, not raised. With `dry_run`, the call
+    makes the refusals from reads only, reports what it would write and writes
+    nothing: no claim, record, attribute or run.
 
     Args:
+        product: The open product, from `open_product`. Its URI is handed to the
+            plugin's context and recorded as the run's output.
         ingestor: The plugin instance whose `index_spec` declares the index.
         plugin_name: The plugin's registered name, used in messages and telemetry.
-        chunk_manager: The control plane of the target product.
-        target: The product URI handed to the plugin's context and recorded as the run's output.
-        product_name: The logical product name.
+        chunk_manager: The control plane the plugin was built with, closed by the
+            caller. `None` uses `product.manager`.
         logger: Receives the index-ensured event log and run-record failures.
         report: Receives the outcome line before the run is recorded complete.
         warn: Receives the conflict message before the run is recorded failed.
@@ -282,6 +285,8 @@ def rebuild_index_record(
         ResolvedIndexAttrsConflictError: The root attribute disagrees with the stored record.
         ProductUnderMaintenanceError: Another owner holds the exclusive maintenance claim.
     """
+    chunk_manager = product.manager if chunk_manager is None else chunk_manager
+    product_name, target = product.label, product.identity.product_uri.to_str()
     run_id = f"rebuild-{uuid.uuid4()}"
     run_meta = {"run_id": run_id, "command": "index_rebuild"}
     run_created = False
@@ -397,10 +402,9 @@ def rebuild_index_record(
 
 
 def verify_index_record(
+    product: Product,
     *,
-    chunk_manager: ChunkManager,
-    product_name: str,
-    target: str,
+    chunk_manager: ChunkManager | None = None,
     plugin_name: str | None = None,
     load_plugin: Callable[[], Any] | None = None,
     configure: Callable[[Any, str], PluginContext] | None = None,
@@ -411,9 +415,9 @@ def verify_index_record(
     checks pass, so a missing or legacy record never needs one.
 
     Args:
-        chunk_manager: The control plane of the target product. The caller closes it.
-        product_name: The logical product name.
-        target: The product URI handed to the plugin's context.
+        product: The open product, from `open_product`. Its URI is handed to the plugin's context.
+        chunk_manager: The control plane the plugin is built with, closed by the caller.
+            `None` uses `product.manager`.
         plugin_name: The plugin to compare against, or `None` to skip the comparison.
             It also names the plugin in the legacy-record message.
         load_plugin: Returns the plugin instance. Required when `plugin_name` is given.
@@ -430,6 +434,8 @@ def verify_index_record(
     """
     if plugin_name is not None and load_plugin is None:
         raise ValueError("load_plugin is required when plugin_name is given")
+    chunk_manager = product.manager if chunk_manager is None else chunk_manager
+    product_name, target = product.label, product.identity.product_uri.to_str()
     try:
         record = chunk_manager.get_resolved_index(product=product_name)
     except ManifestError as exc:

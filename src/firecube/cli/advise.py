@@ -24,7 +24,6 @@ import zarr
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._exit_codes import ExitCode
-from firecube.cli._product import session_identity
 from firecube.cli._shared_options import (
     format_option,
     storage_driver_option,
@@ -35,9 +34,8 @@ from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
 from firecube.core import observability
 from firecube.core.cf import CFReport
 from firecube.core.cf.validator import validate_cf18
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 
 _ROOT_GROUP_ALIASES = frozenset({".", "/", ""})
 _COMPLIANCE_PROFILE_VALIDATORS: dict[str, Callable[..., CFReport]] = {
@@ -108,13 +106,10 @@ def batch_size(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_cfg)
-    identity = session_identity(target_uri, format="zarr", driver=driver_config)
-    session = StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=driver_config,
-        )
+    product = ctx.with_resource(
+        open_product(target_uri, format="zarr", driver=driver_config, require_label=False)
     )
+    identity, session = product.identity, product.session
 
     root = session.zarr.open_group(identity.product_uri, mode="r")
     try:
@@ -228,8 +223,10 @@ def compliance(
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_cfg)
 
-    identity = session_identity(target_uri, format="zarr", driver=driver_config)
-    session = StorageSession(StorageBinding(identity=identity, driver=driver_config))
+    product = ctx.with_resource(
+        open_product(target_uri, format="zarr", driver=driver_config, require_label=False)
+    )
+    identity, session = product.identity, product.session
 
     xr_group = "" if group_path in _ROOT_GROUP_ALIASES else group_path
 

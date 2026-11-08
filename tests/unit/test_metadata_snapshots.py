@@ -22,7 +22,17 @@ import pytest
 import xarray as xr
 
 from firecube.core.controlplane import ChunkManager
-from firecube.core.errors import ControlPlaneCorruptionError, ManifestError
+from firecube.core.controlplane.metadata_snapshots import (
+    SnapshotPreview,
+    SnapshotRecord,
+    take_snapshot_for_product,
+)
+from firecube.core.errors import (
+    ControlPlaneCorruptionError,
+    ManifestError,
+    ProductLabelMismatchError,
+)
+from firecube.core.product.open import open_product
 from firecube.core.zarr.metadata_documents import ABSENT
 from tests.helpers.storage import make_test_binding
 
@@ -164,3 +174,57 @@ def test_blob_write_is_create_if_absent_and_a_tampered_blob_is_detected(store):
     path.write_bytes(b"tampered")
     with pytest.raises(ControlPlaneCorruptionError):
         manager.read_metadata_blob(PRODUCT, blob_id)
+
+
+def _product_store(tmp_path, *, stamped):
+    root = tmp_path / PRODUCT
+    xr.Dataset({"v": (("x",), np.arange(4.0))}).to_zarr(root, zarr_format=3)
+    if stamped:
+        (root / ".firecube").mkdir()
+        (root / ".firecube" / "product.json").write_text(json.dumps({"product": "p.zarr"}))
+    return root
+
+
+def _tree(root):
+    return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+
+def _open(root):
+    return open_product(root.as_uri(), format="zarr", product_name="p.zarr", require_label=False)
+
+
+@pytest.mark.parametrize("stamped", [False, True], ids=["unstamped", "stamped"])
+def test_snapshot_dry_run_previews_and_writes_nothing(tmp_path, stamped):
+    root = _product_store(tmp_path, stamped=stamped)
+    with _open(root) as product:
+        before = (_tree(root), product.manager.list_snapshots("p.zarr"))
+        preview = take_snapshot_for_product(
+            product, dry_run=True, trigger="t", consistency="observation"
+        )
+        after = (_tree(root), product.manager.list_snapshots("p.zarr"))
+    assert isinstance(preview, SnapshotPreview)
+    assert preview.label_recorded is stamped
+    assert after == before
+
+
+def test_snapshot_take_records_a_listed_snapshot(tmp_path):
+    root = _product_store(tmp_path, stamped=True)
+    with _open(root) as product:
+        record = take_snapshot_for_product(product, trigger="t", consistency="observation")
+        assert isinstance(record, SnapshotRecord)
+        assert product.manager.list_snapshots("p.zarr") == [record]
+    assert (root / ".firecube" / "metadata" / "refs" / "latest.json").is_file()
+
+
+@pytest.mark.parametrize("dry_run", [True, False], ids=["dry-run", "take"])
+def test_snapshot_refuses_a_store_that_records_another_label_and_writes_nothing(tmp_path, dry_run):
+    root = _product_store(tmp_path, stamped=True)
+    with _open(root) as product:
+        stamp = root / ".firecube" / "product.json"
+        stamp.write_text(json.dumps({"product": "other"}))
+        before = _tree(root)
+        with pytest.raises(ProductLabelMismatchError):
+            take_snapshot_for_product(
+                product, dry_run=dry_run, trigger="t", consistency="observation"
+            )
+    assert _tree(root) == before

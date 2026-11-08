@@ -24,7 +24,6 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import echo_rendered
-from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     archive_uri_option,
     dry_run_flag,
@@ -41,10 +40,8 @@ from firecube.cli.archive._common import (
     _local_archive,
     _require_overwrite_confirmation,
 )
-from firecube.core.errors import Message, ProductLabelMismatchError
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 
 
 @click.command(
@@ -149,12 +146,6 @@ def restore(
 
     _require_overwrite_confirmation(overwrite=overwrite, yes_i_really_mean_it=yes_i_really_mean_it)
 
-    if dry_run:
-        click.echo(f"[dry-run] Would restore: {archive_abs} -> {target}")
-        if overwrite:
-            click.echo("  Overwrite: yes")
-        return
-
     storage_config = get_storage_config(
         ctx,
         overrides={
@@ -165,36 +156,44 @@ def restore(
         cache=False,
     )
 
-    from firecube.ingestor.runtime.archive import read_restore_source, restore_archive
+    from firecube.ingestor.runtime.archive import (
+        ArchiveRestorePlan,
+        read_restore_source,
+        restore_archive,
+        restore_label,
+    )
 
     archive_format = "zip" if is_zip else "tensogram"
     source = read_restore_source(
         archive=archive, archive_path=archive_abs, archive_format=archive_format
     )
-    driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    restore_identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=_restore_label(source.product_label, product_name, archive=archive),
-    )
-    session = StorageSession(
-        StorageBinding(
-            identity=restore_identity,
-            driver=driver_config,
+    # The target opens under the label the restore takes; a new target records none yet.
+    product = ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=StorageDriverConfig.from_storage_config(storage_config),
+            product_name=restore_label(source, product_name, archive=archive),
+            require_label=False,
         )
     )
 
     restored = restore_archive(
-        session=session,
+        product,
         archive=archive,
         archive_path=archive_abs,
         archive_format=archive_format,
-        target=restore_identity.product_uri.to_str(),
         overwrite=overwrite,
         report=echo_rendered,
         warn=functools.partial(echo_rendered, err=True),
         source=source,
+        dry_run=dry_run,
     )
+    if isinstance(restored, ArchiveRestorePlan):
+        click.echo(f"[dry-run] Would restore: {restored.source.archive_path} -> {target}")
+        if restored.overwrite:
+            click.echo("  Overwrite: yes")
+        return
 
     result = restored.summary
     click.echo(f"Zarr restored: {result['target']}")
@@ -207,32 +206,3 @@ def restore(
         if result.get("controlplane_restored")
         else "  Control-plane: not present"
     )
-
-
-def _restore_label(recorded: str | None, given: str | None, *, archive: str) -> str:
-    """Return the label the restore takes: the archive's, else the given one.
-
-    Raises:
-        click.UsageError: The archive records no label and none is given.
-        ProductLabelMismatchError: The given label differs from the archive's.
-    """
-    if recorded is None:
-        if given is None:
-            raise click.UsageError(
-                f"The archive {archive} records no product label. "
-                "Name the restored product with --product-name <label>."
-            )
-        return given
-    if given is not None and given != recorded:
-        raise ProductLabelMismatchError(
-            Message(
-                "Product label {given!r} is refused: the archive {archive} records the "
-                "label {product!r}.",
-                given=given,
-                archive=archive,
-                product=recorded,
-            ),
-            given=given,
-            recorded=recorded,
-        )
-    return recorded

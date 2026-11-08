@@ -23,7 +23,6 @@ from pathlib import Path
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._product import session_identity
 from firecube.cli._shared_options import (
     storage_driver_option,
     storage_type_option,
@@ -36,9 +35,8 @@ from firecube.core.intake import (
     build_intake_catalog,
     discover_catalog_groups,
 )
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import open_product
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.ingestor.registry.loader import discover_ingestors
 
 log = logging.getLogger("firecube.cli")
@@ -137,15 +135,12 @@ def intake(
     )
 
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    identity = session_identity(target_uri, format="zarr", driver=driver_config)
-    session = StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=driver_config,
-        )
+    product = ctx.with_resource(
+        open_product(target_uri, format="zarr", driver=driver_config, require_label=False)
     )
+    session = product.session
 
-    store_uri = identity.product_uri.to_str()
+    store_uri = product.identity.product_uri.to_str()
 
     # Instantiate ingestor and let Firecube discover/annotate catalog groups.
     ingestor = ingestor_cls()

@@ -55,6 +55,7 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.config import StorageConfig
 from firecube.core.errors import ConfigurationError, SchemaDriftError
+from firecube.core.product.open import open_product
 from firecube.core.zarr._sealing_markers import (
     ATTR_CONSOLIDATED_AT,
     ATTR_COORD_MANAGED,
@@ -325,6 +326,10 @@ def _local_storage() -> StorageConfig:
     return StorageConfig(storage_type="local", storage_driver="fsspec")
 
 
+def _open(cube: Path) -> Any:
+    return open_product(cube.as_uri(), format="zarr", product_name=cube.name, require_label=False)
+
+
 def test_library_consolidation_reports_through_callable_not_stdout(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -334,12 +339,10 @@ def test_library_consolidation_reports_through_callable_not_stdout(
     before = np.asarray(_open_time_array(cube)[:])
     lines: list[str] = []
 
-    summary = consolidate_time_coords(
-        target=f"file://{cube}",
-        product_name=cube.name,
-        storage_config=_local_storage(),
-        report=lines.append,
-    )
+    with _open(cube) as product:
+        summary = consolidate_time_coords(
+            product, storage_config=_local_storage(), report=lines.append
+        )
 
     assert summary.consolidated_groups == ("data",)
     arr = _open_time_array(cube)
@@ -363,9 +366,8 @@ def _snapshotted_cube(cube: Path) -> np.ndarray:
 
 
 def _consolidate(cube: Path, **kwargs: Any) -> None:
-    consolidate_time_coords(
-        target=f"file://{cube}", product_name=cube.name, storage_config=_local_storage(), **kwargs
-    )
+    with _open(cube) as product:
+        consolidate_time_coords(product, storage_config=_local_storage(), **kwargs)
 
 
 def test_consolidation_keeps_root_consolidated_snapshot_readable(tmp_path: Path) -> None:
@@ -446,20 +448,16 @@ def test_library_dry_run_on_drifted_cube_reports_blocked_and_writes_nothing(
     _write_drifted_reference(cube, size=_LEGACY_SLOTS)
     before = _md5_of_files(cube)
 
-    summary = consolidate_time_coords(
-        target=f"file://{cube}",
-        product_name=cube.name,
-        storage_config=_local_storage(),
-        dry_run=True,
-    )
+    with _open(cube) as product:
+        summary = consolidate_time_coords(product, storage_config=_local_storage(), dry_run=True)
 
     assert summary.blocked_by_drift == 1
     assert summary.consolidated_groups == ()
     assert _md5_of_files(cube) == before
 
 
-def test_library_refuses_s3_before_opening_any_store(
-    monkeypatch: pytest.MonkeyPatch,
+def test_library_refuses_s3_before_creating_the_zarr_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An s3 storage config raises ConfigurationError before the store factory is called."""
 
@@ -468,11 +466,11 @@ def test_library_refuses_s3_before_opening_any_store(
 
     monkeypatch.setattr("firecube.core.filesystem.store_factory.create_zarr_store", _boom)
 
-    with pytest.raises(ConfigurationError, match="s3"):
+    # A Product is opened before the call, and opening an s3 one reads the network; the
+    # refusal reads the storage config, so a local product under an s3 config reaches it.
+    with pytest.raises(ConfigurationError, match="s3"), _open(tmp_path / "cube.zarr") as product:
         consolidate_time_coords(
-            target="s3://example-bucket/cube.zarr",
-            product_name="cube.zarr",
-            storage_config=StorageConfig(storage_type="s3", storage_driver="fsspec"),
+            product, storage_config=StorageConfig(storage_type="s3", storage_driver="fsspec")
         )
 
 
@@ -486,12 +484,8 @@ def test_library_refuses_marker_hidden_by_subgroup_consolidated_snapshot(tmp_pat
     writable["data/time"].attrs[ATTR_COORD_MANAGED] = True
     before = np.asarray(_open_time_array(cube)[:])
 
-    with pytest.raises(SchemaDriftError):
-        consolidate_time_coords(
-            target=f"file://{cube}",
-            product_name=cube.name,
-            storage_config=_local_storage(),
-        )
+    with pytest.raises(SchemaDriftError), _open(cube) as product:
+        consolidate_time_coords(product, storage_config=_local_storage())
 
     arr = _open_time_array(cube)
     assert arr.attrs.get(ATTR_COORD_MANAGED) is True
@@ -512,10 +506,8 @@ def test_library_two_time_coordinate_candidates_carry_group_and_time_dim_option(
         "valid_time", data=values, dimension_names=("valid_time",)
     )
 
-    with pytest.raises(ConfigurationError) as refused:
-        consolidate_time_coords(
-            target=f"file://{cube}", product_name=cube.name, storage_config=_local_storage()
-        )
+    with pytest.raises(ConfigurationError) as refused, _open(cube) as product:
+        consolidate_time_coords(product, storage_config=_local_storage())
 
     assert (refused.value.context.group, refused.value.context.options) == ("/data", ("time_dim",))
 

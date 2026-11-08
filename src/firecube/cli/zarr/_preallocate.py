@@ -17,12 +17,12 @@
 from __future__ import annotations
 
 import contextlib
-import uuid
+import os
 from typing import TYPE_CHECKING, Any, cast
 
 import click
 
-from firecube.cli._command_schemas import check_recorded_label, resolve_product_name
+from firecube.cli._command_schemas import resolve_product_name
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import echo_rendered, render
 from firecube.cli._input_filters import (
@@ -30,7 +30,6 @@ from firecube.cli._input_filters import (
     resolve_input_filters,
 )
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
-from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import product_name_option
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import (
@@ -43,9 +42,9 @@ from firecube.core.api import (
     ATTR_PREALLOCATED,
 )
 from firecube.core.controlplane import ChunkManager
-from firecube.core.storage.binding import StorageBinding
+from firecube.core.product.open import open_product
+from firecube.core.runtime import resolve_slot_window
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 
@@ -189,15 +188,8 @@ def preallocate(
     sources, stac_search = admit_sources(
         ctx, plugin, input_data, stac_search, command="firecube zarr preallocate"
     )
-    if (slot_start is None) ^ (slot_end is None):
-        raise click.UsageError("--slot-start and --slot-end must be provided together")
-    from firecube.cli._slot_env import resolve_slot_range_from_env
-
-    resolved_slot_start, resolved_slot_end, resolved_slot_group = resolve_slot_range_from_env(
-        slot_start,
-        slot_end,
-        None,
-        None,
+    resolved_slot_start, resolved_slot_end, resolved_slot_group = resolve_slot_window(
+        slot_start, slot_end, None, None, env=os.environ
     )
 
     storage_config = get_storage_config(
@@ -214,17 +206,18 @@ def preallocate(
     if plugin not in plugins:
         raise click.ClickException(f"Unknown plugin '{plugin}'.")
     ingestor_cls = cast(type[BaseIngestor], plugins[plugin])
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=resolve_product_name(ctx, plugin, ingestor_cls, product_name),
+    product = ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=driver_config,
+            product_name=resolve_product_name(ctx, plugin, ingestor_cls, product_name),
+            require_label=False,
+        )
     )
-    binding = StorageBinding(identity=identity, driver=driver_config)
-    session = StorageSession(binding)
-    check_recorded_label(binding)
-
-    chunk_manager = ChunkManager(binding=binding)
-    preallocate_run_id = f"preallocate:{uuid.uuid4().hex[:16]}"
+    # Built here, not by the handle, so its close below can stay suppressed. The
+    # plugin and the operation share it.
+    chunk_manager = ChunkManager(binding=product.session.binding)
     try:
         ingestor = ingestor_cls(chunk_manager=chunk_manager)
 
@@ -263,13 +256,12 @@ def preallocate(
             # The operation records the run as terminal and releases its claim
             # before it returns or raises; the manager is closed below.
             preallocate_product(
-                ingestor=ingestor,
+                product,
+                ingestor,
                 plugin_ctx=plugin_ctx,
                 plugin_name=plugin,
                 chunk_manager=chunk_manager,
-                session=session,
                 storage_config=storage_config,
-                run_id=preallocate_run_id,
                 write_mode=write_mode,
                 input_data=sources or None,
                 slot_start=resolved_slot_start,

@@ -44,6 +44,7 @@ from firecube.core.controlplane.types import (
 )
 from firecube.core.index_resolve import resolve_index_spec
 from firecube.core.index_spec import IndexSpec, RegularTimeAxis
+from firecube.core.product.open import open_product
 from firecube.ingestor.runtime.index_record import verify_index_record
 from tests.helpers.cli_hints import parse_hint
 from tests.helpers.rows import table_row
@@ -296,12 +297,10 @@ def test_verify_library_valid_record_never_calls_plugin_loader(tmp_path: Path) -
     def loader() -> object:
         raise AssertionError("plugin loaded for a verify without a plugin")
 
-    manager = _manager(f"file://{cube}", "test_product")
-    kwargs = {"product_name": "test_product", "target": f"file://{cube}", "load_plugin": loader}
-    try:
-        verdict = verify_index_record(chunk_manager=manager, **kwargs)
-    finally:
-        manager.close()
+    with open_product(
+        f"file://{cube}", format="zarr", product_name="test_product", require_label=False
+    ) as product:
+        verdict = verify_index_record(product, chunk_manager=product.manager, load_plugin=loader)
 
     assert verdict.outcome == "verified"
     assert verdict.identity_hash == record.identity_hash
@@ -313,13 +312,10 @@ def test_verify_library_attrs_drift_result_carries_no_cli_text(tmp_path: Path) -
     _rebuild_cube(cube, "index_spec_single", "index_spec_single")
     _set_resolved_index_attr(cube, "f" * 64)
 
-    manager = _manager(f"file://{cube}", "index_spec_single")
-    try:
-        verdict = verify_index_record(
-            chunk_manager=manager, product_name="index_spec_single", target=f"file://{cube}"
-        )
-    finally:
-        manager.close()
+    with open_product(
+        f"file://{cube}", format="zarr", product_name="index_spec_single", require_label=False
+    ) as product:
+        verdict = verify_index_record(product)
 
     assert verdict.outcome == "attrs-drift"
     assert verdict.attrs_hash == "f" * 64

@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -26,6 +25,7 @@ from tests.helpers.storage import make_test_binding, make_test_session
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane import ChunkManager
 from firecube.core.product.identity import ProductIdentity
+from firecube.core.product.open import open_product
 from firecube.core.storage import StorageWriteResult
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
@@ -531,23 +531,29 @@ def test_incremental_backup_chain_restore_equals_the_second_release_inventory(
     group = zarr.open_group(str(source), mode="a")
     group.create_array("grow", data=np.arange(3.0))  # rank 1 now, rank 2 in the second release
     group.create_array("shrink", data=np.ones((3, 2)))  # rank 2 now, rank 1 in the second
-    session = _build_local_archive_session(str(source), root, driver)[1]
-    adopt_product(session=session)
     archives = [tmp_path / "a1.zip", tmp_path / "a2.zip"]
-    create_release_for_product(
-        session=session, version="1.0", archive=StorageUri.from_local_path(archives[0])
-    )
-    shutil.rmtree(source / "gone")
-    (source / "counts" / "c" / "0").write_bytes(b"changed chunk")
-    zarr.open_group(str(source), mode="a").create_array("new", data=np.arange(3.0))
-    shutil.rmtree(source / "grow")  # chunk object grow/c/0 becomes the directory grow/c/0/
-    shutil.rmtree(source / "shrink")  # and the directory shrink/c/0/ becomes the object shrink/c/0
-    group = zarr.open_group(str(source), mode="a")
-    group.create_array("grow", data=np.ones((3, 2)))
-    group.create_array("shrink", data=np.arange(3.0))
-    second = create_release_for_product(
-        session=session, version="1.1", archive=StorageUri.from_local_path(archives[1])
-    ).release
+    with open_product(
+        StorageUri.from_local_path(source),
+        format="zarr",
+        driver=StorageDriverConfig(driver=driver),
+        product_name="p.zarr",
+        require_label=False,
+    ) as product:
+        adopt_product(product)
+        create_release_for_product(
+            product, version="1.0", archive=StorageUri.from_local_path(archives[0])
+        )
+        shutil.rmtree(source / "gone")
+        (source / "counts" / "c" / "0").write_bytes(b"changed chunk")
+        zarr.open_group(str(source), mode="a").create_array("new", data=np.arange(3.0))
+        shutil.rmtree(source / "grow")  # chunk object grow/c/0 becomes the directory grow/c/0/
+        shutil.rmtree(source / "shrink")  # shrink/c/0/ becomes the object shrink/c/0
+        group = zarr.open_group(str(source), mode="a")
+        group.create_array("grow", data=np.ones((3, 2)))
+        group.create_array("shrink", data=np.arange(3.0))
+        second = create_release_for_product(
+            product, version="1.1", archive=StorageUri.from_local_path(archives[1])
+        ).release
     assert second.retention is not None and second.retention["mode"] == "incremental"
     inventory = json.loads(
         (
@@ -555,16 +561,19 @@ def test_incremental_backup_chain_restore_equals_the_second_release_inventory(
         ).read_text()
     )
     target = tmp_path / "restored.zarr"
-    binding = make_test_binding(tmp_path, product=target.name, driver=driver)
-    labelled = replace(binding.identity, product_name="p.zarr")  # the archive's label
-    restore_session = StorageSession(StorageBinding(identity=labelled, driver=binding.driver))
-    restore_archive(
-        session=restore_session,
-        archive=archives[1].as_uri(),
-        archive_path=str(archives[1]),
-        archive_format="zip",
-        target=str(target),
-    )
+    with open_product(
+        StorageUri.from_local_path(target),
+        format="zarr",
+        driver=StorageDriverConfig(driver=driver),
+        product_name="p.zarr",  # the archive's label
+        require_label=False,
+    ) as restore_product:
+        restore_archive(
+            restore_product,
+            archive=archives[1].as_uri(),
+            archive_path=str(archives[1]),
+            archive_format="zip",
+        )
 
     def digests(p: Path) -> dict[str, str]:
         skipped = (".firecube/claims/", ".firecube/runs/archive-restore-")

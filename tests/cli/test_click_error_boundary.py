@@ -40,10 +40,10 @@ from firecube.cli._audience import classify
 from firecube.cli._errors import invoke_with_boundary, render
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._recovery import OPERATIONS, _command
-from firecube.cli._slot_env import _parse_int
 from firecube.cli.main import cli
 from firecube.core import errors as err
 from firecube.core.archive.zip.backup_chain import BackupChainError
+from firecube.core.runtime import _parse_slot_int
 from firecube.core.zarr.guard.engine_owned import preallocate_operation
 from firecube.ingestor import errors as ingestor_errors
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
@@ -51,9 +51,9 @@ from firecube.ingestor.runtime.preflight import StoragePreflightError
 from tests.helpers.cli_hints import parse_hint
 
 
-def test_parse_int_invalid_value_raises_click_usage_error() -> None:
-    with pytest.raises(click.UsageError, match="must be an integer"):
-        _parse_int("notanint", name="FIRECUBE_SLOT_START")
+def test_parse_int_invalid_value_raises_slot_window_error() -> None:
+    with pytest.raises(err.SlotWindowError, match="must be an integer"):
+        _parse_slot_int("notanint", name="FIRECUBE_SLOT_START")
 
 
 def test_classify_unknown_path_raises_click_exception() -> None:
@@ -282,6 +282,7 @@ SAMPLES = {
         f"--target {U!r} --plugin p --product-name <product_name>",
     ),
     "validate": ({"target": U, "group_path": "g"}, f"--target {U!r} --group g"),
+    "adopt_product": ({"target": U, "product_name": "n"}, f"--target {U!r} --product-name n"),
 }
 _ROOT = click.Context(_command(()), info_name="firecube")
 _ZARR = click.Context(_command(("zarr",)), info_name="zarr", parent=_ROOT)
