@@ -121,7 +121,7 @@ materializes; `firecube zarr consolidate-time-coord` stamps
 `ATTR_PREALLOCATED` together with `ATTR_CONSOLIDATED_AT`.
 
 `ATTR_PREALLOCATED` and `ATTR_COORD_MANAGED` are documented in
-[Operations](python-api/operations.md#firecube.operations.ATTR_PREALLOCATED).
+[Operations](operations.md#firecube.operations.ATTR_PREALLOCATED).
 `ATTR_CONSOLIDATED_AT` and `assert_coord_markers_consistent()` are not in
 `firecube.sdk`. Their import path `firecube.core.api` is deprecated until v0.2.0.
 

@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Import door for Firecube plugin authors.
+"""The public surface a Firecube plugin builds against.
 
-Import everything a plugin needs from this module. `firecube.operations` is the door for tooling.
-Each name keeps the name and docstring of its defining module. The template classes load on
-first access.
+Templates, hooks, context and result types, array specs, errors, and the storage and time helpers
+a plugin uses to read its inputs. Each name is the object its defining module defines, with that
+module's docstring. The template classes load on first access. Maintenance operations such as
+archive, migrate and release are in `firecube.operations`.
 """
 
 from __future__ import annotations

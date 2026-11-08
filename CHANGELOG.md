@@ -9,10 +9,11 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
-- The module `firecube.sdk` is the one import door for plugin authors. It
-  carries 102 names from the two modules `firecube.ingestor.api` and
-  `firecube.core.api`. It loads no Click and no CLI module. Import the Firecube
-  names that your plugin uses from `firecube.sdk`. The page `docs/reference/python-api/sdk.md`
+- The module `firecube.sdk` holds every Firecube name a plugin imports:
+  templates, hooks, context and result types, array specs, errors, and the
+  storage and time helpers. It carries 102 names from the two modules
+  `firecube.ingestor.api` and `firecube.core.api`. It loads no Click and no CLI module. Import the Firecube
+  names that your plugin uses from `firecube.sdk`. The page `docs/reference/plugin-sdk.md`
   lists them.
 - The module `firecube.operations` is the public Python surface of the CLI.
   The commands below call it, and so can your code. `ingest` and the other
@@ -382,7 +383,7 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 - Firecube deprecates the modules `firecube.ingestor.api` and
   `firecube.core.api`. Import from `firecube.sdk` instead.
-  - Every name stays importable until v0.2.0. That release drops both modules.
+  - Every name stays importable until v0.2.0. That release will drop both modules.
   - Each module emits one `DeprecationWarning` per process. It fires on the
     first attribute access of any name of the module. The warning names
     `firecube.sdk` and v0.2.0.

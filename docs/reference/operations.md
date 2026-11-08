@@ -1,6 +1,21 @@
 # Operations
 
-The module `firecube.operations` is the public Python facade over the operations the `firecube` command line runs. An operation takes the open product as its first argument. Open a product with `open_product`, used as a context manager. Exports keep their original names, without aliases. The module does not re-export errors. `Product.session` and `Product.manager` serve the engine and the operations. They are not part of the contract.
+The module `firecube.operations` holds the Python functions that do what the `firecube` commands do on a finished product. The operations are:
+
+- Archive and restore a product.
+- Take a metadata snapshot.
+- Adopt a store and migrate its metadata.
+- Create, list, read and verify releases.
+- Rebuild and verify the index record.
+- Preallocate arrays and plan slots.
+- Build multi-resolution levels.
+- Consolidate time coordinates.
+
+Use this module in scripts, pipelines and tools that manage products from Python. A plugin does not need it, because a plugin imports from `firecube.sdk`.
+
+Open a product with `open_product`, used as a context manager. It gives a `Product`. Pass the `Product` as the first argument of an operation.
+
+The module does not re-export exceptions. Most are in `firecube.core.errors`. Some are in the runtime module that raises them, for example `SlotWindowError` in `firecube.ingestor.runtime.preallocate`. `Product.session` and `Product.manager` are internal. Do not use them.
 
 ## Opening a Product
 
@@ -150,8 +165,8 @@ and `ATTR_COORD_MANAGED` on the observed-values coordinates it materializes.
 
 ## See Also
 
-- [SDK](sdk.md)
-- [Core Utilities](../core-utilities.md)
-- [CLI Reference](../cli.md)
-- [Exceptions](../exceptions.md)
-- [Storage Drivers](../storage-drivers.md)
+- [Plugin SDK](plugin-sdk.md)
+- [Core Utilities](core-utilities.md)
+- [CLI Reference](cli.md)
+- [Exceptions](exceptions.md)
+- [Storage Drivers](storage-drivers.md)

@@ -221,7 +221,8 @@ nav:
     - Firecube Contributors: contributing/firecube-contributors.md
   - Reference:
     - Overview: reference/index.md
-    - Plugin API:
+    - Plugin SDK:
+      - Overview: reference/plugin-sdk.md
       - Templates: reference/templates.md
       - Hooks & Lifecycle: reference/hooks.md
       - Context & Results: reference/context.md
@@ -229,9 +230,7 @@ nav:
       - Index Specification: reference/parallelism.md
       - Extensions: reference/extensions.md
       - Metadata Migration: reference/migration.md
-    - Python API:
-      - SDK: reference/python-api/sdk.md
-      - Operations: reference/python-api/operations.md
+    - Operations: reference/operations.md
     - Core Utilities: reference/core-utilities.md
     - CLI Reference: reference/cli.md
     - Configuration: reference/config.md

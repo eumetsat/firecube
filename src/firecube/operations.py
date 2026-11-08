@@ -16,7 +16,9 @@
 
 Open a product with `open_product`, then pass the `Product` handle to an operation.
 Each name keeps the name of its defining module, with no alias. The module exports the
-phase A operations and the request and result types their signatures use. It also exports
+archive, migrate, release, snapshot, index, preallocate, slot-plan, multires and
+time-coordinate consolidation operations, with the request and result types their
+signatures use. It also exports
 the two marker attribute names that `firecube zarr preallocate` stamps. It does not
 re-export errors. Most are in `firecube.core.errors`; a few live in the runtime module
 that raises them, such as `SlotWindowError` in `firecube.ingestor.runtime.preallocate`.

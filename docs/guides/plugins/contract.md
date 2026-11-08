@@ -63,7 +63,7 @@ The modules `firecube.ingestor.api` and `firecube.core.api` are deprecated. They
 
 2. Run the tests of the plugin.
 3. If an import fails, the name is not in `firecube.sdk`. For example, `StorageConfig` is not in it. Put that one import back on the old module. The name stays there until v0.2.0.
-4. Open an issue that asks for the name in `firecube.sdk`.
+4. [Open an issue](https://github.com/eumetsat/firecube/issues) that asks for the name in `firecube.sdk`. Give the name and say what your plugin needs it for.
 
 A use of a name that is not in `firecube.sdk` raises a `DeprecationWarning` that names it. Use that warning to find the imports that must stay.
 

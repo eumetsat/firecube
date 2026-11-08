@@ -1,18 +1,30 @@
 # API Reference
 
-Firecube has two public Python doors. A user-facing `import firecube` namespace is planned.
+Firecube has two public Python modules.
 
-- `firecube.sdk` — the door for plugin authors: templates, hooks, context and result types, and utilities
-- `firecube.operations` — the door for tooling: open a product, then archive, migrate, release and snapshot it
+- `firecube.sdk` is for plugin authors. Import from it to build a plugin. It provides templates, hooks, context and result types, array specs, errors, and storage and time helpers.
+- `firecube.operations` is for scripts and tools. It holds the Python functions that do what the `firecube` commands do on a finished product.
 
-Plugins can also import the optional `firecube.ingestor.extensions` module for regridding and DuckDB helpers.
+Plugins can also import the optional module `firecube.ingestor.extensions`. It holds regridding and DuckDB helpers.
 
-Import only from these modules. Deep imports into other Firecube modules are
-not part of the public contract and are rejected by the plugin contract test.
-The modules `firecube.ingestor.api` and `firecube.core.api` are deprecated
-until v0.2.0. Import from `firecube.sdk` instead.
+Import only from these modules. Other Firecube modules can change without notice.
+
+!!! warning "Deprecated modules"
+
+    The modules `firecube.ingestor.api` and `firecube.core.api` are deprecated. Import from `firecube.sdk` instead. Firecube will remove both modules in v0.2.0.
+
+The Plugin SDK pages document `firecube.sdk` and `firecube.ingestor.extensions`. The Operations page documents `firecube.operations`.
 
 <div class="grid cards" markdown>
+
+-   :material-package-variant-closed:{ .lg .middle } **Plugin SDK**
+
+    ---
+
+    The import rule for `firecube.sdk`, the deprecated `api` modules, and a
+    map of the Plugin SDK pages.
+
+    [:octicons-arrow-right-24: Plugin SDK](plugin-sdk.md)
 
 -   :material-puzzle:{ .lg .middle } **Templates**
 
@@ -75,16 +87,15 @@ until v0.2.0. Import from `firecube.sdk` instead.
 
     [:octicons-arrow-right-24: Metadata Migration](migration.md)
 
--   :material-language-python:{ .lg .middle } **Python API**
+-   :material-cog-play:{ .lg .middle } **Operations**
 
     ---
 
-    The `firecube.sdk` door for plugin authors, and the `firecube.operations`
-    facade: open a product, then archive, migrate, release, snapshot, and
-    maintain its Zarr arrays from Python.
+    The Python functions that do what the `firecube` commands do on a
+    finished product: archive, snapshot, migrate, release, and maintain
+    its Zarr arrays.
 
-    [:octicons-arrow-right-24: SDK](python-api/sdk.md)
-    [:octicons-arrow-right-24: Operations](python-api/operations.md)
+    [:octicons-arrow-right-24: Operations](operations.md)
 
 -   :material-tools:{ .lg .middle } **Core Utilities**
 

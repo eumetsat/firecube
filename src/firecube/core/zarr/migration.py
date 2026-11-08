@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""The Zarr metadata-migration contract between a step and the executor that runs it.
+"""The contract between a Zarr metadata migration step and the executor that runs it.
 
-The public door is `firecube.sdk`. A step reads a `StoreView` and returns a `MetadataPlan`. The executor owns every
+A step reads a `StoreView` and returns a `MetadataPlan`. The executor owns every
 read and write. A plan changes node attributes only, so a step never moves or
-rewrites a chunk.
+rewrites a chunk. Plugins import these names from `firecube.sdk`.
 """
 
 from __future__ import annotations

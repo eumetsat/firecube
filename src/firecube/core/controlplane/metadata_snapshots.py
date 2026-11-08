@@ -25,8 +25,8 @@ never a chunk. Layout below .firecube/metadata/:
 Blobs, manifests and records are created once and never rewritten. Records and
 refs name other files by id, never by an absolute path. Only the ChunkManager
 facade writes through the functions here; read-only previews also call
-`latest_snapshot_id` and `plan_snapshot`. `take_snapshot_for_product` is the
-one door for taking or previewing a snapshot of an open product.
+`latest_snapshot_id` and `plan_snapshot`. `take_snapshot_for_product` takes or
+previews a snapshot of an open product; callers use it rather than the pieces.
 """
 
 from __future__ import annotations
