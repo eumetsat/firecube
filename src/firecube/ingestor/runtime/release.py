@@ -19,7 +19,8 @@ snapshot, optionally retains the product's objects in a local zip archive or as 
 version ids, writes the release record and makes it current, under the product's
 exclusive maintenance claim.
 `release_in_run` does the same inside a migration's claim and run, without an archive.
-`verify_release_for_product` compares the live metadata with a release.
+`verify_release_for_product` compares the live metadata with a release, checks what the
+release retains and returns both with the joined verdict.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 
 from firecube.core.controlplane.types import (
     INVENTORY_KIND_S3_VERSIONS,
@@ -39,16 +40,20 @@ from firecube.core.controlplane.types import (
     RELEASE_ATTR,
     canonical_json_bytes,
 )
-from firecube.core.errors import FirecubeError, Message, Param
+from firecube.core.errors import ExclusiveMaintenanceRefusedError, FirecubeError, Message, Param
 from firecube.core.zarr.metadata_documents import ABSENT
-from firecube.ingestor.contracts.migration import AttributePatch, ReleaseRecord
+from firecube.core.zarr.migration import AttributePatch, ReleaseRecord
 
 if TYPE_CHECKING:
     from firecube.core.controlplane.manager import ChunkManager
     from firecube.core.controlplane.releases import ReleaseVerification, StoredRelease
+    from firecube.core.filesystem import StorageFilesystemFull
+    from firecube.core.product.open import Product
     from firecube.core.storage.session import StorageSession
     from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.metadata_documents import MetadataDocument
+    from firecube.ingestor.runtime.migrate import PlannedDocument
+    from firecube.ingestor.runtime.release_retention import RetentionVerification
 
 _RUN_PREFIX: Final = "release-"
 _SNAPSHOT_TRIGGER: Final = "release-create"
@@ -119,6 +124,29 @@ class ReleaseCreateResult:
 
 
 @dataclass(frozen=True)
+class ReleasePlan:
+    """What a release create would do, from live reads; the preview wrote nothing.
+
+    Attributes:
+        version: The release version.
+        outcome: `"create"` when it would write the record, `"resume"` when it would make
+            an existing record current, `"already-current"` when nothing is left to do.
+        previous: The version the record names as previous, or `None` for the first.
+        note: The note the record would keep.
+        documents: The root documents the stamp would write, in write order.
+        retention: The retention the record would carry, without the ids and digests
+            only the run can know, or `None` when it retains nothing.
+    """
+
+    version: str
+    outcome: Literal["create", "resume", "already-current"]
+    previous: str | None
+    note: str | None
+    documents: tuple[str, ...]
+    retention: Mapping[str, Any] | None
+
+
+@dataclass(frozen=True)
 class ReleaseListing:
     """The releases of a product.
 
@@ -129,6 +157,24 @@ class ReleaseListing:
 
     releases: tuple[ReleaseRecord, ...]
     current: str | None
+
+
+@dataclass(frozen=True)
+class ReleaseCheck:
+    """The result of `verify_release_for_product`.
+
+    Attributes:
+        verification: The comparison of the live metadata with the release snapshot.
+        retention: The check of what the release retains.
+    """
+
+    verification: ReleaseVerification
+    retention: RetentionVerification
+
+    @property
+    def holds(self) -> bool:
+        """Whether the metadata matches the snapshot and the retention holds."""
+        return self.verification.matches and self.retention.holds
 
 
 def _frozen(value: Any) -> Any:
@@ -300,12 +346,33 @@ def _stamp_release(
     Raises:
         ReleaseRefusedError: A migration that did not complete stamped `version`.
     """
-    from firecube.ingestor.runtime.migrate import (
-        apply_metadata_plan,
-        open_metadata_target,
-        plan_consolidated_image,
-        plan_documents,
+    from firecube.ingestor.runtime.migrate import apply_metadata_plan, open_metadata_target
+
+    planned = _planned_stamp(
+        manager=manager, product=product, version=version, run_id=run_id, report=report
     )
+    if not planned:
+        return ()
+    target = open_metadata_target(session=session, manager=manager)
+    written = apply_metadata_plan(target=target, owner_id=run_id, documents=planned)
+    report(f"wrote {', '.join(written) or 'no documents'}")
+    return written
+
+
+def _planned_stamp(
+    *,
+    manager: ChunkManager,
+    product: str,
+    version: str,
+    run_id: str,
+    report: Callable[[str], None],
+) -> tuple[PlannedDocument, ...]:
+    """Plan the root documents the release stamp writes, from live reads; write nothing.
+
+    Raises:
+        ReleaseRefusedError: A migration that did not complete stamped `version`.
+    """
+    from firecube.ingestor.runtime.migrate import plan_consolidated_image, plan_documents
 
     documents = manager.enumerate_metadata_documents(product)
     attrs = _root_attributes(documents)
@@ -339,12 +406,7 @@ def _stamp_release(
         }
         patch = AttributePatch("", set={RELEASE_ATTR: version, LAST_MODIFIER_ATTR: stamp})
         planned = plan_documents(documents, (patch,))
-    if not planned:
-        return ()
-    target = open_metadata_target(session=session, manager=manager)
-    written = apply_metadata_plan(target=target, owner_id=run_id, documents=planned)
-    report(f"wrote {', '.join(written) or 'no documents'}")
-    return written
+    return tuple(planned)
 
 
 def _close(manager: ChunkManager, warn: Callable[[str], None]) -> None:
@@ -438,9 +500,130 @@ def _require_recorded_versions(existing: StoredRelease) -> None:
     )
 
 
-def create_release_for_product(
+def _refuse_held_maintenance(manager: ChunkManager, product: str) -> None:
+    """Refuse, from reads only, what the exclusive maintenance claim of a run would refuse.
+
+    Raises:
+        ProductUnderMaintenanceError: Another owner holds the exclusive maintenance claim.
+        ExclusiveMaintenanceRefusedError: Other claims, or unfinished or unreadable runs, exist.
+    """
+    manager.check_exclusive_maintenance(product=product, owner_id=f"{_RUN_PREFIX}dry-run")
+    claims = manager.list_claims(product=product)
+    runs, unreadable = manager.scan_runs(product=product)
+    unfinished = [run for run in runs if not run.is_terminal]
+    if not (claims or unfinished or unreadable):
+        return
+    details: list[str] = []
+    if claims:
+        named = ", ".join(f"{claim.domain} (owner={claim.owner_id})" for claim in claims)
+        details.append(f"active write claim(s) exist: {named}")
+    if unfinished or unreadable:
+        named = ", ".join(
+            [f"{run.run_id} (status={run.status})" for run in unfinished]
+            + [f"{run_id} (unreadable: {error})" for run_id, error in unreadable]
+        )
+        details.append(f"non-terminal or unreadable run(s) exist: {named}")
+    raise ExclusiveMaintenanceRefusedError(
+        f"A release of product {product} would be refused its exclusive maintenance claim: "
+        + "; ".join(details),
+        product=product,
+        claims=[claim.domain for claim in claims],
+        runs=[run.run_id for run in unfinished] + [run_id for run_id, _error in unreadable],
+    )
+
+
+def _existing_plan(
+    existing: StoredRelease, outcome: Literal["resume", "already-current"]
+) -> ReleasePlan:
+    """Return the plan of a release whose record exists; only its ref can be left to write."""
+    return ReleasePlan(
+        version=existing.version,
+        outcome=outcome,
+        previous=existing.previous,
+        note=existing.note,
+        documents=(),
+        retention=existing.retention,
+    )
+
+
+def _new_plan(
     *,
-    session: StorageSession,
+    manager: ChunkManager,
+    product: str,
+    version: str,
+    note: str | None,
+    archive: StorageUri | None,
+    archive_full: bool,
+    retention: Mapping[str, Any] | None,
+    report: Callable[[str], None],
+) -> ReleasePlan:
+    """Plan a new release from live reads: the stamp, the retention and the previous release.
+
+    Raises:
+        ReleaseRefusedError: The stamp or the zip retention would refuse the run.
+    """
+    documents = _planned_stamp(
+        manager=manager,
+        product=product,
+        version=version,
+        run_id=f"{_RUN_PREFIX}dry-run",
+        report=report,
+    )
+    if archive is not None:
+        from firecube.ingestor.runtime.release_retention import plan_zip_retention
+
+        retention = plan_zip_retention(
+            manager=manager,
+            product=product,
+            version=version,
+            archive=archive,
+            archive_full=archive_full,
+        )
+    current = manager.current_release(product)
+    report(f"would record release {version!r} and make it current; nothing is written")
+    return ReleasePlan(
+        version=version,
+        outcome="create",
+        previous=None if current is None else current.version,
+        note=note,
+        documents=tuple(document.path for document in documents),
+        retention=retention,
+    )
+
+
+@overload
+def create_release_for_product(
+    product: Product,
+    *,
+    version: str,
+    note: str | None = ...,
+    report: Callable[[str], None] = ...,
+    warn: Callable[[str], None] = ...,
+    archive: StorageUri | None = ...,
+    archive_full: bool = ...,
+    retain_versions: bool = ...,
+    dry_run: Literal[False] = ...,
+) -> ReleaseCreateResult: ...
+
+
+@overload
+def create_release_for_product(
+    product: Product,
+    *,
+    version: str,
+    note: str | None = ...,
+    report: Callable[[str], None] = ...,
+    warn: Callable[[str], None] = ...,
+    archive: StorageUri | None = ...,
+    archive_full: bool = ...,
+    retain_versions: bool = ...,
+    dry_run: Literal[True],
+) -> ReleasePlan: ...
+
+
+def create_release_for_product(
+    product: Product,
+    *,
     version: str,
     note: str | None = None,
     report: Callable[[str], None] = _ignore_line,
@@ -448,8 +631,9 @@ def create_release_for_product(
     archive: StorageUri | None = None,
     archive_full: bool = False,
     retain_versions: bool = False,
-) -> ReleaseCreateResult:
-    """Create release `version` of the session's product as one recorded maintenance run.
+    dry_run: bool = False,
+) -> ReleaseCreateResult | ReleasePlan:
+    """Create release `version` of an open product as one recorded maintenance run.
 
     Under the exclusive maintenance claim, the run writes `firecube_release` and
     `firecube_last_modifier` on the root group, the root consolidated image last. It
@@ -466,7 +650,7 @@ def create_release_for_product(
     changed since that release, every metadata document, and the deleted keys in its marker.
 
     Args:
-        session: The storage session bound to the product.
+        product: The open product, from `open_product`.
         version: The release name, stored verbatim; only uniqueness is required.
         note: Free text kept in the record.
         report: Receives progress lines.
@@ -477,9 +661,12 @@ def create_release_for_product(
             must be on s3 with the fsspec driver and a bucket with versioning enabled,
             and every current object needs a version id. Exclusive with `archive`. The
             listing is coherent only while the operator keeps every other writer stopped.
+        dry_run: Make every refusal the run would make before its first write, from
+            reads only, and return the plan. The call writes no claim, run, stamp,
+            snapshot, inventory, archive or record. A zip plan hashes every object.
 
     Returns:
-        The outcome, the run and the release record.
+        The outcome, the run and the release record; with `dry_run`, the plan.
 
     Raises:
         TypeError: `version` or `note` is not a string.
@@ -496,6 +683,8 @@ def create_release_for_product(
         ReleaseConflictError: A record of `version` exists, and the live metadata differs
             from its snapshot.
         ClaimConflictError: Another owner holds the exclusive maintenance claim.
+        ProductUnderMaintenanceError: With `dry_run`, another owner holds the exclusive
+            maintenance claim.
         ExclusiveMaintenanceRefusedError: Other claims or unfinished runs exist.
         MetadataStateError: A document changed while the run wrote.
         ArchiveConversionError: The archive could not be written; the run is recorded failed.
@@ -503,18 +692,28 @@ def create_release_for_product(
     _check_version(version, note)
     _admit_retain_versions(version, archive, retain_versions)
     archive_path = _admit_archive(version, archive, archive_full)
+    # An operation-local manager, closed in `finally`: the handle's own manager lives on.
+    session = product.session
     manager = session.control_plane()
-    product = session.product.product_name
+    label = session.product.product_name
+    versions_plan: Mapping[str, Any] | None = None
     try:
         # Refuse an unstorable record name before a driver reads it or the root is stamped.
-        manager.check_release_version(product, version)
-        if not manager.has_control_plane(product):
+        manager.check_release_version(label, version)
+        if not manager.has_control_plane(label):
             raise ReleaseRefusedError(
-                f"the store of product {product} has no control plane; adopt it before "
+                f"the store of product {label} has no control plane; adopt it before "
                 "creating a release",
                 version=version,
             )
-        existing = manager.find_release(product, version)
+        existing = manager.find_release(label, version)
+        if existing is None:
+            from firecube.core.controlplane.metadata_snapshots import latest_snapshot_id
+
+            # The run's snapshot reads this ref after the stamp; refuse a bad one before it.
+            latest_snapshot_id(
+                cast("StorageFilesystemFull", session.fs()), session.product.product_uri
+            )
         if existing is None and archive_path is not None:
             from firecube.ingestor.runtime.release_retention import refuse_existing_archive
 
@@ -524,30 +723,47 @@ def create_release_for_product(
             from firecube.ingestor.runtime.release_versions import preflight_version_retention
 
             # Read-only refusals before any claim, run or write; the step lists again under the claim.
-            preflight_version_retention(session, version=version)
+            versions_plan = preflight_version_retention(session, version=version)
         if existing is not None:
             # Read-only refusal or no-op before any claim or run.
-            _require_match(manager, product, existing)
+            _require_match(manager, label, existing)
             if archive is not None:
                 _require_recorded_archive(existing, archive)
             if retain_versions:
                 _require_recorded_versions(existing)
-            current = manager.current_release(product)
+            current = manager.current_release(label)
             if current is not None and current.version == version:
                 report(f"release {version!r} is current already")
+                if dry_run:
+                    return _existing_plan(existing, "already-current")
                 return ReleaseCreateResult(
                     outcome=OUTCOME_ALREADY_CURRENT,
                     run_id=None,
                     release=to_release_record(existing),
                     documents=(),
                 )
+        if dry_run:
+            _refuse_held_maintenance(manager, label)
+            if existing is not None:
+                report(f"would make release {version!r} current; no other file is written")
+                return _existing_plan(existing, "resume")
+            return _new_plan(
+                manager=manager,
+                product=label,
+                version=version,
+                note=note,
+                archive=archive,
+                archive_full=archive_full,
+                retention=versions_plan,
+                report=report,
+            )
         run_id = f"{_RUN_PREFIX}{uuid.uuid4()}"
-        handle = manager.acquire_exclusive_maintenance(product=product, run_id=run_id)
+        handle = manager.acquire_exclusive_maintenance(product=label, run_id=run_id)
         try:
             return _run(
-                session=session,
+                opened=product,
                 manager=manager,
-                product=product,
+                product=label,
                 version=version,
                 note=note,
                 run_id=run_id,
@@ -574,7 +790,7 @@ def create_release_for_product(
 
 def _run(
     *,
-    session: StorageSession,
+    opened: Product,
     manager: ChunkManager,
     product: str,
     version: str,
@@ -587,6 +803,7 @@ def _run(
     retain_versions: bool = False,
 ) -> ReleaseCreateResult:
     """Record the run, finish the release from its checkpoints, and record the outcome."""
+    session = opened.session
     scope_meta: dict[str, Any] = {
         "run_kind": MAINTENANCE_OP_RELEASE_CREATE,
         "version": version,
@@ -598,7 +815,7 @@ def _run(
 
         scope_meta.update(archive=archive.to_str(), archive_full=archive_full)
         retain = zip_retention(
-            session=session,
+            opened=opened,
             manager=manager,
             product=product,
             version=version,
@@ -703,52 +920,70 @@ def _run(
 
 
 def verify_release_for_product(
-    *, session: StorageSession, version: str | None = None
-) -> ReleaseVerification:
-    """Compare the live metadata documents of the product with a release's snapshot.
+    product: Product, *, version: str | None = None, sample: int | None = None
+) -> ReleaseCheck:
+    """Compare a release with the live metadata and check what the release retains.
 
-    It detects metadata drift only: added, removed and changed documents. An edit of
+    The metadata comparison detects added, removed and changed documents only. An edit of
     chunk bytes is not detected. The call writes nothing and takes no claim.
 
     Args:
-        session: The storage session bound to the product.
-        version: The release to compare; `None` names the current release.
+        product: The open product, from `open_product`.
+        version: The release to check; `None` names the current release.
+        sample: Check this many randomly chosen object versions instead of all; applies
+            to a release made with `--retain-versions` only.
 
     Raises:
+        ValueError: `sample` is less than 1.
         ReleaseNotFoundError: No such release, or no current release.
+        ReleaseRefusedError: The release retains object versions and the driver lists none.
+        ControlPlaneCorruptionError: The release's retention object is malformed.
     """
+    from firecube.ingestor.runtime.release_retention import verify_retention
+
+    # An operation-local manager, closed before `verify_retention` builds its own.
+    session = product.session
     manager = session.control_plane()
     try:
-        return manager.verify_release(session.product.product_name, version)
+        verification = manager.verify_release(session.product.product_name, version)
     finally:
         manager.close()
+    retention = verify_retention(product, verification.version, sample=sample)
+    return ReleaseCheck(verification=verification, retention=retention)
 
 
-def list_releases_for_product(*, session: StorageSession) -> ReleaseListing:
+def list_releases_for_product(product: Product) -> ReleaseListing:
     """Return every release of the product, oldest first, and the current version.
 
     The call writes nothing and takes no claim.
+
+    Args:
+        product: The open product, from `open_product`.
     """
+    session = product.session
     manager = session.control_plane()
-    product = session.product.product_name
+    label = session.product.product_name
     try:
-        current = manager.current_release(product)
+        current = manager.current_release(label)
         return ReleaseListing(
-            releases=tuple(to_release_record(item) for item in manager.list_releases(product)),
+            releases=tuple(to_release_record(item) for item in manager.list_releases(label)),
             current=None if current is None else current.version,
         )
     finally:
         manager.close()
 
 
-def read_release_for_product(
-    *, session: StorageSession, version: str | None = None
-) -> ReleaseRecord:
+def read_release_for_product(product: Product, *, version: str | None = None) -> ReleaseRecord:
     """Return release `version` of the product; `None` names the current release.
+
+    Args:
+        product: The open product, from `open_product`.
+        version: The release to read; `None` names the current release.
 
     Raises:
         ReleaseNotFoundError: No such release, or no current release.
     """
+    session = product.session
     manager = session.control_plane()
     try:
         return to_release_record(manager.read_release(session.product.product_name, version))

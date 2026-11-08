@@ -14,16 +14,17 @@
 
 """Click rename-hint layer.
 
-Augments `click.NoSuchOption` errors with a navigation hint when the
-user types a flag that was renamed in the strict-URI refactor.
+Augments `click.NoSuchOption` errors with a hint when the user types a flag
+that was renamed or removed.
 
 This is NOT a deprecation alias - the old flag still errors out. It is a UX
-layer that helps migrating users find the new flag name.
+layer that helps migrating users find the new flag name, or learn that the
+flag has no replacement.
 
 Click's native similarity-based "Did you mean ..." suggestion only fires when
-the new flag is a close string match (e.g. ``--product`` -> ``--product-name``).
-For semantic renames where the new name is unrelated (``--source`` ->
-``--input-data``), Click stays silent. This module fills that gap.
+the new flag is a close string match. For semantic renames where the new name
+is unrelated (``--source`` -> ``--input-data``), Click stays silent. This
+module fills that gap.
 """
 
 from __future__ import annotations
@@ -32,10 +33,42 @@ from typing import Final
 
 import click
 
+_TARGET = "--target (-t)"
+_TARGET_REASON = "every command names its product URI with --target"
+_LABEL_REASON = "the store records the product label, and this command reads it"
+# The commands that may record the product label, and so keep long-only --product-name.
+_LABEL_WRITERS: Final[tuple[tuple[str, ...], ...]] = (
+    ("ingest",),
+    ("zarr", "preallocate"),
+    ("zarr", "slots"),
+    ("zarr", "index", "rebuild"),
+    ("migrate", "adopt"),
+    ("archive", "restore"),
+)
+# The commands that took the product URI as -p/--product.
+_PRODUCT_URI_READERS: Final[tuple[tuple[str, ...], ...]] = (
+    ("advise",),
+    ("catalog", "intake"),
+    ("parquet",),
+    ("zarr", "validate"),
+)
+# The commands that took the product label as --product-name and now read it from the store.
+_LABEL_READERS: Final[tuple[tuple[str, ...], ...]] = (
+    ("migrate", "run"),
+    ("migrate", "status"),
+    ("release",),
+    ("snapshot",),
+    ("zarr", "consolidate-time-coord"),
+    ("zarr", "index", "show"),
+    ("zarr", "index", "verify"),
+    ("zarr", "multires"),
+)
+
 # Renames Click's similarity matcher will NOT auto-suggest.
-# Layout: { old_flag: [ (command_path_prefix, new_flag_text, explanation), ... ] }
-# Most specific prefix wins.
-_RENAME_HINTS: Final[dict[str, list[tuple[tuple[str, ...], str, str]]]] = {
+# Layout: { old_flag: [ (command_path_prefix, new_flag_text or None, explanation), ... ] }
+# Most specific prefix wins. A `None` new flag means the flag was removed
+# without a replacement.
+_RENAME_HINTS: Final[dict[str, list[tuple[tuple[str, ...], str | None, str]]]] = {
     "--source": [
         (
             ("archive", "restore"),
@@ -43,18 +76,44 @@ _RENAME_HINTS: Final[dict[str, list[tuple[tuple[str, ...], str, str]]]] = {
             "the .tgm artifact path was renamed to --archive in the strict-URI refactor",
         ),
         (
+            ("archive", "create"),
+            _TARGET,
+            _TARGET_REASON,
+        ),
+        (
             ("ingest",),
             "--input-data (-i)",
-            "the plugin input flag was renamed in the strict-URI refactor; "
-            "--source is now reserved for product URIs (archive create only)",
+            "the plugin input flag was renamed in the strict-URI refactor",
         ),
     ],
-    "--target": [
+    "-s": [(("archive", "create"), _TARGET, _TARGET_REASON)],
+    "--product": [(path, _TARGET, _TARGET_REASON) for path in _PRODUCT_URI_READERS],
+    "-p": [(path, _TARGET, _TARGET_REASON) for path in _PRODUCT_URI_READERS],
+    "-n": [
+        (("chunks",), _TARGET, _TARGET_REASON),
+        *(
+            (path, "--product-name", "the product label option has no short form")
+            for path in _LABEL_WRITERS
+        ),
+    ],
+    "--product-name": [
+        # The chunks commands took the product URI as --product-name.
+        (("chunks",), _TARGET, _TARGET_REASON),
+        *((path, None, _LABEL_REASON) for path in _LABEL_READERS),
+    ],
+    "--output-format": [
         (
-            ("archive", "create"),
-            "--archive (-a)",
-            "the .tgm artifact output was renamed to --archive; "
-            "--target now exclusively refers to product target URIs",
+            ("ingest",),
+            None,
+            "the plugin declares its output format; firecube plugins describe shows the plugin",
+        ),
+    ],
+    "--quiet": [(("chunks",), None, "the chunks commands no longer take it")],
+    "--json": [
+        (
+            ("zarr", "index", "show"),
+            "-f json",
+            "-f/--format selects the output format on every command",
         ),
     ],
 }
@@ -79,7 +138,7 @@ def build_command_path(ctx: click.Context | None) -> tuple[str, ...]:
 
 
 def get_rename_hint(option_name: str, command_path: tuple[str, ...]) -> str | None:
-    """Return a hint string for a renamed flag on a specific command, or ``None``.
+    """Return a hint string for a renamed or removed flag on a specific command, or ``None``.
 
     Matches by longest command-path prefix - ``("archive", "restore")`` wins
     over ``("archive",)`` if both registered.
@@ -90,6 +149,8 @@ def get_rename_hint(option_name: str, command_path: tuple[str, ...]) -> str | No
     # Sort by descending path length so the most specific match wins first.
     for path_prefix, new_flag, explanation in sorted(candidates, key=lambda entry: -len(entry[0])):
         if command_path[: len(path_prefix)] == path_prefix:
+            if new_flag is None:
+                return f"Leave it out ({explanation})."
             return f"Use {new_flag} instead ({explanation})."
     return None
 

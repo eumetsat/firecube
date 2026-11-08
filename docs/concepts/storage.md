@@ -31,7 +31,6 @@ firecube ingest <plugin> \
   --product-name demo \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct
 ```
 
@@ -50,7 +49,6 @@ firecube ingest <plugin> \
   --product-name demo \
   --storage-type s3 \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged
 ```
 

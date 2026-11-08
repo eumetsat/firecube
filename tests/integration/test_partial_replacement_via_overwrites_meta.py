@@ -30,28 +30,11 @@ from firecube.ingestor.types.context import (
     IngestResult,
     OutputPaths,
     ResultMetrics,
-    RuntimeFlags,
-    RuntimeIdentity,
-    RuntimeIngestContext,
 )
 from firecube.ingestor.types.result_metrics import PipelineMetrics, StorageMetrics
 from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.integration
-
-
-def _make_runtime_ctx(
-    *, run_id: str, target: str, force_reingest: bool = True
-) -> RuntimeIngestContext:
-    return RuntimeIngestContext(
-        source="source",
-        target=target,
-        output_format="zarr",
-        options={"run_id": run_id},
-        run_id=run_id,
-        identity=RuntimeIdentity(run_id=run_id),
-        flags=RuntimeFlags(force_reingest=force_reingest),
-    )
 
 
 def _make_result(
@@ -180,7 +163,6 @@ def _register_force_reingest(
             },
         )
     SpanRecorder(manager).register_run(
-        ctx=_make_runtime_ctx(run_id=run_id, target=output_path),
         result=_make_result(
             output_path=output_path,
             ranges=ranges,
@@ -190,6 +172,7 @@ def _register_force_reingest(
         run_id=run_id,
         product=product,
         slice_meta={"plugin": "precip_daily", "group": "default"},
+        force_reingest=True,
         record_spans=not pre_record_spans,
     )
 

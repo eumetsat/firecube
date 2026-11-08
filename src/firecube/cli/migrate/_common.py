@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Options, session construction and step-option merging for ``firecube migrate``."""
+"""Options, product opening and step-option merging for ``firecube migrate``."""
 
 from __future__ import annotations
 
@@ -24,33 +24,19 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
-from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
+    format_option,
     product_name_option,
     storage_driver_option,
     storage_type_option,
     target_uri_option,
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
+from firecube.core.errors import Message, Param
+from firecube.operations import Product, StorageDriverConfig, open_product
 
 SET_ATTRS_ID = "firecube:set-attrs"
 """The built-in step that the ``--set``, ``--remove`` and ``--node`` flags belong to."""
-
-
-def format_option(func: Any) -> Any:
-    """Add the ``-f/--format`` option."""
-    return click.option(
-        "-f",
-        "--format",
-        "output_format",
-        type=click.Choice(["text", "json"], case_sensitive=False),
-        default="text",
-        show_default=True,
-        help="Output format; json prints sorted keys.",
-    )(func)
 
 
 def echo_json(payload: Any) -> None:
@@ -76,43 +62,49 @@ def echo_progress(line: str) -> None:
     click.echo(render(line), err=True)
 
 
-def migrate_options(tier: Literal["write", "inspect"]) -> Any:
+def migrate_options(tier: Literal["write", "inspect"], *, product_name: bool = False) -> Any:
     """Return the decorator that adds the options every product-bound migrate command takes.
 
-    The options are ``--target``, ``--product-name``, ``--storage-type``,
-    ``--storage-driver``, ``--storage-anonymous`` and ``--format``.
+    The options are ``--target``, ``--storage-type``, ``--storage-driver``,
+    ``--storage-anonymous`` and ``--format``. With ``product_name``, ``--product-name`` joins them.
     """
 
     def decorator(func: Any) -> Any:
-        func = format_option(func)
+        func = format_option(("table", "json"))(func)
         func = storage_driver_option(required=False)(func)
         func = storage_type_option(
             required=False,
             extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3).",
         )(func)
-        func = product_name_option(required=True)(func)
+        if product_name:
+            func = product_name_option(required=True)(func)
         return target_uri_option(tier)(func)
 
     return decorator
 
 
-def open_session(
+def open_target(
     ctx: click.Context,
     *,
     command: str,
     target: str,
-    product_name: str,
+    product_name: str | None = None,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
     writable: bool,
-) -> StorageSession:
-    """Admit ``--target`` and return the storage session bound to the product.
+) -> Product:
+    """Admit ``--target`` and open its product until the command's context closes.
+
+    Without ``product_name`` the store must record a label. With it, a store that records
+    none opens under ``product_name``.
 
     Raises:
         click.BadParameter: The target fails the URI rule.
-        click.UsageError: The storage type contradicts the scheme, the resolver refuses the
-            URI, or a writing command is given anonymous access.
+        click.UsageError: The storage type contradicts the scheme, ``product_name`` is
+            empty, or a writing command is given anonymous access.
+        ProductLabelMissingError: The store records no label and none is given.
+        ProductLabelMismatchError: The store records a label other than ``product_name``.
     """
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
@@ -130,15 +122,18 @@ def open_session(
             f"{command} writes under .firecube/ and needs write access; "
             "anonymous storage access is not supported."
         )
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=product_name,
-    )
-    return StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=StorageDriverConfig.from_storage_config(storage_config),
+    if product_name == "":
+        raise click.UsageError(
+            render(Message("{name} must not be empty.", name=Param("product_name")))
+        )
+    driver = StorageDriverConfig.from_storage_config(storage_config)
+    return ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=driver,
+            product_name=product_name,
+            require_label=product_name is None,
         )
     )
 

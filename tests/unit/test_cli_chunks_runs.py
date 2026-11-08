@@ -17,6 +17,7 @@ from __future__ import annotations
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from tests.helpers.chunks import bound
 
 
 class _FakeRunsManager:
@@ -43,7 +44,7 @@ def test_abandon_non_tty_without_yes_exits_nonzero():
             "chunks",
             "runs",
             "abandon",
-            "--product-name",
+            "--target",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
             "--run-id",
             "run-xyz",
@@ -59,8 +60,8 @@ def test_abandon_non_tty_without_yes_exits_nonzero():
 def test_abandon_dry_run_does_not_invoke_manager(monkeypatch):
     manager = _FakeRunsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._runs.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._runs.target_product",
+        lambda *args, **kwargs: bound(manager),
     )
 
     r = CliRunner().invoke(
@@ -69,7 +70,7 @@ def test_abandon_dry_run_does_not_invoke_manager(monkeypatch):
             "chunks",
             "runs",
             "abandon",
-            "--product-name",
+            "--target",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
             "--run-id",
             "run-xyz",
@@ -88,8 +89,8 @@ def test_abandon_dry_run_does_not_invoke_manager(monkeypatch):
 def test_abandon_with_yes_invokes_manager(monkeypatch):
     manager = _FakeRunsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._runs.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._runs.target_product",
+        lambda *args, **kwargs: bound(manager),
     )
 
     r = CliRunner().invoke(
@@ -98,7 +99,7 @@ def test_abandon_with_yes_invokes_manager(monkeypatch):
             "chunks",
             "runs",
             "abandon",
-            "--product-name",
+            "--target",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
             "--run-id",
             "run-xyz",

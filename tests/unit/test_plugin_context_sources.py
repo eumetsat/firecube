@@ -22,18 +22,22 @@ from typing import Any, ClassVar
 import numpy as np
 import pytest
 
-from firecube.core.api import AUTO, IndexSpec, IrregularTimeAxis, ItemInfo, SourceItem
-from firecube.ingestor.api import (
+from firecube.ingestor.runtime.configure import configure_ingestor
+from firecube.ingestor.types.context import StorageContext
+from firecube.sdk import (
+    AUTO,
     ConfigurationError,
     DirectZarrIngestor,
+    IndexSpec,
     IngestContext,
+    IrregularTimeAxis,
+    ItemInfo,
     PluginContext,
     RuntimeIngestContext,
+    SourceItem,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.runtime.configure import configure_ingestor
-from firecube.ingestor.types.context import StorageContext
 from tests.helpers.fake_stac import FakeStacApi, install_fake_stac, stac_item
 from tests.helpers.storage import make_test_session
 

@@ -45,10 +45,11 @@ from firecube.ingestor.config.engine import (
     config_keys,
     is_experimental_option_key,
 )
-from firecube.ingestor.errors import RemovedConfigKeyError
+from firecube.ingestor.errors import ConfigurationError, RemovedConfigKeyError
 from firecube.ingestor.templates.config import TemplateConfig
 from firecube.ingestor.types.config import PluginConfig
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     PluginContext,
     RuntimeIngestContext,
@@ -60,6 +61,26 @@ class ExecutionMode(Enum):
     PIPELINE = auto()
 
 
+def _refuse_execution_keys(options: Mapping[str, object], *, plugin_name: str) -> None:
+    """Refuse an option or plugin configuration key that names an `ExecutionParams` field.
+
+    Raises:
+        ConfigurationError: ``options`` holds a field of `ExecutionParams`, such as ``write_mode``.
+    """
+    refused = sorted(config_keys(ExecutionParams) & set(options))
+    if not refused:
+        return
+    raise ConfigurationError(
+        Message(
+            "{key!r} is an execution parameter, not an option or a plugin configuration "
+            "key. Pass {param} instead; an SDK caller sets IngestContext.execution.",
+            key=refused[0],
+            param=Param(refused[0]),
+            plugin=plugin_name,
+        )
+    )
+
+
 class TierConfigurator:
     """Splits a flat ``ctx.options`` dict into four strict options tiers.
 
@@ -69,7 +90,7 @@ class TierConfigurator:
 
     Options tiers (in precedence order for key ownership):
         EngineConfig   — pipeline execution settings (workers, batch size,
-                         write mode, workspace cleanup, …).  Always present.
+                         workspace cleanup, …).  Always present.
         TemplateConfig — output-format settings (Zarr chunk shape, Parquet
                          partition config, …).  Present only if the ingestor
                          declares ``template_config_class``.
@@ -80,9 +101,11 @@ class TierConfigurator:
                          declares ``plugin_config_class``.
 
     Unknown keys (not owned by any tier) raise ``ValueError`` at configure
-    time, enforcing the strict schema contract.
+    time, enforcing the strict schema contract. A field of `ExecutionParams`
+    raises ``ConfigurationError``: the context carries those. The returned `EngineConfig` holds
+    ``ctx.execution`` itself, so a deprecated read of a moved field forwards to it.
 
-    ``configure()`` is pure: it does not mutate ``ctx``.
+    ``configure()`` does not mutate ``ctx``.
     """
 
     def __init__(
@@ -104,6 +127,7 @@ class TierConfigurator:
 
         if "output_name" in options:
             raise RemovedConfigKeyError("output_name")
+        _refuse_execution_keys(options, plugin_name=self._plugin_name)
 
         engine_keys = config_keys(EngineConfig)
         template_keys = (
@@ -133,6 +157,7 @@ class TierConfigurator:
         plugin_opts = {k: options[k] for k in plugin_keys if k in options}
 
         engine_config = EngineConfig.from_options(engine_opts)
+        engine_config._execution = ctx.execution
         template_config = (
             self._template_config_class.from_options(template_opts)
             if self._template_config_class
@@ -158,6 +183,7 @@ def configure_ingestor(
     storage: Any = None,
     input_filters: list[str] | None = None,
     stac_search: dict[str, Any] | None = None,
+    execution: ExecutionParams | None = None,
 ) -> PluginContext:
     """Configure an ingestor without the CLI and return its plugin context.
 
@@ -177,6 +203,7 @@ def configure_ingestor(
         storage: Storage context passed through unchanged; ``None`` leaves storage unbound.
         input_filters: Input filter patterns added to ``options`` when given.
         stac_search: STAC item search filter added to ``options`` when given.
+        execution: The context's `ExecutionParams`; ``None`` gives the defaults.
 
     Returns:
         The plugin context built for the configured ingestor.
@@ -184,6 +211,7 @@ def configure_ingestor(
     Raises:
         ValueError: If ``options`` holds a key no tier owns.
         RemovedConfigKeyError: If ``options`` holds the removed ``output_name`` key.
+        ConfigurationError: If ``options`` holds a field of `ExecutionParams`.
     """
     resolved_options = dict(options)
     if input_filters is not None:
@@ -195,10 +223,11 @@ def configure_ingestor(
         sources=tuple(sources),
         target=target,
         in_memory=True,
-        output_format="zarr",
+        output_format=getattr(ingestor, "output_format", "zarr"),
         options=resolved_options,
         storage=storage,
         run_id=run_id,
+        execution=execution if execution is not None else ExecutionParams(),
     )
     runtime_ctx = RuntimeIngestContext.from_ingest_context(
         ingest_ctx,

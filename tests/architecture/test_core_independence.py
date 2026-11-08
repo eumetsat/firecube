@@ -66,7 +66,7 @@ def test_core_independence():
                 pytest.fail(f"Click violation in {path.relative_to(PROJECT_ROOT)}: imports {imp}")
 
             # Strict API usage check
-            if "register_ingestor" in imp and "firecube.ingestor.api" not in imp:
+            if "register_ingestor" in imp and "firecube.sdk" not in imp:
                 pytest.fail(
-                    f"API violation in {path.relative_to(PROJECT_ROOT)}: imports register_ingestor from {imp}. Must use firecube.ingestor.api."
+                    f"API violation in {path.relative_to(PROJECT_ROOT)}: imports register_ingestor from {imp}. Must use firecube.sdk."
                 )

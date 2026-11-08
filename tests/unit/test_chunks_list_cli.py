@@ -24,6 +24,7 @@ from firecube.cli.chunks._common import parse_time_range
 from firecube.cli.chunks._list import list_cmd
 from firecube.cli.main import cli
 from firecube.core.controlplane.types import ChunkInfo
+from tests.helpers.chunks import bound
 from tests.unit.test_chunk_manager_queries import feb_30_cli_args
 
 
@@ -62,8 +63,8 @@ def _span_chunk() -> ChunkInfo:
 def test_chunks_list_json_omits_span_by_default(monkeypatch):
     runner = CliRunner()
     monkeypatch.setattr(
-        "firecube.cli.chunks._list.resolve_manager",
-        lambda *args, **kwargs: _FakeManager([_span_chunk()]),
+        "firecube.cli.chunks._list.scoped_products",
+        lambda *args, **kwargs: [bound(_FakeManager([_span_chunk()]))],
     )
 
     result = runner.invoke(list_cmd, ["--format", "json"], obj={})
@@ -77,8 +78,8 @@ def test_chunks_list_json_omits_span_by_default(monkeypatch):
 def test_chunks_list_json_includes_span_with_flag(monkeypatch):
     runner = CliRunner()
     monkeypatch.setattr(
-        "firecube.cli.chunks._list.resolve_manager",
-        lambda *args, **kwargs: _FakeManager([_span_chunk()]),
+        "firecube.cli.chunks._list.scoped_products",
+        lambda *args, **kwargs: [bound(_FakeManager([_span_chunk()]))],
     )
 
     result = runner.invoke(list_cmd, ["--format", "json", "--include-span"], obj={})
@@ -92,8 +93,8 @@ def test_chunks_list_json_includes_span_with_flag(monkeypatch):
 def test_chunks_list_table_includes_span_column_with_flag(monkeypatch):
     runner = CliRunner()
     monkeypatch.setattr(
-        "firecube.cli.chunks._list.resolve_manager",
-        lambda *args, **kwargs: _FakeManager([_span_chunk()]),
+        "firecube.cli.chunks._list.scoped_products",
+        lambda *args, **kwargs: [bound(_FakeManager([_span_chunk()]))],
     )
 
     result = runner.invoke(list_cmd, ["--include-span"], obj={})
@@ -116,7 +117,7 @@ def test_chunks_list_passes_time_range_to_manager(monkeypatch):
     runner = CliRunner()
     manager = _FakeManager([_span_chunk()])
     monkeypatch.setattr(
-        "firecube.cli.chunks._list.resolve_manager", lambda *args, **kwargs: manager
+        "firecube.cli.chunks._list.scoped_products", lambda *args, **kwargs: [bound(manager)]
     )
 
     result = runner.invoke(list_cmd, ["--time-range", "2024-01-01:2024-01-31"], obj={})
@@ -148,8 +149,8 @@ def test_chunks_list_json_calls_span_payload_once_per_row(monkeypatch):
 
     counting = _CountingChunk(_span_chunk())
     monkeypatch.setattr(
-        "firecube.cli.chunks._list.resolve_manager",
-        lambda *args, **kwargs: _FakeManager([counting]),  # type: ignore[list-item]
+        "firecube.cli.chunks._list.scoped_products",
+        lambda *args, **kwargs: [bound(_FakeManager([counting]))],  # type: ignore[list-item]
     )
 
     result = CliRunner().invoke(list_cmd, ["--format", "json", "--include-span"], obj={})
@@ -171,8 +172,8 @@ def test_chunks_list_include_replaced_requests_history_from_manager(monkeypatch)
 
     runner = CliRunner()
     monkeypatch.setattr(
-        "firecube.cli.chunks._list.resolve_manager",
-        lambda *args, **kwargs: _RecordingManager([_span_chunk()]),
+        "firecube.cli.chunks._list.scoped_products",
+        lambda *args, **kwargs: [bound(_RecordingManager([_span_chunk()]))],
     )
 
     result = runner.invoke(list_cmd, ["--format", "json", "--include-replaced"], obj={})

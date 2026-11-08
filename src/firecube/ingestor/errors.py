@@ -194,7 +194,7 @@ class AppendOverwriteRefused(ResumeConflictError):
                 "to diagnose the coordinate order before retrying.",
                 validate=Operation(
                     "validate",
-                    product=Placeholder("<uri>"),
+                    target=Placeholder("<uri>"),
                     group_path=Placeholder("<group>"),
                 ),
             )

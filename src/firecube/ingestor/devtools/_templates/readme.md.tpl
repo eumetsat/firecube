@@ -35,7 +35,9 @@ uv sync
 ```
 
 Implement `{hook_summary}` in the generated ingestor, then add behavior-based
-tests for the source data and output contract.
+tests for the source data and output contract. Import every Firecube name from
+`firecube.sdk`. The test `tests/test_import_boundary.py` fails on any other
+Firecube import.
 
 ```bash
 uv run pytest
@@ -63,7 +65,6 @@ uv run firecube ingest {plugin_name} \
   --input-data file:///path/to/your/input \
   --target file:///tmp/{plugin_name}_out{output_suffix} \
   --product-name {plugin_name} \
-  --output-format {output_format} \
   --write-mode {write_mode_default}
 ```
 

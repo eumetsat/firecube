@@ -23,12 +23,12 @@ from unittest.mock import MagicMock
 import pytest
 import xarray as xr
 
-from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.contracts.interfaces import PipelineHost
 from firecube.ingestor.runtime.engine import PipelineExecutor, _process_batch_timed
 from firecube.ingestor.templates import generic as generic_module
 from firecube.ingestor.templates.generic import GenericZarrIngestor
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     OutputPaths,
     PipelineBatch,
@@ -95,6 +95,7 @@ def _runtime_ctx(tmp_path: Path, telemetry: MockTelemetry | None) -> RuntimeInge
             target=str(tmp_path / "output.zarr"),
             output_format="zarr",
             telemetry=cast(Any, telemetry),
+            execution=ExecutionParams(write_mode="staged"),
         ),
         run_id="run-1",
         temp_root=tmp_path,
@@ -144,7 +145,6 @@ def test_phase_spans_emitted(tmp_path, monkeypatch):
         acquire_claim=lambda **kwargs: nullcontext(),
     )
     ingestor = _DummyZarrIngestor(name="dummy_zarr", chunk_manager=chunk_manager)
-    ingestor.engine_config = EngineConfig(write_mode="staged")
     ingestor.template_config = None
 
     monkeypatch.setattr(generic_module, "fs_kwargs_for_uri", lambda *args, **kwargs: {})
@@ -182,7 +182,6 @@ def test_spans_safe_with_none_telemetry(tmp_path, monkeypatch):
         acquire_claim=lambda **kwargs: nullcontext(),
     )
     ingestor = _DummyZarrIngestor(name="dummy_zarr", chunk_manager=chunk_manager)
-    ingestor.engine_config = EngineConfig(write_mode="staged")
     ingestor.template_config = None
     monkeypatch.setattr(generic_module, "fs_kwargs_for_uri", lambda *args, **kwargs: {})
     monkeypatch.setattr(

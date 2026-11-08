@@ -19,11 +19,18 @@ from __future__ import annotations
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import echo_rendered, render, wrap_user_facing_errors
+from firecube.cli._errors import echo_rendered, exit_with_error
+from firecube.cli._exit_codes import ExitCode
+from firecube.cli._shared_options import (
+    storage_driver_option,
+    storage_type_option,
+    target_uri_option,
+)
 from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
+from firecube.operations import StorageDriverConfig, open_product
 
 
 @click.command(
@@ -31,42 +38,16 @@ from firecube.cli._uri_policy import (
     epilog="""\b
 Examples:
   # Preview consolidation on an existing cube with chunked time coordinates
-  firecube zarr consolidate-time-coord --target file:///tmp/x.zarr \
-      --product-name x.zarr --storage-type local --storage-driver fsspec --dry-run
+  firecube zarr consolidate-time-coord --target file:///data/x.zarr --dry-run
 
 See also: firecube zarr preallocate, firecube zarr validate
 """,
 )
-@click.option(
-    "--target",
-    required=True,
-    help="URI of the Zarr cube to consolidate.",
+@target_uri_option(tier="write")
+@storage_type_option(
+    required=False, extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3)."
 )
-@click.option("--product-name", "product_name", required=True, help="Logical product name.")
-@click.option(
-    "--storage-type",
-    "storage_type",
-    required=True,
-    type=click.Choice(["local", "s3"], case_sensitive=False),
-    help="Storage backend type.",
-)
-@click.option(
-    "--storage-driver",
-    "storage_driver",
-    required=True,
-    type=click.Choice(["fsspec", "obstore"], case_sensitive=False),
-    help="Storage driver.",
-)
-@click.option(
-    "--storage-anonymous",
-    "storage_anonymous",
-    is_flag=True,
-    default=None,
-    help=(
-        "Use anonymous access for public S3 buckets. Overrides any credentials "
-        "in the environment or config file."
-    ),
-)
+@storage_driver_option(required=False)
 @click.option(
     "--dry-run",
     "dry_run",
@@ -95,13 +76,11 @@ See also: firecube zarr preallocate, firecube zarr validate
     ),
 )
 @click.pass_context
-@wrap_user_facing_errors
 def consolidate_time_coord(
     ctx: click.Context,
     target: str,
-    product_name: str,
-    storage_type: str,
-    storage_driver: str,
+    storage_type: str | None,
+    storage_driver: str | None,
     storage_anonymous: bool | None,
     dry_run: bool,
     chunk_size: int | None,
@@ -123,13 +102,9 @@ def consolidate_time_coord(
     it, and preserves the coordinate values.
 
     Use it for existing cubes with chunks=(1,) on the time coordinate.
-    Always run with --dry-run first.
+    Always run with --dry-run first. Exits 1 when no group has a time coordinate.
     """
-    from firecube.core.errors import ProductUnderMaintenanceError
-    from firecube.core.zarr.coord_consolidation import (
-        ProductIdentityError,
-        consolidate_time_coords,
-    )
+    from firecube.operations import consolidate_time_coords
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
@@ -150,20 +125,17 @@ def consolidate_time_coord(
         },
         cache=False,
     )
-    try:
+    with open_product(
+        target_uri, format="zarr", driver=StorageDriverConfig.from_storage_config(storage_config)
+    ) as product:
         summary = consolidate_time_coords(
-            target=target,
-            product_name=product_name,
+            product,
             storage_config=storage_config,
             chunk_size=chunk_size,
             time_dim=time_dim,
             dry_run=dry_run,
             report=echo_rendered,
         )
-    except ProductIdentityError as exc:
-        raise click.UsageError(render(exc)) from exc
-    except ProductUnderMaintenanceError as exc:
-        raise click.ClickException(render(exc)) from exc
 
     if dry_run:
         click.echo("Summary:")
@@ -172,4 +144,9 @@ def consolidate_time_coord(
         click.echo(f"  Groups already sealed: {summary.already_sealed}")
         click.echo(f"  Groups blocked by drift: {summary.blocked_by_drift}")
         if summary.blocked_by_drift > 0:
-            raise click.exceptions.Exit(1)
+            raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
+    if summary.eligible == 0 and summary.already_sealed == 0 and summary.blocked_by_drift == 0:
+        exit_with_error(
+            "no group has a time coordinate; pass --time-dim to name the time dimension.",
+            ExitCode.CHECK_FAILED,
+        )

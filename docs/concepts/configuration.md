@@ -28,35 +28,28 @@ Storage settings loaded through the storage configuration use this precedence:
 3. `config.toml`
 4. Built-in defaults
 
-Product name is resolved in this order:
+A store records its product label once, in `.firecube/product.json`. The first write command that creates the store resolves the label in this order:
 
 1. `--product-name`
 2. `default_product_name` in the plugin configuration
 3. the plugin's `PRODUCT_NAME`
 4. fail if no product name is available
 
-!!! warning "Current limitation"
-    `default_product_name` is currently rejected when plugin options are
-    validated. Until that is corrected, pass `--product-name` or declare
-    `PRODUCT_NAME` on the plugin class.
+Every later command that needs the label reads it back from `product.json`. Firecube never infers the label from the URI path. If the resolved name differs from the recorded label, the command refuses it. In that case, pass `--product-name` with the recorded label. If the store has no label, a command that needs the label exits with code 2 and names `firecube migrate adopt`. Pure storage readers, such as `zarr validate`, `parquet validate`, `catalog intake`, `advise` and `archive create`, do not need the label. A first write records it.
+
+`firecube migrate adopt` and `firecube zarr index rebuild` require `--product-name`. `firecube archive restore` needs it only when the archive records no label.
 
 ## Runtime Flags Stay Explicit
 
 The documentation examples keep each ingest decision visible by passing:
 
-- `--product-name`
 - `--target`
 - `--storage-type`
 - `--storage-driver`
-- `--output-format`
 - `--write-mode`
 
-Use `--target` for the output product location. Use `--product-name` for the
-logical product identity when the plugin does not declare `PRODUCT_NAME` or the
-run needs an override. Passing the storage type and driver explicitly keeps the
-selected backend unambiguous. For `firecube chunks ...`, pass the product URI
-through `--product-name` when the command needs to locate the control-plane
-records.
+Use `--target` for the product location. Every command that takes one product URI uses `--target` or `-t`. `firecube zarr compare` takes two stores as positional arguments. Use `--product-name` only to record the label of a new store. Passing the storage type and driver explicitly keeps the
+selected backend unambiguous. The plugin class owns the output format, so no flag selects it.
 
 For runnable examples, see [Run Ingestion](../quickstart/ingestion.md). For the
 complete command surface, see the [CLI Reference](../reference/cli.md).
@@ -151,7 +144,7 @@ firecube plugins explain <plugin_name>.engine.pipeline_workers
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `Unknown option` | The key is not accepted by any active option tier. | Run `firecube ingest <plugin_name> --show-options` and use one of the listed keys. |
-| Missing required flag | The target or write mode was omitted, or no product name fallback exists. | Add `--target` and `--write-mode`; add `--product-name` when the plugin has no `PRODUCT_NAME`. |
+| Missing required flag | The target or write mode was omitted, or no product name fallback exists. | Add `--target` and `--write-mode`. Add `--product-name` when the plugin has no `PRODUCT_NAME` and the store has no label yet. |
 | Storage mismatch error | The target URI and `--storage-type` do not agree. | Use `file://` with `--storage-type local` or `s3://` with `--storage-type s3`. |
 | Plugin defaults do not apply | The `[plugins.<name>]` section name does not match the installed plugin. | Run `firecube plugins describe <plugin_name>` and use that plugin name in `config.toml`. |
 | S3 credentials are ignored | The variables or config keys are not visible to the process running Firecube, or a CLI override is winning. | Print the environment in the same shell before running Firecube and check for explicit CLI overrides. |

@@ -21,23 +21,21 @@ import json
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import render, wrap_user_facing_errors
-from firecube.cli._product import resolve_product_identity
+from firecube.cli._errors import render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._shared_options import (
-    product_uri_option,
     storage_driver_option,
     storage_type_option,
+    target_uri_option,
 )
 from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
     validate_uri_storage_coherence,
 )
-from firecube.core.api import compare_zarr_stores
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.core.zarr.validation import validate_group_with_fs
+from firecube.operations import StorageDriverConfig, open_product
+from firecube.sdk import compare_zarr_stores
 
 
 @click.command(
@@ -45,13 +43,14 @@ from firecube.core.zarr.validation import validate_group_with_fs
     epilog="""\b
 Examples:
   # validate a product group
-  firecube zarr validate -p <product> -g <group>
+  firecube zarr validate --target file:///data/products/MY_PRODUCT.zarr --group <group>
   # validate with a custom config file (config-file precedes subcommand)
-  firecube --config-file /path/config.toml zarr validate -p <product> -g <group>
+  firecube --config-file /data/config/firecube.toml zarr validate \\
+      --target file:///data/products/MY_PRODUCT.zarr --group <group>
 See also: firecube chunks list, firecube parquet validate
 """,
 )
-@product_uri_option(tier="inspect")
+@target_uri_option(tier="inspect")
 @click.option(
     "-g",
     "--group",
@@ -98,10 +97,9 @@ See also: firecube chunks list, firecube parquet validate
 @storage_driver_option(required=False)
 @storage_type_option(required=False)
 @click.pass_context
-@wrap_user_facing_errors
 def validate(
     ctx: click.Context,
-    product: str,
+    target: str,
     group_path: str,
     timeout_s: float | None,
     max_chunks: int | None,
@@ -114,11 +112,11 @@ def validate(
     """validate a Zarr array group
 
     Checks dimension shapes, dtypes, chunk boundaries, and required metadata
-    without modifying any data. Requires --product and --group; exits with a
+    without modifying any data. Requires --target and --group; exits with a
     structured JSON summary.
     """
-    product_uri = parse_and_validate_uri(product, param_hint="--product")
-    storage_type = apply_smart_default(product_uri, storage_type)
+    target_uri = parse_and_validate_uri(target, param_hint="--target")
+    storage_type = apply_smart_default(target_uri, storage_type)
     storage_config = get_storage_config(
         ctx,
         overrides={
@@ -129,17 +127,12 @@ def validate(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    identity = resolve_product_identity(
-        product_uri, format="zarr", product_name=product_uri.to_str()
+    product = ctx.with_resource(
+        open_product(target_uri, format="zarr", driver=driver_config, require_label=False)
     )
-    session = StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=driver_config,
-        )
-    )
+    identity = product.identity
 
-    fs = session.fs()
+    fs = product.session.fs()
     try:
         report = validate_group_with_fs(
             fs,
@@ -158,7 +151,7 @@ def validate(
     report_dict["info_notes"] = [render(note) for note in report_dict["info_notes"]]
     click.echo(json.dumps(report_dict, indent=2))
     if not report.is_valid:
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
 
 @click.command(
@@ -166,9 +159,8 @@ def validate(
     context_settings={"help_option_names": ["-h", "--help"]},
     epilog="""\b
 Examples:
+  # compare two stores
   firecube zarr compare file:///data/a.zarr file:///data/b.zarr
-  firecube zarr compare file:///data/a.zarr file:///data/b.zarr \\
-      --storage-type local --storage-driver fsspec
 """,
 )
 @click.argument("a_uri")
@@ -199,7 +191,6 @@ Examples:
         "in the environment or config file."
     ),
 )
-@wrap_user_facing_errors
 def compare(
     a_uri: str,
     b_uri: str,
@@ -238,7 +229,7 @@ def compare(
     if report.content_mismatches:
         for mismatch in report.content_mismatches:
             click.echo(mismatch, err=True)
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     # Layout-only differences: values are equivalent, warn and exit 0.
     layout_detail = "\n".join(report.layout_mismatches)
     click.echo(

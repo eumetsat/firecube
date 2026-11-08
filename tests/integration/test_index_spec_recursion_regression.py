@@ -33,7 +33,7 @@ from typing import Any, ClassVar, cast
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
     PipelineBatch,
     PluginContext,

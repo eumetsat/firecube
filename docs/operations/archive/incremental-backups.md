@@ -21,9 +21,12 @@ Create a release with `--archive`. A product with no earlier archive gets a full
 ```bash
 firecube release create 1.0.0 \
   --target "$TARGET" \
-  --product-name MY_PRODUCT \
-  --archive "file:///data/archives/MY_PRODUCT-1.0.0.zip"
+  --archive "file:///data/archives/MY_PRODUCT-1.0.0.zip" \
+  --yes-i-really-mean-it
 ```
+
+Omit `--yes-i-really-mean-it` when you run on a terminal. The command then asks
+for confirmation. Add `--dry-run` to preview the backup without a write.
 
 Expected output, shortened:
 
@@ -54,8 +57,8 @@ Ingest more data. Then create the next release with a new version and a new arch
 ```bash
 firecube release create 1.1.0 \
   --target "$TARGET" \
-  --product-name MY_PRODUCT \
-  --archive "file:///data/archives/MY_PRODUCT-1.1.0.zip"
+  --archive "file:///data/archives/MY_PRODUCT-1.1.0.zip" \
+  --yes-i-really-mean-it
 ```
 
 The release retains a ZIP archive already, so Firecube writes an incremental backup:
@@ -136,7 +139,7 @@ VALID: /data/archives/MY_PRODUCT-1.2.0.zip (no issues)
 `archive validate` tests one file. To test the whole chain, run `release verify`:
 
 ```bash
-firecube release verify 1.2.0 --target "$TARGET" --product-name MY_PRODUCT
+firecube release verify 1.2.0 --target "$TARGET"
 ```
 
 Expected output:
@@ -180,9 +183,9 @@ A long chain needs many files and a long restore. To start a new chain, add `--a
 ```bash
 firecube release create 2.0.0 \
   --target "$TARGET" \
-  --product-name MY_PRODUCT \
   --archive "file:///data/archives/MY_PRODUCT-2.0.0.zip" \
-  --archive-full
+  --archive-full \
+  --yes-i-really-mean-it
 ```
 
 The `Retention:` block shows `Mode: full` and `Chain length: 1`. A restore of release `2.0.0` needs this file only.

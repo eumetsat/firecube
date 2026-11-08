@@ -44,6 +44,7 @@ import xarray as xr
 
 from firecube.core.controlplane import SpanCoverage
 from firecube.ingestor.runtime.zarr.append_services import AppendCoverageBuilder
+from firecube.sdk import ExecutionParams
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration
@@ -130,12 +131,12 @@ def test_cf_time_dim_plugin_run_summary_reports_year_2000(tmp_path: Path) -> Non
         source=str(source_dir),
         product="cf_time_dim_telemetry.zarr",
         options={
-            "write_mode": "direct",
             "pipeline_batch_size": 1,
             "pipeline_workers": 1,
             "no_progress": True,
             "cleanup_workspace": True,
         },
+        execution=ExecutionParams(write_mode="direct"),
     )
     ingestor = CFTimeDimIngestor()
     result = ingestor.run(ctx)

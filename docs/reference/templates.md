@@ -2,12 +2,12 @@
 
 This reference covers the template classes plugin authors subclass and the
 members each template expects. Import all symbols from
-`firecube.ingestor.api`.
+`firecube.sdk`.
 
-Plugins that own the complete batch pipeline subclass `BaseIngestor` directly;
-see [Hooks & Lifecycle](hooks.md) for that surface.
+Plugins that own the complete batch pipeline subclass `BaseIngestor` directly.
+See [Hooks & Lifecycle](hooks.md) for that surface.
 
-{{ render_api_summary("firecube.ingestor.api", [
+{{ render_api_summary("firecube.sdk", [
     "register_ingestor",
     "GenericZarrIngestor",
     "GenericParquetIngestor",
@@ -17,7 +17,7 @@ see [Hooks & Lifecycle](hooks.md) for that surface.
 
 ## Registration
 
-::: firecube.ingestor.api.register_ingestor
+::: firecube.sdk.register_ingestor
 
 Every concrete plugin class must also declare a non-empty
 `PRODUCT_NAME: ClassVar[str]`. Firecube checks this when the class is defined.
@@ -31,7 +31,7 @@ Subclass `GenericZarrIngestor` and implement `build_dataset`. The template
 appends the returned dataset to the target Zarr store along the time
 dimension, once per write group per batch.
 
-::: firecube.ingestor.api.GenericZarrIngestor
+::: firecube.sdk.GenericZarrIngestor
     options:
         show_bases: false
         inherited_members: true
@@ -64,14 +64,14 @@ defaults to `"timestamp"`. It is a class declaration, not a `--option` field.
 When the target store already exists, Firecube verifies the declared dimension
 against the store before writing:
 
-::: firecube.ingestor.api.verify_dim_compatibility
+::: firecube.sdk.verify_dim_compatibility
 
 ## GenericParquetIngestor
 
 Subclass `GenericParquetIngestor` and implement `build_dataset`. The remaining
 methods are optional customizations.
 
-::: firecube.ingestor.api.GenericParquetIngestor
+::: firecube.sdk.GenericParquetIngestor
     options:
         show_bases: false
         inherited_members: true
@@ -90,7 +90,7 @@ see the [Configuration Reference](config.md#parquettemplateconfig).
 Subclass `GenericTensogramIngestor` and implement `build_dataset`. The
 template writes each batch through the Tensogram strategy.
 
-::: firecube.ingestor.api.GenericTensogramIngestor
+::: firecube.sdk.GenericTensogramIngestor
     options:
         show_bases: false
         inherited_members: true
@@ -106,7 +106,7 @@ Options are declared through
 Subclass `DirectZarrIngestor` and implement `index_spec`, `inspect_item`,
 `zarr_schema`, and `build_write_intents`.
 
-::: firecube.ingestor.api.DirectZarrIngestor
+::: firecube.sdk.DirectZarrIngestor
     options:
         show_bases: false
         inherited_members: true
@@ -131,13 +131,13 @@ For parallel writes across disjoint slot ranges, see
 
 ### Schema And Write Types
 
-::: firecube.ingestor.api.ZarrGroupSpec
+::: firecube.sdk.ZarrGroupSpec
 
-::: firecube.ingestor.api.ZarrArraySpec
+::: firecube.sdk.ZarrArraySpec
 
-::: firecube.ingestor.api.WriteIntent
+::: firecube.sdk.WriteIntent
 
-::: firecube.ingestor.api.IndexedWrite
+::: firecube.sdk.IndexedWrite
 
 ## See Also
 

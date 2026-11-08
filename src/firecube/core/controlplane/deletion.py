@@ -168,8 +168,10 @@ def _store_array_probe(store_uri: str, storage_config: Any) -> Callable[[str], b
     return has_array
 
 
-def _chunk_object_uri(base_uri: StorageUri, chunk: ChunkInfo) -> StorageUri:
+def _chunk_object_uri(product_root: Callable[[str], StorageUri], chunk: ChunkInfo) -> StorageUri:
     """Return the URI of a chunk record's object inside its product.
+
+    `product_root` maps a product label to the product's root URI.
 
     Raises:
         ValueError: The product or key is empty, absolute, or holds a ``.`` or ``..``
@@ -183,13 +185,12 @@ def _chunk_object_uri(base_uri: StorageUri, chunk: ChunkInfo) -> StorageUri:
                 f"Refused to delete chunk record {key!r} of product {product!r}: its {label} "
                 "is not a relative path inside the product"
             )
-    product_uri = base_uri.join(product)
+    product_uri = product_root(product)
     uri = product_uri.join(key)
     inside = (
         uri.protocol == product_uri.protocol
         and uri.authority == product_uri.authority
         and uri.path.startswith(f"{product_uri.path.rstrip('/')}/")
-        and product_uri.path.startswith(f"{base_uri.path.rstrip('/')}/")
     )
     if not inside:
         raise ValueError(
@@ -1077,6 +1078,10 @@ class DeletionEngine:
         finally:
             self._clear_maintenance_claims(claims)
 
+    def _product_root(self, product: str) -> StorageUri:
+        """Return the root URI of `product`, resolved as the repository reads its records."""
+        return StorageUri.parse(self.repo.get_product_root_uri(product))
+
     def _delete_from_storage(
         self, chunks: list[ChunkInfo], storage_config: StorageConfig | None
     ) -> list[str]:
@@ -1102,7 +1107,6 @@ class DeletionEngine:
         errors: list[str] = []
         if not self.repo.base_uri:
             return ["Missing base URI; cannot delete without a base URI"]
-        base_uri = StorageUri.parse(self.repo.base_uri)
         try:
             # The protocol's rm expands glob characters, which are legal in a product
             # name or key, and so can delete objects of another product.
@@ -1114,7 +1118,7 @@ class DeletionEngine:
             ]
         for chunk in chunks:
             try:
-                uri = _chunk_object_uri(base_uri, chunk)
+                uri = _chunk_object_uri(self._product_root, chunk)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
@@ -1135,18 +1139,17 @@ class DeletionEngine:
             return ["Missing base URI; cannot delete from S3 without a base URI"]
 
         base_uri = self.repo.base_uri.rstrip("/")
-        fs, base_path = self.repo._get_fs(base_uri)
-        base_path = str(base_path).rstrip("/")
+        fs, _base_path = self.repo._get_fs(base_uri)
 
-        product_base = StorageUri.parse(self.repo.base_uri)
         s3_paths: list[str] = []
         for chunk in chunks:
             try:
-                _chunk_object_uri(product_base, chunk)
+                _chunk_object_uri(self._product_root, chunk)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
-            p = f"{base_path}/{chunk.product.strip('/')}/{chunk.key.lstrip('/')}".replace("//", "/")
+            root = str(self._product_root(chunk.product)).rstrip("/")
+            p = f"{root}/{chunk.key.lstrip('/')}".replace("//", "/")
             s3_paths.append(p)
 
         batch_size = 1000  # S3 delete limit
@@ -1175,15 +1178,14 @@ class DeletionEngine:
             return [
                 "Missing local target base; cannot delete local storage without a file:// product URI"
             ]
-        local_base = StorageUri.from_local_path(base)
         for c in chunks:
             try:
-                _chunk_object_uri(local_base, c)
+                uri = _chunk_object_uri(self._product_root, c)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
             try:
-                p = base / c.product / c.key
+                p = Path(uri.path)
                 if p.exists():
                     if p.is_file():
                         p.unlink()
@@ -1492,7 +1494,7 @@ class DeletionEngine:
         force: bool,
         collateral_spans: Sequence[ChunkInfo],
         product: str,
-        base_path: str,
+        store_path: str,
         arrays: list[str],
         time_ranges: list[Any],
         expected_time_dim_name: str,
@@ -1696,10 +1698,8 @@ class DeletionEngine:
                         t_idx if dim_i == time_dim else next(other_iter)
                         for dim_i in range(len(expected_chunks))
                     ]
-                    rel = f"{product}/{array_path.strip('/')}/c/" + "/".join(
-                        str(i) for i in indices
-                    )
-                    pending_paths.append(f"{base_path.rstrip('/')}/{rel}")
+                    rel = f"{array_path.strip('/')}/c/" + "/".join(str(i) for i in indices)
+                    pending_paths.append(f"{store_path.rstrip('/')}/{rel}")
                     span_paths_added += 1
                     if len(pending_paths) >= pending_limit:
                         _flush_pending()
@@ -1844,8 +1844,8 @@ class DeletionEngine:
                     op=MAINTENANCE_OP_DELETE,
                     scope_for=_scope_for,
                 )
-            base_uri = self.repo.base_uri.rstrip("/")
-            store_uri = f"{base_uri}/{product}"
+            product_root = self._product_root(product)
+            store_uri = product_root.to_str()
             span_time_dims = resolve_span_time_dims(
                 spans_list,
                 store_uri=store_uri,
@@ -1853,11 +1853,8 @@ class DeletionEngine:
                 explicit=time_dim_name,
                 default=self.time_dim_name,
             )
-            fs, base_uri = self.repo._get_fs(self.repo.base_uri)
-            base_uri_obj: Any = base_uri
-            base_path = (
-                base_uri_obj.path if base_uri_obj.protocol == "file" else base_uri_obj.to_str()
-            )
+            fs, _root = self.repo._get_fs(product_root)
+            store_path = product_root.path if product_root.protocol == "file" else store_uri
             counts = {"deleted_keys": 0, "deleted_spans": 0, "region_filled_spans": 0}
             errors: list[str] = []
             warnings: list[str] = []
@@ -1933,7 +1930,7 @@ class DeletionEngine:
                     self._delete_span_by_chunk_keys(
                         **common,
                         product=product,
-                        base_path=base_path,
+                        store_path=store_path,
                         arrays=arrays,
                         time_ranges=time_ranges,
                         expected_time_dim_name=expected_time_dim_name,

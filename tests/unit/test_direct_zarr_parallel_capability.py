@@ -22,7 +22,9 @@ from typing import Any, ClassVar
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.runtime.parallel_gate import validate_parallel_capability
+from firecube.sdk import (
     BaseIngestor,
     DirectZarrIngestor,
     PipelineBatch,
@@ -32,8 +34,6 @@ from firecube.ingestor.api import (
     RuntimeIngestContext,
     ZarrGroupSpec,
 )
-from firecube.ingestor.errors import ConfigurationError
-from firecube.ingestor.runtime.parallel_gate import validate_parallel_capability
 
 
 def _slot_model() -> IndexSpec:

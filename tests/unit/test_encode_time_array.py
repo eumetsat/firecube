@@ -42,9 +42,3 @@ def test_encode_time_array_malformed_units_raise_valueerror() -> None:
 
     with pytest.raises(ValueError, match=r"units|since|invalid"):
         encode_time_array(values, {"units": "kelvin", "calendar": "standard"})
-
-
-def test_encode_time_array_is_exported_from_core_api() -> None:
-    from firecube.core.api import encode_time_array as exported
-
-    assert exported is encode_time_array

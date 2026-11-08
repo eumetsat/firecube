@@ -19,7 +19,6 @@ from __future__ import annotations
 import importlib
 import json
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any, Literal, cast
 from unittest.mock import MagicMock, patch
 
@@ -35,7 +34,6 @@ from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import StorageError
 from firecube.core.filesystem.store_factory import create_zarr_store
 from firecube.core.storage import StorageWriteResult
-from firecube.ingestor.api import BaseIngestor, OutputPaths, PluginContext
 from firecube.ingestor.templates.direct_zarr import (
     DirectZarrIngestor,
     WriteIntent,
@@ -50,6 +48,7 @@ from firecube.ingestor.types.context import (
     RuntimeIngestContext,
     StorageContext,
 )
+from firecube.sdk import BaseIngestor, ExecutionParams, OutputPaths, PluginContext
 from tests.helpers.storage import begin_write_session, make_test_binding, make_test_session
 
 ProductTarget = __import__(
@@ -116,10 +115,10 @@ def _prepare_bt3_ingest(
         target=product,
         output_format="zarr",
         options={
-            "write_mode": "staged",
             "pipeline_batch_size": 1,
             "no_progress": True,
         },
+        execution=ExecutionParams(write_mode="staged"),
         storage=StorageContext(output=make_test_session(workspace, product=product)),
         run_id=run_id,
     )
@@ -239,15 +238,12 @@ def test_direct_zarr_receives_storage_config_obstore_branch(
         ),
         workspace=tmp_path,
     )
-    ingestor.engine_config = SimpleNamespace(  # type: ignore[assignment]
-        write_mode="direct", slot_group=None, slot_start=None, slot_end=None
-    )
-
     runtime_ctx = RuntimeIngestContext(
         source=str(tmp_path / "input.nc"),
         target=session.product.product_uri.to_str(),
         output_format="zarr",
-        options={"write_mode": "direct", "run_id": "run-001"},
+        options={"run_id": "run-001"},
+        execution=ExecutionParams(write_mode="direct"),
         storage=StorageContext(output=session),
         run_id="run-001",
     )

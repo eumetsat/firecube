@@ -32,7 +32,7 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
+from firecube.sdk import IngestContext, IngestResult, OutputPaths
 
 pytestmark = pytest.mark.integration
 
@@ -53,8 +53,6 @@ def test_default_discovery_missing_input_data_fails_clean(tmp_path: Path) -> Non
             "cli_test_plugin",
             "--target",
             target.as_uri(),
-            "--output-format",
-            "zarr",
             "--storage-type",
             "local",
             "--storage-driver",
@@ -112,8 +110,6 @@ def test_override_discovery_no_input_data_succeeds(tmp_path: Path) -> None:
                 "direct_zarr_capable_test_plugin",
                 "--target",
                 target.as_uri(),
-                "--output-format",
-                "zarr",
                 "--storage-type",
                 "local",
                 "--storage-driver",
@@ -177,8 +173,6 @@ def test_default_discovery_empty_input_data_fails_clean(tmp_path: Path) -> None:
             "",
             "--target",
             target.as_uri(),
-            "--output-format",
-            "zarr",
             "--storage-type",
             "local",
             "--storage-driver",
@@ -222,8 +216,6 @@ def test_literal_none_string_preserved_as_user_provided_input(tmp_path: Path) ->
             "None",
             "--target",
             target.as_uri(),
-            "--output-format",
-            "zarr",
             "--storage-type",
             "local",
             "--storage-driver",
@@ -256,8 +248,6 @@ def test_missing_file_uri_input_data_exits_1_before_discovery(tmp_path: Path) ->
             missing,
             "--target",
             target.as_uri(),
-            "--output-format",
-            "zarr",
             "--storage-type",
             "local",
             "--storage-driver",

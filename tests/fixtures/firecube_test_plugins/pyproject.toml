@@ -18,6 +18,7 @@ cli_test_plugin = "cli_test_plugin"
 direct_zarr_capable_test_plugin = "direct_zarr_capable_test_plugin"
 direct_zarr_non_capable_test_plugin = "direct_zarr_non_capable_test_plugin"
 e2e_zarr = "e2e_zarr_test_plugin:E2eZarrIngestor"
+engine_config_read_test_plugin = "engine_config_read_test_plugin"
 fixed_epoch_shape_plugin = "slot_shape_test_plugin:FixedEpochShapeIngestor"
 index_spec_custom_dim = "index_spec_test_plugin:IndexSpecCustomTimeDimIngestor"
 index_spec_integer = "index_spec_integer_test_plugin:IntegerAxisIngestor"
@@ -58,4 +59,4 @@ w14_override_empty = "w14_single_discovery_plugin:OverrideEmptyIngestor"
 "cli-test:from-release" = "cli_test_plugin:FromReleaseStep"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cli_test_plugin", "src/direct_zarr_capable_test_plugin", "src/direct_zarr_non_capable_test_plugin", "src/e2e_zarr_test_plugin", "src/multi_group_capable_test_plugin", "src/cf_time_dim_test_plugin", "src/slot_shape_test_plugin", "src/index_spec_test_plugin", "src/index_spec_integer_test_plugin", "src/callable_payload_test_plugin", "src/irregular_axis_test_plugin", "src/regular_axis_test_plugin", "src/indexed_write_test_plugin", "src/mixed_bounded_unbounded_test_plugin", "src/precip_daily_test_plugin", "src/w14_single_discovery_plugin"]
+packages = ["src/cli_test_plugin", "src/direct_zarr_capable_test_plugin", "src/direct_zarr_non_capable_test_plugin", "src/e2e_zarr_test_plugin", "src/engine_config_read_test_plugin", "src/multi_group_capable_test_plugin", "src/cf_time_dim_test_plugin", "src/slot_shape_test_plugin", "src/index_spec_test_plugin", "src/index_spec_integer_test_plugin", "src/callable_payload_test_plugin", "src/irregular_axis_test_plugin", "src/regular_axis_test_plugin", "src/indexed_write_test_plugin", "src/mixed_bounded_unbounded_test_plugin", "src/precip_daily_test_plugin", "src/w14_single_discovery_plugin"]

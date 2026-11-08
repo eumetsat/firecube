@@ -34,7 +34,7 @@ def test_file_uri_no_storage_flags(tmp_local_zarr: Path) -> None:
     result = _invoke_intake(
         [
             "cli_test_plugin",
-            "-p",
+            "-t",
             tmp_local_zarr.as_uri(),
             "-o",
             catalog_path.as_uri(),
@@ -98,11 +98,12 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any, tmp_path: Path) -> None:
         catalog_module, "build_catalog_source_specs", fake_build_catalog_source_specs
     )
 
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
     catalog_path = tmp_path / "catalog.yaml"
     result = _invoke_intake(
         [
             "cli_test_plugin",
-            "-p",
+            "-t",
             "s3://bucket/x.zarr",
             "-o",
             catalog_path.as_uri(),
@@ -171,7 +172,7 @@ def test_passes_typed_storage_session_downstream(
     result = _invoke_intake(
         [
             "cli_test_plugin",
-            "-p",
+            "-t",
             tmp_local_zarr.as_uri(),
             "-o",
             (tmp_local_zarr.parent / "catalog.yaml").as_uri(),
@@ -188,7 +189,7 @@ def test_catalog_intake_writes_output_to_the_literal_path(tmp_local_zarr, tmp_pa
     out = tmp_path / "sp ace'q" / "catalog.yaml"
     src = tmp_local_zarr.as_uri()
     result = _invoke_intake(
-        ["cli_test_plugin", "-p", src, "-o", f"file://{out}", "--collection-id", "c"]
+        ["cli_test_plugin", "-t", src, "-o", f"file://{out}", "--collection-id", "c"]
     )
     assert result.exit_code == 0, result.output
     assert out.exists()

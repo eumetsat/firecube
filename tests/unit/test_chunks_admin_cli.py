@@ -24,6 +24,7 @@ from firecube.cli.chunks._compact import compact_group
 from firecube.cli.chunks._runs import runs_group
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import ClaimInfo, RunInfo
+from tests.helpers.chunks import bound
 from tests.helpers.storage import make_test_binding
 
 
@@ -87,11 +88,15 @@ class _FakeRunsManager:
 def test_chunks_claims_list_json(monkeypatch):
     runner = CliRunner()
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager",
-        lambda *args, **kwargs: _FakeClaimsManager(),
+        "firecube.cli.chunks._claims.scoped_products",
+        lambda *args, **kwargs: [bound(_FakeClaimsManager())],
     )
 
-    result = runner.invoke(claims_group, ["list", "--format", "json"], obj={})
+    result = runner.invoke(
+        claims_group,
+        ["list", "--target", "file:///tmp/TEST_PRODUCT.zarr", "--format", "json"],
+        obj={},
+    )
 
     assert result.exit_code == 0
     payload = json.loads(result.output)
@@ -104,15 +109,15 @@ def test_chunks_claims_clear(monkeypatch):
     manager = _FakeClaimsManager()
     product_uri = "file:///tmp/TEST_PRODUCT.zarr"
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._claims.target_product",
+        lambda *args, **kwargs: bound(manager),
     )
 
     result = runner.invoke(
         claims_group,
         [
             "clear",
-            "--product-name",
+            "--target",
             product_uri,
             "--domain",
             "TEST_PRODUCT.zarr:zarr_group:F024",
@@ -130,13 +135,13 @@ def test_chunks_compact_rebuild_json(monkeypatch):
     runner = CliRunner()
     product_uri = "file:///tmp/TEST_PRODUCT.zarr"
     monkeypatch.setattr(
-        "firecube.cli.chunks._compact.resolve_manager",
-        lambda *args, **kwargs: _FakeSnapshotManager(),
+        "firecube.cli.chunks._compact.target_product",
+        lambda *args, **kwargs: bound(_FakeSnapshotManager()),
     )
 
     result = runner.invoke(
         compact_group,
-        ["rebuild", "--product-name", product_uri, "--format", "json"],
+        ["rebuild", "--target", product_uri, "--format", "json"],
         obj={},
     )
 
@@ -149,13 +154,13 @@ def test_chunks_runs_list_json(monkeypatch):
     runner = CliRunner()
     product_uri = "file:///tmp/TEST_PRODUCT.zarr"
     monkeypatch.setattr(
-        "firecube.cli.chunks._runs.resolve_manager",
-        lambda *args, **kwargs: _FakeRunsManager(),
+        "firecube.cli.chunks._runs.target_product",
+        lambda *args, **kwargs: bound(_FakeRunsManager()),
     )
 
     result = runner.invoke(
         runs_group,
-        ["list", "--product-name", product_uri, "--format", "json"],
+        ["list", "--target", product_uri, "--format", "json"],
         obj={},
     )
 
@@ -205,12 +210,13 @@ def test_chunks_runs_list_filters_status_with_real_manager(tmp_path, monkeypatch
         status="complete",
     )
     monkeypatch.setattr(
-        "firecube.cli.chunks._runs.resolve_manager", lambda *args, **kwargs: manager
+        "firecube.cli.chunks._runs.target_product",
+        lambda *args, **kwargs: bound(manager, product),
     )
 
     product_uri = (tmp_path / product).as_uri()
     result = runner.invoke(
-        runs_group, ["list", "--product-name", product_uri, "--status", "started"], obj={}
+        runs_group, ["list", "--target", product_uri, "--status", "started"], obj={}
     )
 
     assert result.exit_code == 0
@@ -223,15 +229,15 @@ def test_chunks_runs_abandon(monkeypatch):
     manager = _FakeRunsManager()
     product_uri = "file:///tmp/TEST_PRODUCT.zarr"
     monkeypatch.setattr(
-        "firecube.cli.chunks._runs.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._runs.target_product",
+        lambda *args, **kwargs: bound(manager),
     )
 
     result = runner.invoke(
         runs_group,
         [
             "abandon",
-            "--product-name",
+            "--target",
             product_uri,
             "--run-id",
             "run-001",

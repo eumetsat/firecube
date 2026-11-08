@@ -20,12 +20,16 @@ from pathlib import Path
 
 import click
 
-from firecube.cli._errors import render
-from firecube.cli._shared_options import dry_run_flag, yes_flag
-from firecube.core.controlplane.types import ClearSweepResult
-from firecube.core.errors import ClaimConflictError
+from firecube.cli._shared_options import (
+    all_products_flag,
+    dry_run_flag,
+    format_option,
+    target_uri_option,
+    yes_flag,
+)
+from firecube.core.controlplane.types import ClaimInfo, ClearSweepResult
 
-from ._manager import resolve_cli_product, resolve_manager
+from ._manager import BoundProduct, scoped_products, target_product
 
 
 @click.group("claims")
@@ -39,42 +43,41 @@ def claims_group() -> None:
     "list",
     epilog="""\b
 Examples:
-  # list all claims across all products
-  firecube chunks claims list
+  # list claims for a specific product
+  firecube chunks claims list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
-  # list claims for a specific product
-  firecube chunks claims list --product-name file:///data/products/MY_PRODUCT.zarr
+  # list all claims across all products under the [storage] base URI
+  firecube chunks claims list --all-products
 
 See also: firecube chunks claims clear, firecube chunks runs list
 """,
 )
-@click.option("-n", "--product-name", "product_name", help="full product URI to inspect")
+@target_uri_option("inspect", required=False)
+@all_products_flag
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json"]),
-    default="table",
-    help="output format",
-)
+@format_option(("table", "json"))
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
-    product_name: str | None,
+    target: str | None,
+    all_products: bool,
     workspace: Path | None,
     output_format: str,
 ) -> None:
     """list active write claims
 
-    list active write-coordination claims for one or all products. claims are
+    list active write-coordination claims for one product (--target) or
+    every product under the [storage] base URI (--all-products). claims are
     short-lived locks written to .firecube/claims/ to coordinate concurrent
     writes. stale claims from crashed processes can block ingestion -- use
     claims clear to release them"""
-    product_name, product_uri = resolve_cli_product(product_name)
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    claims = manager.list_claims(product=product_name)
+    rows: list[tuple[BoundProduct, ClaimInfo]] = [
+        (product, claim)
+        for product in scoped_products(ctx, workspace, target, all_products)
+        for claim in product.manager.list_claims(product=product.label)
+    ]
+    claims = [claim for _product, claim in rows]
 
     if output_format == "json":
         click.echo(
@@ -107,6 +110,9 @@ def list_cmd(
     for claim in claims:
         state = "stale" if claim.stale else "active"
         click.echo(f"{claim.product:<24} {state:<8} {claim.owner_id:<24} {claim.domain}")
+    listed = list(dict.fromkeys(product for product, _claim in rows))
+    if len(listed) > 1:
+        click.echo(f"Products: {', '.join(f'{p.label} ({p.uri.to_str()})' for p in listed)}")
 
 
 @claims_group.command(
@@ -114,28 +120,28 @@ def list_cmd(
     epilog="""\b
 Examples:
   # clear a stale claim (interactive confirmation)
-  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --domain <domain>
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --domain <domain>
 
 \b
   # clear a stale claim in non-interactive context
-  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --domain <domain> --yes-i-really-mean-it
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --domain <domain> --yes-i-really-mean-it
 
 \b
   # bypass the is_stale check (--force) and confirm (--yes-i-really-mean-it)
-  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --domain <domain> --force --yes-i-really-mean-it
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --domain <domain> --force --yes-i-really-mean-it
 
 \b
   # preview every stale claim (bulk mode never prompts)
-  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --all-stale
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --all-stale
 
 \b
   # clear every stale claim
-  firecube chunks claims clear --product-name file:///data/products/MY_PRODUCT.zarr --all-stale --yes-i-really-mean-it
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --all-stale --yes-i-really-mean-it
 
 See also: firecube chunks claims list, firecube chunks runs abandon
 """,
 )
-@click.option("-n", "--product-name", "product_name", required=True, help="full product URI")
+@target_uri_option("inspect")
 @click.option("--domain", "domain_id", help="full write-domain identifier")
 @click.option(
     "--all-stale",
@@ -158,7 +164,7 @@ See also: firecube chunks claims list, firecube chunks runs abandon
 @click.pass_context
 def clear_cmd(
     ctx: click.Context,
-    product_name: str,
+    target: str,
     domain_id: str | None,
     all_stale: bool,
     workspace: Path | None,
@@ -184,8 +190,8 @@ def clear_cmd(
     if dry_run and not all_stale:
         raise click.UsageError("--dry-run is only supported with --all-stale.")
 
-    product_name, product_uri = resolve_cli_product(product_name)
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
+    product = target_product(ctx, workspace, target)
+    manager, product_name = product.manager, product.label
 
     if all_stale:
         dry_run = dry_run or not yes_i_really_mean_it
@@ -202,10 +208,7 @@ def clear_cmd(
 
     if domain_id is None:
         raise click.UsageError("Provide --domain when not using --all-stale.")
-    try:
-        cleared = manager.clear_claim(product=product_name, domain_id=domain_id, force=force)
-    except ClaimConflictError as exc:
-        raise click.ClickException(render(exc)) from exc
+    cleared = manager.clear_claim(product=product_name, domain_id=domain_id, force=force)
 
     if not cleared:
         raise click.ClickException(f"No claim found for product={product_name} domain={domain_id}")

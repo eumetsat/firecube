@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     OutputPaths,
     PipelineBatch,
     PipelineMetrics,

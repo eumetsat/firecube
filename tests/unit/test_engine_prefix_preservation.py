@@ -23,9 +23,14 @@ from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import IngestResult, OutputPaths, ResultMetrics
 from firecube.ingestor.runtime.engine import PipelineExecutor
-from firecube.ingestor.types.context import RuntimeIdentity, RuntimeIngestContext, StorageContext
+from firecube.ingestor.types.context import (
+    ExecutionParams,
+    RuntimeIdentity,
+    RuntimeIngestContext,
+    StorageContext,
+)
+from firecube.sdk import IngestResult, OutputPaths, ResultMetrics
 
 
 class _FakeHost:
@@ -56,7 +61,8 @@ def _make_ctx(source: Path, *, target: str) -> RuntimeIngestContext:
         target=target,
         output_format="zarr",
         storage=StorageContext(output=_session(target)),
-        options={"write_mode": "staged", "upload_workers": 4},
+        options={"upload_workers": 4},
+        execution=ExecutionParams(write_mode="staged"),
         run_id="test-run",
         identity=RuntimeIdentity(run_id="test-run"),
     )
@@ -222,7 +228,8 @@ def test_sessionless_completion_preserves_prefix_from_ctx_target(
         target=target,
         output_format="zarr",
         storage=StorageContext(output=_session(target)),
-        options={"write_mode": "staged", "upload_workers": 4},
+        options={"upload_workers": 4},
+        execution=ExecutionParams(write_mode="staged"),
         run_id="test-run",
         identity=RuntimeIdentity(run_id="test-run"),
     )

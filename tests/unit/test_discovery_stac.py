@@ -248,14 +248,14 @@ def test_validate_stac_search_refuses_other_keys(monkeypatch, api_a, value, matc
 
 
 @pytest.mark.contract
-def test_core_api_import_does_not_load_the_stac_client():
+def test_sdk_import_does_not_load_the_stac_client():
     repo_root = Path(__file__).resolve().parents[2]
 
     result = subprocess.run(
         [
             sys.executable,
             "-c",
-            "import sys, firecube.core.api; print('pystac_client' in sys.modules)",
+            "import sys, firecube.sdk; print('pystac_client' in sys.modules)",
         ],
         capture_output=True,
         text=True,

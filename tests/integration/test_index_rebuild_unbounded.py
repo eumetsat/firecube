@@ -46,7 +46,7 @@ def test_rebuild_unbounded_axis_fails_cleanly(tmp_path: Path) -> None:
 
     result = CliRunner().invoke(cli, _args(target))
 
-    assert result.exit_code == 1, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert result.exit_code == 2, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     assert "failed to create resolved index record" in result.output
     assert "unbounded group(s) 'data'" in result.output
     assert "Traceback" not in result.output

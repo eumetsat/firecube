@@ -44,19 +44,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from firecube.core.api import (
-    ATTR_PREALLOCATED,
-    FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
-    AxisSpec,
-    ExtentUnknownError,
-    IndexSpec,
-    IntegerAxis,
-    IrregularTimeAxis,
-    ItemInfo,
-    RegularTimeAxis,
-    ResolvedIndex,
-    compute_group_identity_hash,
-)
+from firecube.core.controlplane.types import WriteDomain
 from firecube.core.errors import (
     ClaimConflictError,
     FirecubeError,
@@ -65,27 +53,17 @@ from firecube.core.errors import (
     Operation,
     Placeholder,
 )
+from firecube.core.index_resolve import (
+    _compute_group_identity_hash as compute_group_identity_hash,
+)
 from firecube.core.indexed_write import IndexedWrite
 from firecube.core.time.calendar import is_gregorian_axis
+from firecube.core.zarr._reserved_attrs import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
+from firecube.core.zarr._sealing_markers import ATTR_PREALLOCATED
 from firecube.core.zarr.guard._layout import resolve_effective_layout, warn_default_layout
 from firecube.core.zarr.guard.engine_owned import is_engine_owned_spec, preallocate_operation
 from firecube.core.zarr.guard.metadata_authority import MetadataAuthority, hold_authority
-from firecube.ingestor.api import (
-    BaseIngestor,
-    ConfigurationError,
-    OutputPaths,
-    PipelineBatch,
-    PipelineResult,
-    PipelineRunState,
-    PluginContext,
-    RuntimeIngestContext,
-    SchemaDriftError,
-    SchemaSizeMismatchError,
-    UnboundedAxisError,
-    WriteDomain,
-    ZarrTemplateConfig,
-    merge_batch_metrics,
-)
+from firecube.ingestor.runtime.aggregation import merge_batch_metrics
 from firecube.ingestor.runtime.zarr.direct_region_adapter import (
     DirectRegionAdapter,
     open_zarr_array,
@@ -101,6 +79,28 @@ from firecube.ingestor.runtime.zarr.strategies.indexed_region import (
 from firecube.ingestor.runtime.zarr.write import derive_effective_codecs_for_spec
 from firecube.ingestor.runtime.zarr.write_session import ZarrWriteSession
 from firecube.ingestor.types import write_mode_policy
+from firecube.sdk import (
+    AxisSpec,
+    BaseIngestor,
+    ConfigurationError,
+    ExtentUnknownError,
+    IndexSpec,
+    IntegerAxis,
+    IrregularTimeAxis,
+    ItemInfo,
+    OutputPaths,
+    PipelineBatch,
+    PipelineResult,
+    PipelineRunState,
+    PluginContext,
+    RegularTimeAxis,
+    ResolvedIndex,
+    RuntimeIngestContext,
+    SchemaDriftError,
+    SchemaSizeMismatchError,
+    UnboundedAxisError,
+    ZarrTemplateConfig,
+)
 
 if TYPE_CHECKING:
     from firecube.core.storage.completion import StagedPromotionUnits
@@ -1452,7 +1452,7 @@ class DirectZarrIngestor(BaseIngestor):
         treated as skip (backward-compat with pre-hash stores and fresh
         ingests that have not yet run ``firecube zarr preallocate``).
         """
-        write_mode = self.engine_config.write_mode
+        write_mode = ctx.execution.write_mode
         try:
             store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
         except ConfigurationError:
@@ -1496,7 +1496,7 @@ class DirectZarrIngestor(BaseIngestor):
 
     def _verify_schema_at_pod_startup(self, ctx: PluginContext) -> None:
         """Verify global direct-Zarr schema once per pod process before batches run."""
-        from firecube.ingestor.api import IndexedRegionStrategy
+        from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 
         # Called once per run, on the main thread before any batch: every run
         # kind gets its own session here (empty ledger, ownership unchecked),
@@ -1506,7 +1506,7 @@ class DirectZarrIngestor(BaseIngestor):
         if self._parallel_execution_state is None:
             return
 
-        write_mode = self.engine_config.write_mode
+        write_mode = ctx.execution.write_mode
         store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
         product = session.product
         run_id = session.run_id
@@ -1580,7 +1580,7 @@ class DirectZarrIngestor(BaseIngestor):
         """Build this run's write session, closing any earlier run's.
 
         Called on the main thread before any batch or worker. Window, slot
-        group and write mode come from ``engine_config``; a staged session
+        group and write mode come from ``ctx.execution``; a staged session
         also gets the workspace URI, for its seeding authority, and the final
         target, opened at promotion for the authority promoted metadata is
         published under. An earlier session whose close still fails (its
@@ -1590,16 +1590,15 @@ class DirectZarrIngestor(BaseIngestor):
         if previous is not None:
             previous.close()
             self._zarr_write_session = None
-        engine_config = self.engine_config
-        start = getattr(engine_config, "slot_start", None)
-        end = getattr(engine_config, "slot_end", None)
-        write_mode = str(engine_config.write_mode)
+        execution = ctx.execution
+        start, end = execution.slot_start, execution.slot_end
+        write_mode = execution.write_mode
         session = ZarrWriteSession(
             product=_ctx_product_name(ctx, self.name),
             run_id=str(ctx.run_id or ctx.option("run_id", "unknown")),
             write_mode=write_mode,
-            window=(start, end) if isinstance(start, int) and isinstance(end, int) else None,
-            slot_group=getattr(engine_config, "slot_group", None),
+            window=(start, end) if start is not None and end is not None else None,
+            slot_group=execution.slot_group,
             acquire_claim=lambda **kwargs: self._chunk_manager.acquire_claim(**kwargs),
             open_root=lambda uri: _open_zarr_root_for_read(uri, self._chunk_manager.storage_config),
             # In staged mode the workspace never holds engine-owned chunks:
@@ -1726,7 +1725,7 @@ class DirectZarrIngestor(BaseIngestor):
         `GenericZarrIngestor._process_batch` verbatim so plugin authors
         get the same lifecycle contract across both templates.
         """
-        from firecube.ingestor.api import IndexedRegionStrategy
+        from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 
         self.batch_setup(ctx)
 
@@ -1734,7 +1733,7 @@ class DirectZarrIngestor(BaseIngestor):
             session = self._write_session()
             prep_metrics = self.prepare_batch_data(batch, ctx) or {}
 
-            write_mode = self.engine_config.write_mode
+            write_mode = ctx.execution.write_mode
             store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
 
             schema = self._cached_zarr_schema(ctx)
@@ -1876,16 +1875,10 @@ class DirectZarrIngestor(BaseIngestor):
                     slot_group=session.slot_group,
                     codec_pipelines_by_array=codec_pipelines_by_array,
                     region_write_concurrency=region_write_concurrency,
-                    suppress_static_emission_for_non_owner=getattr(
-                        self.engine_config,
-                        "suppress_static_emission_for_non_owner",
-                        False,
+                    suppress_static_emission_for_non_owner=(
+                        ctx.execution.suppress_static_emission_for_non_owner
                     ),
-                    static_owner_slot_start=getattr(
-                        self.engine_config,
-                        "static_owner_slot_start",
-                        None,
-                    ),
+                    static_owner_slot_start=ctx.execution.static_owner_slot_start,
                     zarr_write_empty_chunks=zarr_write_empty_chunks,
                     zarr_unit_write_buffer=zarr_unit_write_buffer,
                     on_write=(

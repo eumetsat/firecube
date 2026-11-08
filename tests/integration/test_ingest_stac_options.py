@@ -28,23 +28,25 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import AUTO, IndexSpec, IrregularTimeAxis, ItemInfo, RegularTimeAxis
-from firecube.core.controlplane import ChunkManager
 from firecube.core.discovery import DiscoveryRequest, discover
+from firecube.core.product.open import open_product
 from firecube.core.runtime import resolve_storage_config
-from firecube.core.storage.session import StorageSession
-from firecube.ingestor.api import (
-    DirectZarrIngestor,
-    OutputPaths,
-    PipelineResult,
-    ZarrArraySpec,
-    ZarrGroupSpec,
-)
 from firecube.ingestor.registry import loader
 from firecube.ingestor.runtime.configure import configure_ingestor
 from firecube.ingestor.runtime.preallocate import preallocate_product
+from firecube.sdk import (
+    AUTO,
+    DirectZarrIngestor,
+    IndexSpec,
+    IrregularTimeAxis,
+    ItemInfo,
+    OutputPaths,
+    PipelineResult,
+    RegularTimeAxis,
+    ZarrArraySpec,
+    ZarrGroupSpec,
+)
 from tests.helpers.fake_stac import FakeStacApi, install_fake_stac, stac_item
-from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.integration
 
@@ -550,7 +552,7 @@ def test_missing_stac_extra_names_the_command_before_any_access(tmp_path, apis, 
 
     result = CliRunner().invoke(cli, _ingest(tmp_path, "--input-data", SRC_A))
 
-    assert result.exit_code == 1, result.output
+    assert result.exit_code == 4, result.output
     assert "firecube ingest requires the stac extra" in result.output
     assert "firecube[stac]" in result.output
     assert _no_requests(*apis)
@@ -614,10 +616,10 @@ def test_second_preallocate_on_one_instance_discovers_again(tmp_path, apis):
         overrides={"storage_type": "local", "storage_driver": "fsspec"},
         set_global=False,
     )
-    binding = make_test_binding(tmp_path, product="out.zarr")
-    chunk_manager = ChunkManager(binding=binding)
-    try:
-        ingestor = _StacObservedAxis(chunk_manager=chunk_manager)
+    with open_product(
+        target.as_uri(), format="zarr", product_name="out.zarr", require_label=False
+    ) as product:
+        ingestor = _StacObservedAxis(chunk_manager=product.manager)
 
         def preallocate(source: str, run_id: str) -> None:
             plugin_ctx = configure_ingestor(
@@ -628,11 +630,10 @@ def test_second_preallocate_on_one_instance_discovers_again(tmp_path, apis):
                 sources=(source,),
             )
             preallocate_product(
-                ingestor=ingestor,
+                product,
+                ingestor,
                 plugin_ctx=plugin_ctx,
                 plugin_name="stac_observed_axis",
-                chunk_manager=chunk_manager,
-                session=StorageSession(binding),
                 storage_config=storage_config,
                 run_id=run_id,
                 write_mode="direct",
@@ -642,8 +643,6 @@ def test_second_preallocate_on_one_instance_discovers_again(tmp_path, apis):
         preallocate(SRC_A, "first")
         searched_by_first = (len(api_a.searches), len(api_b.searches))
         preallocate(SRC_B, "second")
-    finally:
-        chunk_manager.close()
 
     assert len(api_a.searches) == searched_by_first[0]
     assert len(api_b.searches) > searched_by_first[1]

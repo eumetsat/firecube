@@ -34,6 +34,8 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.filesystem import fsspec_backend
+from firecube.core.product.open import open_product
+from firecube.ingestor.runtime.release import verify_release_for_product
 from tests.helpers.storage import make_test_session
 from tests.integration._staged_helpers import s3_env
 
@@ -42,6 +44,11 @@ pytestmark = [pytest.mark.integration, pytest.mark.contract]
 FORMATS = pytest.mark.parametrize("fmt", [2, 3], ids=["v2", "v3"])
 ARRAY_DOC = {2: "temp/.zattrs", 3: "temp/zarr.json"}
 RELEASING = "cli-test:release"  # the fixture step whose `to_release` is 0.1.1
+
+
+def _needs_confirmation(args: tuple[str, ...]) -> bool:
+    asks = args[:2] in {("migrate", "adopt"), ("migrate", "run"), ("release", "create")}
+    return asks and "--dry-run" not in args
 
 
 def _store(base: Path, fmt: int) -> Path:
@@ -53,7 +60,9 @@ def _store(base: Path, fmt: int) -> Path:
 
 
 def _cli(store: Path, *args: str, exit_code: int = 0):
-    out = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), "--product-name", "p.zarr"])
+    label = ["--product-name", "p.zarr"] if args[:2] == ("migrate", "adopt") else []
+    confirm = ["--yes-i-really-mean-it"] if _needs_confirmation(args) else []
+    out = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), *label, *confirm])
     assert out.exit_code == exit_code, out.output
     return out
 
@@ -105,6 +114,16 @@ def test_snapshot_diff_names_exactly_the_hand_edited_attribute(tmp_path, fmt):
     _cli(store, "snapshot", "show", "0" * 64, exit_code=1)  # well formed, but none exists
 
 
+def test_snapshot_take_dry_run_plan_carries_the_label_and_writes_no_snapshot(tmp_path):
+    store = _store(tmp_path, 3)
+    known = _json(store, "snapshot", "list")
+    plan = _json(store, "snapshot", "take", "--dry-run")
+    assert plan["dry_run"] is True and plan["label_recorded"] is True
+    assert {"parent", "manifest", "documents", "blobs", "manifest_recorded"} <= plan.keys()
+    assert _json(store, "snapshot", "list") == known  # no snapshot was written
+    assert not (store / ".firecube" / "metadata" / "refs" / "latest.json").exists()
+
+
 @FORMATS
 @pytest.mark.parametrize("ingested", [False, True], ids=["no-producer-anywhere", "real-ingest"])
 def test_release_producer_is_the_ingests_across_migrate(tmp_path, subtests, fmt, ingested):
@@ -114,6 +133,7 @@ def test_release_producer_is_the_ingests_across_migrate(tmp_path, subtests, fmt,
     expected = None
     if ingested:  # one real, completed ingest; its producer is read back from its own run_started
         opts = ["--write-mode", "direct", "--input-data", tmp_path.as_uri()]
+        opts += ["--product-name", "p.zarr"]
         _cli(store, "ingest", "cli_test_plugin", *opts, "--option", "allow_empty_source=true")
         paths = (store / ".firecube/runs").glob("*/events-*.jsonl")  # read, not selected
         events = [json.loads(ln) for p in paths if p.parent.name != "ingest-1" for ln in p.open()]
@@ -163,7 +183,7 @@ def test_release_resume_rewrites_nothing(tmp_path, monkeypatch, subtests, fmt, m
     store = _store(tmp_path, fmt)
     args = ("release", "create", "0.1.1") if mode == "standalone" else ("migrate", "run", RELEASING)
     monkeypatch.setattr(ChunkManager, failing, Mock(side_effect=RuntimeError("injected")))
-    _cli(store, *args, exit_code=1)
+    _cli(store, *args, exit_code=70)  # an injected RuntimeError is unclassified
     monkeypatch.undo()
     kept = {part: _hashes(store, ".firecube", part) for part in ("releases", "metadata")}
     _cli(store, *args)
@@ -191,7 +211,7 @@ def test_versions_with_slash_percent_and_dot_round_trip_under_escaped_keys(tmp_p
 def test_version_the_storage_cannot_hold_is_refused_before_anything_is_written(tmp_path, version):
     store = _store(tmp_path, 3)
     before = _hashes(store)
-    _cli(store, "release", "create", version, exit_code=1)
+    _cli(store, "release", "create", version, exit_code=2)
     assert _hashes(store) == before
 
 
@@ -253,7 +273,7 @@ def test_interrupted_release_archive_is_refused_on_rerun_and_rebuilt_from_one_ru
     archive = tmp_path / "full.zip"
     args = ("release", "create", "1.0", "--archive", archive.as_uri())
     monkeypatch.setattr(ChunkManager, "create_release", Mock(side_effect=RuntimeError("injected")))
-    _cli(store, *args, exit_code=1)
+    _cli(store, *args, exit_code=70)  # an injected RuntimeError is unclassified
     monkeypatch.undo()
     assert archive.is_file()  # the failure came after the archive write
 
@@ -377,6 +397,28 @@ def test_release_verify_reports_a_deleted_previous_backup_as_a_broken_backup_cha
     assert "backup chain: broken at 1.0" in _cli(store, "release", "verify", exit_code=1).output
 
 
+@pytest.mark.parametrize("damage", ["backup", "metadata"])
+def test_verify_release_for_product_fails_when_either_check_fails(tmp_path, damage):
+    store = _store(tmp_path, 3)
+    _archived(store, "1.0", tmp_path / "one.zip")
+    _archived(store, "2.0", tmp_path / "two.zip")
+    with open_product(store.as_uri(), format="zarr") as product:
+        clean = verify_release_for_product(product)
+        if damage == "backup":
+            (tmp_path / "one.zip").unlink()
+        else:
+            _hand_edit(store, "temp/zarr.json")
+        result = verify_release_for_product(product)
+    assert (clean.verification.matches, clean.retention.holds, clean.holds) == (True, True, True)
+    assert clean.retention.version == clean.verification.version == "2.0"
+    assert (result.verification.matches, result.retention.holds, result.holds) == (
+        damage == "backup",
+        damage == "metadata",
+        False,
+    )
+    assert result.retention.version == result.verification.version == "2.0"
+
+
 @FORMATS
 def test_release_record_without_retention_still_shows_and_verifies(tmp_path, fmt):
     store = _store(tmp_path, fmt)
@@ -430,11 +472,14 @@ def versioned(s3_client: Any) -> Any:
 
 
 def _s3_cli(client: Any, *args: str, exit_code: int = 0):
-    target = ["--target", f"s3://{_BUCKET}/p.zarr", "--product-name", "p.zarr"]
+    target = ["--target", f"s3://{_BUCKET}/p.zarr"]
+    if args[:2] == ("migrate", "adopt"):
+        target += ["--product-name", "p.zarr"]
     env = s3_env(
         client.meta.endpoint_url, access_key="testing", secret_key="testing", region="us-east-1"
     )
-    out = CliRunner().invoke(cli, [*args, *target], env=env)
+    confirm = ["--yes-i-really-mean-it"] if _needs_confirmation(args) else []
+    out = CliRunner().invoke(cli, [*args, *target, *confirm], env=env)
     assert out.exit_code == exit_code, out.output
     return out
 

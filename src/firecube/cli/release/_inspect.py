@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import click
 
-from firecube.cli._errors import render
-from firecube.cli.release._common import echo_json, open_session, release_options
+from firecube.cli._exit_codes import ExitCode
+from firecube.cli.release._common import echo_json, open_target, release_options
 from firecube.cli.release._render import (
     echo_listing,
     echo_record,
@@ -28,13 +28,11 @@ from firecube.cli.release._render import (
     release_payload,
     verification_payload,
 )
-from firecube.core.errors import FirecubeError
-from firecube.ingestor.runtime.release import (
+from firecube.operations import (
     list_releases_for_product,
     read_release_for_product,
     verify_release_for_product,
 )
-from firecube.ingestor.runtime.release_retention import verify_retention
 
 
 @click.command(
@@ -42,11 +40,11 @@ from firecube.ingestor.runtime.release_retention import verify_retention
     epilog="""\b
 Examples:
   # list the releases of a product, oldest first; the current one is marked *
-  firecube release list --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube release list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # list them as JSON
-  firecube release list --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube release list --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube release show, firecube release create
 """,
@@ -56,7 +54,6 @@ See also: firecube release show, firecube release create
 def list_cmd(
     ctx: click.Context,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -68,20 +65,16 @@ def list_cmd(
     producer status. the current release is marked with *. a product with no
     release prints a notice, or an empty list in json, and exits 0.
     """
-    session = open_session(
+    product = open_target(
         ctx,
         command="release list",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        listing = list_releases_for_product(session=session)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    listing = list_releases_for_product(product)
     if output_format == "json":
         echo_json(listing_payload(listing))
         return
@@ -93,11 +86,11 @@ def list_cmd(
     epilog="""\b
 Examples:
   # show the current release
-  firecube release show --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube release show --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # show release 1.0.0 as JSON
-  firecube release show 1.0.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube release show 1.0.0 --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube release list, firecube release verify
 """,
@@ -109,7 +102,6 @@ def show(
     ctx: click.Context,
     version: str | None,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -122,20 +114,16 @@ def show(
     and the runs recorded since the previous release. exits 1 when no such
     release exists.
     """
-    session = open_session(
+    product = open_target(
         ctx,
         command="release show",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        record = read_release_for_product(session=session, version=version)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    record = read_release_for_product(product, version=version)
     if output_format == "json":
         echo_json(release_payload(record))
         return
@@ -147,11 +135,11 @@ def show(
     epilog="""\b
 Examples:
   # compare the metadata of a product with its current release
-  firecube release verify --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube release verify --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # compare it with release 1.0.0 and print the result as JSON
-  firecube release verify 1.0.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube release verify 1.0.0 --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube release show, firecube snapshot diff
 """,
@@ -173,7 +161,6 @@ def verify(
     ctx: click.Context,
     version: str | None,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -194,24 +181,19 @@ def verify(
     the archive is missing or changed, the backup chain is broken, a version is lost
     or a bucket setting changed, and when no such release exists.
     """
-    session = open_session(
+    product = open_target(
         ctx,
         command="release verify",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        verification = verify_release_for_product(session=session, version=version)
-        check = verify_retention(session, verification.version, sample=sample)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = verify_release_for_product(product, version=version, sample=sample)
     if output_format == "json":
-        echo_json(verification_payload(verification, check))
+        echo_json(verification_payload(result.verification, result.retention))
     else:
-        echo_verification(verification, check)
-    if not (verification.matches and check.holds):
-        ctx.exit(1)
+        echo_verification(result.verification, result.retention)
+    if not result.holds:
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)

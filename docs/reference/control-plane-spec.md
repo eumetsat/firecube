@@ -350,12 +350,12 @@ creates the cache again from the WAL.
 ## Resolved Index: `index/current.json`
 
 The resolved-index record is the durable form of an engine-resolved
-[`IndexSpec`](parallelism.md#firecube.ingestor.api.IndexSpec). It is written
+[`IndexSpec`](parallelism.md#firecube.sdk.IndexSpec). It is written
 once, after the first successful resolution, and verified against the plugin
 declaration on every later run. Inspect it with `firecube zarr index show`;
 regenerate it with `firecube zarr index rebuild`. The rendered API reference
 for the record type is
-[`ResolvedIndexRecord`](parallelism.md#firecube.ingestor.api.ResolvedIndexRecord).
+[`ResolvedIndexRecord`](parallelism.md#firecube.sdk.ResolvedIndexRecord).
 
 | Key | Type | Meaning |
 |---|---|---|

@@ -733,7 +733,7 @@ def resolve_index_spec(
         NotImplementedError: If any axis kind is not supported.
 
     Examples:
-        >>> from firecube.core.api import IndexSpec, RegularTimeAxis
+        >>> from firecube.sdk import IndexSpec, RegularTimeAxis
         >>> axis = RegularTimeAxis(
         ...     coordinate="timestamp",
         ...     epoch="2024-01-01T00:00:00Z",

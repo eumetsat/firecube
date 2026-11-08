@@ -22,9 +22,9 @@ import pytest
 from firecube.core.storage import StorageWriteResult
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import IngestResult, OutputPaths, PipelineMetrics, ResultMetrics
 from firecube.ingestor.runtime.engine import PipelineExecutor
 from firecube.ingestor.types.context import RuntimeIdentity, RuntimeIngestContext, StorageContext
+from firecube.sdk import ExecutionParams, IngestResult, OutputPaths, PipelineMetrics, ResultMetrics
 from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.integration
@@ -55,7 +55,8 @@ def _ctx(
         target=session.product.product_uri.to_str(),
         output_format="zarr",
         storage=StorageContext(output=session),
-        options={"write_mode": write_mode, "upload_workers": 3},
+        options={"upload_workers": 3},
+        execution=ExecutionParams(write_mode=write_mode),
         run_id="m7-run",
         identity=RuntimeIdentity(run_id="m7-run"),
     )

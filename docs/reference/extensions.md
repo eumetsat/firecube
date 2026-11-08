@@ -1,7 +1,7 @@
 # Extensions
 
 This reference covers `firecube.ingestor.extensions`, the optional helper
-surface plugins may import alongside `firecube.ingestor.api`. HEALPix helpers
+surface plugins may import alongside `firecube.sdk`. HEALPix helpers
 require the `firecube[healpix]` extra.
 
 {{ render_api_summary("firecube.ingestor.extensions", [

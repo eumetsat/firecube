@@ -47,8 +47,9 @@ firecube plugins describe <plugin>
 ```
 
 Then follow the plugin documentation for its source data and options. Ingestion
-requires a target and write mode, plus a product name from the command or plugin
-class. This example also spells out the storage and output choices:
+requires a target and a write mode. The first run records the product name in the
+store, taken from `--product-name` or the plugin class. This example also spells
+out the storage choices:
 
 ```bash
 firecube ingest <plugin> \
@@ -57,7 +58,6 @@ firecube ingest <plugin> \
   --product-name my_product \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct
 ```
 
@@ -69,7 +69,6 @@ firecube ingest <plugin> \
   --product-name my_product \
   --storage-type local \
   --storage-driver obstore \
-  --output-format zarr \
   --write-mode direct
 ```
 

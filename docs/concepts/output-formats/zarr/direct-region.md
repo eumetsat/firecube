@@ -47,7 +47,7 @@ The declared time axis decides what the coordinate array stores and who
 writes it. Declaring one is a single entry in `index_spec`:
 
 ```python
-from firecube.ingestor.api import IndexSpec, TimeAxis
+from firecube.sdk import IndexSpec, TimeAxis
 
 IndexSpec(
     name="my_product_v1",
@@ -77,12 +77,12 @@ merged.
 
 Each `TimeAxis` constructor commits the product to one regime:
 
-- **Grid** ([`TimeAxis.grid`](../../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.grid)): regular cadence and the nominal grid is the
+- **Grid** ([`TimeAxis.grid`](../../../reference/parallelism.md#firecube.sdk.TimeAxis.grid)): regular cadence and the nominal grid is the
   truth. Slot `n` stores exactly `epoch + n * cadence`, so the axis is filled
   and sealed without reading any source data. Worker timestamps must land
   exactly on the grid; any deviation is treated as corruption. Claim this
   only when the source guarantees exact slot times.
-- **Observed** ([`TimeAxis.observed`](../../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.observed)): regular cadence for placement, real
+- **Observed** ([`TimeAxis.observed`](../../../reference/parallelism.md#firecube.sdk.TimeAxis.observed)): regular cadence for placement, real
   observation times for storage. A ten-minute sensor rarely stamps files at
   the slot boundary; the observation arrives at `00:00:02` or `00:10:07`.
   Firecube floors each timestamp onto the cadence to find its slot while the
@@ -91,10 +91,10 @@ Each `TimeAxis` constructor commits the product to one regime:
   products need. The axis stays open-ended: windows materialize as source
   data arrives, and re-runs reconcile per slot instead of failing or
   overwriting.
-- **Explicit** ([`TimeAxis.explicit`](../../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.explicit)): no regular cadence, but the full list
+- **Explicit** ([`TimeAxis.explicit`](../../../reference/parallelism.md#firecube.sdk.TimeAxis.explicit)): no regular cadence, but the full list
   of timestamps is known upfront. The declaration carries the values, so the
   axis is written and sealed like the grid regime.
-- **Discovered** ([`TimeAxis.discovered`](../../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.discovered)): the timestamps live inside the
+- **Discovered** ([`TimeAxis.discovered`](../../../reference/parallelism.md#firecube.sdk.TimeAxis.discovered)): the timestamps live inside the
   source files. This declares `IrregularTimeAxis(values=AUTO)`, the spelling
   the reference and error messages use. Firecube runs `inspect_item` over
   every item before any write, sorts the collected coordinates, and builds

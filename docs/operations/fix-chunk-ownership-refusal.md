@@ -97,7 +97,6 @@ Start a worker for slots 0 to 149. Another worker would take slots 150 to 199. B
 
 ```bash
 firecube ingest direct_zarr_capable_test_plugin $FLAGS \
-  --output-format zarr \
   --option pipeline_workers=1 \
   --slot-start 0 \
   --slot-end 150 \
@@ -107,11 +106,11 @@ grep '^Error' refusal.log
 ```
 
 ```text
-1
+2
 Error: Group 'data' chunk_shapes=[(100, 10)]; slot range [0, 150) misaligned. Suggested aligned range: [0, 200)
 ```
 
-Firecube raised a `ConfigurationError` and the command exited with 1. The refusal comes before the worker writes. The log file also holds a JSON warning with the same text.
+Firecube refused the range with a configuration error and the command exited with 2. The refusal comes before the worker writes. The log file also holds a JSON warning with the same text.
 
 Check that the store holds no chunk:
 
@@ -131,7 +130,6 @@ Run the first two planned ranges. Each command starts one worker:
 
 ```bash
 firecube ingest direct_zarr_capable_test_plugin $FLAGS \
-  --output-format zarr \
   --option pipeline_workers=1 \
   --slot-start 0 \
   --slot-end 100 \
@@ -147,7 +145,6 @@ firecube ingest direct_zarr_capable_test_plugin $FLAGS \
 
 ```bash
 firecube ingest direct_zarr_capable_test_plugin $FLAGS \
-  --output-format zarr \
   --option pipeline_workers=1 \
   --slot-start 100 \
   --slot-end 200 \

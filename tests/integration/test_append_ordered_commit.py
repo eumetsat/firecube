@@ -40,6 +40,7 @@ from firecube.ingestor.types.context import (
     PluginContext,
     StorageContext,
 )
+from firecube.sdk import ExecutionParams
 from tests.helpers.storage import make_test_binding, make_test_session
 
 pytestmark = pytest.mark.integration
@@ -102,10 +103,10 @@ def test_parallel_workers_commit_appends_in_batch_order(tmp_path: Path) -> None:
         options={
             "pipeline_batch_size": _BATCH_SIZE,
             "pipeline_workers": _WORKERS,
-            "write_mode": "direct",
             "no_progress": True,
             "layout": "areastats",
         },
+        execution=ExecutionParams(write_mode="direct"),
         storage=StorageContext(output=session),
         run_id="ordered-commit-run",
     )

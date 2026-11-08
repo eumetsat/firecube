@@ -23,11 +23,11 @@ import functools
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import echo_rendered, render
-from firecube.cli._product import resolve_product_identity
+from firecube.cli._errors import echo_rendered
 from firecube.cli._shared_options import (
     archive_uri_option,
     dry_run_flag,
+    product_name_option,
     target_uri_option,
     yes_flag,
 )
@@ -40,9 +40,7 @@ from firecube.cli.archive._common import (
     _local_archive,
     _require_overwrite_confirmation,
 )
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
+from firecube.operations import StorageDriverConfig, open_product
 
 
 @click.command(
@@ -51,22 +49,39 @@ from firecube.core.storage.session import StorageSession
 Examples:
   # restore an archive to a local Zarr store
   firecube archive restore \\
-    --archive file:///tmp/archive.tgm \\
-    --target file:///path/to/restored.zarr
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
+    --target file:///data/products/RESTORED.zarr
   # restore and overwrite an existing store
   firecube archive restore \\
-    --archive file:///tmp/archive.tgm \\
-    --target file:///path/to/product.zarr \\
-    --overwrite
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --overwrite --yes-i-really-mean-it
+  # show what a restore would write, and write nothing
+  firecube archive restore \\
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
+    --target file:///data/products/RESTORED.zarr \\
+    --dry-run
   # restore a zip archive to a local Zarr store
   firecube archive restore \\
-    --archive file:///tmp/archive.zip \\
-    --target file:///path/to/restored.zarr
+    --archive file:///data/archives/MY_PRODUCT.zip \\
+    --target file:///data/products/RESTORED.zarr
+  # restore an archive without a control plane under a product label
+  firecube archive restore \\
+    --archive file:///data/archives/DATA_ONLY.tgm \\
+    --target file:///data/products/RESTORED.zarr \\
+    --product-name <label>
 See also: firecube archive create, firecube archive info
 """,
 )
 @archive_uri_option(tier="write")
 @target_uri_option(tier="write")
+@product_name_option(
+    required=False,
+    help=(
+        "Logical product name. The restored product keeps the label the archive records; "
+        "needed only when the archive records none."
+    ),
+)
 @click.option(
     "--storage-type",
     "storage_type",
@@ -97,6 +112,7 @@ def restore(
     ctx: click.Context,
     archive: str,
     target: str,
+    product_name: str | None,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -109,7 +125,8 @@ def restore(
     decodes all encoded array groups from a .tgm archive, or copies every entry
     of a .zip archive, and writes them back to the target Zarr store. archive
     groups restore to their original paths. zip archives restore to local
-    targets only.
+    targets only. the restored product takes the label the archive records;
+    --product-name names it only when the archive records none.
     """
     is_zip = _is_zip_archive(archive)
 
@@ -128,12 +145,6 @@ def restore(
 
     _require_overwrite_confirmation(overwrite=overwrite, yes_i_really_mean_it=yes_i_really_mean_it)
 
-    if dry_run:
-        click.echo(f"[dry-run] Would restore: {archive_abs} -> {target}")
-        if overwrite:
-            click.echo("  Overwrite: yes")
-        return
-
     storage_config = get_storage_config(
         ctx,
         overrides={
@@ -144,39 +155,44 @@ def restore(
         cache=False,
     )
 
-    driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    restore_identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=target.rstrip("/").rsplit("/", 1)[-1],
-    )
-    session = StorageSession(
-        StorageBinding(
-            identity=restore_identity,
-            driver=driver_config,
-        )
-    )
-
-    from firecube.core.archive.zip.backup_chain import BackupChainError
-    from firecube.ingestor.runtime.archive import (
-        ArchiveClaimError,
-        ArchiveConversionError,
+    from firecube.operations import (
+        ArchiveRestorePlan,
+        read_restore_source,
         restore_archive,
+        restore_label,
     )
 
-    try:
-        restored = restore_archive(
-            session=session,
-            archive=archive,
-            archive_path=archive_abs,
-            archive_format="zip" if is_zip else "tensogram",
-            target=restore_identity.product_uri.to_str(),
-            overwrite=overwrite,
-            report=echo_rendered,
-            warn=functools.partial(echo_rendered, err=True),
+    archive_format = "zip" if is_zip else "tensogram"
+    source = read_restore_source(
+        archive=archive, archive_path=archive_abs, archive_format=archive_format
+    )
+    # The target opens under the label the restore takes; a new target records none yet.
+    product = ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=StorageDriverConfig.from_storage_config(storage_config),
+            product_name=restore_label(source, product_name, archive=archive),
+            require_label=False,
         )
-    except (ArchiveClaimError, ArchiveConversionError, BackupChainError) as exc:
-        raise click.ClickException(render(exc)) from exc
+    )
+
+    restored = restore_archive(
+        product,
+        archive=archive,
+        archive_path=archive_abs,
+        archive_format=archive_format,
+        overwrite=overwrite,
+        report=echo_rendered,
+        warn=functools.partial(echo_rendered, err=True),
+        source=source,
+        dry_run=dry_run,
+    )
+    if isinstance(restored, ArchiveRestorePlan):
+        click.echo(f"[dry-run] Would restore: {restored.source.archive_path} -> {target}")
+        if restored.overwrite:
+            click.echo("  Overwrite: yes")
+        return
 
     result = restored.summary
     click.echo(f"Zarr restored: {result['target']}")

@@ -29,7 +29,7 @@ def _invoke_batch_size(args: list[str]):
 
 
 def test_file_uri_no_storage_flags(tmp_local_zarr: Path) -> None:
-    result = _invoke_batch_size(["-p", tmp_local_zarr.as_uri(), "-g", "g1"])
+    result = _invoke_batch_size(["-t", tmp_local_zarr.as_uri(), "-g", "g1"])
 
     assert result.exit_code == 0
     assert "Missing option" not in result.output
@@ -50,8 +50,9 @@ def test_s3_uri_infers_storage_type(monkeypatch, tmp_path: Path) -> None:
         return backing_store
 
     monkeypatch.setattr(ZarrIO, "open_group", fake_open_group)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
 
-    result = _invoke_batch_size(["-p", "s3://bucket/x.zarr", "-g", "g1"])
+    result = _invoke_batch_size(["-t", "s3://bucket/x.zarr", "-g", "g1"])
 
     assert result.exit_code == 0, result.output
     assert "Recommended: --option pipeline_batch_size=2" in result.output
@@ -69,7 +70,7 @@ def test_missing_group_clean_error(tmp_path: Path) -> None:
 
     zarr.open_group(str(store_path), mode="w")
 
-    result = _invoke_batch_size(["-p", store_path.as_uri(), "-g", "definitely-missing"])
+    result = _invoke_batch_size(["-t", store_path.as_uri(), "-g", "definitely-missing"])
 
     assert result.exit_code == 1
     assert "Error opening store:" in result.output

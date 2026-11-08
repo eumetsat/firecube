@@ -23,11 +23,11 @@ import zarr
 
 from firecube.core.config import StorageConfig
 from firecube.core.zarr.validation import validate_group_with_fs
-from firecube.ingestor.api import GenericZarrIngestor, PluginContext
 from firecube.ingestor.errors import AppendOverwriteRefused, SchemaDriftReingestError
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
 from firecube.ingestor.runtime.zarr.append_failure import AppendBatchFailed
 from firecube.ingestor.runtime.zarr.strategies.append import AppendStrategy
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_local_session, make_test_context
 
 pytestmark = pytest.mark.integration
@@ -156,7 +156,6 @@ def _engine_run(root, mode, times, workers=1, **options):
         root,
         product="coordinate_safety.zarr",
         options={
-            "write_mode": mode,
             "x_times": times,
             "pipeline_workers": workers,
             "pipeline_batch_size": 1,
@@ -165,6 +164,7 @@ def _engine_run(root, mode, times, workers=1, **options):
             "zarr_chunk_shape": {"time": 1, "x": 2},
             **options,
         },
+        execution=ExecutionParams(write_mode=mode),
     )
     host.run(ctx)
     return host

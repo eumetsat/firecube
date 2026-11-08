@@ -20,7 +20,38 @@ from typing import Any
 
 import click
 
+from firecube.cli._errors import render
+from firecube.cli._input_filters import load_plugin_defaults
 from firecube.cli._uri_policy import parse_and_validate_uri, validate_uri_storage_coherence
+from firecube.core.errors import ConfigurationError
+from firecube.operations import resolve_product_name as core_resolve_product_name
+
+
+def resolve_product_name(
+    ctx: click.Context, plugin: str, ingestor_cls: type, given: str | None
+) -> str:
+    """Return the product label a write command offers to the store.
+
+    Precedence: `--product-name`, the plugin's `default_product_name` config key, then the
+    plugin class `PRODUCT_NAME`. The store refuses a label that differs from the one it records.
+
+    Raises:
+        ConfigurationError: The flag is empty, or no source names a label.
+        click.UsageError: The config is unreadable.
+    """
+    config_value = (
+        None if given is not None else load_plugin_defaults(ctx, plugin).get("default_product_name")
+    )
+    return core_resolve_product_name(
+        given, config_value, getattr(ingestor_cls, "PRODUCT_NAME", None), plugin
+    )
+
+
+def _ingest_context() -> click.Context:
+    """Return a context of the `ingest` command, so a config built outside Click renders its flags."""
+    from firecube.cli._recovery import _command
+
+    return click.Context(_command(("ingest",)), info_name="ingest")
 
 
 @dataclass(slots=True)
@@ -37,7 +68,6 @@ class IngestCommandConfig:
     storage_type: str | None
     storage_driver: str | None
     product_name: str | None = None
-    output_format: str = "zarr"
     in_memory: bool = False
     options: dict[str, Any] = field(default_factory=dict)
 
@@ -49,11 +79,12 @@ class IngestCommandConfig:
         """Aggregate all validation errors into a single Click usage error."""
         errors: list[str] = []
 
-        if self.product_name is not None and self.product_name == "":
-            errors.append(
-                "--product-name was provided but is empty. Either omit it (use plugin "
-                "PRODUCT_NAME or config default_product_name), or provide a non-empty value."
-            )
+        if self.product_name == "":
+            try:
+                core_resolve_product_name("", None, None, self.plugin)
+            except ConfigurationError as exc:
+                ctx = click.get_current_context(silent=True) or _ingest_context()
+                errors.append(render(exc, ctx))
 
         if not self.target:
             errors.append("--target is required.")

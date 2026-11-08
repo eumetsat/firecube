@@ -35,15 +35,33 @@ Use JSON for scripts:
 firecube archive info --archive "$ARCHIVE_URI" --format json
 ```
 
-Expected output resembles:
+`archive info` offers the formats `table` and `json`. Expected output resembles:
 
 ```json
 {
   "path": "/data/archives/MY_PRODUCT.tgm",
   "format": "v1",
-  "size_bytes": 4432,
-  "groups": ["data"],
-  "has_controlplane": true
+  "size_bytes": 34048,
+  "groups": [
+    "data"
+  ],
+  "has_controlplane": true,
+  "group_details": [
+    {
+      "group": "data",
+      "variables": {
+        "data": {
+          "shape": [1000, 10],
+          "dtype": "float32",
+          "dims": ["timestamp", "x"],
+          "zarr_chunks": [100, 10]
+        }
+      },
+      "compression": "zstd",
+      "source_uri": "file:///data/products/MY_PRODUCT.zarr",
+      "archived_at": "2026-11-07T12:10:53.536335+00:00"
+    }
+  ]
 }
 ```
 
@@ -67,6 +85,9 @@ Group: data
 [control-plane]
   Product: product.zarr
 ```
+
+Add `-f json` to print the contents as JSON. The output starts with the keys
+`format`, `message_count` and `messages`.
 
 ## Root Group Label
 
@@ -104,6 +125,17 @@ Expected output:
 
 ```text
 VALID: /data/archives/MY_PRODUCT.tgm (2 message(s), no issues)
+```
+
+Add `-f json` to print the result as JSON:
+
+```json
+{
+  "path": "/data/archives/MY_PRODUCT.tgm",
+  "valid": true,
+  "issues": [],
+  "message_count": 2
+}
 ```
 
 A `.tgm` archive with no messages is invalid. The command exits with code 1:

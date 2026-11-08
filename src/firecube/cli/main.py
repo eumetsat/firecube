@@ -26,9 +26,10 @@ from typing import Any
 
 import click
 
-from firecube.cli._command_schemas import IngestCommandConfig
+from firecube.cli._command_schemas import IngestCommandConfig, resolve_product_name
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import MissingProductNameError, render, wrap_user_facing_errors
+from firecube.cli._errors import enable_debug, render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._formatter import (
     COMMAND_GROUPS,
     OPTION_GROUPS,
@@ -40,6 +41,7 @@ from firecube.cli._input_filters import input_filters_option, resolve_input_filt
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._rename_hints import install_rename_hints
 from firecube.cli._shared_options import (
+    dry_run_flag,
     storage_driver_option,
     storage_type_option,
     write_mode_option,
@@ -53,12 +55,10 @@ from firecube.cli._uri_policy import parse_and_validate_source_uri
 from firecube.core.config import get_plugin_defaults, load_config_file
 from firecube.core.observability import set_current_span_attribute, span
 from firecube.core.product.resolver import ProductResolver
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
-from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import IngestContext, StorageContext
 from firecube.ingestor.registry.loader import discover_ingestors
+from firecube.ingestor.runtime.configure import ensure_run_id
+from firecube.operations import StorageDriverConfig, StorageUri, open_product, resolve_slot_window
+from firecube.sdk import BaseIngestor, ExecutionParams, IngestContext, StorageContext
 
 log = logging.getLogger("firecube.cli")
 
@@ -98,7 +98,6 @@ OPTION_GROUPS.update(
                     "--input-filters",
                     "--target",
                     "--product-name",
-                    "--output-format",
                 ],
             },
             {
@@ -112,6 +111,7 @@ OPTION_GROUPS.update(
                     "--slot-start",
                     "--slot-end",
                     "--slot-size",
+                    "--dry-run",
                 ],
             },
             {
@@ -122,7 +122,7 @@ OPTION_GROUPS.update(
         "firecube archive create": [
             {
                 "name": "Required",
-                "options": ["--source", "--archive"],
+                "options": ["--target", "--archive"],
             },
             {
                 "name": "Formats",
@@ -152,7 +152,7 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Behavior",
-                "options": ["--overwrite"],
+                "options": ["--overwrite", "--product-name"],
             },
             {
                 "name": "Storage",
@@ -163,7 +163,8 @@ OPTION_GROUPS.update(
             {
                 "name": "Filtering",
                 "options": [
-                    "--product-name",
+                    "--target",
+                    "--all-products",
                     "--start-date",
                     "--end-date",
                     "--time-range",
@@ -185,7 +186,7 @@ OPTION_GROUPS.update(
         "firecube chunks delete": [
             {
                 "name": "Scope",
-                "options": ["--product-name", "--all-products"],
+                "options": ["--target", "--all-products"],
             },
             {
                 "name": "Filters",
@@ -215,7 +216,7 @@ OPTION_GROUPS.update(
         "firecube chunks delete-span": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Filtering",
@@ -233,7 +234,7 @@ OPTION_GROUPS.update(
         "firecube chunks runs list": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Output",
@@ -243,7 +244,7 @@ OPTION_GROUPS.update(
         "firecube chunks runs abandon": [
             {
                 "name": "Required",
-                "options": ["--product-name", "--run-id", "--reason"],
+                "options": ["--target", "--run-id", "--reason"],
             },
             {
                 "name": "Safety",
@@ -261,7 +262,7 @@ OPTION_GROUPS.update(
             },
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Safety",
@@ -275,7 +276,7 @@ OPTION_GROUPS.update(
         "firecube catalog intake": [
             {
                 "name": "Required",
-                "options": ["--product", "--output", "--collection-id"],
+                "options": ["--target", "--output", "--collection-id"],
             },
             {
                 "name": "Optional",
@@ -291,10 +292,10 @@ OPTION_GROUPS.update(
         "firecube zarr validate": [
             {
                 "name": "Required",
-                "options": ["--product", "--group"],
+                "options": ["--target", "--group"],
             },
             {
-                "name": "Options",
+                "name": "Validation",
                 "options": [
                     "--timeout",
                     "--max-chunks",
@@ -308,21 +309,18 @@ OPTION_GROUPS.update(
         "firecube zarr slots": [
             {
                 "name": "Required",
-                "options": [
-                    "--target",
-                    "--product-name",
-                    "--storage-type",
-                    "--storage-driver",
-                    "--storage-anonymous",
-                    "--write-mode",
-                ],
+                "options": ["--target", "--write-mode"],
             },
             {
                 "name": "Input",
-                "options": ["--input-data", "--input-filters"],
+                "options": ["--input-data", "--input-filters", "--product-name"],
             },
             {
-                "name": "Options",
+                "name": "Storage",
+                "options": ["--storage-type", "--storage-driver", "--storage-anonymous"],
+            },
+            {
+                "name": "Planning",
                 "options": ["--slot-size", "--no-resume", "--format", "--yes-i-really-mean-it"],
             },
         ],
@@ -331,32 +329,28 @@ OPTION_GROUPS.update(
                 "name": "Required",
                 "options": [
                     "--target",
-                    "--product-name",
                     "--storage-type",
                     "--storage-driver",
                     "--storage-anonymous",
                 ],
             },
             {
-                "name": "Options",
+                "name": "Levels",
                 "options": ["--resolutions"],
             },
         ],
         "firecube zarr preallocate": [
             {
                 "name": "Required",
-                "options": [
-                    "--target",
-                    "--product-name",
-                    "--storage-type",
-                    "--storage-driver",
-                    "--storage-anonymous",
-                    "--write-mode",
-                ],
+                "options": ["--target", "--write-mode"],
             },
             {
                 "name": "Input",
-                "options": ["--input-data", "--input-filters"],
+                "options": ["--input-data", "--input-filters", "--product-name"],
+            },
+            {
+                "name": "Storage",
+                "options": ["--storage-type", "--storage-driver", "--storage-anonymous"],
             },
             {
                 "name": "Advanced",
@@ -366,7 +360,7 @@ OPTION_GROUPS.update(
         "firecube parquet validate": [
             {
                 "name": "Required",
-                "options": ["--product"],
+                "options": ["--target"],
             },
             {
                 "name": "Options",
@@ -376,7 +370,7 @@ OPTION_GROUPS.update(
         "firecube parquet consolidate": [
             {
                 "name": "Required",
-                "options": ["--product", "--output"],
+                "options": ["--target", "--output"],
             },
             {
                 "name": "Options",
@@ -415,7 +409,7 @@ OPTION_GROUPS.update(
         "firecube advise batch-size": [
             {
                 "name": "Required",
-                "options": ["--product", "--group"],
+                "options": ["--target", "--group"],
             },
             {
                 "name": "Options",
@@ -425,7 +419,7 @@ OPTION_GROUPS.update(
         "firecube advise compliance": [
             {
                 "name": "Required",
-                "options": ["--profile", "--product", "--group"],
+                "options": ["--profile", "--target", "--group"],
             },
             {
                 "name": "Options",
@@ -454,7 +448,7 @@ OPTION_GROUPS.update(
                 "options": ["--archive"],
             },
             {
-                "name": "Options",
+                "name": "Checks",
                 "options": ["--quick"],
             },
         ],
@@ -467,7 +461,7 @@ OPTION_GROUPS.update(
         "firecube chunks claims list": [
             {
                 "name": "Filtering",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Output",
@@ -481,7 +475,7 @@ OPTION_GROUPS.update(
         "firecube chunks compact rebuild": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Safety",
@@ -499,7 +493,7 @@ OPTION_GROUPS.update(
         "firecube chunks compact status": [
             {
                 "name": "Required",
-                "options": ["--product-name"],
+                "options": ["--target"],
             },
             {
                 "name": "Output",
@@ -521,8 +515,11 @@ OPTION_GROUPS.update(
     type=click.Path(path_type=Path),
     help="Firecube TOML config file (default: ~/.config/firecube/config.toml)",
 )
+@click.option(
+    "--debug", is_flag=True, help="Print the traceback of an error; sets FIRECUBE_DEBUG=1."
+)
 @click.pass_context
-def cli(ctx: click.Context, config_file: Path | None) -> None:
+def cli(ctx: click.Context, config_file: Path | None, debug: bool) -> None:
     """A plugin-driven batch ingestion engine for building and maintaining operational analysis-ready data cubes
 
     Firecube handles the operational work of building and maintaining cubes,
@@ -532,6 +529,8 @@ def cli(ctx: click.Context, config_file: Path | None) -> None:
     storage management and diagnostics.
     """
     ctx.ensure_object(dict)
+    if debug:
+        enable_debug(ctx)
     if config_file is not None:
         ctx.obj["config_file"] = config_file
 
@@ -543,30 +542,26 @@ Examples:
   firecube ingest <plugin> --show-options
   # run ingestion from a local source to a local target
   firecube ingest <plugin> \\
-    --input-data file:///path/to/input \\
-    --target file:///path/to/output.zarr \\
+    --input-data file:///data/raw \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
     --product-name <name> \\
-    --storage-type local \\
-    --storage-driver fsspec \\
-    --output-format zarr \\
     --write-mode direct
   # run with staged write mode (write locally then upload)
   firecube ingest <plugin> \\
     --input-data file:///data/raw \\
-    --target s3://bucket/output.zarr \\
+    --target s3://bucket/MY_PRODUCT.zarr \\
     --product-name <name> \\
-    --storage-type s3 \\
-    --storage-driver fsspec \\
-    --output-format zarr \\
     --write-mode staged
+  # show what a run would do, and write nothing
+  firecube ingest <plugin> \\
+    --input-data file:///data/raw \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --write-mode direct \\
+    --dry-run
   # pass plugin-specific options
   firecube ingest <plugin> \\
-    --input-data file:///data/ \\
-    --target file:///tmp/output.zarr \\
-    --product-name <name> \\
-    --storage-type local \\
-    --storage-driver fsspec \\
-    --output-format zarr \\
+    --input-data file:///data/raw \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
     --write-mode direct \\
     --option horizon=LST \\
     --option no_progress=true
@@ -585,17 +580,14 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
     help=("Target product URI required (file:///abs/path or s3://bucket/key); -t short available."),
 )
 @click.option(
-    "-n",
     "--product-name",
     "product_name",
     default=None,
     help=(
-        "Logical product name. Overrides the plugin class default and the "
-        "per-plugin config default."
+        "Logical product name. Overrides the per-plugin config default_product_name "
+        "and the plugin class PRODUCT_NAME. The store refuses a name that differs "
+        "from the one it records."
     ),
-)
-@click.option(
-    "--output-format", required=False, help="output format to deliver (e.g. parquet, zarr)"
 )
 @storage_type_option(
     required=False,
@@ -663,6 +655,7 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
     ),
 )
 @click.option("--in-memory", is_flag=True, help="use in-memory DuckDB")
+@dry_run_flag
 @click.option(
     "--option",
     "extra_options",
@@ -676,7 +669,6 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
     help="show available options for the specified plugin and exit",
 )
 @click.pass_context
-@wrap_user_facing_errors
 def ingest(
     ctx: click.Context,
     plugin: str,
@@ -688,7 +680,6 @@ def ingest(
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
-    output_format: str | None,
     write_mode: str | None,
     slot_start: int | None,
     slot_end: int | None,
@@ -697,6 +688,7 @@ def ingest(
     suppress_static_emission_for_non_owner: bool,
     static_owner_slot_start: int | None,
     in_memory: bool,
+    dry_run: bool,
     extra_options,
     show_options: bool,
 ) -> None:
@@ -705,7 +697,8 @@ def ingest(
     The plugin handles source reading; firecube manages write strategy (staged
     or direct), pipeline parallelism, and chunk tracking. Use --option to pass
     plugin-specific overrides, or --show-options to list available options for
-    a plugin.
+    a plugin. --dry-run prints the plan and writes nothing; it exits 1 when a
+    check would block the run.
     """
     extra_options = coerce_options_for_plugin(plugin, extra_options)
     ingest_cfg: IngestCommandConfig | None = None
@@ -728,7 +721,6 @@ def ingest(
                 storage_type=storage_type_resolved,
                 storage_driver=storage_driver,
                 product_name=product_name,
-                output_format=output_format or "zarr",
                 in_memory=in_memory,
                 options=dict(extra_options),
             )
@@ -737,9 +729,6 @@ def ingest(
 
     if not show_options and target is None:
         raise click.ClickException("Missing option '--target'.")
-
-    if (slot_start is None) ^ (slot_end is None):
-        raise click.UsageError("--slot-start and --slot-end must be provided together")
 
     plugins = discover_ingestors()
     if plugin not in plugins:
@@ -750,10 +739,14 @@ def ingest(
     if show_options:
         _print_plugin_options(plugin, ingestor_cls)
         return
+    # Only the engine's own run() plans; another one would write.
+    if dry_run and getattr(ingestor_cls, "run", None) is not BaseIngestor.run:
+        raise click.UsageError(f"--dry-run needs a BaseIngestor plugin that keeps run(): {plugin}")
 
     explicit_config = ctx.obj.get("config_file")
     cfg = load_config_file(explicit_config, strict=explicit_config is not None)
     options = get_plugin_defaults(cfg, plugin)
+    options.pop("default_product_name", None)
     resolved_filters = resolve_input_filters(ctx, plugin, input_filters, defaults=options)
     if resolved_filters is not None:
         options["input_filters"] = resolved_filters
@@ -784,38 +777,32 @@ def ingest(
             },
         ):
             assert ingest_cfg is not None
-            from firecube.cli._slot_env import resolve_slot_range_from_env
-
-            resolved_slot_start, resolved_slot_end, resolved_slot_group = (
-                resolve_slot_range_from_env(
-                    slot_start,
-                    slot_end,
-                    slot_size,
-                    slot_group,
-                )
+            resolved_slot_start, resolved_slot_end, resolved_slot_group = resolve_slot_window(
+                slot_start, slot_end, slot_size, slot_group, env=os.environ
             )
-            options["slot_start"] = resolved_slot_start
-            options["slot_end"] = resolved_slot_end
-            options["slot_size"] = slot_size
-            options["slot_group"] = resolved_slot_group
-            options["suppress_static_emission_for_non_owner"] = (
-                suppress_static_emission_for_non_owner
+            execution = ExecutionParams(
+                write_mode=str(ingest_cfg.write_mode),
+                slot_start=resolved_slot_start,
+                slot_end=resolved_slot_end,
+                slot_size=slot_size,
+                slot_group=resolved_slot_group,
+                suppress_static_emission_for_non_owner=suppress_static_emission_for_non_owner,
+                static_owner_slot_start=static_owner_slot_start,
+                dry_run=dry_run,
             )
-            options["static_owner_slot_start"] = static_owner_slot_start
-            resolved_product_name = (
-                ingest_cfg.product_name
-                or get_plugin_defaults(cfg, plugin).get("default_product_name")
-                or getattr(ingestor_cls, "PRODUCT_NAME", None)
+            set_current_span_attribute("firecube.write_mode", execution.write_mode)
+            resolved_product_name = resolve_product_name(
+                ctx, plugin, ingestor_cls, ingest_cfg.product_name
             )
-            if not resolved_product_name:
-                raise MissingProductNameError(plugin)
 
             target_str = ingest_cfg.target
+            # The plugin class declares the format; BaseIngestor declares "zarr".
+            output_format = str(getattr(ingestor_cls, "output_format", "zarr"))
             try:
                 identity = ProductResolver.resolve(
                     target_str,
-                    format=ingest_cfg.output_format,
-                    product_name=str(resolved_product_name),
+                    format=output_format,
+                    product_name=resolved_product_name,
                 )
             except ValueError as exc:
                 raise click.UsageError(render(exc)) from exc
@@ -830,24 +817,16 @@ def ingest(
             }
             storage_config = get_storage_config(ctx, overrides=storage_overrides, cache=False)
             options.setdefault("storage", {"type": storage_config.storage_type})
-
-            # Per HIGH-3 fix: read every option from the validated typed config, not raw Click params.
-            # IngestCommandConfig has applied defaults and validation; the raw params are inputs to
-            # its construction only. This ensures typed defaults (e.g. output_format="zarr") flow through.
-            final_write_mode = ingest_cfg.write_mode
-            set_current_span_attribute("firecube.write_mode", str(final_write_mode))
-            options["write_mode"] = final_write_mode
-
-            final_output_format = ingest_cfg.output_format
-            if final_output_format == "tensogram":
-                from firecube.ingestor.api import is_dataset_producer
-
-                if not is_dataset_producer(ingestor_cls):
-                    raise click.ClickException(
-                        f"Plugin '{plugin}' does not support --output-format tensogram. "
-                        "It must implement the DatasetProducer protocol "
-                        "(build_dataset + get_batch_groups)."
-                    )
+            # Before the ingestor exists: its constructor makes a temporary workspace directory.
+            session = ctx.with_resource(
+                open_product(
+                    identity.product_uri,
+                    format=output_format,
+                    driver=StorageDriverConfig.from_storage_config(storage_config),
+                    product_name=resolved_product_name,
+                    require_label=False,
+                )
+            ).session
 
             # Instantiate the ingestor *after* setting the global storage config so
             # BaseIngestor can initialise ChunkManager with the correct output base.
@@ -863,13 +842,6 @@ def ingest(
             if upload_workers < 1:
                 raise click.BadParameter("upload_workers must be at least 1.")
 
-            driver_config = StorageDriverConfig.from_storage_config(storage_config)
-            session = StorageSession(
-                StorageBinding(
-                    identity=identity,
-                    driver=driver_config,
-                )
-            )
             plugin_target = identity.product_uri.to_str()
             log.debug(
                 "Ingest target wiring (target=%s plugin_target=%s product_name=%s resolved_product_name=%s write_mode=%s storage_type=%s)",
@@ -877,31 +849,26 @@ def ingest(
                 plugin_target,
                 identity.product_name,
                 resolved_product_name,
-                final_write_mode,
+                execution.write_mode,
                 storage_config.storage_type,
             )
-
-            # Generate Run ID (Engine-owned)
-            run_id = str(options.get("run_id") or options.get("manifest_run_id") or "")
-            if not run_id:
-                import uuid
-
-                hostname = os.getenv("HOSTNAME", "host")
-                run_id = f"{plugin}-{hostname}-{uuid.uuid4().hex}"
 
             ingest_ctx = IngestContext(
                 sources=tuple(sources),
                 target=plugin_target,
                 in_memory=ingest_cfg.in_memory,
-                output_format=final_output_format,
+                output_format=output_format,
                 options=options,
                 storage=StorageContext(output=session),
-                run_id=run_id,
+                execution=execution,
             )
+            ingest_ctx.run_id = ensure_run_id(ctx=ingest_ctx, plugin_name=plugin)
             result = ingestor.run(ingest_ctx)
 
             if result.manifest:
                 click.echo(json.dumps(result.manifest, indent=2))
+                if dry_run and result.manifest["plan"]["blocked"]:
+                    raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
             else:
                 click.echo(
                     json.dumps(

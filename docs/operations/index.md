@@ -6,13 +6,13 @@ clean up, archive, or restore Firecube products.
 Operations commands work against a product URI:
 
 ```bash
-firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 For S3 products, use the full S3 URI:
 
 ```bash
-firecube chunks list --product-name "s3://bucket/products/MY_PRODUCT.zarr"
+firecube chunks list --target "s3://bucket/products/MY_PRODUCT.zarr"
 ```
 
 ## Preflight
@@ -24,8 +24,9 @@ firecube chunks list --help
 firecube archive create --help
 ```
 
-For storage-deleting operations on local products, make sure the storage config
-points at the product root:
+A command with `--target` needs no storage configuration. A command with
+`--all-products` scans the base path of the storage configuration. Set that path
+for local products:
 
 ```bash
 export FIRECUBE_STORAGE_TYPE=local

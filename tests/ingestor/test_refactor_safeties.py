@@ -18,7 +18,7 @@ from tests.helpers.storage import make_test_binding
 
 from firecube.core.controlplane import ChunkManager
 from firecube.ingestor.runtime.recording import SpanRecorder
-from firecube.ingestor.types.context import IngestResult, OutputPaths, RuntimeIngestContext
+from firecube.ingestor.types.context import IngestResult, OutputPaths
 
 
 def test_span_recorder_skips_when_already_registered(tmp_path) -> None:
@@ -41,11 +41,11 @@ def test_span_recorder_skips_when_already_registered(tmp_path) -> None:
         result.registered = True
 
         recorder.register_run(
-            ctx=RuntimeIngestContext(source=str(tmp_path)),
             result=result,
             run_id=run_id,
             product=product,
             slice_meta={"plugin": "test_recorder"},
+            force_reingest=False,
         )
 
         after = manager.list_runs(product=product)

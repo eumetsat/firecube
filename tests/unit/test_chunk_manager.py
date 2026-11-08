@@ -723,7 +723,7 @@ def test_claim_conflict_names_owner_run_and_clear_command(temp_workspace):
             _claim(manager, stack, "grp:slot=0", "other")
         message, root = str(excinfo.value), manager.get_product_root(product)
         printed = render(excinfo.value)
-        clear = f"firecube chunks claims clear --product-name {root} --domain {domain}"
+        clear = f"firecube chunks claims clear --target {root} --domain {domain}"
         assert f"{clear} --force" in printed
         assert message.startswith(f"Write-domain claim conflict for {domain}")
         assert "run-r" in message and "started" in message
@@ -756,7 +756,7 @@ def test_maintenance_refusal_resolves_a_shared_owner_once(temp_workspace):
 @pytest.mark.contract
 def test_abandon_refuses_when_claims_cannot_be_listed(temp_workspace):
     class _Unlistable(CountingFilesystem):
-        broken = True
+        broken = False
 
         def ls(self, uri, detail=False, refresh=False):
             if self.broken and uri.path.endswith("/claims"):
@@ -769,6 +769,7 @@ def test_abandon_refuses_when_claims_cannot_be_listed(temp_workspace):
     with closing(manager), ExitStack() as stack:
         _record_started_run(manager, product=product, run_id="run-r")
         _claim(manager, stack, "grp:slot=0", "run-r:grp:slot=0")
+        fs.broken = True  # the first write of an unstamped store lists claims, so break after it
         with pytest.raises(ManifestError, match=r"(?s)run-r.*again") as excinfo:
             manager.abandon_run(product=product, run_id="run-r", reason="killed writer")
         assert excinfo.value.context.product_uri == manager.get_product_root(product)

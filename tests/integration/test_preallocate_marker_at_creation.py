@@ -14,11 +14,11 @@ import pytest
 import zarr
 
 import firecube.core.zarr.coord_materialization as coord_mat
-from firecube.core.api import ItemInfo
 from firecube.core.errors import SchemaDriftError
 from firecube.core.zarr._sealing_markers import ATTR_COORD_MANAGED, ATTR_PREALLOCATED
 from firecube.core.zarr.coord_materialization import materialize_regular_coord_array
 from firecube.core.zarr.region_writer import RegionZarrWriter
+from firecube.sdk import ItemInfo
 
 pytestmark = pytest.mark.integration
 

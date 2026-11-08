@@ -62,12 +62,17 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(log_dict, ensure_ascii=False, separators=(",", ":"))
 
 
+def debug_enabled() -> bool:
+    """Return whether `FIRECUBE_DEBUG` is set to `1`, `true`, `yes` or `on`, in any case."""
+    return os.getenv("FIRECUBE_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def resolve_logging_env() -> tuple[str, str, list[str], bool]:
     """Resolve logging env vars from FIRECUBE_* names only."""
     log_format = (os.getenv("FIRECUBE_LOG_FORMAT") or "json").lower()
     log_level = (os.getenv("FIRECUBE_LOG_LEVEL") or "INFO").upper()
 
-    firecube_debug = os.getenv("FIRECUBE_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
+    firecube_debug = debug_enabled()
 
     structured_fields_raw = os.getenv(
         "FIRECUBE_LOG_STRUCTURED_FIELDS",

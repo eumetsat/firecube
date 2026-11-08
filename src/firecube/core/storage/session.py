@@ -118,6 +118,11 @@ class StorageSession:
         raise TypeError("StorageSession is process-local and cannot be pickled.")
 
     @property
+    def binding(self) -> StorageBinding:
+        """The binding this session reads and writes through."""
+        return self._binding
+
+    @property
     def product(self) -> ProductIdentity:
         return self._binding.identity
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
@@ -50,13 +51,14 @@ def test_archive_create_passes_product_session_without_storage_config(
     monkeypatch.setattr(converter, "zarr_to_tgm", fake_zarr_to_tgm)
 
     source = tmp_path / "source.zarr"
+    zarr.open_group(str(source), mode="w")
     archive = tmp_path / "archive.tgm"
     result = CliRunner().invoke(
         cli,
         [
             "archive",
             "create",
-            "--source",
+            "--target",
             source.as_uri(),
             "--archive",
             archive.as_uri(),

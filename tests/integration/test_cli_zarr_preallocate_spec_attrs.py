@@ -26,8 +26,8 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import WriteIntent, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.registry import loader as _loader
+from firecube.sdk import WriteIntent, ZarrArraySpec, ZarrGroupSpec
 
 pytestmark = [pytest.mark.integration, pytest.mark.contract]
 
@@ -144,12 +144,11 @@ def test_reserved_attr_fails_loudly(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(plugin_module.DirectZarrCapableTestIngestor, "zarr_schema", bad_zarr_schema)
 
-    with pytest.raises(ValueError, match=r"Reserved attr '_ARRAY_DIMENSIONS'"):
-        CliRunner().invoke(
-            cli,
-            _preallocate_args(tmp_path / "out.zarr"),
-            catch_exceptions=False,
-        )
+    result = CliRunner().invoke(cli, _preallocate_args(tmp_path / "out.zarr"))
+
+    assert result.exit_code != 0, result.output
+    assert "Reserved attr '_ARRAY_DIMENSIONS'" in result.stderr
+    assert "Traceback" not in result.output
 
 
 def test_dimension_names_written(tmp_path: Path) -> None:

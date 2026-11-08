@@ -75,8 +75,6 @@ def test_runs_list_json_includes_slot_fields(tmp_path: Path) -> None:
             str(workspace),
             "runs",
             "list",
-            "--product-name",
-            product,
             "--target",
             (root / product).as_uri(),
             "-f",

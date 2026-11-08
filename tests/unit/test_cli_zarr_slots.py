@@ -32,16 +32,7 @@ from firecube.cli.main import cli
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane import ChunkManager
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
-    DirectZarrIngestor,
-    PipelineBatch,
-    PluginConfig,
-    PluginContext,
-    WriteIntent,
-    ZarrArraySpec,
-    ZarrGroupSpec,
-    register_ingestor,
-)
+from firecube.core.product.open import open_product
 from firecube.ingestor.registry import loader
 from firecube.ingestor.runtime import slot_plan
 from firecube.ingestor.runtime.configure import configure_ingestor
@@ -51,8 +42,17 @@ from firecube.ingestor.runtime.slot_plan import (
     SlotPlanCeilingError,
     plan_slots,
 )
+from firecube.sdk import (
+    DirectZarrIngestor,
+    PipelineBatch,
+    PluginConfig,
+    PluginContext,
+    WriteIntent,
+    ZarrArraySpec,
+    ZarrGroupSpec,
+    register_ingestor,
+)
 from tests.helpers.rows import table_row
-from tests.helpers.storage import make_test_binding
 
 
 def _cli_index_spec(size: int) -> IndexSpec:
@@ -601,22 +601,21 @@ def _plan_in_python(tmp_path: Path, groups: dict[str, tuple[int, int]], **kwargs
         "index_spec": lambda self, ctx: spec,
         "zarr_schema": lambda self, ctx: schema,
     }
-    binding = make_test_binding(tmp_path, product="x.zarr")
-    manager = ChunkManager(binding=binding, workspace=tmp_path)
-    ingestor = type("PlanSlotsPlugin", (_SlotsCapablePlugin,), members)(chunk_manager=manager)
     target = (tmp_path / "x.zarr").as_uri()
-    ctx = configure_ingestor(ingestor, target=target, options={}, run_id="run-1")
-    return plan_slots(
-        ingestor=ingestor,
-        plugin_ctx=ctx,
-        plugin_name="plan_slots_test",
-        chunk_manager=manager,
-        identity=binding.identity,
-        target=target,
-        storage_config=StorageConfig(storage_type="local"),
-        coverage_storage_config=lambda: StorageConfig(storage_type="local"),
-        **kwargs,
-    )
+    with open_product(target, format="zarr", require_label=False) as product:
+        ingestor = type("PlanSlotsPlugin", (_SlotsCapablePlugin,), members)(
+            chunk_manager=product.manager
+        )
+        ctx = configure_ingestor(ingestor, target=target, options={}, run_id="run-1")
+        return plan_slots(
+            product,
+            ingestor,
+            plugin_ctx=ctx,
+            plugin_name="plan_slots_test",
+            storage_config=StorageConfig(storage_type="local"),
+            coverage_storage_config=lambda: StorageConfig(storage_type="local"),
+            **kwargs,
+        )
 
 
 @pytest.mark.contract
@@ -670,3 +669,37 @@ def test_plan_slots_refuses_plan_above_ceiling_unless_overridden(
 
     assert (refused.value.range_count, refused.value.suggested_slot_size) == (11, 2)
     assert [p.range_count for p in plans] == [11]
+
+
+@pytest.mark.parametrize("planning_fails", [False, True], ids=["run_succeeds", "run_raises"])
+def test_zarr_slots_closes_its_planning_chunk_manager(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, planning_fails: bool
+) -> None:
+    # Instruments the class, so every manager built during the run is counted, however the
+    # command reaches the constructor.
+    built: list[ChunkManager] = []
+    closes: list[ChunkManager] = []
+    real_init, real_close = ChunkManager.__init__, ChunkManager.close
+
+    def recording_init(self: ChunkManager, *args: Any, **kwargs: Any) -> None:
+        built.append(self)
+        real_init(self, *args, **kwargs)
+
+    def recording_close(self: ChunkManager) -> None:
+        closes.append(self)
+        real_close(self)
+
+    monkeypatch.setattr(ChunkManager, "__init__", recording_init)
+    monkeypatch.setattr(ChunkManager, "close", recording_close)
+    if planning_fails:
+
+        def _boom(*_: Any, **__: Any) -> Any:
+            raise RuntimeError("planning failed after the manager was built")
+
+        monkeypatch.setattr("firecube.cli.zarr._slots.plan_slots", _boom)
+
+    result = CliRunner().invoke(cli, _required_args(tmp_path, "slots_test_capable"))
+
+    assert (result.exit_code != 0) is planning_fails, result.output
+    assert built
+    assert [closes.count(m) for m in built] == [1] * len(built)

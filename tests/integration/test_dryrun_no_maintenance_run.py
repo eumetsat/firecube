@@ -142,7 +142,7 @@ def _delete_span_cli(tmp_path: Path, *extra_flags: str):
             "--workspace",
             str(tmp_path),
             "delete-span",
-            "--product-name",
+            "--target",
             _store_root(tmp_path).as_uri(),
             "--run-id",
             RUN_ID,

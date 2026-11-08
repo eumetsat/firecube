@@ -45,11 +45,23 @@ from firecube.core.controlplane.types import (
     SpanCoverage,
 )
 from firecube.core.filesystem.fsspec_backend import FsspecFilesystem
+from firecube.core.product.open import open_product
+from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.runtime import archive as lib
-from tests.helpers.storage import make_test_binding, make_test_session
+from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.integration
+
+
+def _open(tmp_path: Path, name: str = "product.zarr"):
+    return open_product(
+        (tmp_path / name).as_uri(),
+        format="zarr",
+        driver=StorageDriverConfig(driver="fsspec"),
+        product_name=name,
+        require_label=False,
+    )
 
 
 def _local_env(tmp_path: Path) -> dict[str, str]:
@@ -279,6 +291,8 @@ def test_archive_restore_emits_maintenance_lifecycle_events(tmp_path):
             archive_uri,
             "--target",
             restored_uri,
+            "--product-name",
+            "restored.zarr",
             "--storage-type",
             "local",
             "--storage-driver",
@@ -329,7 +343,7 @@ def _zip_create_args(tmp_path: Path) -> list[str]:
         manager.close()
     out = (tmp_path / "out.zip").as_uri()
     flags = "--archive-format zip --storage-type local --storage-driver fsspec"
-    return f"archive create --source {product.as_uri()} --archive {out} {flags}".split()
+    return f"archive create --target {product.as_uri()} --archive {out} {flags}".split()
 
 
 def test_archive_create_fails_when_record_cannot_be_written(tmp_path, monkeypatch):
@@ -362,12 +376,11 @@ def test_archive_create_keeps_archive_error_when_record_setup_fails(tmp_path, mo
     assert "Error: archive boom" in result.output.splitlines()
 
 
-def test_archive_restore_failure_emits_maintenance_failed(tmp_path):
+def test_archive_restore_failure_emits_maintenance_failed(tmp_path, monkeypatch):
     runner = CliRunner()
     env = _local_env(tmp_path)
-    bogus_archive = tmp_path / "missing.tgm"
+    valid_archive = _zip_whose_admitted_restore_fails(tmp_path, monkeypatch)
     restored = tmp_path / "restored.zarr"
-    bogus_archive.write_bytes(b"not a tensogram archive")
 
     result = runner.invoke(
         cli,
@@ -375,9 +388,11 @@ def test_archive_restore_failure_emits_maintenance_failed(tmp_path):
             "archive",
             "restore",
             "--archive",
-            StorageUri.from_local_path(bogus_archive).to_str(),
+            StorageUri.from_local_path(valid_archive).to_str(),
             "--target",
             StorageUri.from_local_path(restored).to_str(),
+            "--product-name",
+            "restored.zarr",
             "--storage-type",
             "local",
             "--storage-driver",
@@ -410,11 +425,22 @@ def test_archive_restore_failure_emits_maintenance_failed(tmp_path):
     assert failed_event["record"]["meta"]["op"] == "archive_restore"
 
 
-@pytest.mark.parametrize("failing", ["record", "release"])
-def test_restore_error_survives_failing_bookkeeping(tmp_path, monkeypatch, failing):
+def _zip_whose_admitted_restore_fails(tmp_path: Path, monkeypatch) -> Path:
+    """Write a zip the preflight admits, and make its restore fail while the claim is held."""
     archive = tmp_path / "bad.zip"
     with zipfile.ZipFile(archive, "w") as zf:
-        zf.writestr("notes.txt", "no zarr here")
+        zf.writestr("zarr.json", '{"zarr_format": 3, "node_type": "group"}')
+
+    def _failing_restore(*a, **k):
+        raise ValueError("No Zarr v3 root metadata found")
+
+    monkeypatch.setattr("firecube.core.archive.zip.archive.zip_to_zarr", _failing_restore)
+    return archive
+
+
+@pytest.mark.parametrize("failing", ["record", "release"])
+def test_restore_error_survives_failing_bookkeeping(tmp_path, monkeypatch, failing):
+    archive = _zip_whose_admitted_restore_fails(tmp_path, monkeypatch)
     if failing == "record":
         boom = Mock(side_effect=OSError("bookkeeping boom"))
         monkeypatch.setattr(ChunkManager, "record_maintenance_failed", boom)
@@ -429,6 +455,7 @@ def test_restore_error_survives_failing_bookkeeping(tmp_path, monkeypatch, faili
         monkeypatch.setattr(FsspecFilesystem, "compare_delete", compare_delete)
     args = ["archive", "restore", "--archive", archive.as_uri(), "--storage-type", "local"]
     args += ["--target", (tmp_path / "r.zarr").as_uri(), "--storage-driver", "fsspec"]
+    args += ["--product-name", "r.zarr"]
     result = CliRunner().invoke(cli, args, env=_local_env(tmp_path))
     assert result.exit_code != 0
     assert "No Zarr v3 root metadata found" in result.output
@@ -437,9 +464,7 @@ def test_restore_error_survives_failing_bookkeeping(tmp_path, monkeypatch, faili
 
 @pytest.mark.contract
 def test_restore_archive_raises_its_own_error_when_bookkeeping_fails(tmp_path, monkeypatch):
-    archive = tmp_path / "bad.zip"
-    with zipfile.ZipFile(archive, "w") as zf:
-        zf.writestr("notes.txt", "no zarr here")
+    archive = _zip_whose_admitted_restore_fails(tmp_path, monkeypatch)
     boom = Mock(side_effect=OSError("bookkeeping boom"))
     monkeypatch.setattr(ChunkManager, "record_maintenance_failed", boom)
     real_delete = FsspecFilesystem.compare_delete
@@ -451,13 +476,15 @@ def test_restore_archive_raises_its_own_error_when_bookkeeping_fails(tmp_path, m
 
     monkeypatch.setattr(FsspecFilesystem, "compare_delete", compare_delete)
     warnings: list[str] = []
-    with pytest.raises(lib.ArchiveConversionError, match="No Zarr v3 root metadata found"):
+    with (
+        pytest.raises(lib.ArchiveConversionError, match="No Zarr v3 root metadata found"),
+        _open(tmp_path, "r.zarr") as product,
+    ):
         lib.restore_archive(
-            session=make_test_session(tmp_path, product="r.zarr"),
+            product,
             archive=archive.as_uri(),
             archive_path=str(archive),
             archive_format="zip",
-            target=(tmp_path / "r.zarr").as_uri(),
             warn=warnings.append,
         )
     assert [w.startswith("Warning: ") and "bookkeeping boom" in w for w in warnings] == [True] * 2
@@ -472,7 +499,8 @@ def test_create_archive_records_the_run_with_its_scope(tmp_path, archive_format,
     _zip_create_args(tmp_path)  # builds the product and its control plane; the args go unused
     out = tmp_path / "out.archive"
     kwargs = {"archive": out.as_uri(), "archive_path": str(out), "archive_format": archive_format}
-    result = lib.create_archive(session=make_test_session(tmp_path), **kwargs, **selection)
+    with _open(tmp_path) as product:
+        result = lib.create_archive(product, **kwargs, **selection)
     assert result.run_id is not None
     events = _read_events(tmp_path / "product.zarr", result.run_id)
     types = [e["event_type"] for e in events]
@@ -496,6 +524,6 @@ def test_create_archive_raises_record_error_with_the_archive_on_disk(tmp_path, m
     monkeypatch.setattr(ChunkManager, "record_maintenance_completed", denied)
     out = tmp_path / "out.zip"
     kwargs = {"archive": out.as_uri(), "archive_path": str(out), "archive_format": "zip"}
-    with pytest.raises(lib.ArchiveRecordError, match="record denied"):
-        lib.create_archive(session=make_test_session(tmp_path), **kwargs)
+    with pytest.raises(lib.ArchiveRecordError, match="record denied"), _open(tmp_path) as product:
+        lib.create_archive(product, **kwargs)
     assert out.exists()

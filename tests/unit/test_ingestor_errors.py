@@ -15,21 +15,16 @@
 """Ingestor error hierarchy and CLI dispatch invariants.
 
 These tests pin the invariant that the CLI-boundary classifier
-(``firecube.cli._errors._is_known_user_error``) recognises every
-``FirecubeError`` subclass through an ``isinstance`` check rather than a
-name-based whitelist, and that non-``FirecubeError`` user-facing
-exceptions still gain explicit membership in
-``_KNOWN_NON_FIRECUBE_USER_ERRORS``.
-
-If a new ingestor exception is introduced, it must either inherit from
-``FirecubeError`` (preferred — automatic isinstance coverage) or be added
-to ``_KNOWN_NON_FIRECUBE_USER_ERRORS`` (only if inheriting from
-``FirecubeError`` is genuinely impossible, e.g. a third-party base).
+(``firecube.cli._errors.classify``) recognises every ``FirecubeError``
+subclass through an ``isinstance`` check rather than a name-based whitelist,
+so an ingestor exception that inherits from ``FirecubeError`` never ends a
+command with the internal-error exit code.
 """
 
 import pytest
 
-from firecube.cli._errors import _KNOWN_NON_FIRECUBE_USER_ERRORS, _is_known_user_error
+from firecube.cli._errors import classify
+from firecube.cli._exit_codes import ExitCode
 from firecube.core.errors import ConfigurationError, FirecubeError, StorageError
 from firecube.ingestor.errors import IngestorError, SchemaDriftReingestError
 
@@ -50,38 +45,20 @@ def test_dispatch_schema_drift_reingest_via_firecube_branch() -> None:
         dataset_variable="v",
         reason="extra_incoming_variable",
     )
-    assert _is_known_user_error(exc)
-    assert type(exc).__name__ not in _KNOWN_NON_FIRECUBE_USER_ERRORS
+    assert classify(exc) is ExitCode.CHECK_FAILED
 
 
 def test_dispatch_configuration_error_via_firecube_branch() -> None:
-    exc = ConfigurationError("bad config")
-    assert _is_known_user_error(exc)
-    assert type(exc).__name__ not in _KNOWN_NON_FIRECUBE_USER_ERRORS
+    assert classify(ConfigurationError("bad config")) is ExitCode.USAGE
 
 
 def test_dispatch_storage_error_via_firecube_branch() -> None:
-    exc = StorageError("s3 unreachable")
-    assert _is_known_user_error(exc)
-    assert type(exc).__name__ not in _KNOWN_NON_FIRECUBE_USER_ERRORS
+    assert classify(StorageError("s3 unreachable")) is ExitCode.RUNTIME_ERROR
 
 
-def test_dispatch_unknown_error_returns_false() -> None:
-    assert not _is_known_user_error(ValueError("some internal invariant"))
+def test_dispatch_unknown_error_is_internal() -> None:
+    assert classify(ValueError("some internal invariant")) is ExitCode.INTERNAL
 
 
-def test_dispatch_file_not_found_via_explicit_membership() -> None:
-    assert _is_known_user_error(FileNotFoundError("missing input"))
-
-
-def test_known_non_firecube_set_never_lists_firecube_subclasses() -> None:
-    import builtins
-
-    for name in _KNOWN_NON_FIRECUBE_USER_ERRORS:
-        cls = getattr(builtins, name, None)
-        if not isinstance(cls, type):
-            continue
-        assert not issubclass(cls, FirecubeError), (
-            f"{name!r} is a FirecubeError subclass and must be removed from "
-            f"_KNOWN_NON_FIRECUBE_USER_ERRORS (isinstance dispatch covers it)"
-        )
+def test_dispatch_file_not_found_is_a_runtime_error() -> None:
+    assert classify(FileNotFoundError("missing input")) is ExitCode.RUNTIME_ERROR

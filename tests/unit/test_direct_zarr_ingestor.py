@@ -38,7 +38,7 @@ from firecube.ingestor.templates.direct_zarr import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.types.context import PipelineBatch, PluginContext
+from firecube.ingestor.types.context import ExecutionParams, PipelineBatch, PluginContext
 from tests.helpers.storage import begin_write_session, make_test_context
 
 
@@ -138,8 +138,8 @@ class TestDirectZarrProcessBatch:
                 return []
 
         ingestor = _EmptyIngestor()
-        ingestor.engine_config = MagicMock(write_mode="direct")
         ctx = MagicMock(spec=PluginContext)
+        ctx.execution = ExecutionParams(write_mode="direct")
         ctx.output_name = "test_product"
         ctx.run_id = "run-001"
         ctx.option = MagicMock(return_value="unknown")
@@ -154,8 +154,8 @@ class TestDirectZarrProcessBatch:
 
     def test_process_batch_error_returns_failure(self) -> None:
         ingestor = _StubDirectIngestor()
-        ingestor.engine_config = MagicMock(write_mode="direct")
         ctx = MagicMock(spec=PluginContext)
+        ctx.execution = ExecutionParams(write_mode="direct")
         ctx.output_name = "test_product"
         ctx.run_id = "run-001"
         ctx.option = MagicMock(return_value="unknown")
@@ -342,15 +342,8 @@ class TestDirectZarrLifecycleHooks:
         ctx.run_id = "run-001"
         ctx.option = MagicMock(return_value="unknown")
         ctx.storage = None
+        ctx.execution = ExecutionParams(write_mode="direct")
         return ctx
-
-    def _build_engine_config(self) -> MagicMock:
-        return MagicMock(
-            write_mode="direct",
-            slot_start=None,
-            slot_end=None,
-            slot_group=None,
-        )
 
     def test_lifecycle_hook_order_on_success(self) -> None:
         calls: list[str] = []
@@ -372,13 +365,14 @@ class TestDirectZarrLifecycleHooks:
                 super().batch_teardown(ctx)
 
         ingestor = _OrderedIngestor()
-        ingestor.engine_config = self._build_engine_config()
         ingestor._index_binding = None
         ctx = self._build_ctx()
         batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
 
         with (
-            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch(
+                "firecube.ingestor.runtime.zarr.strategies.indexed_region.IndexedRegionStrategy"
+            ) as MockStrategy,
             patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
         ):
             MockStrategy.return_value.write_groups.return_value = {
@@ -425,7 +419,6 @@ class TestDirectZarrLifecycleHooks:
                 super().batch_teardown(ctx)
 
         ingestor = _EmptyOrderedIngestor()
-        ingestor.engine_config = self._build_engine_config()
         ingestor._index_binding = None
         ctx = self._build_ctx()
         batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=[])
@@ -469,13 +462,14 @@ class TestDirectZarrLifecycleHooks:
                 super().batch_teardown(ctx)
 
         ingestor = _FailingIngestor()
-        ingestor.engine_config = self._build_engine_config()
         ingestor._index_binding = None
         ctx = self._build_ctx()
         batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
 
         with (
-            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch(
+                "firecube.ingestor.runtime.zarr.strategies.indexed_region.IndexedRegionStrategy"
+            ) as MockStrategy,
             patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
         ):
             MockStrategy.return_value.write_groups.side_effect = RuntimeError(
@@ -508,13 +502,14 @@ class TestDirectZarrLifecycleHooks:
                 return {"prep_custom": 42}
 
         ingestor = _PrepMetricsIngestor()
-        ingestor.engine_config = self._build_engine_config()
         ingestor._index_binding = None
         ctx = self._build_ctx()
         batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
 
         with (
-            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch(
+                "firecube.ingestor.runtime.zarr.strategies.indexed_region.IndexedRegionStrategy"
+            ) as MockStrategy,
             patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
         ):
             MockStrategy.return_value.write_groups.return_value = {
@@ -604,12 +599,12 @@ def _staged_run_ctx(tmp_path: Path, workspace: Path) -> Any:
         tmp_path,
         product="stub.zarr",
         options={
-            "write_mode": "staged",
             "workspace": str(workspace),
             "pipeline_workers": 1,
             "no_progress": True,
             "cleanup_workspace": True,
         },
+        execution=ExecutionParams(write_mode="staged"),
     )
 
 
@@ -618,10 +613,8 @@ class TestRunStateClose:
 
     def test_host_keeps_its_session_after_a_failed_close(self) -> None:
         ingestor = _StubDirectIngestor()
-        ingestor.engine_config = MagicMock(
-            write_mode="direct", slot_start=None, slot_end=None, slot_group=None
-        )
         ctx = MagicMock(spec=PluginContext)
+        ctx.execution = ExecutionParams(write_mode="direct")
         ctx.output_name = "test_product"
         ctx.run_id = "run-001"
         ctx.option = MagicMock(return_value="unknown")
@@ -686,23 +679,18 @@ class TestRunStateClose:
 
 class TestApiReExports:
     def test_direct_zarr_ingestor_importable(self) -> None:
-        from firecube.ingestor.api import DirectZarrIngestor as D
+        from firecube.sdk import DirectZarrIngestor as D
 
         assert D is DirectZarrIngestor
 
-    def test_indexed_region_strategy_importable(self) -> None:
-        from firecube.ingestor.api import IndexedRegionStrategy as I
-
-        assert I is IndexedRegionStrategy
-
     def test_write_intent_importable(self) -> None:
-        from firecube.ingestor.api import WriteIntent as W
+        from firecube.sdk import WriteIntent as W
 
         assert W is WriteIntent
 
     def test_zarr_specs_importable(self) -> None:
-        from firecube.ingestor.api import ZarrArraySpec as PublicArraySpec
-        from firecube.ingestor.api import ZarrGroupSpec as PublicGroupSpec
+        from firecube.sdk import ZarrArraySpec as PublicArraySpec
+        from firecube.sdk import ZarrGroupSpec as PublicGroupSpec
 
         assert PublicArraySpec is ZarrArraySpec
         assert PublicGroupSpec is ZarrGroupSpec

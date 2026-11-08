@@ -1,20 +1,20 @@
 # Core Utilities
 
-This reference covers the helper functions exported from `firecube.core.api`
+This reference covers the helper functions exported from `firecube.sdk`
 for use inside plugin hooks: URI and filesystem handling, source discovery,
 dataset preparation, and time conversion.
 
 `RESERVED_ARRAY_ATTRS`, `assert_attrs_safe()`, and
 `FIRECUBE_STATIC_WRITTEN_ATTR` describe the array attribute keys Firecube
-owns for Zarr writes. The sealing marker constants stamped by `firecube zarr
-preallocate` and `firecube zarr consolidate-time-coord` are operator-tooling
-surface; they are documented with those commands in
+owns for Zarr writes. The sealing marker constants are operator-tooling
+surface. `firecube zarr preallocate` and `firecube zarr consolidate-time-coord`
+stamp them. They are documented with those commands in
 [CLI reference](cli.md).
 
 `compare_zarr_stores()` performs a read-only, driver-aware comparison of two
 Zarr stores and returns `ZarrCompareReport`.
 
-{{ render_api_summary("firecube.core.api", [
+{{ render_api_summary("firecube.sdk", [
     "parse_uri",
     "is_remote_target",
     "infer_target_protocol",
@@ -51,68 +51,68 @@ Zarr stores and returns `ZarrCompareReport`.
 
 ## URI And Filesystem
 
-::: firecube.core.api.parse_uri
+::: firecube.sdk.parse_uri
 
-::: firecube.core.api.is_remote_target
+::: firecube.sdk.is_remote_target
 
-::: firecube.core.api.infer_target_protocol
+::: firecube.sdk.infer_target_protocol
 
-::: firecube.core.api.local_path_from_target
+::: firecube.sdk.local_path_from_target
 
-::: firecube.core.api.create_filesystem_for_uri
+::: firecube.sdk.create_filesystem_for_uri
 
-::: firecube.core.api.path_stats
+::: firecube.sdk.path_stats
 
-::: firecube.core.api.ensure_directory
+::: firecube.sdk.ensure_directory
 
-::: firecube.core.api.delete_path
+::: firecube.sdk.delete_path
 
 ## Source Discovery
 
-::: firecube.core.api.discover
+::: firecube.sdk.discover
 
-::: firecube.core.api.DiscoveryRequest
+::: firecube.sdk.DiscoveryRequest
 
-::: firecube.core.api.SourceItem
+::: firecube.sdk.SourceItem
 
-::: firecube.core.api.discover_input_files
+::: firecube.sdk.discover_input_files
 
 ## Dataset Preparation
 
-::: firecube.core.api.prepare_netcdf_for_zarr
+::: firecube.sdk.prepare_netcdf_for_zarr
 
-::: firecube.core.api.clean_netcdf_encoding
+::: firecube.sdk.clean_netcdf_encoding
 
-::: firecube.core.api.normalize_string_vars
+::: firecube.sdk.normalize_string_vars
 
-::: firecube.core.api.rename_time_dim
+::: firecube.sdk.rename_time_dim
 
-::: firecube.core.api.read_hdf5_array
+::: firecube.sdk.read_hdf5_array
 
-::: firecube.core.api.materialize_hdf5_path
+::: firecube.sdk.materialize_hdf5_path
 
 ## ZIP Extraction
 
-::: firecube.core.api.extract_all_from_zips
+::: firecube.sdk.extract_all_from_zips
 
 ## Time Conversion
 
-::: firecube.core.api.epoch_s_to_iso
+::: firecube.sdk.epoch_s_to_iso
 
-::: firecube.core.api.iso_to_epoch_s
+::: firecube.sdk.iso_to_epoch_s
 
-::: firecube.core.api.normalize_epoch_iso
+::: firecube.sdk.normalize_epoch_iso
 
 `coerce_to_epoch_s()` is documented with the direct-Zarr index types in
 [Index Specification](parallelism.md).
 
 ## Reserved Array Attributes
 
-::: firecube.core.api.RESERVED_ARRAY_ATTRS
+::: firecube.sdk.RESERVED_ARRAY_ATTRS
 
-::: firecube.core.api.assert_attrs_safe
+::: firecube.sdk.assert_attrs_safe
 
-::: firecube.core.api.FIRECUBE_STATIC_WRITTEN_ATTR
+::: firecube.sdk.FIRECUBE_STATIC_WRITTEN_ATTR
 
 The sealing markers record who owns a time-coordinate array's values.
 `firecube zarr preallocate` stamps `ATTR_PREALLOCATED` on grid-valued
@@ -120,9 +120,10 @@ coordinates and `ATTR_COORD_MANAGED` on observed-values coordinates it
 materializes; `firecube zarr consolidate-time-coord` stamps
 `ATTR_PREALLOCATED` together with `ATTR_CONSOLIDATED_AT`.
 
-::: firecube.core.api.ATTR_PREALLOCATED
-
-::: firecube.core.api.ATTR_COORD_MANAGED
+`ATTR_PREALLOCATED` and `ATTR_COORD_MANAGED` are documented in
+[Operations](operations.md#firecube.operations.ATTR_PREALLOCATED).
+`ATTR_CONSOLIDATED_AT` and `assert_coord_markers_consistent()` are not in
+`firecube.sdk`. Their import path `firecube.core.api` is deprecated until v0.2.0.
 
 ::: firecube.core.api.ATTR_CONSOLIDATED_AT
 
@@ -130,21 +131,21 @@ materializes; `firecube zarr consolidate-time-coord` stamps
 
 ## Batch Resources
 
-::: firecube.core.api.BatchResourceRegistry
+::: firecube.sdk.BatchResourceRegistry
 
 ## Zarr Chunk Geometry
 
-::: firecube.core.api.physical_chunk_keys_for_region
+::: firecube.sdk.physical_chunk_keys_for_region
 
-::: firecube.core.api.chunk_axis_range
+::: firecube.sdk.chunk_axis_range
 
-::: firecube.core.api.axis_selection_is_chunk_aligned
+::: firecube.sdk.axis_selection_is_chunk_aligned
 
 ## Zarr Store Comparison
 
-::: firecube.core.api.ZarrCompareReport
+::: firecube.sdk.ZarrCompareReport
 
-::: firecube.core.api.compare_zarr_stores
+::: firecube.sdk.compare_zarr_stores
 
 ## See Also
 

@@ -12,7 +12,7 @@ Define the configuration next to an already working plugin:
 ```python
 from dataclasses import dataclass
 
-from firecube.ingestor.api import PluginConfig
+from firecube.sdk import PluginConfig
 
 
 @dataclass
@@ -49,7 +49,7 @@ from typing import Any, ClassVar
 
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericZarrIngestor,
     PluginConfig,
     PluginContext,
@@ -103,7 +103,6 @@ firecube ingest my_plugin \
   --product-name my_product \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct \
   --option scale_factor=0.01
 ```

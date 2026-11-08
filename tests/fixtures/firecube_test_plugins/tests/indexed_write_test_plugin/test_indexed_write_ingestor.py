@@ -35,12 +35,12 @@ from indexed_write_test_plugin import (
     _canonical_timestamps,  # type: ignore[attr-defined]
 )
 
-from firecube.core.api import IndexedWrite, IndexSpec, RegularTimeAxis
 from firecube.core.errors import IndexedWriteCompilationError
 from firecube.core.index_resolve import resolve_index_spec
 from firecube.ingestor.templates.direct_zarr import (
     _compile_indexed_write,  # type: ignore[attr-defined]
 )
+from firecube.sdk import IndexedWrite, IndexSpec, RegularTimeAxis
 
 
 def _fake_ctx() -> Any:

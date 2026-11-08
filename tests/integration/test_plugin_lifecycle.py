@@ -133,5 +133,21 @@ def test_plugin_editable_install_verifies_in_fresh_interpreter():
         )
 
 
+@pytest.mark.integration
+def test_plugins_list_json_lists_name_module_description():
+    """`plugins list -f json` must report name, module and description per plugin."""
+    result = subprocess.run(
+        [sys.executable, "-m", "firecube.cli.main", "plugins", "list", "-f", "json"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    entries = json.loads(result.stdout)
+    assert entries, "no plugins registered in the test environment"
+    required = {"name", "module", "description"}
+    malformed = [e for e in entries if not (isinstance(e, dict) and required <= e.keys())]
+    assert malformed == []
+
+
 if __name__ == "__main__":
     test_plugin_lifecycle()

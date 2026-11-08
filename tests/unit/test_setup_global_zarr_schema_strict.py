@@ -21,9 +21,9 @@ import numpy as np
 import pytest
 import zarr
 
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.errors import SchemaSizeMismatchError
 from firecube.ingestor.templates.direct_zarr import _setup_global_zarr_schema
+from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 
 
 def _strategy(store_uri: str) -> SimpleNamespace:

@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import pyarrow as pa
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericParquetIngestor,
     PipelineBatch,
     PluginContext,

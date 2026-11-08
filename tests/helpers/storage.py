@@ -27,12 +27,15 @@ from pathlib import Path
 from typing import Any, Literal
 from unittest.mock import patch
 
+from firecube.core.controlplane.product_label import stamp_product_label
+from firecube.core.controlplane.types import CONTROL_DIRNAME
+from firecube.core.filesystem import create_filesystem
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.types.context import IngestContext, StorageContext
+from firecube.ingestor.types.context import ExecutionParams, IngestContext, StorageContext
 
 # All module-level import sites that create a local binding to ``_open_fsspec_url``.
 # Function-local imports are caught by patching the source (first entry) because
@@ -130,6 +133,7 @@ def make_test_binding(
     driver: Literal["fsspec", "obstore"] = "fsspec",
     protocol: str = "file",
     authority: str | None = None,
+    label: str | None = None,
 ) -> StorageBinding:
     if protocol == "file":
         uri = StorageUri.from_local_path(tmp_path / product)
@@ -137,9 +141,20 @@ def make_test_binding(
         if not authority:
             raise ValueError(f"authority (bucket) is required for protocol={protocol!r}")
         uri = StorageUri(protocol=protocol, authority=authority, path=f"/{product}")
-    identity = ProductIdentity.from_uri(uri, format, product_name=product)
+    identity = ProductIdentity.from_uri(uri, format, product_name=label or product)
     driver_config = StorageDriverConfig(driver=driver)
     return StorageBinding(identity=identity, driver=driver_config)
+
+
+def stamp_test_label(store: Path, label: str = "test_product") -> None:
+    """Record ``label`` in a hand-built local store, as the first engine write does.
+
+    Read commands refuse a store that records no product label.
+    """
+    binding = make_test_binding(store.parent, product=store.name, label=label)
+    stamp_product_label(
+        create_filesystem(binding), binding.identity.product_uri.join(CONTROL_DIRNAME), label
+    )
 
 
 def make_test_session(
@@ -172,6 +187,7 @@ def make_test_context(
     protocol: str = "file",
     authority: str | None = None,
     options: dict[str, Any] | None = None,
+    execution: ExecutionParams | None = None,
 ) -> IngestContext:
     session = make_test_session(
         tmp_path,
@@ -187,17 +203,15 @@ def make_test_context(
         output_format=format,
         options=options or {},
         storage=StorageContext(output=session),
+        execution=execution or ExecutionParams(),
     )
 
 
-def begin_write_session(host: Any, ctx: Any, *, engine_config: Any | None = None) -> Any:
+def begin_write_session(host: Any, ctx: Any) -> Any:
     """Build a DirectZarr host's run write session, as pod startup does.
 
     For tests that call ``_process_batch`` or an engine function without
     ``run()``: the template refuses a batch or promotion without a session.
-    ``engine_config`` is set on the host first when given (window, slot group
-    and write mode come from it).
+    The window, slot group and write mode come from ``ctx.execution``.
     """
-    if engine_config is not None:
-        host.engine_config = engine_config
     return host._begin_write_session(ctx)

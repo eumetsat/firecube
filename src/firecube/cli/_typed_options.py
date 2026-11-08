@@ -62,10 +62,10 @@ def output_path_option(
     return decorator
 
 
-# Keys owned by dedicated `firecube ingest` flags. They are valid EngineConfig
-# fields, so they would pass unknown-key validation — but the free-form merge
-# happens after typed-flag resolution and would silently override the explicit
-# flag. Hard-reject at parse time.
+# Keys owned by dedicated `firecube ingest` flags, refused at parse time. The
+# EngineConfig fields input_filters and stac_search would otherwise let the
+# free-form merge override the explicit flag; the ExecutionParams fields are no
+# options at all.
 _TYPED_FLAG_OWNED_KEYS: dict[str, str] = {
     "input_filters": "--input-filters",
     "stac_search": "--stac-search",
@@ -74,6 +74,8 @@ _TYPED_FLAG_OWNED_KEYS: dict[str, str] = {
     "slot_end": "--slot-end",
     "slot_size": "--slot-size",
     "slot_group": "--slot-group",
+    "suppress_static_emission_for_non_owner": "--suppress-static-emission-for-non-owner",
+    "static_owner_slot_start": "--static-owner-slot-start",
 }
 
 

@@ -35,7 +35,9 @@ import xarray as xr
 import zarr
 from click.testing import CliRunner
 
-from firecube.cli._errors import render, wrap_user_facing_errors
+from firecube.cli._errors import render
+from firecube.cli._exit_codes import ExitCode
+from firecube.cli._formatter import FirecubeGroup
 from firecube.core.config import StorageConfig
 from firecube.ingestor.errors import AppendOverwriteRefused
 from firecube.ingestor.runtime.zarr.append_services import AppendResumeService
@@ -135,10 +137,14 @@ def test_unsorted_incoming_refused_via_classify_dataset(tmp_path: Path) -> None:
 
 
 def test_repro_unsorted_existing_validate_command_parses() -> None:
-    @click.command()
-    @wrap_user_facing_errors
+    @click.group(cls=FirecubeGroup)
+    def root() -> None:
+        pass
+
+    @root.command()
     def refuse() -> None:
         raise AppendOverwriteRefused(["2024-01-01"], "unsorted_existing_coord")
 
-    result = CliRunner().invoke(refuse)
+    result = CliRunner().invoke(root, ["refuse"])
+    assert result.exit_code == ExitCode.CHECK_FAILED
     assert parse_hint(result.output, "firecube zarr validate") == "zarr validate"

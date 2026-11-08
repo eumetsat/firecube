@@ -23,8 +23,7 @@ versions, it tests the bucket settings and the listed versions. The command exit
 
 ```bash
 firecube release verify 1.0.0 \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 The command re-reads the live metadata documents. It compares them byte for
@@ -129,7 +128,6 @@ product this takes time and costs requests. To test a random subset, add
 ```bash
 firecube release verify 2.0.0 \
   --target "s3://my-bucket/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT \
   --storage-type s3 \
   --storage-driver fsspec \
   --sample 100
@@ -152,11 +150,9 @@ with a new snapshot:
 
 ```bash
 firecube snapshot take \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 firecube snapshot diff <release-snapshot-id> latest \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 The identifier of the release snapshot is in the output of

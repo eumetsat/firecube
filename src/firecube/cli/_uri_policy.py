@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Final
 
 import click
 
-from firecube.core.storage.uri import StorageUri
+from firecube.operations import StorageUri
 
 if TYPE_CHECKING:
     from firecube.core.discovery import StacCollectionUri

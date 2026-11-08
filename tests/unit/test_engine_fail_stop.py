@@ -40,6 +40,7 @@ from firecube.ingestor.runtime.engine import (
 )
 from firecube.ingestor.runtime.telemetry import derive_pipeline_summary
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     IngestResult,
     OutputPaths,
@@ -90,7 +91,7 @@ class _StubHost:
         self.name = "stub"
         self._log = logger or logging.getLogger("test.engine_fail_stop")
         self._chunk_manager = None
-        self.engine_config = EngineConfig(write_mode="direct")
+        self.engine_config = EngineConfig()
         self._emulate_gate = emulate_gate
         self._hold_until = hold_until
         self._lock = threading.Lock()
@@ -195,7 +196,12 @@ def _batches(count: int = 5) -> list[PipelineBatch]:
 
 def _runtime_ctx(tmp_path: Path) -> RuntimeIngestContext:
     return RuntimeIngestContext.from_ingest_context(
-        IngestContext(source=str(tmp_path), target="out.zarr", output_format="zarr"),
+        IngestContext(
+            source=str(tmp_path),
+            target="out.zarr",
+            output_format="zarr",
+            execution=ExecutionParams(write_mode="direct"),
+        ),
         run_id="fail-stop-run",
         temp_root=tmp_path,
         materializer=lambda p: Path(p),

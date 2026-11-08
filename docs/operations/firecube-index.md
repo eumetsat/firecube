@@ -16,35 +16,35 @@ Print the current resolved-index record for a product.
 
 ```bash
 firecube zarr index show \
-  --target file:///data/products/my_product.zarr \
-  --product-name my_product
+  --target file:///data/products/my_product.zarr
 ```
 
 Output includes the schema version, the timestamp the record was written, the
 run that wrote it, the identity hash, and a table of groups with their axis
 kind and size.
 
-Add `--json` to receive the raw record as JSON, suitable for scripting:
+Add `-f json` to receive the raw record as JSON, suitable for scripting:
 
 ```bash
 firecube zarr index show \
   --target file:///data/products/my_product.zarr \
-  --product-name my_product \
-  --json
+  -f json
 ```
+
+The command reads the product label from the store. If the store records no
+label, the command exits 2 and names `firecube migrate adopt`.
 
 **Required flags:**
 
 | Flag | Description |
 |---|---|
-| `--target` | Product Zarr URI (`file://` or `s3://`). |
-| `--product-name` | Logical product name. |
+| `-t/--target` | Product Zarr URI (`file://` or `s3://`). |
 
 **Optional flags:**
 
 | Flag | Description |
 |---|---|
-| `--json` | Emit the raw record as JSON instead of the human-readable summary. |
+| `-f/--format` | `table` (default) prints the human-readable summary. `json` prints the raw record. |
 | `--derived` | For `regular_time` groups, compute and print the derived coordinate values (timestamps) from the stored epoch, cadence, and size. Emits a note to stderr for `irregular_time` and `integer` groups. Does not write any files. |
 
 Add `--derived` to see the full list of timestamps for a `RegularTimeAxis` group:
@@ -52,7 +52,6 @@ Add `--derived` to see the full list of timestamps for a `RegularTimeAxis` group
 ```bash
 firecube zarr index show \
   --target file:///data/products/my_product.zarr \
-  --product-name my_product \
   --derived
 ```
 
@@ -61,8 +60,8 @@ firecube zarr index show \
 | Code | Meaning |
 |---|---|
 | `0` | Record found and printed. |
-| `1` | Storage or manifest error. |
-| `3` | No index record found. |
+| `1` | No index record found, or a storage or manifest error. |
+| `2` | The store records no product label. |
 
 ### `firecube zarr index verify`
 
@@ -71,8 +70,7 @@ format that requires migration.
 
 ```bash
 firecube zarr index verify \
-  --target file:///data/products/my_product.zarr \
-  --product-name my_product
+  --target file:///data/products/my_product.zarr
 ```
 
 Pass `--plugin` to name the plugin that owns the product. The command uses the
@@ -82,7 +80,6 @@ plugin name to check for legacy slot-index records that predate the current
 ```bash
 firecube zarr index verify \
   --target file:///data/products/my_product.zarr \
-  --product-name my_product \
   --plugin my_plugin
 ```
 
@@ -99,7 +96,6 @@ Pass each option once:
 ```bash
 firecube zarr index verify \
   --target file:///data/products/my_product.zarr \
-  --product-name my_product \
   --plugin mtg_fci_l1c \
   --option product_type=FDHSI \
   --option time_epoch=2024-01-01 \
@@ -116,8 +112,7 @@ VERIFIED resolved index 7998667a5eba8d09
 
 | Flag | Description |
 |---|---|
-| `--target` | Product Zarr URI (`file://` or `s3://`). |
-| `--product-name` | Logical product name. |
+| `-t/--target` | Product Zarr URI (`file://` or `s3://`). |
 
 **Optional flags:**
 
@@ -131,9 +126,8 @@ VERIFIED resolved index 7998667a5eba8d09
 | Code | Meaning |
 |---|---|
 | `0` | Record verified. |
-| `1` | Record is a legacy format or cannot be read, or the plugin cannot resolve its spec. |
-| `2` | The command received `--option` without `--plugin`. |
-| `3` | No index record found. |
+| `1` | No index record found, the record is a legacy format or cannot be read, or the plugin cannot resolve its spec. |
+| `2` | The command received `--option` without `--plugin`, or the store records no product label. |
 
 ### `firecube zarr index rebuild`
 
@@ -175,19 +169,27 @@ Expected output when the record already matches:
 Index record unchanged: identity_hash=7998667a5eba8d09
 ```
 
+Add `--dry-run` to see the outcome without a write. For a matching record the
+output resembles:
+
+```text
+Dry run: would keep the index record, which matches (identity_hash=81b87699c4d6c5e1) and record one rebuild run; nothing is written
+```
+
 **Required flags:**
 
 | Flag | Description |
 |---|---|
-| `--target` | Product Zarr URI (`file://` or `s3://`). |
+| `-t/--target` | Product Zarr URI (`file://` or `s3://`). |
 | `--plugin` | Plugin name used to resolve the index spec. |
-| `--product-name` | Logical product name. |
+| `--product-name` | Logical product name. The store refuses a name that differs from its recorded label. |
 
 **Optional flags:**
 
 | Flag | Description |
 |---|---|
 | `--option KEY=VALUE` | Plugin option. Repeat the flag for each option. |
+| `--dry-run` | Report what the command would do and write nothing. |
 
 **Exit codes:**
 
@@ -195,6 +197,7 @@ Index record unchanged: identity_hash=7998667a5eba8d09
 |---|---|
 | `0` | Record rebuilt or unchanged. |
 | `1` | Plugin failed to resolve the spec, or the existing record conflicts. |
+| `2` | `--product-name` differs from the label that the store records. |
 
 ## When To Use Each Command
 
@@ -235,7 +238,6 @@ format. Run `firecube zarr index verify` to detect the legacy format, then
 ```bash
 firecube zarr index verify \
   --target file:///data/products/my_product.zarr \
-  --product-name my_product \
   --plugin my_plugin
 
 firecube zarr index rebuild \

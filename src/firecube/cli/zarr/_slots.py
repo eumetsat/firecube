@@ -25,11 +25,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 import click
 
+from firecube.cli._command_schemas import resolve_product_name
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import render
+from firecube.cli._errors import exit_with_error, render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
-from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
     format_option,
     product_name_option,
@@ -42,22 +43,21 @@ from firecube.cli._uri_policy import (
     parse_and_validate_uri,
 )
 from firecube.cli.zarr._common import _configure_ingestor_for_cli
-from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import Message, Operation, Placeholder
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.runtime import slot_plan
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+from firecube.operations import StorageDriverConfig, open_product, plan_slots
+from firecube.sdk import ExecutionParams
 
 if TYPE_CHECKING:
     from firecube.core.config import StorageConfig
     from firecube.ingestor.runtime.slot_plan import (
-        GroupSlotPlan,
         SlotPlanBlockedError,
         SlotPlanCeilingError,
     )
+    from firecube.operations import GroupSlotPlan
 
 #: Plan JSON schema version. Independent of control-plane SCHEMA_VERSION.
 PLAN_SCHEMA_VERSION = "v1"
@@ -134,25 +134,25 @@ def _discover_ingestors_quietly() -> dict[str, type[Any]]:
     epilog="""\b
 Examples:
   # Emit JSON plan for Argo/Kubeflow (resume-aware by default)
-  firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
-      --storage-type local --storage-driver fsspec --write-mode direct
+  firecube zarr slots <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode direct
 
+\b
   # Human-readable table output for inspection
-  firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
-      --storage-type local --storage-driver fsspec --write-mode direct -f table
+  firecube zarr slots <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode direct -f table
 
+\b
   # Override slot partition size
-  firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
-      --storage-type local --storage-driver fsspec --write-mode direct --slot-size 200
+  firecube zarr slots <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode direct --slot-size 200
 """,
 )
 @click.argument("plugin")
 @click.option(
-    "--target",
-    required=True,
-    help="Target product URI required (file:///abs/path or s3://bucket/key).",
+    "-t", "--target", required=True, help="Target product URI (file:///path or s3://bucket/key)."
 )
-@product_name_option(required=True)
+@product_name_option(required=False)
 @storage_type_option(
     required=False, extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3)."
 )
@@ -211,7 +211,7 @@ def slots(
     ctx: click.Context,
     plugin: str,
     target: str,
-    product_name: str,
+    product_name: str | None,
     storage_type: str,
     storage_driver: str,
     storage_anonymous: bool | None,
@@ -253,17 +253,6 @@ def slots(
         cache=False,
     )
     resolved_storage_driver = storage_config.storage_driver
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=product_name,
-    )
-    binding = StorageBinding(
-        identity=identity,
-        driver=StorageDriverConfig.from_storage_config(storage_config),
-    )
-    chunk_manager = ChunkManager(binding=binding)
-
     plugins = (
         ingestor_loader.AVAILABLE_INGESTORS
         if plugin in ingestor_loader.AVAILABLE_INGESTORS
@@ -272,6 +261,17 @@ def slots(
     if plugin not in plugins:
         raise click.ClickException(f"Unknown plugin '{plugin}'.")
     ingestor_cls = cast(Any, plugins[plugin])
+    product = ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=StorageDriverConfig.from_storage_config(storage_config),
+            product_name=resolve_product_name(ctx, plugin, ingestor_cls, product_name),
+            require_label=False,
+        )
+    )
+    identity = product.identity
+    chunk_manager = product.manager
 
     ingestor = ingestor_cls(chunk_manager=chunk_manager) if sources else ingestor_cls()
 
@@ -289,6 +289,7 @@ def slots(
             stac_search=stac_search,
             sources=sources,
             run_id="zarr-slots",
+            execution=ExecutionParams(write_mode=write_mode, slot_size=slot_size),
         )
 
     def coverage_storage_config() -> StorageConfig:
@@ -303,13 +304,11 @@ def slots(
         )
 
     try:
-        plans = slot_plan.plan_slots(
-            ingestor=ingestor,
+        plans = plan_slots(
+            product,
+            ingestor,
             plugin_ctx=plugin_ctx,
             plugin_name=plugin,
-            chunk_manager=chunk_manager,
-            identity=identity,
-            target=target,
             storage_config=storage_config,
             coverage_storage_config=coverage_storage_config,
             input_data=sources or None,
@@ -320,11 +319,9 @@ def slots(
             warn=_warn_stderr,
         )
     except slot_plan.SlotPlanBlockedError as exc:
-        raise click.ClickException(render(_blocked_refusal(exc, target))) from exc
+        exit_with_error(render(_blocked_refusal(exc, target)), ExitCode.CHECK_FAILED)
     except slot_plan.SlotPlanCeilingError as exc:
-        raise click.ClickException(render(_ceiling_refusal(exc))) from exc
-    except slot_plan.SlotPlanError as exc:
-        raise click.ClickException(render(exc)) from exc
+        exit_with_error(render(_ceiling_refusal(exc)), ExitCode.CHECK_FAILED)
 
     range_count = sum(plan.range_count for plan in plans)
     if range_count > PLAN_RANGE_HINT:
@@ -332,7 +329,7 @@ def slots(
 
     header = {
         "schema_version": PLAN_SCHEMA_VERSION,
-        "product_name": product_name,
+        "product_name": identity.product_name,
         "target": target,
         "storage_type": storage_type,
         "storage_driver": resolved_storage_driver,
@@ -360,7 +357,7 @@ def _group_summary(plan: GroupSlotPlan) -> dict[str, Any]:
 def _blocked_refusal(exc: SlotPlanBlockedError, target: str) -> Message:
     """Build the refusal for a plan with blocked ranges, naming the recovery commands.
 
-    The `delete-span` preview carries `target` as its product name.
+    The `delete-span` preview carries `target` as the product URI.
     """
     details = "; ".join(
         f"group '{name}' has blocked ranges {[[s, e] for s, e in intervals]}"
@@ -376,7 +373,7 @@ def _blocked_refusal(exc: SlotPlanBlockedError, target: str) -> Message:
         details=details,
         preview=Operation(
             "delete_span",
-            product_name=target,
+            target=target,
             run_id=Placeholder("<id>"),
             dry_run=True,
             force=True,

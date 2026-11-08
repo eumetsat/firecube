@@ -38,9 +38,9 @@ import zarr
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import WriteDomain
 from firecube.core.errors import ClaimConflictError
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.templates import direct_zarr as direct_zarr_module
 from firecube.ingestor.templates.direct_zarr import _setup_global_zarr_schema
+from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 from tests.helpers.storage import make_test_binding
 
 _PRODUCT = "product.zarr"

@@ -38,12 +38,14 @@ from typing import IO, TYPE_CHECKING, Any, BinaryIO, Final
 
 import zarr
 
+from firecube.core.archive._common import PRODUCT_LABEL_KEY, refuse_other_product_label
 from firecube.core.archive.zip.archive import (
     _dimension_names,
     _prepare_target,
     _refuse_invalid_metadata,
     _refuse_unsafe_entries,
     _walk_live,
+    archived_product_label,
 )
 from firecube.core.archive.zip.marker import (
     MARKER_ENTRY,
@@ -52,7 +54,7 @@ from firecube.core.archive.zip.marker import (
     read_zip_marker,
 )
 from firecube.core.controlplane.types import CLAIMS_DIRNAME, CONTROL_DIRNAME
-from firecube.core.errors import FirecubeError, Message
+from firecube.core.errors import FirecubeError, Message, ProductLabelConflictError
 from firecube.core.storage.uri import StorageUri
 from firecube.core.uris import local_path_from_target, require_target_is_product
 
@@ -97,6 +99,7 @@ class ChainBackup:
             The marker, directory entries and claim files are not product keys.
         deleted_keys: The product keys an incremental backup removes, in marker order.
         marker: The parsed marker.
+        product_label: The product label the backup records, or `None` when it records none.
     """
 
     path: Path
@@ -107,6 +110,7 @@ class ChainBackup:
     entries: Mapping[str, str]
     deleted_keys: tuple[str, ...]
     marker: Mapping[str, Any]
+    product_label: str | None
 
 
 def _broken(archive: str, broken_at: Path | str, reason: Message) -> BackupChainError:
@@ -191,7 +195,8 @@ def _read_backup(path: Path, digest: str, archive: str) -> ChainBackup:
     Raises:
         BackupChainError: The file is not a zip archive, an entry is unsafe or corrupt,
             a `zarr.json` entry is not valid Zarr v3 metadata, a full backup has no root
-            `zarr.json`, or the marker is absent or malformed.
+            `zarr.json`, the marker is absent or malformed, or the label stamp is malformed
+            or the run records name several labels.
     """
     try:
         with zipfile.ZipFile(path) as zf:
@@ -214,7 +219,8 @@ def _read_backup(path: Path, digest: str, archive: str) -> ChainBackup:
                     entries[info.filename] = entry_digest
             entries = {key: entries[key] for key in keys}
             _refuse_invalid_metadata(zf, keys, str(path))
-    except (ValueError, zipfile.BadZipFile, OSError) as exc:
+            product_label = archived_product_label(zf, str(path))
+    except (ValueError, zipfile.BadZipFile, OSError, ProductLabelConflictError) as exc:
         raise _broken(archive, path, Message("{error}", error=str(exc))) from exc
     marker = _checked_marker(path, archive)
     if marker["mode"] == MODE_FULL and "zarr.json" not in entries:
@@ -228,6 +234,7 @@ def _read_backup(path: Path, digest: str, archive: str) -> ChainBackup:
         entries=MappingProxyType(entries),
         deleted_keys=tuple(marker["deleted_keys"]),
         marker=MappingProxyType(dict(marker)),
+        product_label=product_label,
     )
 
 
@@ -279,6 +286,53 @@ def _refuse_inconsistent_deletes(backups: Sequence[ChainBackup], archive: str) -
         present.update(backup.entries)
 
 
+def backup_chain_label(backups: Sequence[ChainBackup]) -> str | None:
+    """Return the product label of a resolved backup chain: its full backup's label, or `None`."""
+    return backups[0].product_label if backups else None
+
+
+def backup_chain_label_stamp(backups: Sequence[ChainBackup]) -> bytes | None:
+    """Return the label stamp entry of the first backup that holds one, or `None`.
+
+    Raises:
+        BackupChainError: The entry cannot be read, or its bytes differ from the ones
+            `resolve_backup_chain` hashed.
+    """
+    archive = str(backups[-1].path) if backups else ""
+    for backup in backups:
+        if (digest := backup.entries.get(PRODUCT_LABEL_KEY)) is None:
+            continue
+        try:
+            with zipfile.ZipFile(backup.path) as zf:
+                data = zf.read(PRODUCT_LABEL_KEY)
+        except (KeyError, zipfile.BadZipFile, OSError) as exc:
+            reason = Message(
+                "its entry {key!r} cannot be read: {error}", key=PRODUCT_LABEL_KEY, error=str(exc)
+            )
+            raise _broken(archive, backup.path, reason) from exc
+        if f"sha256:{hashlib.sha256(data).hexdigest()}" != digest:
+            reason = Message(
+                "its entry {key!r} changed after the backup chain was checked",
+                key=PRODUCT_LABEL_KEY,
+            )
+            raise _broken(archive, backup.path, reason)
+        return data
+    return None
+
+
+def _refuse_other_labels(backups: Sequence[ChainBackup], archive: str) -> None:
+    """Refuse a backup whose product label differs from the backup chain's label."""
+    label = backup_chain_label(backups)
+    for backup in backups:
+        if backup.product_label is not None and backup.product_label != label:
+            reason = Message(
+                "it records the product label {product!r}, not the backup chain's {chain!r}",
+                product=backup.product_label,
+                chain=label,
+            )
+            raise _broken(archive, backup.path, reason)
+
+
 def resolve_backup_chain(path: str) -> list[ChainBackup]:
     """Return the checked backup chain that ends at `path`, the full backup first.
 
@@ -286,7 +340,8 @@ def resolve_backup_chain(path: str) -> list[ChainBackup]:
     and writes nothing. Each previous backup must exist, have the marker's
     `previous_backup_digest` and name the marker's `previous_release`. Each backup must
     pass the zip restore's entry, CRC and metadata checks. Each of the `deleted_keys` must
-    be a relative product key that the state before it holds.
+    be a relative product key that the state before it holds. A backup that records a
+    product label must record the backup chain's label, `backup_chain_label`.
 
     Args:
         path: Local path or `file://` URI of the newest backup.
@@ -296,8 +351,8 @@ def resolve_backup_chain(path: str) -> list[ChainBackup]:
 
     Raises:
         BackupChainError: A backup is missing, changed, malformed or repeated, a deleted
-            key is unsafe or absent from the state before it, or the backup chain holds
-            more than `MAX_CHAIN_BACKUPS` backups.
+            key is unsafe or absent from the state before it, a backup records another
+            product label, or the backup chain holds more than `MAX_CHAIN_BACKUPS` backups.
     """
     archive = str(path)
     current = local_path_from_target(archive)
@@ -355,6 +410,7 @@ def resolve_backup_chain(path: str) -> list[ChainBackup]:
         current = _previous_backup_path(backup, archive)
     backups = newest_first[::-1]
     _refuse_inconsistent_deletes(backups, archive)
+    _refuse_other_labels(backups, archive)
     return backups
 
 
@@ -557,14 +613,15 @@ def _put_entries(
     backup: ChainBackup,
     root: Path | None,
     archive: str,
+    kept: frozenset[str],
 ) -> None:
     """Put each product key of `backup` from `zf`; refuse an entry whose bytes differ.
 
     The keys are the ones `resolve_backup_chain` recorded, so an entry it did not see is
-    never put.
+    never put. A key in `kept` stays as the target holds it.
     """
     product_uri = session.product.product_uri
-    for key in sorted(backup.entries):
+    for key in sorted(backup.entries.keys() - kept):
         try:
             data = zf.read(key)
         except (KeyError, zipfile.BadZipFile, OSError) as exc:
@@ -590,7 +647,9 @@ def restore_backup_chain(
     """Restore a resolved backup chain into the session's product, the full backup first.
 
     Before any write, every backup must still have the digest `resolve_backup_chain`
-    recorded, and no symlink may lie on the local path of a restored key. The full backup
+    recorded, no symlink may lie on the local path of a restored key, and the target may
+    record no other product label than the backup chain. No backup replaces or deletes a
+    target's label stamp. The full backup
     then prepares the target as the zip restore does and puts its entries. Each incremental
     backup first deletes its `deleted_keys`, one literal object each, with the local
     directories that leaves empty. It then puts its entries. Every entry put must hash to
@@ -614,6 +673,8 @@ def restore_backup_chain(
             lies on a restored key's path, the target lacks a key an incremental backup
             deletes, or a restored object does not match its archive entry.
         FileExistsError: `target` holds a Zarr store and `overwrite` is False.
+        ProductLabelMismatchError: The target records another product label.
+        ProductLabelConflictError: An unstamped target's records name several labels.
         ConfigurationError: An overwrite finds a symlink at the target or on a kept path.
         Exception: The driver's error for a failed put or delete; the restore stops at the first.
     """
@@ -630,17 +691,26 @@ def restore_backup_chain(
     for backup in backups[1:]:
         _open_unchanged(backup, archive).close()
     refuse_symlinked_target(backups, session)
+    if (label := backup_chain_label(backups)) is not None:
+        refuse_other_product_label(session, label)
+    product_uri = session.product.product_uri
     with _open_unchanged(full_backup, archive) as handle, zipfile.ZipFile(handle) as zf:
         _prepare_target(
             local_path_from_target(target), overwrite=overwrite, keep_run_id=keep_run_id
         )
-        _put_entries(session, zf, full_backup, root, archive)
+        # A target stamp records the backup chain's label, checked above, and is
+        # create-only: no backup replaces or deletes it.
+        kept = frozenset(
+            {PRODUCT_LABEL_KEY} if session.exists(product_uri.join(PRODUCT_LABEL_KEY)) else ()
+        )
+        _put_entries(session, zf, full_backup, root, archive, kept)
 
-    product_uri = session.product.product_uri
     for backup in backups[1:]:
         # Deletes come first: a replacement key may sit where a deleted key, or its
         # directory, was. `resolve_backup_chain` refused a backup that holds and deletes a key.
         for key in backup.deleted_keys:
+            if key in kept:
+                continue
             uri = product_uri.join(key)
             if not session.exists(uri):
                 reason = Message(
@@ -654,10 +724,11 @@ def restore_backup_chain(
             expected.pop(key, None)
             removed[key] = backup
         with _open_unchanged(backup, archive) as handle, zipfile.ZipFile(handle) as zf:
-            _put_entries(session, zf, backup, root, archive)
+            _put_entries(session, zf, backup, root, archive, kept)
         for key in backup.entries:
             expected[key] = (backup, backup.entries[key])
             removed.pop(key, None)
 
-    _verify_restored(session, expected, removed, archive)
+    written = {key: entry for key, entry in expected.items() if key not in kept}
+    _verify_restored(session, written, removed, archive)
     return _summary(session, backups, target, sorted(expected))

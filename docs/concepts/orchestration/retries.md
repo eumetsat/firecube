@@ -19,7 +19,7 @@ At that point, inspect the product before retrying again:
 
 ```bash
 firecube chunks runs list \
-  --product-name file:///data/products/MY_PRODUCT.zarr
+  --target file:///data/products/MY_PRODUCT.zarr
 ```
 
 Use [Recover Runs And Claims](../../operations/chunk-manager/recover.md) when a
@@ -37,7 +37,6 @@ firecube ingest <plugin> \
   --product-name MY_PRODUCT \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged \
   --option resume_existing=true
 ```
@@ -57,7 +56,6 @@ firecube ingest <plugin> \
   --product-name MY_PRODUCT \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged \
   --option run_id="$RUN_ID"
 ```

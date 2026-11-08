@@ -17,27 +17,24 @@
 from __future__ import annotations
 
 import json as _json
-import sys
 from collections.abc import Callable
 
 import click
 import zarr
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import wrap_user_facing_errors
-from firecube.cli._product import resolve_product_identity
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._shared_options import (
-    product_uri_option,
+    format_option,
     storage_driver_option,
     storage_type_option,
+    target_uri_option,
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
 from firecube.core import observability
 from firecube.core.cf import CFReport
 from firecube.core.cf.validator import validate_cf18
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
+from firecube.operations import StorageDriverConfig, open_product
 
 _ROOT_GROUP_ALIASES = frozenset({".", "/", ""})
 _COMPLIANCE_PROFILE_VALIDATORS: dict[str, Callable[..., CFReport]] = {
@@ -65,12 +62,12 @@ def advise(ctx: click.Context) -> None:
     epilog="""\b
 Examples:
   # get recommended batch size for a product group
-  firecube advise batch-size -p <product> -g <group>
+  firecube advise batch-size --target file:///data/products/MY_PRODUCT.zarr --group <group>
 
 See also: firecube ingest, firecube zarr validate
 """,
 )
-@product_uri_option(tier="inspect")
+@target_uri_option(tier="inspect")
 @click.option(
     "-g",
     "--group",
@@ -81,10 +78,9 @@ See also: firecube ingest, firecube zarr validate
 @storage_driver_option(required=False)
 @storage_type_option(required=False)
 @click.pass_context
-@wrap_user_facing_errors
 def batch_size(
     ctx: click.Context,
-    product: str,
+    target: str,
     group_path: str,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -97,8 +93,8 @@ def batch_size(
     into memory without partial chunks. Run before a long ingestion job to
     set --option pipeline_batch_size=N.
     """
-    product_uri = parse_and_validate_uri(product, param_hint="--product")
-    storage_type = apply_smart_default(product_uri, storage_type)
+    target_uri = parse_and_validate_uri(target, param_hint="--target")
+    storage_type = apply_smart_default(target_uri, storage_type)
     storage_cfg = get_storage_config(
         ctx,
         overrides={
@@ -109,26 +105,21 @@ def batch_size(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_cfg)
-    identity = resolve_product_identity(
-        product_uri, format="zarr", product_name=product_uri.to_str()
+    product = ctx.with_resource(
+        open_product(target_uri, format="zarr", driver=driver_config, require_label=False)
     )
-    session = StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=driver_config,
-        )
-    )
+    identity, session = product.identity, product.session
 
+    root = session.zarr.open_group(identity.product_uri, mode="r")
     try:
-        root = session.zarr.open_group(identity.product_uri, mode="r")
         grp = root[group_path]
-    except Exception as exc:
+    except KeyError as exc:
         click.echo(f"Error opening store: {exc}", err=True)
-        sys.exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED) from exc
 
     if not isinstance(grp, zarr.Group):
         click.echo(f"Path '{group_path}' is not a Zarr group.", err=True)
-        sys.exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
     time_chunk_size = _find_time_chunk_size(grp)
 
@@ -167,11 +158,11 @@ def _find_time_chunk_size(grp: zarr.Group) -> int | None:
     epilog="""\b
 Examples:
   # run Tier-1 CF-1.8 checks on a local cube root
-  firecube advise compliance --profile cf-18 -p /path/to/cube.zarr -g .
+  firecube advise compliance --profile cf-18 --target file:///data/products/MY_PRODUCT.zarr --group .
   # check a nested group, emit JSON for downstream tooling
-  firecube advise compliance --profile cf-18 -p s3://bucket/x.zarr -g F024/FWI --storage-type s3 --storage-driver fsspec --format json
-  # fail (exit 2) on any warning or info finding
-  firecube advise compliance --profile cf-18 -p ./cube.zarr -g . --strict
+  firecube advise compliance --profile cf-18 --target file:///data/products/MY_PRODUCT.zarr --group F024/FWI --format json
+  # fail (exit 3) on any warning or info finding
+  firecube advise compliance --profile cf-18 --target file:///data/products/MY_PRODUCT.zarr --group . --strict
 
 See also: firecube zarr validate
 """,
@@ -182,7 +173,7 @@ See also: firecube zarr validate
     type=click.Choice(sorted(_COMPLIANCE_PROFILE_VALIDATORS)),
     help="compliance profile to run",
 )
-@product_uri_option(tier="inspect")
+@target_uri_option(tier="inspect")
 @click.option(
     "-g",
     "--group",
@@ -190,28 +181,20 @@ See also: firecube zarr validate
     required=True,
     help="group path inside the cube ('.' or '/' for root, otherwise e.g. F024/FWI)",
 )
-@click.option(
-    "--format",
-    "output_format",
-    type=click.Choice(["text", "json"]),
-    default="text",
-    show_default=True,
-    help="output format for the report",
-)
+@format_option(("table", "json"))
 @click.option(
     "--strict",
     is_flag=True,
     default=False,
-    help="treat any warning or info finding as a non-zero exit (code 2)",
+    help="treat any warning or info finding as a non-zero exit (code 3)",
 )
 @storage_driver_option(required=False)
 @storage_type_option(required=False)
 @click.pass_context
-@wrap_user_facing_errors
 def compliance(
     ctx: click.Context,
     profile: str,
-    product: str,
+    target: str,
     group_path: str,
     output_format: str,
     strict: bool,
@@ -222,12 +205,12 @@ def compliance(
     """run structural compliance checks
 
     Opens a Zarr cube and runs the selected compliance profile. Findings are
-    emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
+    emitted as a human-readable table (default) or as JSON. Exit codes: 0 on clean
     (or warnings/info without --strict), 1 if any error finding is reported,
-    2 if warnings/info appear under --strict.
+    3 if warnings/info appear under --strict.
     """
-    product_uri = parse_and_validate_uri(product, param_hint="--product")
-    storage_type = apply_smart_default(product_uri, storage_type)
+    target_uri = parse_and_validate_uri(target, param_hint="--target")
+    storage_type = apply_smart_default(target_uri, storage_type)
     storage_cfg = get_storage_config(
         ctx,
         overrides={
@@ -239,18 +222,18 @@ def compliance(
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_cfg)
 
-    identity = resolve_product_identity(
-        product_uri, format="zarr", product_name=product_uri.to_str()
+    product = ctx.with_resource(
+        open_product(target_uri, format="zarr", driver=driver_config, require_label=False)
     )
-    session = StorageSession(StorageBinding(identity=identity, driver=driver_config))
+    identity, session = product.identity, product.session
 
     xr_group = "" if group_path in _ROOT_GROUP_ALIASES else group_path
 
     try:
         root = session.zarr.open_group(identity.product_uri, mode="r")
         if xr_group:
-            target = root[xr_group]
-            if not isinstance(target, zarr.Group):
+            node = root[xr_group]
+            if not isinstance(node, zarr.Group):
                 raise click.ClickException(
                     f"Path '{group_path}' is a Zarr array, not a group. "
                     "Specify a group path (for example '/' or 'F024/FWI')."
@@ -268,7 +251,7 @@ def compliance(
         raise click.ClickException(f"Group '{group_path}' not found in Zarr cube.") from exc
 
     try:
-        report = _COMPLIANCE_PROFILE_VALIDATORS[profile](ds, product=product, group=group_path)
+        report = _COMPLIANCE_PROFILE_VALIDATORS[profile](ds, product=target, group=group_path)
     finally:
         ds.close()
 
@@ -279,9 +262,9 @@ def compliance(
 
     summary = report.summary
     if summary.errors > 0:
-        sys.exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if strict and (summary.warnings > 0 or summary.info > 0):
-        sys.exit(2)
+        raise click.exceptions.Exit(ExitCode.STRICT_WARNINGS)
 
 
 def _render_compliance_text(report: CFReport, *, profile: str) -> None:

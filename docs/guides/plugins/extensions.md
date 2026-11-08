@@ -26,7 +26,7 @@ template in the class bases:
 ```python
 from typing import Any, ClassVar
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericParquetIngestor,
     PipelineBatch,
     PluginContext,
@@ -90,7 +90,7 @@ any resources it acquired before the error.
 
 Reading archives is covered in [Discover Zipped Data](discover-zipped-data.md).
 For resources that must outlive one function call, register an `ExitStack`
-with [`BatchResourceRegistry`](../../reference/core-utilities.md#firecube.core.api.BatchResourceRegistry)
+with [`BatchResourceRegistry`](../../reference/core-utilities.md#firecube.sdk.BatchResourceRegistry)
 so readers close before their scratch files are removed.
 
 ## Use The Gridding Extensions

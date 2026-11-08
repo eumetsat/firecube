@@ -25,7 +25,7 @@ _INVALID_CODEC_FIELD_ROWS: tuple[tuple[str, dict[str, Any], str], ...] = (
 
 @pytest.mark.unit
 def test_invalid_codec_fields_are_rejected(subtests):
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     for row_id, kwargs, match in _INVALID_CODEC_FIELD_ROWS:
         with subtests.test(msg=f"test_{row_id}"), pytest.raises(ValueError, match=match):
@@ -34,7 +34,7 @@ def test_invalid_codec_fields_are_rejected(subtests):
 
 @pytest.mark.unit
 def test_full_construction_with_all_codec_fields():
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     spec = ZarrArraySpec(
         name="x",

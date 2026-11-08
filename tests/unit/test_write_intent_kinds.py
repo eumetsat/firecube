@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from firecube.ingestor.api import WriteIntent
+from firecube.sdk import WriteIntent
 
 
 def test_static_kind_ts_index_ignored_semantically() -> None:

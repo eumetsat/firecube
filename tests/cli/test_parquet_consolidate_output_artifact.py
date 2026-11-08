@@ -43,7 +43,7 @@ def test_file_uri_input_no_storage_flags_and_file_uri_output(
 
     output_path = tmp_path / "out.parquet"
     result = _invoke_consolidate(
-        ["-p", input_path.as_uri(), "-o", output_path.as_uri(), "--codec", "snappy"]
+        ["-t", input_path.as_uri(), "-o", output_path.as_uri(), "--codec", "snappy"]
     )
 
     assert result.exit_code == 0, result.output
@@ -62,7 +62,7 @@ def test_parquet_consolidate_writes_output_to_the_literal_path(tmp_path: Path) -
     src.mkdir()
     out.parent.mkdir()
     _write_parquet(src / "part.parquet")
-    result = _invoke_consolidate(["-p", f"file://{src}", "-o", f"file://{out}"])
+    result = _invoke_consolidate(["-t", f"file://{src}", "-o", f"file://{out}"])
     assert result.exit_code == 0, result.output
     assert pq.read_table(out).equals(pq.read_table(src / "part.parquet"))
     assert not [p for p in tmp_path.rglob("*") if "%" in p.name]

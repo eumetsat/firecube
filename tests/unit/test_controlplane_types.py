@@ -202,19 +202,10 @@ def test_manifest_record_identity_and_wire_format(subtests: Any, tmp_path: Path)
         recovered = ResolvedIndexRecord.from_json_bytes(record.to_json_bytes())
         assert recovered.items is None
 
-    with table_row(subtests, "item_manifest_entry_is_reexported_from_public_apis", tmp_path):
-        from firecube.core.api import ItemManifestEntry as CoreEntry
-        from firecube.ingestor.api import ItemManifestEntry as IngestorEntry
+    with table_row(subtests, "item_manifest_entry_is_exported_from_sdk", tmp_path):
+        from firecube.sdk import ItemManifestEntry as SdkEntry
 
-        assert CoreEntry is ItemManifestEntry
-        assert IngestorEntry is ItemManifestEntry
-
-    with table_row(subtests, "validate_manifest_entries_is_reexported_from_public_apis", tmp_path):
-        from firecube.core.api import validate_manifest_entries as core_fn
-        from firecube.ingestor.api import validate_manifest_entries as ingestor_fn
-
-        assert core_fn is validate_manifest_entries
-        assert ingestor_fn is validate_manifest_entries
+        assert SdkEntry is ItemManifestEntry
 
 
 def test_invalid_manifests_are_refused(subtests: Any, tmp_path: Path) -> None:

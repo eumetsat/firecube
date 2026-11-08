@@ -5,9 +5,10 @@ and to keep a record of each state you hand over. They do not write a chunk.
 Two options of `release create` read chunk objects: `--archive` reads them to
 archive them, and `--retain-versions` lists their versions.
 
-The `firecube snapshot` commands work on any Zarr v2 or v3 store. A real
-`migrate run` and `release create` need a control plane. A store that Firecube
-did not write has none, so run `migrate adopt` on it first.
+Every maintenance command reads the product label back from the store. A store
+that Firecube did not write records no label, and the command exits 2. Run
+`migrate adopt` on such a store first. A real `migrate run` and `release create`
+also need the control plane that adoption writes.
 
 ## Prerequisites
 
@@ -47,8 +48,27 @@ If a crash leaves the claim in place, follow
 | `firecube migrate` | Give a foreign store a control plane, and change attributes in the metadata documents with a recorded, repeatable step. |
 | `firecube release` | Name one state of the metadata, and detect later whether it changed. Optionally keep the chunk bytes of the state in a zip archive, or as object versions on S3. |
 
-Every command except `firecube migrate list` needs `--target` and
-`--product-name`.
+Every command except `firecube migrate list` needs `-t/--target`. Only
+`firecube migrate adopt` also needs `--product-name`, because it records the
+label.
+
+## Preview And Ask For Confirmation
+
+Five maintenance commands take `--dry-run`: `snapshot take`, `migrate run`,
+`migrate adopt`, `release create` and `zarr multires`. `release create` also
+takes it together with `--archive`. A dry run writes nothing. It makes the
+refusals that the page of that command lists. `zarr index rebuild` takes
+`--dry-run` too. See
+[Inspect And Manage The Resolved Index](../firecube-index.md).
+
+The dry runs of `migrate run`, `migrate adopt` and `zarr preallocate` do not
+check for a held exclusive maintenance claim. They exit 0 while the real run
+exits 1. A clean preview of those three commands is no proof that the product is free.
+
+Three commands ask for confirmation: `migrate run`, `migrate adopt` and
+`release create`. On a terminal, the command asks a question. Off a terminal,
+the command exits 2 until you add `--yes-i-really-mean-it`. `--dry-run` skips
+the question.
 
 ## Next Steps
 

@@ -17,14 +17,17 @@
 from __future__ import annotations
 
 import contextlib
+import csv
 import importlib
 import json
+import sys
 from pathlib import Path
 
 import click
 
 from firecube.cli._errors import render
 from firecube.core import observability
+from firecube.core.errors import FirecubeError
 from firecube.ingestor.registry.metadata import (
     get_plugin_descriptor,
     list_plugins,
@@ -60,12 +63,15 @@ def _load_plugin_cli(plugin: str) -> click.Command:
         raise click.UsageError(hint) from exc
 
     module_root = descriptor.module.split(".", 1)[0]
+    cli_module = f"{module_root}.plugin_cli"
     # Convention: plugin can provide `<root>.plugin_cli:cli` (click.Command / click.Group).
     try:
-        mod = importlib.import_module(f"{module_root}.plugin_cli")
+        mod = importlib.import_module(cli_module)
     except ModuleNotFoundError as exc:
-        # If the module exists but plugin_cli doesn't, it might just be an ingestor-only plugin.
-        # But if we are here, the user explicitly tried `firecube plugins <plugin> ...`.
+        # Only the plugin's own absent `plugin_cli` means an ingestor-only plugin; a missing
+        # module that `plugin_cli` itself imports reaches the CLI error boundary.
+        if exc.name != cli_module:
+            raise
         raise click.ClickException(
             f"Plugin '{plugin}' does not expose CLI commands via 'firecube.plugin_cli' entry point "
             f"or '{module_root}.plugin_cli:cli' convention."
@@ -117,6 +123,24 @@ def _echo_json(data: object) -> None:
     click.echo(json.dumps(data, indent=2))
 
 
+_LIST_COLUMNS: tuple[str, ...] = ("name", "module", "description")
+
+
+def _plugin_row(name: str) -> dict[str, str]:
+    """Return the name, module and first description line of one plugin.
+
+    A descriptor failure propagates to the root error boundary, as it does for describe.
+    """
+
+    descriptor = get_plugin_descriptor(name)
+    lines = (descriptor.description or "").splitlines()
+    return {
+        "name": name,
+        "module": descriptor.module,
+        "description": lines[0].strip() if lines else "",
+    }
+
+
 @plugins.command(
     "list",
     epilog="""\b
@@ -142,15 +166,21 @@ def list_plugins_cmd(output_format: str) -> None:
     plugin. Use -f to control output format.
     """
 
-    names = list_plugins()
+    rows = [_plugin_row(name) for name in list_plugins()]
     if output_format == "json":
-        _echo_json(names)
+        _echo_json(rows)
         return
-    if not names:
+    if output_format == "csv":
+        writer = csv.DictWriter(sys.stdout, fieldnames=_LIST_COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+        return
+    if not rows:
         click.echo("No plugins registered.")
         return
-    for name in names:
-        click.echo(name)
+    widths = {col: max(len(col), *(len(row[col]) for row in rows)) for col in _LIST_COLUMNS}
+    for line in [dict(zip(_LIST_COLUMNS, _LIST_COLUMNS, strict=True)), *rows]:
+        click.echo("  ".join(line[col].ljust(widths[col]) for col in _LIST_COLUMNS).rstrip())
 
 
 # describe and explain are now in plugin_introspect
@@ -270,7 +300,9 @@ def create_plugin(
             license=license,
             template_type=resolved_template,
         )
-    except Exception as exc:
+    except FirecubeError:
+        raise
+    except (ValueError, FileExistsError) as exc:
         raise click.ClickException(render(exc)) from exc
 
     ingestor_file = next((project_path / "src").glob("*/ingestor.py"))

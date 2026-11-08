@@ -25,21 +25,27 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from firecube.core import observability
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.manager import check_legacy_index_record
+from firecube.core.controlplane.types import ResolvedIndexRecord, WriteDomain
 from firecube.core.errors import (
     LegacyIndexRecordError,
     ManifestError,
     Message,
+    ResolvedIndexAttrsConflictError,
+    ResolvedIndexClaimTimeoutError,
     ResolvedIndexConflictError,
 )
 from firecube.core.index_resolve import ExtentUnknownError, ResolvedIndex, resolve_index_spec
 from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.types.context import IngestContext, PluginContext, RuntimeIngestContext
+
+if TYPE_CHECKING:
+    from firecube.core.product.open import Product
 
 _log = logging.getLogger(__name__)
 
@@ -54,14 +60,16 @@ class IndexRebuildResult:
 
     Attributes:
         outcome: `"created"` when the rebuild wrote the record or its root attribute;
-            `"matched_existing"` when the stored record already matched.
-        identity_hash: The identity hash of the persisted record.
-        run_id: The run id recorded in the control plane.
+            `"matched_existing"` when the stored record already matched; `"dry-run"`
+            when a preview wrote nothing.
+        identity_hash: The identity hash of the persisted record, or of the declared
+            record in a dry run.
+        run_id: The run id recorded in the control plane, or `None` in a dry run.
     """
 
-    outcome: Literal["created", "matched_existing"]
+    outcome: Literal["created", "matched_existing", "dry-run"]
     identity_hash: str
-    run_id: str
+    run_id: str | None
 
 
 @dataclass(frozen=True)
@@ -170,31 +178,96 @@ def _declared_index(
         ) from exc
 
 
-def rebuild_index_record(
-    *,
-    ingestor: Any,
-    plugin_name: str,
+def _preview_rebuild(
     chunk_manager: ChunkManager,
-    target: str,
     product_name: str,
+    record: ResolvedIndexRecord,
+    *,
+    report: Callable[[str], None],
+    warn: Callable[[str], None],
+) -> IndexRebuildResult:
+    """Make the refusals `ensure_resolved_index` makes, from reads only; report what it would write.
+
+    Raises:
+        ProductUnderMaintenanceError: Another owner holds the exclusive maintenance claim.
+        ResolvedIndexConflictError: The stored record differs; `warn` receives its message.
+        ResolvedIndexAttrsConflictError: The root attribute disagrees with the stored record.
+        ResolvedIndexClaimTimeoutError: No record exists and `resolved_index:current` is held.
+    """
+    chunk_manager.check_exclusive_maintenance(
+        product=product_name, owner_id=record.recorded_by_run_id
+    )
+    stored = chunk_manager.get_resolved_index(product=product_name)
+    attrs_hash = chunk_manager.read_resolved_index_attrs_hash(product=product_name)
+    declared = record.identity_hash
+    if stored is not None and stored.identity_hash != declared:
+        message = (
+            "plugin declares incompatible resolved index: "
+            f"stored={stored.identity_hash[:16]} declared={declared[:16]}"
+        )
+        warn(message)
+        raise ResolvedIndexConflictError(message)
+    if stored is None and attrs_hash is not None:
+        raise ResolvedIndexAttrsConflictError(
+            "zarr root attrs have resolved-index identity hash but no control-plane record"
+        )
+    if stored is not None and attrs_hash not in (None, declared):
+        raise ResolvedIndexAttrsConflictError(
+            "zarr root attrs have drifted from authoritative resolved-index record: "
+            f"cp_hash={stored.identity_hash[:16]} attrs_hash={str(attrs_hash)[:16]!r}"
+        )
+    if stored is None:
+        # A held claim, even a stale one, refuses the run's acquire; the run then waits for
+        # a record its holder never wrote, as the ingest dry run reports too.
+        domain = WriteDomain(product=product_name, category="resolved_index", name="current")
+        holder = chunk_manager.repo.read_claim_by_domain(
+            product=product_name, domain=domain.identifier
+        )
+        if holder is not None:
+            state = "stale" if holder.stale else "live"
+            raise ResolvedIndexClaimTimeoutError(
+                f"claim {holder.domain} is held by {holder.owner_id} ({state}) and the store "
+                "has no resolved-index record, so the rebuild would not converge on one"
+            )
+        action = "write the index record and mirror it on the root attributes"
+    elif attrs_hash is None:
+        action = "mirror the stored index record on the root attributes"
+    else:
+        action = "keep the index record, which matches"
+    report(
+        f"Dry run: would {action} (identity_hash={declared[:16]}) and record one rebuild run; "
+        "nothing is written"
+    )
+    return IndexRebuildResult(outcome="dry-run", identity_hash=declared, run_id=None)
+
+
+def rebuild_index_record(
+    product: Product,
+    ingestor: Any,
+    *,
+    plugin_name: str,
+    chunk_manager: ChunkManager | None = None,
     logger: logging.Logger = _log,
     report: Callable[[str], None] = lambda _message: None,
     warn: Callable[[str], None] = lambda _message: None,
     configure: Callable[[Any, str], PluginContext] | None = None,
+    dry_run: bool = False,
 ) -> IndexRebuildResult:
     """Persist the resolved-index record the plugin declares, and mirror it on the root attributes.
 
     Every refusal comes before the record is written. Once the control plane holds
     the run, the call tries to record it as complete or failed before returning or
-    raising; a failure of that record is logged, not raised. The caller closes
-    `chunk_manager`.
+    raising; a failure of that record is logged, not raised. With `dry_run`, the call
+    makes the refusals from reads only, reports what it would write and writes
+    nothing: no claim, record, attribute or run.
 
     Args:
+        product: The open product, from `open_product`. Its URI is handed to the
+            plugin's context and recorded as the run's output.
         ingestor: The plugin instance whose `index_spec` declares the index.
         plugin_name: The plugin's registered name, used in messages and telemetry.
-        chunk_manager: The control plane of the target product.
-        target: The product URI handed to the plugin's context and recorded as the run's output.
-        product_name: The logical product name.
+        chunk_manager: The control plane the plugin was built with, closed by the
+            caller. `None` uses `product.manager`.
         logger: Receives the index-ensured event log and run-record failures.
         report: Receives the outcome line before the run is recorded complete.
         warn: Receives the conflict message before the run is recorded failed.
@@ -209,7 +282,11 @@ def rebuild_index_record(
             attributes differs from the declared one.
         ResolvedIndexConflictError: The control plane already holds a different record;
             `warn` receives its message, then the run is recorded as failed.
+        ResolvedIndexAttrsConflictError: The root attribute disagrees with the stored record.
+        ProductUnderMaintenanceError: Another owner holds the exclusive maintenance claim.
     """
+    chunk_manager = product.manager if chunk_manager is None else chunk_manager
+    product_name, target = product.label, product.identity.product_uri.to_str()
     run_id = f"rebuild-{uuid.uuid4()}"
     run_meta = {"run_id": run_id, "command": "index_rebuild"}
     run_created = False
@@ -253,6 +330,8 @@ def rebuild_index_record(
                 "materialize the group's coord"
             )
         record = resolved.as_resolved_index_record(run_id=run_id)
+        if dry_run:
+            return _preview_rebuild(chunk_manager, product_name, record, report=report, warn=warn)
         # ``ensure_resolved_index`` does not create the run; the caller's
         # recording does. A conflict still leaves a run that must be recorded failed.
         try:
@@ -323,10 +402,9 @@ def rebuild_index_record(
 
 
 def verify_index_record(
+    product: Product,
     *,
-    chunk_manager: ChunkManager,
-    product_name: str,
-    target: str,
+    chunk_manager: ChunkManager | None = None,
     plugin_name: str | None = None,
     load_plugin: Callable[[], Any] | None = None,
     configure: Callable[[Any, str], PluginContext] | None = None,
@@ -337,9 +415,9 @@ def verify_index_record(
     checks pass, so a missing or legacy record never needs one.
 
     Args:
-        chunk_manager: The control plane of the target product. The caller closes it.
-        product_name: The logical product name.
-        target: The product URI handed to the plugin's context.
+        product: The open product, from `open_product`. Its URI is handed to the plugin's context.
+        chunk_manager: The control plane the plugin is built with, closed by the caller.
+            `None` uses `product.manager`.
         plugin_name: The plugin to compare against, or `None` to skip the comparison.
             It also names the plugin in the legacy-record message.
         load_plugin: Returns the plugin instance. Required when `plugin_name` is given.
@@ -356,6 +434,8 @@ def verify_index_record(
     """
     if plugin_name is not None and load_plugin is None:
         raise ValueError("load_plugin is required when plugin_name is given")
+    chunk_manager = product.manager if chunk_manager is None else chunk_manager
+    product_name, target = product.label, product.identity.product_uri.to_str()
     try:
         record = chunk_manager.get_resolved_index(product=product_name)
     except ManifestError as exc:

@@ -54,7 +54,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
     PipelineBatch,
     PluginContext,

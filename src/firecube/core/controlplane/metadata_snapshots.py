@@ -24,7 +24,9 @@ never a chunk. Layout below .firecube/metadata/:
 
 Blobs, manifests and records are created once and never rewritten. Records and
 refs name other files by id, never by an absolute path. Only the ChunkManager
-facade calls the I/O functions here.
+facade writes through the functions here; read-only previews also call
+`latest_snapshot_id` and `plan_snapshot`. `take_snapshot_for_product` takes or
+previews a snapshot of an open product; callers use it rather than the pieces.
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ import posixpath
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 
 from firecube.core.controlplane._content_addressed import (
     HEX_ID,
@@ -44,6 +46,7 @@ from firecube.core.controlplane._content_addressed import (
     require_id,
     sha256_hex,
 )
+from firecube.core.controlplane.product_label import check_product_label
 from firecube.core.controlplane.types import (
     CONTROL_DIRNAME,
     METADATA_DIRNAME,
@@ -60,6 +63,9 @@ from firecube.core.zarr.metadata_documents import (
     enumerate_metadata_documents,
     parse_node_document,
 )
+
+if TYPE_CHECKING:
+    from firecube.core.product.open import Product
 
 SnapshotConsistency = Literal["observation", "coherent"]
 """How a snapshot was taken: ``observation`` on a live store, ``coherent`` under the exclusive claim."""
@@ -295,6 +301,142 @@ def manifest_bytes(entries: Sequence[ManifestEntry]) -> bytes:
             ],
         }
     )
+
+
+@dataclass(frozen=True)
+class SnapshotPlan:
+    """What taking a snapshot of the live documents would write.
+
+    Attributes:
+        parent: The id the new record would name as its parent, or ``None``.
+        manifest: The sha256 hex of the manifest the documents make.
+        documents: The number of documents the snapshot would capture.
+        blobs: The number of distinct document contents; an existing blob is not rewritten.
+        manifest_recorded: Whether a recorded snapshot names the manifest already, so
+            no blob and no manifest would be written.
+    """
+
+    parent: str | None
+    manifest: str
+    documents: int
+    blobs: int
+    manifest_recorded: bool
+
+
+def latest_snapshot_id(fs: StorageFilesystemFull, product_root: StorageUri) -> str | None:
+    """Return the id ``refs/latest.json`` names, or ``None`` without it, as a take reads it.
+
+    Reads only that ref, so a preflight refuses what `take_snapshot` would refuse.
+
+    Raises:
+        ControlPlaneCorruptionError: ``refs/latest.json`` does not parse or names no id.
+    """
+    return _read_latest_id(fs, metadata_root(product_root))
+
+
+def plan_snapshot(
+    fs: StorageFilesystemFull,
+    product_root: StorageUri,
+    documents: Sequence[MetadataDocument],
+    *,
+    records: Iterable[SnapshotRecord],
+) -> SnapshotPlan:
+    """Plan a snapshot of *documents* against the recorded *records*; write nothing.
+
+    *documents* are the captured documents, as `captured_documents` returns them.
+
+    Raises:
+        ControlPlaneCorruptionError: ``refs/latest.json`` does not parse or names no id.
+    """
+    parent = latest_snapshot_id(fs, product_root)
+    manifest_id = sha256_hex(manifest_bytes(build_manifest(documents)))
+    return SnapshotPlan(
+        parent=parent,
+        manifest=manifest_id,
+        documents=len(documents),
+        blobs=len({document.digest for document in documents}),
+        manifest_recorded=any(record.manifest == manifest_id for record in records),
+    )
+
+
+@dataclass(frozen=True)
+class SnapshotPreview:
+    """The outcome of a dry-run snapshot take: what it would write, and the label state.
+
+    Attributes:
+        plan: What the snapshot would write.
+        label_recorded: Whether the store records its product label already. A store
+            without the stamp gets it from a real take.
+    """
+
+    plan: SnapshotPlan
+    label_recorded: bool
+
+
+@overload
+def take_snapshot_for_product(
+    product: Product,
+    *,
+    dry_run: Literal[False] = ...,
+    trigger: str,
+    consistency: SnapshotConsistency,
+) -> SnapshotRecord: ...
+
+
+@overload
+def take_snapshot_for_product(
+    product: Product,
+    *,
+    dry_run: Literal[True],
+    trigger: str,
+    consistency: SnapshotConsistency,
+) -> SnapshotPreview: ...
+
+
+def take_snapshot_for_product(
+    product: Product,
+    *,
+    dry_run: bool = False,
+    trigger: str,
+    consistency: SnapshotConsistency,
+) -> SnapshotRecord | SnapshotPreview:
+    """Snapshot the metadata documents of an open product, or preview the snapshot.
+
+    Refuse a store that records another label before anything is read or written. A dry
+    run returns the plan and writes nothing. A real run takes no maintenance claim and
+    records the snapshot with no run id, so only an ``observation`` fits.
+
+    Args:
+        product: The open product, bound to the label its store records.
+        dry_run: Return a `SnapshotPreview` and write nothing.
+        trigger: Why the snapshot is taken; a non-empty string stored in the record.
+        consistency: ``observation``; a ``coherent`` snapshot needs a run id and is
+            refused here.
+
+    Returns:
+        The new `SnapshotRecord`, or the `SnapshotPreview` of a dry run.
+
+    Raises:
+        ValueError: *trigger* is empty, or *consistency* does not fit a snapshot with no run id.
+        ProductLabelMismatchError: The store records another label.
+        ManifestError: The label stamp, a run or claim record cannot be read.
+        ControlPlaneCorruptionError: ``refs/latest.json`` does not parse.
+    """
+    _check_take(run_id=None, trigger=trigger, consistency=consistency)
+    fs = cast(StorageFilesystemFull, product.session.fs())
+    stamped = check_product_label(fs, product.identity.control_root_uri, product.label)
+    manager = product.manager
+    if not dry_run:
+        return manager.take_snapshot(
+            product.label, run_id=None, trigger=trigger, consistency=consistency
+        )
+    plan = plan_snapshot(
+        fs,
+        product.identity.product_uri,
+        manager.enumerate_metadata_documents(product.label),
+        records=manager.list_snapshots(product.label),
+    )
+    return SnapshotPreview(plan=plan, label_recorded=stamped is not None)
 
 
 def _check_take(*, run_id: str | None, trigger: str, consistency: str) -> None:

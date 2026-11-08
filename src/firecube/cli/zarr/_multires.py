@@ -22,22 +22,23 @@ import click
 
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
-from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
-    product_name_option,
+    dry_run_flag,
     storage_driver_option,
     storage_type_option,
+    target_uri_option,
 )
 from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
-from firecube.core.errors import ConfigurationError, ProductUnderMaintenanceError
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.core.zarr.layers import DEFAULT_MULTIRES_RESOLUTIONS
-from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
+from firecube.operations import (
+    MultiresConfig,
+    StorageDriverConfig,
+    ZarrMultiresBuilder,
+    open_product,
+)
 
 
 @click.command(
@@ -45,31 +46,26 @@ from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
     epilog="""\b
 Examples:
   Default multi-resolution layers for a local Zarr product:
-  firecube zarr multires --target file:///p.zarr --product-name p \\
-      --storage-type local --storage-driver fsspec
+  firecube zarr multires --target file:///data/p.zarr
 
 \b
   Explicit resolution levels:
-  firecube zarr multires --target s3://b/p.zarr --product-name p \\
-      --storage-type s3 --storage-driver fsspec -r 1.0 -r 0.5
+  firecube zarr multires --target file:///data/p.zarr --resolutions 1.0 --resolutions 0.5
 
 \b
   Dataset in a group, with coordinates not named lat and lon:
-  firecube zarr multires --target file:///p.zarr --product-name p \\
-      --storage-type local --storage-driver fsspec -g data \\
+  firecube zarr multires --target file:///data/p.zarr --group data \\
       --lat-name latitude --lon-name longitude
+
+\b
+  Show the layers it would write, and write nothing:
+  firecube zarr multires --target file:///data/p.zarr --dry-run
 
 \b
 See also: firecube zarr validate
 """,
 )
-@click.option(
-    "-t",
-    "--target",
-    "target",
-    required=True,
-    help="Target product URI required (file:///abs/path or s3://bucket/key); scheme must match --storage-type.",
-)
+@target_uri_option(tier="write")
 @click.option(
     "--resolutions",
     "resolutions",
@@ -99,11 +95,11 @@ See also: firecube zarr validate
     show_default=True,
     help="Name of the 1-D longitude coordinate to coarsen.",
 )
-@product_name_option(required=True)
 @storage_type_option(
     required=False, extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3)."
 )
 @storage_driver_option(required=False)
+@dry_run_flag
 @click.pass_context
 def multires(
     ctx: click.Context,
@@ -112,12 +108,16 @@ def multires(
     group: str | None,
     lat_name: str,
     lon_name: str,
-    product_name: str,
-    storage_type: str,
-    storage_driver: str,
+    storage_type: str | None,
+    storage_driver: str | None,
     storage_anonymous: bool | None,
+    dry_run: bool,
 ) -> None:
-    """Build multi-resolution Zarr pyramid for an existing product."""
+    """Build multi-resolution Zarr pyramid for an existing product.
+
+    --dry-run makes the same checks, prints each layer it would write or replace,
+    and writes nothing.
+    """
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
     storage_config = get_storage_config(
@@ -130,32 +130,19 @@ def multires(
         cache=False,
     )
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    identity = resolve_product_identity(
-        target_uri,
-        format="zarr",
-        product_name=product_name,
-    )
-    session = StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=driver_config,
-        )
-    )
+    product = ctx.with_resource(open_product(target_uri, format="zarr", driver=driver_config))
     config = MultiresConfig(
-        product=identity.product_name,
+        product=product.label,
         group=(group or "").strip("/"),
         resolutions=list(resolutions) or list(DEFAULT_MULTIRES_RESOLUTIONS),
         lat_name=lat_name,
         lon_name=lon_name,
     )
     try:
-        result = ZarrMultiresBuilder(
-            storage_config,
-            product_name=identity.product_name,
-            product_uri=identity.product_uri,
-            session=session,
-        ).build(config)
-    except (ImportError, ValueError, ConfigurationError, ProductUnderMaintenanceError) as exc:
+        result = ZarrMultiresBuilder(product, storage_config=storage_config).build(
+            config, dry_run=dry_run
+        )
+    except ValueError as exc:
         raise click.ClickException(render(exc)) from exc
 
     click.echo(json.dumps(result, indent=2))

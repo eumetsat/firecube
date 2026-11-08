@@ -123,7 +123,7 @@ cover empty, partial, and malformed input.
 
 from importlib.metadata import entry_points
 
-from firecube.ingestor.api import discover_ingestors
+from firecube.sdk import discover_ingestors
 
 from {import_name} import {class_name}
 
@@ -142,14 +142,14 @@ _DEPENDENCY_HINT = (
 )
 
 _DEPS_STRING_PER_TEMPLATE: dict[str, str] = {
-    "base": f'    "firecube>=0.1.5",\n{_DEPENDENCY_HINT}',
-    "zarr": f'    "firecube>=0.1.5",\n    "xarray",\n{_DEPENDENCY_HINT}',
+    "base": f'    "firecube>=0.1.9",\n{_DEPENDENCY_HINT}',
+    "zarr": f'    "firecube>=0.1.9",\n    "xarray",\n{_DEPENDENCY_HINT}',
     "parquet": (
-        '    "firecube>=0.1.5",\n'
+        '    "firecube>=0.1.9",\n'
         '    "pyarrow",\n'
         '    # "pandas",  # uncomment if your build_dataset returns pandas.DataFrame'
     ),
-    "direct_zarr": f'    "firecube>=0.1.5",\n    "numpy",\n{_DEPENDENCY_HINT}',
+    "direct_zarr": f'    "firecube>=0.1.9",\n    "numpy",\n{_DEPENDENCY_HINT}',
 }
 
 _DIRECT_ZARR_EXTRA_INCOMPLETE_NOTE = (
@@ -171,7 +171,6 @@ compression, and sharding defaults live in `ZarrStorageConfig` in the ingestor."
 _README_SUBSTITUTIONS_PER_TEMPLATE: dict[str, dict[str, str]] = {
     "base": {
         "hook_summary": "write_product_item()",
-        "output_format": "zarr",
         "output_suffix": "",
         "write_mode_default": "direct",
         "extra_incomplete_note": "",
@@ -190,7 +189,6 @@ relying on `--write-mode staged`.""",
     },
     "zarr": {
         "hook_summary": "read_dataset()",
-        "output_format": "zarr",
         "output_suffix": ".zarr",
         "write_mode_default": "direct",
         "extra_incomplete_note": (
@@ -210,7 +208,6 @@ print(xr.open_zarr("/tmp/{plugin_name}_out.zarr", group="default", consolidated=
     },
     "parquet": {
         "hook_summary": "read_table()",
-        "output_format": "parquet",
         "output_suffix": ".parquet",
         "write_mode_default": "direct",
         "extra_incomplete_note": "",
@@ -231,7 +228,6 @@ writes the part files in a local workspace and uploads them at the end.""",
     },
     "direct_zarr": {
         "hook_summary": "read_product_item()",
-        "output_format": "zarr",
         "output_suffix": ".zarr",
         "write_mode_default": "direct",
         "extra_incomplete_note": _DIRECT_ZARR_EXTRA_INCOMPLETE_NOTE,
@@ -275,7 +271,6 @@ uv run firecube ingest {plugin_name} \\
   --input-data file:///path/to/your/input \\
   --target file:///tmp/{plugin_name}_out.zarr \\
   --product-name {plugin_name} \\
-  --output-format zarr \\
   --write-mode direct \\
   --slot-start 0 \\
   --slot-end 24
@@ -453,6 +448,12 @@ def create_plugin_structure(
             class_name=class_name,
             import_name=import_name,
             plugin_name=plugin_name,
+        )
+    )
+    (root / "tests" / "test_import_boundary.py").write_text(
+        _load_template("test_import_boundary.py.tpl").format(
+            import_name=import_name,
+            copyright_header=copyright_header,
         )
     )
 

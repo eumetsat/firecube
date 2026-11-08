@@ -45,7 +45,7 @@ from firecube.ingestor.runtime.release import ReleaseRefusedError
 if TYPE_CHECKING:
     from firecube.core.controlplane.manager import ChunkManager
     from firecube.core.controlplane.releases import StoredRelease
-    from firecube.core.storage.session import StorageSession
+    from firecube.core.product.open import Product
 
 RETENTION_KIND_ZIP: Final = "zip"
 RETENTION_KIND_VERSIONS: Final = INVENTORY_KIND_S3_VERSIONS
@@ -275,9 +275,85 @@ def _refuse_unrestorable_deletes(
     )
 
 
+def _backup_scope(
+    manager: ChunkManager,
+    product: str,
+    digests: Mapping[str, str],
+    *,
+    version: str,
+    archive_full: bool,
+) -> tuple[StoredRelease | None, list[str], list[str]]:
+    """Return the previous backup's release, the keys to archive and the deleted keys.
+
+    The previous release is `None` for a full backup.
+
+    Raises:
+        ReleaseRefusedError: The product has no `zarr.json`, or an incremental backup
+            would delete a key a backup chain restore refuses.
+    """
+    current = manager.current_release(product)
+    previous = current if not archive_full and _is_zip_retention(current) else None
+    if "zarr.json" not in digests:
+        raise ReleaseRefusedError(
+            Message(
+                "The product {product} has no Zarr v3 root document zarr.json, so it "
+                "cannot be retained in a zip archive.",
+                product=product,
+            ),
+            version=version,
+        )
+    if previous is None:
+        return None, sorted(digests), []
+    previous_inventory = manager.read_inventory(product, retention_text(previous, "inventory"))
+    previous_digests = {item.key: item.digest for item in previous_inventory.objects}
+    keys = sorted(
+        key
+        for key, digest in digests.items()
+        if previous_digests.get(key) != digest or _is_metadata_document(key)
+    )
+    deleted_keys = sorted(set(previous_digests).difference(digests))
+    _refuse_unrestorable_deletes(deleted_keys, previous.version, version=version)
+    return previous, keys, deleted_keys
+
+
+def plan_zip_retention(
+    *,
+    manager: ChunkManager,
+    product: str,
+    version: str,
+    archive: StorageUri,
+    archive_full: bool,
+) -> dict[str, Any]:
+    """Return the retention a zip archive of release `version` would record; write nothing.
+
+    The plan reads and hashes every object of the product now. The run archives the
+    documents and records it writes too, so its counts can be higher.
+
+    Raises:
+        ReleaseRefusedError: As `zip_retention` and its step refuse, before any write.
+    """
+    archive_path = require_local_archive(archive, version=version)
+    refuse_existing_archive(archive_path, version=version)
+    inventory = manager.take_digest_inventory(product)
+    digests = {item.key: str(item.digest) for item in inventory.objects}
+    previous, keys, deleted_keys = _backup_scope(
+        manager, product, digests, version=version, archive_full=archive_full
+    )
+    return {
+        "kind": RETENTION_KIND_ZIP,
+        "uri": archive.to_str(),
+        "format": "zip",
+        "mode": MODE_FULL if previous is None else MODE_INCREMENTAL,
+        "previous_release": None if previous is None else previous.version,
+        "chain_length": 1 if previous is None else _chain_length(previous) + 1,
+        "deleted_key_count": len(deleted_keys),
+        "object_count": len(keys),
+    }
+
+
 def zip_retention(
     *,
-    session: StorageSession,
+    opened: Product,
     manager: ChunkManager,
     product: str,
     version: str,
@@ -310,34 +386,11 @@ def zip_retention(
         from firecube.ingestor.runtime.archive import create_archive
 
         refuse_existing_archive(archive_path, version=version)
-        current = manager.current_release(product)
-        previous = current if not archive_full and _is_zip_retention(current) else None
         inventory = manager.take_digest_inventory(product)
         digests = {item.key: str(item.digest) for item in inventory.objects}
-        if "zarr.json" not in digests:
-            raise ReleaseRefusedError(
-                Message(
-                    "The product {product} has no Zarr v3 root document zarr.json, so it "
-                    "cannot be retained in a zip archive.",
-                    product=product,
-                ),
-                version=version,
-            )
-        if previous is None:
-            keys = sorted(digests)
-            deleted_keys: list[str] = []
-        else:
-            previous_inventory = manager.read_inventory(
-                product, retention_text(previous, "inventory")
-            )
-            previous_digests = {item.key: item.digest for item in previous_inventory.objects}
-            keys = sorted(
-                key
-                for key, digest in digests.items()
-                if previous_digests.get(key) != digest or _is_metadata_document(key)
-            )
-            deleted_keys = sorted(set(previous_digests).difference(digests))
-            _refuse_unrestorable_deletes(deleted_keys, previous.version, version=version)
+        previous, keys, deleted_keys = _backup_scope(
+            manager, product, digests, version=version, archive_full=archive_full
+        )
         inventory_id = manager.write_inventory(product, inventory)
         report(f"inventory {inventory_id} lists {len(digests)} objects")
         mode = MODE_FULL if previous is None else MODE_INCREMENTAL
@@ -353,8 +406,9 @@ def zip_retention(
             "metadata_manifest": manager.read_snapshot(product, snapshot_id).record.manifest,
             "deleted_keys": deleted_keys,
         }
+        # create_archive builds and closes its own manager, so the caller's handle serves.
         created = create_archive(
-            session=session,
+            opened,
             archive=archive.to_str(),
             archive_path=archive_path,
             archive_format="zip",
@@ -446,7 +500,7 @@ def _first_broken_previous_backup(
 
 
 def verify_retention(
-    session: StorageSession, version: str | None = None, *, sample: int | None = None
+    product: Product, version: str | None = None, *, sample: int | None = None
 ) -> RetentionVerification:
     """Check what a release retains: its backup chain, or its listed object versions.
 
@@ -456,7 +510,7 @@ def verify_retention(
     HEAD that fails counts as a lost version. The call writes nothing and takes no claim.
 
     Args:
-        session: The storage session bound to the product.
+        product: The open product, from `open_product`.
         version: The release to check; `None` names the current release.
         sample: Check this many randomly chosen versions instead of all; a zip release
             ignores it.
@@ -472,10 +526,11 @@ def verify_retention(
 
     if sample is not None and sample < 1:
         raise ValueError(f"sample must be at least 1, not {sample}")
+    session = product.session
     manager = session.control_plane()
-    product = session.product.product_name
+    label = session.product.product_name
     try:
-        release = manager.read_release(product, version)
+        release = manager.read_release(label, version)
         if release.retention is None:
             return RetentionVerification(version=release.version, kind=None)
         kind = release.retention.get("kind")
@@ -486,7 +541,7 @@ def verify_retention(
                 f"release {release.version!r} names retention kind {kind!r}, which is not known"
             )
         archive = _archive_state(release)
-        broken_at = _first_broken_previous_backup(manager, product, release)
+        broken_at = _first_broken_previous_backup(manager, label, release)
         return RetentionVerification(
             version=release.version,
             kind=kind,

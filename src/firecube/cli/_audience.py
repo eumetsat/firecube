@@ -81,6 +81,9 @@ TIER_1_PATHS: frozenset[tuple[str, ...]] = frozenset(
         ("chunks", "delete-span"),
         ("archive", "create"),
         ("archive", "restore"),
+        ("migrate", "run"),
+        ("migrate", "adopt"),
+        ("release", "create"),
     }
 )
 
@@ -96,9 +99,6 @@ TIER_3_PATHS: frozenset[tuple[str, ...]] = frozenset(
         ("chunks", "compact", "rebuild"),
         ("chunks", "snapshots", "rebuild"),
         ("zarr", "preallocate"),
-        ("migrate", "run"),
-        ("migrate", "adopt"),
-        ("release", "create"),
     }
 )
 

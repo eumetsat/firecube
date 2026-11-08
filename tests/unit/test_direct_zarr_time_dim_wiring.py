@@ -25,11 +25,16 @@ import numpy as np
 import pytest
 import zarr
 
-from firecube.ingestor.api import DirectZarrIngestor, WriteIntent, ZarrArraySpec, ZarrGroupSpec
-from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 from firecube.ingestor.templates.direct_zarr import _setup_global_zarr_schema
 from firecube.ingestor.types.context import PipelineBatch
+from firecube.sdk import (
+    DirectZarrIngestor,
+    ExecutionParams,
+    WriteIntent,
+    ZarrArraySpec,
+    ZarrGroupSpec,
+)
 from tests.helpers.storage import begin_write_session
 
 
@@ -90,7 +95,12 @@ class _RecordingIndexedRegionStrategy:
 
 
 def _plugin_ctx() -> Any:
-    return SimpleNamespace(run_id="run-001", storage=None, option=MagicMock(return_value=None))
+    return SimpleNamespace(
+        run_id="run-001",
+        storage=None,
+        execution=ExecutionParams(write_mode="direct"),
+        option=MagicMock(return_value=None),
+    )
 
 
 @pytest.mark.unit
@@ -106,13 +116,12 @@ def test_process_batch_builds_region_strategy_with_declared_time_dim(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import firecube.ingestor.api as ingestor_api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
 
     _RecordingIndexedRegionStrategy.instances.clear()
-    monkeypatch.setattr(ingestor_api, "IndexedRegionStrategy", _RecordingIndexedRegionStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _RecordingIndexedRegionStrategy)
 
     ingestor = _TimeDirectIngestor()
-    ingestor.engine_config = EngineConfig(write_mode="direct")
     cast(Any, ingestor)._chunk_manager = SimpleNamespace(
         storage_config=None,
         acquire_claim=MagicMock(
@@ -141,16 +150,15 @@ def test_parallel_startup_schema_setup_uses_declared_time_dim(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import firecube.ingestor.api as ingestor_api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
     from firecube.ingestor.templates import direct_zarr
 
     setup_global_schema = MagicMock()
     _RecordingIndexedRegionStrategy.instances.clear()
-    monkeypatch.setattr(ingestor_api, "IndexedRegionStrategy", _RecordingIndexedRegionStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _RecordingIndexedRegionStrategy)
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", setup_global_schema)
 
     ingestor = _TimeDirectIngestor()
-    ingestor.engine_config = EngineConfig(write_mode="direct")
     parallel_state = SimpleNamespace(
         global_expected={"data": 1},
         schema_verified={},

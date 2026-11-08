@@ -14,9 +14,9 @@
 
 """Optional plugin extensions: parsing, spatial regridding and DuckDB batch support.
 
-Plugins may import from this package in addition to ``firecube.ingestor.api``
-and ``firecube.core.api``. Symbols are imported lazily so that importing the
-package does not require the optional dependencies of every extension.
+Plugins may import from this package in addition to ``firecube.sdk``. Symbols are
+imported lazily so that importing the package does not require the optional
+dependencies of every extension.
 """
 
 from __future__ import annotations

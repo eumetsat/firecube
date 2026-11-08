@@ -68,8 +68,6 @@ def _ingest(source: Path, target: Path, *, chunk_len: int) -> None:
             "local",
             "--storage-driver",
             "fsspec",
-            "--output-format",
-            "zarr",
             "--write-mode",
             "direct",
             "--option",
@@ -90,7 +88,7 @@ def _chunk_list(target: Path) -> list[dict[str, Any]]:
         _firecube_command(
             "chunks",
             "list",
-            "--product-name",
+            "--target",
             target.as_uri(),
             "--include-span",
             "--format",

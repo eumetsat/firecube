@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import click
 
-from firecube.cli._errors import render
 from firecube.cli.snapshot._common import open_manager, snapshot_options
 from firecube.cli.snapshot._render import (
     diff_payload,
@@ -29,7 +28,6 @@ from firecube.cli.snapshot._render import (
     record_payload,
     snapshot_payload,
 )
-from firecube.core.errors import FirecubeError
 
 
 @click.command(
@@ -37,11 +35,11 @@ from firecube.core.errors import FirecubeError
     epilog="""\b
 Examples:
   # list the snapshots of a product, oldest first
-  firecube snapshot list --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube snapshot list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # list them as JSON
-  firecube snapshot list --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube snapshot list --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube snapshot show, firecube snapshot take
 """,
@@ -51,7 +49,6 @@ See also: firecube snapshot show, firecube snapshot take
 def list_cmd(
     ctx: click.Context,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -66,16 +63,12 @@ def list_cmd(
     manager, product = open_manager(
         ctx,
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        records = manager.list_snapshots(product)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    records = manager.list_snapshots(product)
 
     if output_format == "json":
         echo_json([record_payload(record) for record in records])
@@ -92,11 +85,11 @@ def list_cmd(
     epilog="""\b
 Examples:
   # show the newest snapshot
-  firecube snapshot show latest --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube snapshot show latest --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # show one snapshot by its record hash, as JSON
-  firecube snapshot show <record-hash> --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube snapshot show <record-hash> --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube snapshot list, firecube snapshot diff
 """,
@@ -108,7 +101,6 @@ def show(
     ctx: click.Context,
     snapshot_id: str,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -123,16 +115,12 @@ def show(
     manager, product = open_manager(
         ctx,
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        snapshot = manager.read_snapshot(product, snapshot_id)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    snapshot = manager.read_snapshot(product, snapshot_id)
 
     if output_format == "json":
         echo_json(snapshot_payload(snapshot))
@@ -145,11 +133,11 @@ def show(
     epilog="""\b
 Examples:
   # compare an older snapshot with the newest one
-  firecube snapshot diff <record-hash> latest --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube snapshot diff <record-hash> latest --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # print the differences as JSON
-  firecube snapshot diff <record-hash> latest --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube snapshot diff <record-hash> latest --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube snapshot list, firecube snapshot show
 """,
@@ -163,7 +151,6 @@ def diff(
     before: str,
     after: str,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -179,16 +166,12 @@ def diff(
     manager, product = open_manager(
         ctx,
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    try:
-        result = manager.diff_snapshots(product, before, after)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = manager.diff_snapshots(product, before, after)
 
     if output_format == "json":
         echo_json(diff_payload(result))

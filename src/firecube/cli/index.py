@@ -26,29 +26,32 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast
 
 import click
 
-from firecube.cli._errors import echo_rendered, render, wrap_user_facing_errors
+from firecube.cli._errors import echo_rendered, render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._formatter import FirecubeGroup
+from firecube.cli._shared_options import (
+    dry_run_flag,
+    format_option,
+    product_name_option,
+    target_uri_option,
+)
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import parse_and_validate_uri
-from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import (
     ManifestError,
     Message,
     Operation,
-    ResolvedIndexAttrsConflictError,
     ResolvedIndexConflictError,
 )
-from firecube.core.product.identity import ProductIdentity
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.time.calendar import is_gregorian_like
 from firecube.ingestor.registry import loader as ingestor_loader
+from firecube.operations import ChunkManager, open_product
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from firecube.ingestor.api import PluginContext
-    from firecube.ingestor.runtime.index_record import IndexVerification
+    from firecube.operations import IndexVerification
+    from firecube.sdk import PluginContext
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +63,10 @@ def index() -> None:
 
 def _manager(target: str, product_name: str) -> ChunkManager:
     product_uri = parse_and_validate_uri(target, param_hint="--target")
-    binding = StorageBinding(
-        identity=ProductIdentity.from_uri(product_uri, "zarr", product_name=product_name),
-        driver=StorageDriverConfig.from_storage_config_or_default(None),
-    )
+    with open_product(
+        product_uri, format="zarr", product_name=product_name, require_label=False
+    ) as product:
+        binding = product.session.binding
     workspace = Path.cwd()
     if product_uri.protocol == "file":
         workspace = Path(product_uri.path).parent
@@ -75,12 +78,12 @@ def _load_record(manager: ChunkManager, product_name: str) -> Any | None:
         return manager.get_resolved_index(product=product_name)
     except ManifestError as exc:
         click.echo(render(exc), err=True)
-        raise click.exceptions.Exit(1) from exc
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED) from exc
 
 
 def _exit_no_record() -> NoReturn:
     click.echo("No index record found", err=True)
-    raise click.exceptions.Exit(3)
+    raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
 
 def _load_plugin(plugin: str, manager: ChunkManager) -> Any:
@@ -230,10 +233,22 @@ def _derived_coordinates_label_for_group(
     return f"{label}:"
 
 
-@index.command("show")
-@click.option("--target", required=True, help="Product Zarr URI to inspect.")
-@click.option("--product-name", required=True, help="Logical product name.")
-@click.option("--json", "as_json", is_flag=True, help="Emit the raw record as JSON.")
+@index.command(
+    "show",
+    epilog="""\b
+Examples:
+  # show the resolved-index record
+  firecube zarr index show --target file:///data/p.zarr
+
+\b
+  # also compute derived coordinates of regular time axes
+  firecube zarr index show --target file:///data/p.zarr --derived
+
+See also: firecube zarr index verify, firecube zarr index rebuild
+""",
+)
+@target_uri_option(tier="inspect")
+@format_option(("table", "json"))
 @click.option(
     "--derived/--no-derived",
     default=False,
@@ -244,15 +259,18 @@ def _derived_coordinates_label_for_group(
         "NEVER persists anything."
     ),
 )
-def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> None:
-    """Show the current resolved-index record."""
+def show_cmd(target: str, output_format: str, derived: bool) -> None:
+    """Show the current resolved-index record; `-f json` emits the raw record."""
 
+    uri = parse_and_validate_uri(target, param_hint="--target")
+    with open_product(uri, format="zarr") as product:
+        product_name = product.label
     manager = _manager(target, product_name)
     try:
         record = _load_record(manager, product_name)
         if record is None:
             _exit_no_record()
-        if as_json:
+        if output_format == "json":
             click.echo(record.to_json_bytes().decode("utf-8"))
             return
         click.echo(f"schema_version: {record.schema_version}")
@@ -292,9 +310,21 @@ def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> No
         manager.close()
 
 
-@index.command("verify")
-@click.option("--target", required=True, help="Product Zarr URI to inspect.")
-@click.option("--product-name", required=True, help="Logical product name.")
+@index.command(
+    "verify",
+    epilog="""\b
+Examples:
+  # check the record against the root attr
+  firecube zarr index verify --target file:///data/p.zarr
+
+\b
+  # also compare the record with a plugin's declaration
+  firecube zarr index verify --target file:///data/p.zarr --plugin my_plugin
+
+See also: firecube zarr index show, firecube zarr index rebuild
+""",
+)
+@target_uri_option(tier="inspect")
 @click.option("--plugin", required=False, help="Optional plugin name to compare against.")
 @click.option(
     "--option",
@@ -303,47 +333,47 @@ def show_cmd(target: str, product_name: str, as_json: bool, derived: bool) -> No
     type=TypedOptionsParam(),
     help="Plugin option in key=value form. Requires --plugin.",
 )
-def verify_cmd(
-    target: str, product_name: str, plugin: str | None, option: tuple[tuple[str, object], ...]
-) -> None:
+def verify_cmd(target: str, plugin: str | None, option: tuple[tuple[str, object], ...]) -> None:
     """Verify the current resolved-index record and mirrored root attr."""
 
-    from firecube.ingestor.runtime.index_record import IndexRecordError, verify_index_record
+    from firecube.ingestor.runtime.index_record import IndexRecordError
+    from firecube.operations import verify_index_record
 
     if option and plugin is None:
         raise click.UsageError("--option requires --plugin")
-    manager = _manager(target, product_name)
-    try:
-        load_plugin = (
-            functools.partial(_load_plugin, plugin, manager) if plugin is not None else None
-        )
+    uri = parse_and_validate_uri(target, param_hint="--target")
+    with open_product(uri, format="zarr") as product:
+        manager, product_name = _manager(target, product.label), product.label
         try:
-            verification = verify_index_record(
-                chunk_manager=manager,
-                product_name=product_name,
-                target=target,
-                plugin_name=plugin,
-                load_plugin=load_plugin,
-                configure=_configurer(target, option),
+            load_plugin = (
+                functools.partial(_load_plugin, plugin, manager) if plugin is not None else None
             )
-        except IndexRecordError as exc:
-            # A plugin's own ClickException reaches the operator unchanged.
-            cause = exc.__cause__
-            if isinstance(cause, click.ClickException):
-                raise cause  # noqa: B904 - re-raise the plugin's exception as it was raised
-            raise click.ClickException(render(exc)) from exc
-        _render_verification(
-            verification,
-            rebuild=Operation(
-                "rebuild_index", target=target, plugin=plugin, product_name=product_name
-            ),
-        )
-    finally:
-        manager.close()
+            try:
+                verification = verify_index_record(
+                    product,
+                    chunk_manager=manager,
+                    plugin_name=plugin,
+                    load_plugin=load_plugin,
+                    configure=_configurer(target, option),
+                )
+            except IndexRecordError as exc:
+                # A plugin's own ClickException reaches the operator unchanged.
+                cause = exc.__cause__
+                if isinstance(cause, click.ClickException):
+                    raise cause  # noqa: B904 - re-raise the plugin's exception as it was raised
+                raise
+            _render_verification(
+                verification,
+                rebuild=Operation(
+                    "rebuild_index", target=target, plugin=plugin, product_name=product_name
+                ),
+            )
+        finally:
+            manager.close()
 
 
 def _render_verification(verification: IndexVerification, *, rebuild: Operation) -> None:
-    """Echo a verification verdict; exit 1 on drift or an unusable record, 3 without one.
+    """Echo a verification verdict; exit 1 on drift, an unusable record or no record.
 
     `rebuild` is the `zarr index rebuild` call, with this invocation's values, that the
     attrs advice prints.
@@ -352,7 +382,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
     if outcome in ("unreadable-record", "legacy-record"):
         detail = verification.detail
         click.echo(str(detail) if detail is None else render(detail), err=True)
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if outcome == "attrs-without-record":
         advice = Message(
             "attrs drift — root attr has resolved-index identity hash but no "
@@ -363,7 +393,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
             rebuild=rebuild,
         )
         click.echo(render(advice), err=True)
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if outcome == "no-record":
         _exit_no_record()
     identity_hash = str(verification.identity_hash)
@@ -374,7 +404,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
             f"{identity_hash[:8]}",
             err=True,
         )
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if outcome == "attrs-drift":
         advice = Message(
             "attrs drift — root attr diverges from on-disk record; "
@@ -385,7 +415,7 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
             rebuild=rebuild,
         )
         click.echo(render(advice), err=True)
-        raise click.exceptions.Exit(1)
+        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
     if verification.attrs_hash is None:
         click.echo(
             "root attr will be re-mirrored on next `ensure` — this is the "
@@ -394,10 +424,28 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
     click.echo(f"VERIFIED resolved index {identity_hash[:16]}")
 
 
-@index.command("rebuild")
-@click.option("--target", required=True, help="Product Zarr URI to rebuild the index for.")
+@index.command(
+    "rebuild",
+    epilog="""\b
+Examples:
+  # rebuild the record from a plugin's declaration
+  firecube zarr index rebuild --target file:///data/p.zarr --plugin my_plugin --product-name p
+
+\b
+  # pass a plugin option
+  firecube zarr index rebuild --target file:///data/p.zarr --plugin my_plugin --product-name p \\
+      --option key=value
+
+\b
+  # show what a rebuild would write, and write nothing
+  firecube zarr index rebuild --target file:///data/p.zarr --plugin my_plugin --product-name p --dry-run
+
+See also: firecube zarr index verify, firecube zarr index show
+""",
+)
+@target_uri_option(tier="write")
 @click.option("--plugin", required=True, help="Plugin name used to resolve the index spec.")
-@click.option("--product-name", required=True, help="Logical product name.")
+@product_name_option(required=True)
 @click.option(
     "--option",
     "option",
@@ -405,36 +453,40 @@ def _render_verification(verification: IndexVerification, *, rebuild: Operation)
     type=TypedOptionsParam(),
     help="Plugin option in key=value form.",
 )
-@wrap_user_facing_errors
+@dry_run_flag
 def rebuild_cmd(
-    target: str, plugin: str, product_name: str, option: tuple[tuple[str, object], ...]
+    target: str,
+    plugin: str,
+    product_name: str,
+    option: tuple[tuple[str, object], ...],
+    dry_run: bool,
 ) -> None:
-    """Rebuild the resolved-index record from a plugin declaration."""
+    """Rebuild the resolved-index record from a plugin declaration; `--dry-run` writes nothing."""
 
-    from firecube.ingestor.runtime.index_record import IndexRecordError, rebuild_index_record
+    from firecube.operations import rebuild_index_record
 
-    manager = _manager(target, product_name)
-    try:
-        ingestor = _load_plugin(plugin, manager)
+    uri = parse_and_validate_uri(target, param_hint="--target")
+    with open_product(
+        uri, format="zarr", product_name=product_name, require_label=False
+    ) as product:
+        manager = _manager(target, product_name)
         try:
-            rebuild_index_record(
-                ingestor=ingestor,
-                plugin_name=plugin,
-                chunk_manager=manager,
-                target=target,
-                product_name=product_name,
-                logger=logger,
-                report=echo_rendered,
-                warn=functools.partial(echo_rendered, err=True),
-                configure=_configurer(target, option),
-            )
-        except IndexRecordError as exc:
-            raise click.ClickException(render(exc)) from exc
-        except ResolvedIndexConflictError as exc:
-            # The library has already echoed the conflict through ``warn``.
-            raise click.exceptions.Exit(1) from exc
-        except ResolvedIndexAttrsConflictError as exc:
-            raise click.ClickException(render(exc)) from exc
-    finally:
-        with contextlib.suppress(Exception):
-            manager.close()
+            ingestor = _load_plugin(plugin, manager)
+            try:
+                rebuild_index_record(
+                    product,
+                    ingestor,
+                    plugin_name=plugin,
+                    chunk_manager=manager,
+                    logger=logger,
+                    report=echo_rendered,
+                    warn=functools.partial(echo_rendered, err=True),
+                    configure=_configurer(target, option),
+                    dry_run=dry_run,
+                )
+            except ResolvedIndexConflictError as exc:
+                # The library has already echoed the conflict through ``warn``.
+                raise click.exceptions.Exit(ExitCode.CHECK_FAILED) from exc
+        finally:
+            with contextlib.suppress(Exception):
+                manager.close()

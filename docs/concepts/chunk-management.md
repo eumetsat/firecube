@@ -42,7 +42,7 @@ Start with inspection:
 
 ```bash
 firecube chunks list \
-  --product-name file:///data/products/MY_PRODUCT.zarr
+  --target file:///data/products/MY_PRODUCT.zarr
 ```
 
 Then use the operation page that matches what you found:

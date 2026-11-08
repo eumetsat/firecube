@@ -22,7 +22,7 @@ Locks the public API surface for coordinate-keyed write intents:
 - No ``.static()`` or ``.coordinate()`` factory — those live on ``WriteIntent``
   or are engine-owned respectively.
 - The dataclass is frozen; instances cannot be mutated post-construction.
-- Both SDK façades re-export the type.
+- ``firecube.sdk`` re-exports the type.
 """
 
 from __future__ import annotations
@@ -117,12 +117,7 @@ def test_write_intent_builders_and_exports(subtests: Any, tmp_path: Path) -> Non
         with pytest.raises(FrozenInstanceError):
             iw.group = "other"  # type: ignore[misc]
 
-    with table_row(subtests, "reexport_from_core_api", tmp_path):
-        from firecube.core.api import IndexedWrite as CoreIndexedWrite
+    with table_row(subtests, "exported_from_sdk", tmp_path):
+        from firecube.sdk import IndexedWrite as SdkIndexedWrite
 
-        assert CoreIndexedWrite is IndexedWrite
-
-    with table_row(subtests, "reexport_from_ingestor_api", tmp_path):
-        from firecube.ingestor.api import IndexedWrite as IngestorIndexedWrite
-
-        assert IngestorIndexedWrite is IndexedWrite
+        assert SdkIndexedWrite is IndexedWrite

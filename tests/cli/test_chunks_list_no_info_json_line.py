@@ -21,6 +21,8 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from firecube.core.controlplane import ChunkManager
+from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.unit
 
@@ -58,12 +60,26 @@ def test_chunks_list_no_info_before_table(
     monkeypatch.delenv("FIRECUBE_BUCKET", raising=False)
     monkeypatch.setenv("FIRECUBE_CONFIG", str(config_file))
     _stub_list_chunks(monkeypatch)
+    manager = ChunkManager(binding=make_test_binding(tmp_path, product="product.zarr"))
+    manager.record_run_started(
+        product="product.zarr", run_id="r1", output_path="", output_format="zarr", size=0, meta={}
+    )
+    manager.close()
 
     with caplog.at_level(logging.INFO, logger="firecube.cli"):
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            ["chunks", "--workspace", str(workspace), "list", "--format", "json"],
+            [
+                "chunks",
+                "--workspace",
+                str(workspace),
+                "list",
+                "--target",
+                product_path.as_uri(),
+                "--format",
+                "json",
+            ],
         )
 
     assert result.exit_code == 0, result.output

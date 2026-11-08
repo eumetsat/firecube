@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from firecube.core.errors import ConfigFileError, Message, Param
+from firecube.core.errors import ConfigFileError, Message, Placeholder
 
 try:  # Python 3.12+
     import tomllib  # type: ignore[import-not-found]
@@ -93,10 +93,13 @@ class StorageConfig:
         if (self.access_key is not None) != (self.secret_key is not None):
             raise ValueError(
                 Message(
-                    "StorageConfig requires both {access_key} and {secret_key} "
-                    "when using explicit credentials",
-                    access_key=Param("access_key"),
-                    secret_key=Param("secret_key"),
+                    "Explicit S3 credentials need both an access key and a secret key. "
+                    "Set both {access_env} and {secret_env}, or both {access_key} and "
+                    "{secret_key} under [storage] in the config file.",
+                    access_env=Placeholder("FIRECUBE_ACCESS_KEY"),
+                    secret_env=Placeholder("FIRECUBE_SECRET_KEY"),
+                    access_key=Placeholder("access_key"),
+                    secret_key=Placeholder("secret_key"),
                 )
             )
 

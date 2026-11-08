@@ -19,7 +19,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from firecube.ingestor.api import ZarrArraySpec
+from firecube.sdk import ZarrArraySpec
 
 pytestmark = pytest.mark.unit
 

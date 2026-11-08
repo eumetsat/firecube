@@ -82,8 +82,6 @@ def _invoke_runs_list(target: str, endpoint: str) -> tuple[int, str]:
             "chunks",
             "runs",
             "list",
-            "--product-name",
-            "logical_product",
             "--target",
             target,
             "--format",

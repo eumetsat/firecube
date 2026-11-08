@@ -50,16 +50,20 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 from firecube.cli.main import cli
-from firecube.core.api import IndexedWrite, IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.registry import loader as _loader
+from firecube.ingestor.runtime.zarr import append as append_module
+from firecube.sdk import (
     DirectZarrIngestor,
+    ExecutionParams,
     GenericZarrIngestor,
+    IndexedWrite,
+    IndexSpec,
+    ItemInfo,
     PluginContext,
+    RegularTimeAxis,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.registry import loader as _loader
-from firecube.ingestor.runtime.zarr import append as append_module
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration
@@ -121,7 +125,6 @@ def _engine_run(
     """Drive one ingest through ``host.run(ctx)``; staged write mode unless told otherwise."""
     host = _PartialChunkZarr()
     options: dict[str, Any] = {
-        "write_mode": write_mode,
         "x_group": group,
         "x_days": days,
         "x_attrs": attrs,
@@ -133,7 +136,12 @@ def _engine_run(
     }
     if resume_existing:
         options["resume_existing"] = True
-    ctx = make_test_context(tmp_path, product=_PRODUCT, options=options)
+    ctx = make_test_context(
+        tmp_path,
+        product=_PRODUCT,
+        options=options,
+        execution=ExecutionParams(write_mode=write_mode),
+    )
     host.run(ctx)
 
 
@@ -419,8 +427,6 @@ def _fill_ingest(
         "local",
         "--storage-driver",
         driver,
-        "--output-format",
-        "zarr",
         "--write-mode",
         write_mode,
         "--option",

@@ -24,9 +24,9 @@ import zarr
 
 from firecube.core.config import StorageConfig
 from firecube.core.filesystem.store_factory import create_zarr_store
-from firecube.ingestor.api import ConfigurationError
 from firecube.ingestor.errors import AppendOverwriteRefused, SchemaDriftError
 from firecube.ingestor.runtime.zarr.write import write_dataset_to_zarr
+from firecube.sdk import ConfigurationError
 
 pytestmark = pytest.mark.unit
 

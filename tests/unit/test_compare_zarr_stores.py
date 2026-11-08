@@ -21,8 +21,8 @@ import numpy as np
 import pytest
 import zarr
 
-from firecube.core.api import FIRECUBE_STATIC_WRITTEN_ATTR, compare_zarr_stores
 from firecube.core.zarr import validation
+from firecube.sdk import FIRECUBE_STATIC_WRITTEN_ATTR, compare_zarr_stores
 from tests.helpers.rows import table_row
 
 pytestmark = pytest.mark.unit

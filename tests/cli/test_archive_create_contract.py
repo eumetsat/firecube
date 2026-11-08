@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import xarray as xr
+import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
@@ -34,7 +35,7 @@ def _invoke_create(args: list[str]):
 def test_create_rejects_storage_type_source_uri_mismatch() -> None:
     result = _invoke_create(
         [
-            "--source",
+            "--target",
             "file:///tmp/x.zarr",
             "--archive",
             "file:///tmp/x.tgm",
@@ -57,7 +58,7 @@ def test_create_writes_nothing_for_a_refused_archive_uri(
     cwd = tmp_path / "cwd"
     cwd.mkdir()
     monkeypatch.chdir(cwd)
-    args = ["--source", f"file://{tmp_local_zarr}", "--archive", f"FILE://{tmp_path}/out.tgm"]
+    args = ["--target", f"file://{tmp_local_zarr}", "--archive", f"FILE://{tmp_path}/out.tgm"]
 
     def snapshot() -> dict[str, bytes | None]:
         return {
@@ -77,7 +78,7 @@ def test_create_writes_nothing_for_a_refused_archive_uri(
 def test_create_rejects_bare_archive_path() -> None:
     result = _invoke_create(
         [
-            "--source",
+            "--target",
             "file:///tmp/x.zarr",
             "--archive",
             "/tmp/foo.tgm",
@@ -96,7 +97,7 @@ def test_create_rejects_bare_archive_path() -> None:
 def test_create_rejects_remote_tgm_archive() -> None:
     result = _invoke_create(
         [
-            "--source",
+            "--target",
             "file:///tmp/x.zarr",
             "--archive",
             "s3://bucket/x.tgm",
@@ -131,10 +132,11 @@ def test_create_resolves_file_uri_archive(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(converter, "zarr_to_tgm", fake_zarr_to_tgm)
 
     archive_path = tmp_path / "archive.tgm"
+    zarr.open_group(str(tmp_path / "x.zarr"), mode="w")
     result = _invoke_create(
         [
-            "--source",
-            "file:///tmp/x.zarr",
+            "--target",
+            (tmp_path / "x.zarr").as_uri(),
             "--archive",
             f"file://{archive_path}",
             "--storage-type",
@@ -146,6 +148,28 @@ def test_create_resolves_file_uri_archive(tmp_path: Path, monkeypatch) -> None:
 
     assert result.exit_code == 0, result.output
     assert seen["target"] == str(archive_path)
+
+
+@pytest.mark.contract
+def test_create_dry_run_refuses_zip_only_options_as_the_real_run_does(tmp_path: Path) -> None:
+    store = tmp_path / "s.zarr"
+    zarr.open_group(str(store), mode="w").create_array("a", shape=(3,), dtype="f8")
+    adopt = ["migrate", "adopt", "--target", store.as_uri(), "--product-name", "LBL"]
+    assert CliRunner().invoke(cli, [*adopt, "--yes-i-really-mean-it"]).exit_code == 0
+    archive = tmp_path / "a.zip"
+    args = ["--target", store.as_uri(), "--archive", archive.as_uri(), "--archive-format", "zip"]
+    args += ["--group", "F024"]
+    files = lambda: {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}  # noqa: E731
+    before = files()
+
+    real = _invoke_create(args)
+    dry = _invoke_create([*args, "--dry-run"])
+
+    assert real.exit_code != 0 and "Zip archive does not support" in real.output
+    assert dry.exit_code == real.exit_code, dry.output
+    assert "Zip archive does not support" in dry.output
+    assert "[dry-run] Would archive" not in dry.output
+    assert files() == before and not archive.exists()
 
 
 def test_create_refuses_a_360_day_time_coordinate_and_records_the_run_failed(
@@ -164,7 +188,7 @@ def test_create_refuses_a_360_day_time_coordinate_and_records_the_run_failed(
         )  # fmt: skip
     finally:
         manager.close()
-    args = ["--source", src.as_uri(), "--archive", (tmp_path / "out.tgm").as_uri()]
+    args = ["--target", src.as_uri(), "--archive", (tmp_path / "out.tgm").as_uri()]
     args += ["--storage-type", "local", "--storage-driver", "fsspec"]
     env = {"FIRECUBE_STORAGE_TYPE": "local", "FIRECUBE_TARGET_PATH": str(tmp_path)}
 

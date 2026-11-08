@@ -70,7 +70,6 @@ firecube ingest <plugin> \
   --product-name MY_PRODUCT \
   --storage-type s3 \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged \
   --option run_id="<external-job-id>"
 ```

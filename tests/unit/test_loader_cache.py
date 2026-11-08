@@ -16,8 +16,8 @@ from unittest.mock import patch
 
 import pytest
 
-from firecube.ingestor.api import IngestContext, IngestResult
 from firecube.ingestor.registry import loader
+from firecube.sdk import IngestContext, IngestResult
 
 
 @pytest.fixture(autouse=True)

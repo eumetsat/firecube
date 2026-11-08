@@ -35,8 +35,8 @@ import zarr
 
 from firecube.core.zarr.guard.metadata_authority import AuthorityBasis, MetadataAuthority
 from firecube.core.zarr.region_writer import RegionZarrWriter
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.templates.direct_zarr import _setup_global_zarr_schema
+from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 
 
 def _strategy(store_uri: str) -> SimpleNamespace:

@@ -22,14 +22,15 @@ from typing import Any, cast
 import pytest
 
 from firecube.core.index_spec import IndexSpec, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor, WriteIntent
+from firecube.sdk import (
     ConfigurationError,
     EngineConfig,
+    ExecutionParams,
     PipelineBatch,
     PluginContext,
     RuntimeIngestContext,
 )
-from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor, WriteIntent
 from tests.helpers.storage import begin_write_session, make_test_context
 
 pytestmark = pytest.mark.unit
@@ -62,12 +63,13 @@ class _SerialUnboundedAxisIngestor(DirectZarrIngestor):
         return [WriteIntent(group="data", array="data", ts_index=0, data=object())]
 
 
-def _make_ctx(tmp_path: Path):
+def _make_ctx(tmp_path: Path, execution: ExecutionParams | None = None):
     return make_test_context(
         tmp_path,
         source=str(tmp_path / "source"),
         product="serial_unbounded_axis.zarr",
-        options={"write_mode": "direct", "allow_empty_source": True},
+        options={"allow_empty_source": True},
+        execution=execution or ExecutionParams(write_mode="direct"),
     )
 
 
@@ -76,10 +78,7 @@ def test_base_run_serial_unbounded_axis_accepts(tmp_path: Path) -> None:
     ingestor = _SerialUnboundedAxisIngestor(name="serial_unbounded_axis")
     ingestor._configurator = SimpleNamespace(  # type: ignore[assignment]
         configure=lambda runtime_ctx: (
-            EngineConfig(
-                write_mode="direct",
-                allow_empty_source=True,
-            ),  # NO slot_start/slot_end → serial
+            EngineConfig(allow_empty_source=True),  # NO slot_start/slot_end → serial
             None,
             None,
         )
@@ -99,12 +98,12 @@ def test_base_run_parallel_unbounded_axis_raises_configuration_error(
     ingestor = _SerialUnboundedAxisIngestor(name="serial_unbounded_axis")
     ingestor._configurator = SimpleNamespace(  # type: ignore[assignment]
         configure=lambda runtime_ctx: (
-            EngineConfig(write_mode="direct", slot_start=0, slot_end=1),
+            EngineConfig(),
             None,
             None,
         )
     )
-    ctx = _make_ctx(tmp_path)
+    ctx = _make_ctx(tmp_path, ExecutionParams(write_mode="direct", slot_start=0, slot_end=1))
 
     with pytest.raises(ConfigurationError, match=re.escape(UNBOUNDED_AXIS_MESSAGE)):
         ingestor.ingest(ctx)
@@ -114,14 +113,13 @@ def test_direct_zarr_process_batch_defense_in_depth_raises_configuration_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     ingestor = _SerialUnboundedAxisIngestor(name="serial_unbounded_axis")
-    ingestor.engine_config = EngineConfig(write_mode="direct", slot_start=0, slot_end=1)
     ingestor.template_config = None
     batch = PipelineBatch(batch_id="batch-1", data_path=tmp_path, items=["item"], metadata={})
     runtime_ctx = make_test_context(
         tmp_path,
         source=str(tmp_path / "source"),
         product="serial_unbounded_axis.zarr",
-        options={"write_mode": "direct"},
+        execution=ExecutionParams(write_mode="direct", slot_start=0, slot_end=1),
     )
     ctx = PluginContext(cast(RuntimeIngestContext, runtime_ctx))
 

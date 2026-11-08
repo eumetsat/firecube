@@ -19,10 +19,9 @@ from pathlib import Path
 import h5py
 import pytest
 
-from firecube.core.api import discover_input_files
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import EngineConfig, IngestContext
 from firecube.ingestor.runtime.configure import TierConfigurator
+from firecube.sdk import EngineConfig, IngestContext, discover_input_files
 
 
 @pytest.fixture

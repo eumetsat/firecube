@@ -23,7 +23,6 @@ from firecube.cli._shared_options import (
     config_file_option,
     dry_run_flag,
     format_option,
-    product_filter_option,
     product_name_option,
     storage_driver_option,
     storage_type_option,
@@ -133,33 +132,6 @@ def test_format_option_accepts_non_table_default() -> None:
     assert "json" in run_result.output
 
 
-def test_product_filter_option_optional_by_default() -> None:
-    @click.command()
-    @product_filter_option()
-    def cmd(product_name: str | None) -> None:
-        click.echo(product_name or "none")
-
-    help_result = CliRunner().invoke(cmd, ["--help"])
-    assert "-n, --product-name TEXT" in help_result.output
-    assert "Filter by product name." in help_result.output
-    assert "[required]" not in help_result.output
-
-    run_result = CliRunner().invoke(cmd, [])
-    assert run_result.exit_code == 0
-    assert "none" in run_result.output
-
-
-def test_product_filter_option_can_be_required() -> None:
-    @click.command()
-    @product_filter_option(required=True)
-    def cmd(product_name: str) -> None:
-        click.echo(product_name)
-
-    result = CliRunner().invoke(cmd, [])
-    assert result.exit_code != 0
-    assert "Missing option '-n' / '--product-name'" in result.output
-
-
 def test_product_name_option_required_by_default() -> None:
     @click.command()
     @product_name_option()
@@ -226,13 +198,12 @@ def test_all_decorators_exported() -> None:
     from firecube.cli._shared_options import __all__
 
     assert __all__ == [
+        "all_products_flag",
         "archive_uri_option",
         "config_file_option",
         "dry_run_flag",
         "format_option",
-        "product_filter_option",
         "product_name_option",
-        "product_uri_option",
         "storage_driver_option",
         "storage_type_option",
         "target_uri_option",

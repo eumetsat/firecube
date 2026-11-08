@@ -36,7 +36,6 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import EVENT_RUN_ABANDONED, WriteDomain
-from firecube.core.errors import ManifestError
 from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.runtime.resume_guard import ResumeGuard
@@ -46,7 +45,7 @@ from tests.unit._helpers.counting_fs import CountingFilesystem, make_counting_lo
 pytestmark = pytest.mark.integration
 
 # MUST end in .zarr -- matches make_test_binding default naming convention and
-# the URI-form product_name the CLI resolves via resolve_cli_product().
+# the label the CLI reads from the store when it resolves `--target`.
 PRODUCT = "crashtest.zarr"
 
 
@@ -188,21 +187,19 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "compact",
             "rebuild",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,
         ],
     )
-    assert result.exit_code != 0, result.output
-    # rebuild_cmd does NOT catch ManifestError -> check the exception, not stdout.
-    assert isinstance(result.exception, ManifestError), (
-        f"expected ManifestError; got {type(result.exception).__name__}: {result.exception!r}"
-    )
+    # ManifestError reaches the CLI error boundary: exit 1 and an `Error:` line on stderr.
+    assert result.exit_code == 1, result.output
+    assert result.stderr.startswith("Error:"), result.stderr
     # Claims block BEFORE runs (see repo.py::_assert_compaction_allowed), so the
     # first message we see mentions the claims. Both branches contain the
     # "cannot rebuild compact cache" prefix.
-    assert "cannot rebuild compact cache" in str(result.exception).lower()
+    assert "cannot rebuild compact cache" in result.stderr.lower()
 
     # --- Phase 3: claim sweep -- 3 cleared, 2 preserved ---
     result = runner.invoke(
@@ -211,7 +208,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "claims",
             "clear",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,
@@ -242,7 +239,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "runs",
             "abandon",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,
@@ -279,19 +276,18 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "compact",
             "rebuild",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,
         ],
     )
-    assert result.exit_code != 0, (
+    assert result.exit_code == 1, (
         f"rebuild should still fail with fresh non-terminal state; "
         f"output={result.output!r} exc={result.exception!r}"
     )
-    assert isinstance(result.exception, ManifestError), (
-        f"expected ManifestError; got {type(result.exception).__name__}: {result.exception!r}"
-    )
+    assert result.stderr.startswith("Error:"), result.stderr
+    assert "cannot rebuild compact cache" in result.stderr.lower()
 
     # --- Phase 6: simulate live pods releasing claims + finishing runs;
     #             final rebuild succeeds. ---
@@ -320,7 +316,7 @@ def test_crash_recovery_full_flow(tmp_path: Path) -> None:
             "chunks",
             "compact",
             "rebuild",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             workspace,

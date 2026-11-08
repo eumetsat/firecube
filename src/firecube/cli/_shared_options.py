@@ -14,19 +14,20 @@
 
 from __future__ import annotations
 
+import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal
 
 import click
 
 __all__ = [
+    "all_products_flag",
     "archive_uri_option",
     "config_file_option",
     "dry_run_flag",
     "format_option",
-    "product_filter_option",
     "product_name_option",
-    "product_uri_option",
     "storage_driver_option",
     "storage_type_option",
     "target_uri_option",
@@ -134,28 +135,13 @@ def write_mode_option(
     return decorator
 
 
-def product_uri_option(tier: Literal["write", "inspect"]) -> Any:
-    help_text = (
-        "Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme."
-        if tier == "inspect"
-        else "Firecube product URI; --storage-type must match URI scheme."
-    )
+def target_uri_option(tier: Literal["write", "inspect"], *, required: bool = True) -> Any:
+    """Add `-t, --target`, the product URI option, as parameter `target`.
 
-    def decorator(func: Any) -> Any:
-        return click.option(
-            "-p",
-            "--product",
-            "product",
-            required=True,
-            type=str,
-            help=help_text,
-            shell_complete=_uri_shell_complete,
-        )(func)
-
-    return decorator
-
-
-def target_uri_option(tier: Literal["write", "inspect"]) -> Any:
+    Args:
+        tier: `inspect` says storage flags follow the URI scheme; `write` says they must match it.
+        required: Make Click refuse a call without the option.
+    """
     help_text = (
         "Target Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme."
         if tier == "inspect"
@@ -167,13 +153,24 @@ def target_uri_option(tier: Literal["write", "inspect"]) -> Any:
             "-t",
             "--target",
             "target",
-            required=True,
+            required=required,
             type=str,
             help=help_text,
             shell_complete=_uri_shell_complete,
         )(func)
 
     return decorator
+
+
+def all_products_flag(f: Any) -> Any:
+    """Add `--all-products`, which selects every product under the configured storage base."""
+    return click.option(
+        "--all-products",
+        "all_products",
+        is_flag=True,
+        default=False,
+        help="Act on every product under the [storage] base URI of the config file. Excludes --target.",
+    )(f)
 
 
 def archive_uri_option(tier: Literal["write", "inspect"]) -> Any:
@@ -197,13 +194,25 @@ def archive_uri_option(tier: Literal["write", "inspect"]) -> Any:
     return decorator
 
 
-def format_option(default: str = "table") -> Any:
+FORMAT_CHOICES: tuple[str, ...] = ("table", "json", "csv")
+"""The output formats a command may offer through `format_option`."""
+
+
+def format_option(choices: Sequence[str] = FORMAT_CHOICES, default: str = "table") -> Any:
+    """Add the shared case-insensitive `-f, --format` option, bound to `output_format`.
+
+    Raises:
+        ValueError: `choices` is not a subset of `FORMAT_CHOICES` or lacks `default`.
+    """
+    if not set(choices) <= set(FORMAT_CHOICES) or default not in choices:
+        raise ValueError(f"format choices {tuple(choices)!r} and default {default!r} are invalid")
+
     def decorator(f: Any) -> Any:
         return click.option(
             "-f",
             "--format",
             "output_format",
-            type=click.Choice(["table", "json", "csv"], case_sensitive=False),
+            type=click.Choice(list(choices), case_sensitive=False),
             default=default,
             show_default=True,
             help="Output format.",
@@ -212,26 +221,27 @@ def format_option(default: str = "table") -> Any:
     return decorator
 
 
-def product_filter_option(required: bool = False) -> Any:
+def product_name_option(required: bool = True, *, help: str | None = None) -> Any:
+    """Add the long-only `--product-name` option for a command that may record the label.
+
+    With `required=False` and no `help`, the help names the plugin fallbacks for the label,
+    which holds for plugin commands only. A command without a plugin passes its own `help`.
+    """
+    help_text = help or (
+        "Logical product name."
+        if required
+        else (
+            "Logical product name. Optional: overrides the plugin config default_product_name "
+            "and the plugin PRODUCT_NAME. The store refuses a name that differs from the one it records."
+        )
+    )
+
     def decorator(f: Any) -> Any:
         return click.option(
-            "-n",
             "--product-name",
             "product_name",
             required=required,
-            help="Filter by product name.",
-        )(f)
-
-    return decorator
-
-
-def product_name_option(required: bool = True) -> Any:
-    def decorator(f: Any) -> Any:
-        return click.option(
-            "--product-name",
-            "product_name",
-            required=required,
-            help="Logical product name.",
+            help=help_text,
         )(f)
 
     return decorator
@@ -255,3 +265,20 @@ def yes_flag(f: Any) -> Any:
         default=False,
         help="Skip confirmation prompts. Required for destructive operations in non-TTY.",
     )(f)
+
+
+def require_confirmation(command: str, *, confirmed: bool, dry_run: bool) -> None:
+    """Ask before `command` changes the store; skip the question for a preview or a confirmed call.
+
+    Raises:
+        click.UsageError: Standard input is not a terminal and the call is not confirmed.
+        click.Abort: The operator declines at the prompt.
+    """
+    if confirmed or dry_run:
+        return
+    if not sys.stdin.isatty():
+        raise click.UsageError(
+            f"Confirmation required: {command} changes the store. Re-run with "
+            "--yes-i-really-mean-it, preview it with --dry-run, or run interactively."
+        )
+    click.confirm(f"Run {command} on this product?", abort=True)

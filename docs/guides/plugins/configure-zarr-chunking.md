@@ -48,7 +48,7 @@ wins:
 ```python
 from dataclasses import dataclass, field
 
-from firecube.ingestor.api import GenericZarrIngestor, ZarrTemplateConfig
+from firecube.sdk import GenericZarrIngestor, ZarrTemplateConfig
 
 
 @dataclass

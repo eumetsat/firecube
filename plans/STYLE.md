@@ -8,7 +8,9 @@ Anti-patterns are named so reviewers can cite them by name in PR comments withou
 
 These patterns have caused real bugs or maintenance pain. If a change introduces any of them, it must be rejected at review:
 
-- **BASENAME heuristics**: CLI guesses `output_name` from the target path basename when `--product-name` is not provided. Forbidden because implicit naming breaks idempotency and makes runs non-reproducible. Always require `--product-name` explicitly.
+- **BASENAME heuristics**: CLI guesses the product label from the target path basename. Forbidden because implicit naming breaks idempotency and makes runs non-reproducible. The store records the label once in `.firecube/product.json`, and every command reads it back. The first write takes the label from `--product-name`, the config or the plugin, and never from the URI path.
+
+  **Note**: a removed CLI flag keeps a rename hint that names the new spelling (`src/firecube/cli/_rename_hints.py`). A hint is a tombstone. Delete every rename hint at 1.0. The delete leaves no alias. A hint never accepts the old spelling.
 
 - **Magic Output Detection**: `main.py` inspects plugin result dicts for specific keys to resolve local paths. Forbidden because it couples the engine to plugin internals. Plugin results must use `PipelineResult(outputs=OutputPaths(primary=...))`. No key sniffing.
 
@@ -18,7 +20,7 @@ These patterns have caused real bugs or maintenance pain. If a change introduces
 
 - **Database Leakage**: A plugin pulling global `[database.duckdb]` settings implicitly from the top-level config. Forbidden because it creates invisible coupling between unrelated config sections. Plugin config must be self-contained under its own namespace.
 
-- **Option Aliases**: Dual-naming the same Zarr config key (e.g. `zarr_chunk` vs `chunk_shape`). Forbidden because it creates confusion about which name is canonical and which is deprecated. Pick one name, document it, reject the other at parse time.
+- **Option Aliases**: Dual-naming the same Zarr config key (e.g. `zarr_chunk` vs `chunk_shape`). Forbidden because it creates confusion about which name is canonical and which is deprecated. Pick one name, document it, reject the other at parse time. The deprecation shims of `firecube.ingestor.api` and `firecube.core.api` are a recorded exception (`plans/DONE.md`, 2026-11-08).
 
   **Note**: internal or verified-zero-caller dual hook names for the same concern (e.g. `groups_for_items` and `get_batch_groups`) are this same anti-pattern at the API surface. When unification is required, the canonical name MUST be declared and the duplicate MUST be DELETED in the same change — no `DeprecationWarning`, no back-compat shim, no transitional period. Carrying two names "for safety" is the anti-pattern this rule exists to prevent.
 
@@ -44,7 +46,7 @@ These apply to all new code in `src/` and to plugin implementations.
 
 ## Docstrings On Public Surfaces
 
-Anything exported from `firecube.ingestor.api`, `firecube.core.api`, or `firecube.ingestor.extensions` is rendered verbatim into the public API reference. The docstring is the reference text, so it carries the same bar as a docs page.
+Anything exported from `firecube.ingestor.api`, `firecube.core.api`, `firecube.operations`, or `firecube.ingestor.extensions` is rendered verbatim into the public API reference. The docstring is the reference text, so it carries the same bar as a docs page.
 
 - **Write the docstring with the code**: every public function, class, method, dataclass, and exported type alias ships with a docstring in the same change that introduces it. Adding a name to a facade `__all__` without one is an incomplete change — `tests/sdk/test_api_docs_coverage.py` fails until the symbol has both a reference entry and docstring text. Type aliases need an attribute docstring (a string literal on the line below); a `#` comment is invisible to the reference.
 - **Non-public code**: write a docstring whenever intent is not obvious from the name and signature — anything with non-trivial control flow, a side effect, a failure mode, or a non-obvious return. Do not pad trivial helpers with restatements of their own signature.
@@ -74,5 +76,5 @@ These are the short-form rules that cut across all three sections above. They ap
 - **One driver everywhere**: `StorageConfig.storage_driver` selects fsspec or obstore for the entire write domain. No mixing. Source-side fsspec reads are allowlisted in `test_no_raw_fsspec_usage.py`.
 - **Engine owns bookkeeping**: plugins must not write manifests or control-plane files directly. All lifecycle state goes through `SpanRecorder` and `ChunkManager`.
 - **No mixin creep, no god base classes**: if `BaseIngestor` or any template grows too large, split into composed services. The base class hook surface must stay small and documented.
-- **Public surfaces only**: plugins import from `firecube.ingestor.api` and `firecube.core.api`. Deep imports from internal submodules are a coupling violation and will break on refactor.
+- **Public surfaces only**: plugins import from `firecube.sdk`. The modules `firecube.ingestor.api` and `firecube.core.api` are deprecated until v0.2.0. Deep imports from internal submodules are a coupling violation and will break on refactor.
 - **One container, one run**: do not add internal schedulers or queues. Concurrency comes from orchestrating disjoint slices at the job level, not from shared writers inside a single process.

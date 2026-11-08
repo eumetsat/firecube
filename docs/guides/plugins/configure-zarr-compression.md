@@ -45,7 +45,7 @@ zarr_codecs = [{ name = "zstd", configuration = { level = 3 } }]
 ```python
 from dataclasses import dataclass
 
-from firecube.ingestor.api import GenericZarrIngestor, ZarrTemplateConfig
+from firecube.sdk import GenericZarrIngestor, ZarrTemplateConfig
 
 
 @dataclass

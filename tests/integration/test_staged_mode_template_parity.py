@@ -49,8 +49,9 @@ import pytest
 import xarray as xr
 import zarr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
+    ExecutionParams,
     GenericParquetIngestor,
     GenericZarrIngestor,
     PipelineBatch,
@@ -171,7 +172,7 @@ class _DirectParityIngestor(DirectZarrIngestor):
         ]
 
     def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
-        write_mode = self.engine_config.write_mode
+        write_mode = ctx.execution.write_mode
         store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
         ts_index = _next_ts_index_from_store(store_uri, "data/timestamp")
         ts_iso = str(ctx.option("x_ts_iso", _T1))
@@ -225,7 +226,7 @@ class _ValueDedupParityIngestor(DirectZarrIngestor):
         ]
 
     def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
-        write_mode = self.engine_config.write_mode
+        write_mode = ctx.execution.write_mode
         store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
         ts_iso = str(ctx.option("x_ts_iso", _T1))
         ts_val = np.datetime64(ts_iso, "s")
@@ -281,7 +282,6 @@ def _run_staged_ingest(
         source=str(source_dir),
         product=product_filename,
         options={
-            "write_mode": write_mode,
             "resume_existing": resume_existing,
             "pipeline_batch_size": 1,
             "pipeline_workers": 1,
@@ -290,6 +290,7 @@ def _run_staged_ingest(
             "x_ts_iso": ts_iso,
             "x_sentinel": sentinel,
         },
+        execution=ExecutionParams(write_mode=write_mode),
     )
     ingestor = ingestor_cls()
     result = ingestor.run(ctx)
@@ -418,12 +419,12 @@ def test_staged_hook_does_not_fire_for_non_zarr_outputs(tmp_path: Path) -> None:
         product="parquet_parity.parquet",
         format="parquet",
         options={
-            "write_mode": "staged",
             "pipeline_batch_size": 1,
             "pipeline_workers": 1,
             "no_progress": True,
             "cleanup_workspace": True,
         },
+        execution=ExecutionParams(write_mode="staged"),
     )
 
     result = _ParquetParityIngestor().run(ctx)

@@ -66,8 +66,6 @@ def _ingest(
             "local",
             "--storage-driver",
             "fsspec",
-            "--output-format",
-            "zarr",
             "--write-mode",
             "direct",
             "--option",
@@ -85,7 +83,7 @@ def _assert_configuration_error_before_store(
     result: subprocess.CompletedProcess[str], target: Path
 ) -> None:
     combined = result.stdout + result.stderr
-    assert result.returncode == 1, combined
+    assert result.returncode == 2, combined
     assert "Error:" in combined
     assert "zarr_shard_shape" in combined
     assert not target.exists(), "invalid config must fail before Zarr/.firecube store creation"

@@ -14,7 +14,7 @@
 
 """Internal storage write-coordination protocols.
 
-Not part of firecube.core.api or firecube.ingestor.api.
+Not part of firecube.sdk.
 """
 
 from __future__ import annotations

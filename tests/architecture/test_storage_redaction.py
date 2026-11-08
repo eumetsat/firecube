@@ -44,13 +44,14 @@ from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import IngestResult, OutputPaths, PipelineMetrics, ResultMetrics
 from firecube.ingestor.runtime.engine import PipelineExecutor
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     RuntimeIdentity,
     RuntimeIngestContext,
     StorageContext,
 )
+from firecube.sdk import IngestResult, OutputPaths, PipelineMetrics, ResultMetrics
 
 SENTINEL_ACCESS_KEY = "SENTINEL_ACCESS_KEY_DO_NOT_USE"
 SENTINEL_SECRET_KEY = "SENTINEL_SECRET_KEY_DO_NOT_USE"
@@ -86,7 +87,8 @@ def _build_runtime_ctx(
         source="source",
         target=target,
         output_format="zarr",
-        options={"write_mode": write_mode, "no_progress": True},
+        options={"no_progress": True},
+        execution=ExecutionParams(write_mode=write_mode),
         storage=storage,
         run_id="redaction-probe-run",
         identity=RuntimeIdentity(run_id="redaction-probe-run"),

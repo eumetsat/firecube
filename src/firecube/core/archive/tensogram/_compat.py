@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from firecube.core.errors import OptionalExtraMissingError
+
 try:
     import tensogram  # pyright: ignore[reportMissingImports]
     import tensogram_xarray  # pyright: ignore[reportMissingImports]
@@ -28,9 +30,10 @@ except ImportError:
 
 
 def require_tensogram(operation: str) -> None:
-    """Raise ImportError with install instructions if tensogram is not available."""
+    """Raise `OptionalExtraMissingError` with install instructions if tensogram is missing."""
     if not HAS_TENSOGRAM:
-        raise ImportError(
+        raise OptionalExtraMissingError(
             f"{operation} requires the tensogram extras. "
-            "Install with: uv pip install 'firecube[tensogram]'"
+            "Install with: uv pip install 'firecube[tensogram]'",
+            extra="tensogram",
         )

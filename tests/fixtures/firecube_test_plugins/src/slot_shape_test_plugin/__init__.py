@@ -30,14 +30,16 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, ClassVar
 
-from firecube.core.api import IndexSpec, RegularTimeAxis, normalize_epoch_iso
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
+    IndexSpec,
     PipelineBatch,
     PluginContext,
+    RegularTimeAxis,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
+    normalize_epoch_iso,
     register_ingestor,
 )
 

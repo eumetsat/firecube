@@ -20,11 +20,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from firecube.ingestor.api import (
-    GenericZarrIngestor,
-    PluginContext,
-    register_ingestor,
-)
+from firecube.sdk import GenericZarrIngestor, PluginContext, register_ingestor
 
 
 @register_ingestor("fc_test_stub")

@@ -24,7 +24,6 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import IntegerAxis, ResolvedIndexRecord
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.manager import check_legacy_index_record
 from firecube.core.controlplane.types import (
@@ -37,6 +36,7 @@ from firecube.core.errors import LegacyIndexRecordError
 from firecube.core.index_resolve import resolve_index_spec
 from firecube.core.index_spec import IndexSpec
 from firecube.core.slot_index import SlotAxis, SlotIndexModel
+from firecube.sdk import IntegerAxis, ResolvedIndexRecord
 from tests.helpers.storage import make_test_binding
 
 pytestmark = pytest.mark.integration

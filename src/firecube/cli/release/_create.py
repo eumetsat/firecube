@@ -18,18 +18,17 @@ from __future__ import annotations
 
 import click
 
-from firecube.cli._errors import render
+from firecube.cli._shared_options import dry_run_flag, require_confirmation, yes_flag
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.cli.release._common import (
     echo_json,
     echo_progress,
     echo_warning,
-    open_session,
+    open_target,
     release_options,
 )
-from firecube.cli.release._render import create_payload, echo_record
-from firecube.core.errors import FirecubeError
-from firecube.ingestor.runtime.release import create_release_for_product
+from firecube.cli.release._render import create_payload, echo_plan, echo_record, plan_payload
+from firecube.operations import create_release_for_product
 
 
 @click.command(
@@ -37,15 +36,19 @@ from firecube.ingestor.runtime.release import create_release_for_product
     epilog="""\b
 Examples:
   # name the current state of a product as release 1.0.0
-  firecube release create 1.0.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube release create 1.0.0 --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # add a note and print the new release as JSON
-  firecube release create 1.1.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --note "units fixed" -f json
+  firecube release create 1.1.0 --target file:///data/products/MY_PRODUCT.zarr --note "units fixed" -f json
 
 \b
   # retain the chunk bytes in a zip archive (a full backup first, incremental backups after)
-  firecube release create 1.2.0 --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --archive file:///data/archives/MY_PRODUCT-1.2.0.zip
+  firecube release create 1.2.0 --target file:///data/products/MY_PRODUCT.zarr --archive file:///data/archives/MY_PRODUCT-1.2.0.zip
+
+\b
+  # show what the release and its archive would write, and write nothing
+  firecube release create 1.2.0 --target file:///data/products/MY_PRODUCT.zarr --archive file:///data/archives/MY_PRODUCT-1.2.0.zip --dry-run
 
 See also: firecube release list, firecube release verify, firecube snapshot list
 """,
@@ -87,12 +90,13 @@ See also: firecube release list, firecube release verify, firecube snapshot list
         "versioned s3 bucket and the fsspec driver. Exclusive with --archive."
     ),
 )
+@dry_run_flag
+@yes_flag
 @click.pass_context
 def create(
     ctx: click.Context,
     version: str,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -101,6 +105,8 @@ def create(
     archive: str | None,
     archive_full: bool,
     retain_versions: bool,
+    dry_run: bool,
+    yes_i_really_mean_it: bool,
 ) -> None:
     """name the current metadata of a product as a release
 
@@ -116,6 +122,11 @@ def create(
     as the object versions of a versioned s3 bucket. an interrupted create
     that wrote an archive is
     refused on rerun until the file is removed.
+
+    --dry-run makes the refusals of a run from reads only and prints what it
+    would write, archive and retention included, and writes nothing. a create
+    asks for confirmation in a terminal and needs --yes-i-really-mean-it
+    elsewhere.
     """
     if archive_full and archive is None:
         raise click.UsageError("--archive-full requires --archive.")
@@ -128,20 +139,20 @@ def create(
             raise click.UsageError(
                 "Invalid value for '--archive': a release archive is a local file:// URI."
             )
-    session = open_session(
+    product = open_target(
         ctx,
         command="release create",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=True,
     )
+    require_confirmation("release create", confirmed=yes_i_really_mean_it, dry_run=dry_run)
     json_out = output_format == "json"
-    try:
-        result = create_release_for_product(
-            session=session,
+    if dry_run:
+        plan = create_release_for_product(
+            product,
             version=version,
             note=note,
             report=echo_progress if json_out else click.echo,
@@ -149,9 +160,23 @@ def create(
             archive=archive_uri,
             archive_full=archive_full,
             retain_versions=retain_versions,
+            dry_run=True,
         )
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+        if json_out:
+            echo_json(plan_payload(plan))
+            return
+        echo_plan(plan)
+        return
+    result = create_release_for_product(
+        product,
+        version=version,
+        note=note,
+        report=echo_progress if json_out else click.echo,
+        warn=echo_warning,
+        archive=archive_uri,
+        archive_full=archive_full,
+        retain_versions=retain_versions,
+    )
     if json_out:
         echo_json(create_payload(result))
         return

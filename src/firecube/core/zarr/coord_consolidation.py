@@ -46,11 +46,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import ConfigurationError, Message, Param, SchemaDriftError
-from firecube.core.product.resolver import ProductResolver
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.time.calendar import is_gregorian_like
 from firecube.core.time.convert import coord_to_datetime64
 from firecube.core.uris import local_path_from_target
@@ -61,18 +57,11 @@ from firecube.core.zarr._sealing_markers import (
     ATTR_COORD_MANAGED,
     ATTR_PREALLOCATED,
 )
-from firecube.core.zarr.guard.engine_owned import exception_text
 
 if TYPE_CHECKING:
     from firecube.core.config import StorageConfig
-    from firecube.core.product.identity import ProductIdentity
-
-
-class ProductIdentityError(ConfigurationError):
-    """The target URI and product name form no valid product identity.
-
-    The message is the resolver's own text.
-    """
+    from firecube.core.controlplane import ChunkManager
+    from firecube.core.product.open import Product
 
 
 @dataclass(frozen=True)
@@ -100,9 +89,8 @@ def _noop_report(message: str) -> None:
 
 
 def consolidate_time_coords(
+    product: Product,
     *,
-    target: str,
-    product_name: str,
     storage_config: StorageConfig,
     chunk_size: int | None = None,
     time_dim: str | None = None,
@@ -111,15 +99,14 @@ def consolidate_time_coords(
 ) -> ConsolidationSummary:
     """Rewrite each group's legacy per-slot time coordinate densely and seal it.
 
-    The function walks every group of the local Zarr product at *target*.
+    The function walks every group of the local Zarr product.
     It repairs an interrupted earlier run, rewrites the coordinate and stamps the sealing markers.
     It refreshes consolidated metadata where a group already carries it, and creates none.
     It then records the consolidated groups in the product's control plane.
     A dry run reports each proposal, rewrites nothing and records nothing.
 
     Args:
-        target: Full URI of the Zarr product.
-        product_name: Logical product name of the control-plane identity.
+        product: The open product, from `open_product`.
         storage_config: Storage settings of the product; the storage type must be local.
         chunk_size: Chunk length of the rewritten coordinate; ``None`` derives it from the axis length.
         time_dim: Time-coordinate name for every group; ``None`` resolves the name per group.
@@ -131,7 +118,6 @@ def consolidate_time_coords(
 
     Raises:
         ConfigurationError: The storage type is s3, or a group's time coordinate cannot be resolved.
-        ProductIdentityError: *target* and *product_name* form no valid product identity.
         ProductUnderMaintenanceError: Another owner holds the product's exclusive maintenance claim; a dry run skips the check.
         SchemaDriftError: A group's store state forbids consolidation, such as drift or an engine-managed coordinate.
     """
@@ -152,90 +138,76 @@ def consolidate_time_coords(
     # Manager and existing-seal snapshot must live outside the loop so the
     # already-sealed branch can backfill a WAL event when a prior rerun crashed
     # between stamping firecube_consolidated_at and recording the event.
-    identity = _resolve_product_identity(target, product_name=product_name)
-    manager = ChunkManager(
-        binding=StorageBinding(
-            identity=identity,
-            driver=StorageDriverConfig.from_storage_config(storage_config),
+    identity, manager = product.identity, product.manager
+    target = identity.product_uri.to_str()
+    # The maintenance check precedes the writable open: that open creates
+    # root metadata on a store that lacks it.
+    if not dry_run:
+        manager.check_exclusive_maintenance(
+            product=identity.product_name, owner_id=f"consolidate-{uuid.uuid4().hex}"
         )
-    )
-    try:
-        # The maintenance check precedes the writable open: that open creates
-        # root metadata on a store that lacks it.
-        if not dry_run:
-            manager.check_exclusive_maintenance(
-                product=identity.product_name, owner_id=f"consolidate-{uuid.uuid4().hex}"
-            )
-        handle = create_zarr_store(uri=target, storage_config=storage_config, mode="a")
-        root = zarr.open_group(
-            **handle.zarr_kwargs(), mode="a", zarr_format=3, use_consolidated=False
-        )
-        reference = _read_consolidate_reference_index(
-            target,
-            storage_config,
-            product_name=product_name,
-        )
-        existing_seal_groups: set[str] = {
-            group_name
-            for event in manager.list_time_coord_consolidations(product=identity.product_name)
-            for group_name in event.groups
-        }
+    handle = create_zarr_store(uri=target, storage_config=storage_config, mode="a")
+    root = zarr.open_group(**handle.zarr_kwargs(), mode="a", zarr_format=3, use_consolidated=False)
+    reference = _read_consolidate_reference_index(manager, identity.product_name)
+    existing_seal_groups: set[str] = {
+        group_name
+        for event in manager.list_time_coord_consolidations(product=identity.product_name)
+        for group_name in event.groups
+    }
 
-        for group in _walk_zarr_groups(root):
-            summary.scanned += 1
-            resolved_time_dim, dim_source = _resolve_time_dim_for_group(
-                group, explicit=time_dim, reference=reference
-            )
-            array_keys = set(group.array_keys())
-            if resolved_time_dim is None or not array_keys:
-                report(f"Group {_display_group_name(group)}: no time coord, skipping")
-                continue
-            consolidating_key = f"{resolved_time_dim}.consolidating"
-            if resolved_time_dim not in array_keys and consolidating_key not in array_keys:
-                raise ConfigurationError(
-                    Message(
-                        "Group {group}: expected time coord "
-                        "{coord!r} (source: {dim_source}) not present "
-                        "in group (arrays: {arrays!r}). Refusing to "
-                        "no-op. Pass a matching {time_dim} or ensure the store was "
-                        "written by a plugin whose time_dim_name matches this cube.",
-                        group=_display_group_name(group),
-                        coord=resolved_time_dim,
-                        dim_source=dim_source,
-                        arrays=sorted(array_keys),
-                        time_dim=Param("time_dim"),
-                    )
+    for group in _walk_zarr_groups(root):
+        summary.scanned += 1
+        resolved_time_dim, dim_source = _resolve_time_dim_for_group(
+            group, explicit=time_dim, reference=reference
+        )
+        array_keys = set(group.array_keys())
+        if resolved_time_dim is None or not array_keys:
+            report(f"Group {_display_group_name(group)}: no time coord, skipping")
+            continue
+        consolidating_key = f"{resolved_time_dim}.consolidating"
+        if resolved_time_dim not in array_keys and consolidating_key not in array_keys:
+            raise ConfigurationError(
+                Message(
+                    "Group {group}: expected time coord "
+                    "{coord!r} (source: {dim_source}) not present "
+                    "in group (arrays: {arrays!r}). Refusing to "
+                    "no-op. Pass a matching {time_dim} or ensure the store was "
+                    "written by a plugin whose time_dim_name matches this cube.",
+                    group=_display_group_name(group),
+                    coord=resolved_time_dim,
+                    dim_source=dim_source,
+                    arrays=sorted(array_keys),
+                    time_dim=Param("time_dim"),
                 )
-            consolidated = _consolidate_group_time_coord(
-                group,
-                target=target,
-                chunk_size=chunk_size,
-                dry_run=dry_run,
-                reference=reference,
-                consolidated_at=consolidated_at,
-                summary=summary,
-                time_dim_name=resolved_time_dim,
-                report=report,
-                pending_backfills=pending_backfills,
-                existing_seal_groups=existing_seal_groups,
             )
-            if consolidated:
-                consolidated_groups.append(str(getattr(group, "path", "") or "/").strip("/"))
+        consolidated = _consolidate_group_time_coord(
+            group,
+            target=target,
+            chunk_size=chunk_size,
+            dry_run=dry_run,
+            reference=reference,
+            consolidated_at=consolidated_at,
+            summary=summary,
+            time_dim_name=resolved_time_dim,
+            report=report,
+            pending_backfills=pending_backfills,
+            existing_seal_groups=existing_seal_groups,
+        )
+        if consolidated:
+            consolidated_groups.append(str(getattr(group, "path", "") or "/").strip("/"))
 
-        if summary.eligible == 0 and summary.already_sealed == 0 and summary.blocked_by_drift == 0:
-            report("consolidate-time-coord: no group with a time coord found.")
-        # Every event of this run, backfills included, follows the refresh: a
-        # failed refresh leaves the events missing, so the rerun backfills them
-        # and refreshes again.
-        if consolidated_groups or pending_backfills:
-            _refresh_consolidated_metadata(root)
-        for group_name, stored_consolidated_at, backfill_line in pending_backfills:
-            manager.record_time_coord_consolidation((group_name,), stored_consolidated_at)
-            report(backfill_line)
-        if consolidated_groups:
-            manager.record_time_coord_consolidation(tuple(consolidated_groups), consolidated_at)
-    finally:
-        manager.close()
+    if summary.eligible == 0 and summary.already_sealed == 0 and summary.blocked_by_drift == 0:
+        report("consolidate-time-coord: no group with a time coord found.")
+    # Every event of this run, backfills included, follows the refresh: a
+    # failed refresh leaves the events missing, so the rerun backfills them
+    # and refreshes again.
+    if consolidated_groups or pending_backfills:
+        _refresh_consolidated_metadata(root)
+    for group_name, stored_consolidated_at, backfill_line in pending_backfills:
+        manager.record_time_coord_consolidation((group_name,), stored_consolidated_at)
+        report(backfill_line)
+    if consolidated_groups:
+        manager.record_time_coord_consolidation(tuple(consolidated_groups), consolidated_at)
 
     return ConsolidationSummary(
         scanned=summary.scanned,
@@ -244,14 +216,6 @@ def consolidate_time_coords(
         blocked_by_drift=summary.blocked_by_drift,
         consolidated_groups=tuple(consolidated_groups),
     )
-
-
-def _resolve_product_identity(target: str, *, product_name: str) -> ProductIdentity:
-    """Resolve the Zarr product identity, raising `ProductIdentityError` with the resolver's text."""
-    try:
-        return ProductResolver.resolve(target, format="zarr", product_name=product_name)
-    except ValueError as exc:
-        raise ProductIdentityError(exception_text(exc)) from exc
 
 
 def _walk_zarr_groups(root: Any) -> Generator[Any]:
@@ -652,26 +616,12 @@ def _rewrite_time_coord_local(
     os.rename(temp_path, final_path)
 
 
-def _read_consolidate_reference_index(
-    target: str,
-    storage_config: Any,
-    *,
-    product_name: str,
-) -> Any | None:
+def _read_consolidate_reference_index(manager: ChunkManager, product_name: str) -> Any | None:
     """Best-effort read of the control-plane resolved-index record."""
-    identity = _resolve_product_identity(target, product_name=product_name)
-    manager = ChunkManager(
-        binding=StorageBinding(
-            identity=identity,
-            driver=StorageDriverConfig.from_storage_config(storage_config),
-        )
-    )
     try:
-        return manager.get_resolved_index(product=identity.product_name)
+        return manager.get_resolved_index(product=product_name)
     except FileNotFoundError:
         return None
-    finally:
-        manager.close()
 
 
 @dataclass(frozen=True)

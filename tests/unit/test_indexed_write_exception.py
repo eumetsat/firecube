@@ -49,19 +49,10 @@ def test_indexed_write_compilation_error_contract(subtests: Any, tmp_path: Path)
     with table_row(subtests, "compilation_error_is_value_error", tmp_path):
         assert issubclass(IndexedWriteCompilationError, ValueError)
 
-    with table_row(subtests, "reexport_from_core_api", tmp_path):
-        from firecube.core.api import (
-            IndexedWriteCompilationError as CoreIndexedWriteCompilationError,
-        )
+    with table_row(subtests, "exported_from_sdk", tmp_path):
+        from firecube.sdk import IndexedWriteCompilationError as SdkError
 
-        assert CoreIndexedWriteCompilationError is IndexedWriteCompilationError
-
-    with table_row(subtests, "reexport_from_ingestor_api", tmp_path):
-        from firecube.ingestor.api import (
-            IndexedWriteCompilationError as IngestorIndexedWriteCompilationError,
-        )
-
-        assert IngestorIndexedWriteCompilationError is IndexedWriteCompilationError
+        assert SdkError is IndexedWriteCompilationError
 
     with table_row(subtests, "abstract_error_fires_when_neither_hook_overridden", tmp_path):
         ingestor = _MinimalDirectZarrIngestor()

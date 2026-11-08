@@ -20,15 +20,12 @@ from typing import Any, cast
 import numpy as np
 import pytest
 import zarr
-from click.testing import CliRunner
 from zarr.storage import LocalStore
 
-from firecube.cli.main import cli
-from firecube.core.api import FIRECUBE_STATIC_WRITTEN_ATTR
-from firecube.ingestor.api import EngineConfig
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 from firecube.ingestor.templates.direct_zarr import WriteIntent, ZarrArraySpec, ZarrGroupSpec
+from firecube.sdk import FIRECUBE_STATIC_WRITTEN_ATTR, ExecutionParams
 
 pytestmark = pytest.mark.integration
 
@@ -151,17 +148,7 @@ def test_suppression_does_not_affect_dynamic_writes(tmp_path: Path) -> None:
 
 def test_misconfig_suppression_true_without_owner_slot_raises() -> None:
     with pytest.raises(ConfigurationError):
-        EngineConfig(suppress_static_emission_for_non_owner=True)
-
-
-def test_show_options_lists_both_new_fields() -> None:
-    result = CliRunner().invoke(
-        cli, ["ingest", "direct_zarr_capable_test_plugin", "--show-options"]
-    )
-
-    assert result.exit_code == 0, result.output
-    assert "--option suppress_static_emission_for_non_owner" in result.output
-    assert "--option static_owner_slot_start" in result.output
+        ExecutionParams(suppress_static_emission_for_non_owner=True)
 
 
 def test_misconfig_suppression_true_without_slot_start_raises() -> None:
@@ -172,7 +159,7 @@ def test_misconfig_suppression_true_without_slot_start_raises() -> None:
     there is no co-worker in serial mode.
     """
     with pytest.raises(ConfigurationError, match=r"slot_start"):
-        EngineConfig(
+        ExecutionParams(
             suppress_static_emission_for_non_owner=True,
             static_owner_slot_start=0,
             slot_start=None,

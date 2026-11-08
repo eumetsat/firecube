@@ -28,12 +28,7 @@ from typing import Any, ClassVar
 
 import xarray as xr
 
-from firecube.ingestor.api import (
-    GenericZarrIngestor,
-    PluginConfig,
-    PluginContext,
-    register_ingestor,
-)
+from firecube.sdk import GenericZarrIngestor, PluginConfig, PluginContext, register_ingestor
 
 LAYOUTS: dict[str, dict[str, int]] = {
     "timeseries": {"time": 365, "lat": 10, "lon": 10},

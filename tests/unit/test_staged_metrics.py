@@ -24,10 +24,15 @@ from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 from firecube.core.uris import local_path_from_target
-from firecube.ingestor.api import IngestResult, OutputPaths
 from firecube.ingestor.contracts.interfaces import PipelineHost
 from firecube.ingestor.runtime.engine import PipelineExecutor
-from firecube.ingestor.types.context import RuntimeIdentity, RuntimeIngestContext, StorageContext
+from firecube.ingestor.types.context import (
+    ExecutionParams,
+    RuntimeIdentity,
+    RuntimeIngestContext,
+    StorageContext,
+)
+from firecube.sdk import IngestResult, OutputPaths
 
 
 class _FakeHost:
@@ -90,7 +95,8 @@ def _make_ctx(source: Path) -> RuntimeIngestContext:
         target=target,
         output_format="zarr",
         storage=StorageContext(output=session),
-        options={"write_mode": "staged", "upload_workers": 4},
+        options={"upload_workers": 4},
+        execution=ExecutionParams(write_mode="staged"),
         run_id="test-run",
         identity=RuntimeIdentity(run_id="test-run"),
     )

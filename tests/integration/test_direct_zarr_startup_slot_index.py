@@ -47,17 +47,18 @@ from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import (
+from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
+from firecube.ingestor.templates import direct_zarr
+from firecube.sdk import (
     DirectZarrIngestor,
+    ExecutionParams,
     PipelineBatch,
     PluginContext,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.errors import ConfigurationError
-from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
-from firecube.ingestor.templates import direct_zarr
 
 pytestmark = pytest.mark.integration
 
@@ -71,10 +72,6 @@ class _CapableIngestor(DirectZarrIngestor):
     def __init__(self, *, chunk_manager: ChunkManager, model_name: str = "startup_v1") -> None:
         super().__init__(name=PRODUCT_NAME, chunk_manager=chunk_manager)
         self._model_name = model_name
-        self.engine_config = cast(
-            Any,
-            SimpleNamespace(write_mode="direct", slot_start=0, slot_end=10, slot_group=None),
-        )
 
     def index_spec(self, ctx: PluginContext) -> IndexSpec:
         _ = ctx
@@ -127,10 +124,6 @@ class _NonCapableIngestor(DirectZarrIngestor):
 
     def __init__(self, *, chunk_manager: ChunkManager) -> None:
         super().__init__(name=PRODUCT_NAME, chunk_manager=chunk_manager)
-        self.engine_config = cast(
-            Any,
-            SimpleNamespace(write_mode="direct", slot_start=0, slot_end=10, slot_group=None),
-        )
 
     def zarr_schema(self, ctx: PluginContext) -> list[ZarrGroupSpec]:
         _ = ctx
@@ -190,6 +183,7 @@ def _plugin_ctx() -> Any:
         _ctx=object(),
         run_id="run-1",
         storage=None,
+        execution=ExecutionParams(write_mode="direct", slot_start=0, slot_end=10),
         option=lambda key, default=None: default,
     )
 

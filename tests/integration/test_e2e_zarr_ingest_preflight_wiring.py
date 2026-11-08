@@ -89,8 +89,8 @@ import pytest
 import xarray as xr
 import zarr
 
-from firecube.ingestor.api import GenericZarrIngestor, PluginContext
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration
@@ -186,7 +186,6 @@ def _engine_run(
     """
     host = _PreflightWiringZarr()
     options: dict[str, Any] = {
-        "write_mode": write_mode,
         "x_days": days,
         "x_attrs": attrs,
         "x_attrs_per_day": attrs_per_day,
@@ -201,7 +200,12 @@ def _engine_run(
         options["resume_existing"] = True
     if force_reingest:
         options["force_reingest"] = True
-    ctx = make_test_context(tmp_path, product=_PRODUCT, options=options)
+    ctx = make_test_context(
+        tmp_path,
+        product=_PRODUCT,
+        options=options,
+        execution=ExecutionParams(write_mode=write_mode),
+    )
     host.run(ctx)
 
 

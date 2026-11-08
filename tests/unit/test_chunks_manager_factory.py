@@ -19,7 +19,6 @@ import importlib
 import click
 
 from firecube.core.config import StorageConfig
-from firecube.core.storage.uri import StorageUri
 
 manager_module = importlib.import_module("firecube.cli.chunks._manager")
 StorageDriverConfig = importlib.import_module(
@@ -28,7 +27,7 @@ StorageDriverConfig = importlib.import_module(
 
 
 class _FakeChunkManager:
-    def __init__(self, *, binding, workspace) -> None:
+    def __init__(self, *, binding, workspace, filesystem=None) -> None:
         self.binding = binding
         self.workspace = workspace
         self.base_uri = binding.identity.product_uri
@@ -37,11 +36,15 @@ class _FakeChunkManager:
         pass
 
 
+def _recorded_label(uri, *, format, driver):
+    return "TEST_PRODUCT.zarr"
+
+
 def _make_ctx(workspace):
     return click.Context(click.Command("chunks"), obj={"workspace": workspace})
 
 
-def test_resolve_manager_uses_default_driver_when_storage_config_missing(
+def test_target_product_uses_default_driver_when_storage_config_missing(
     monkeypatch, temp_workspace
 ) -> None:
     calls: list[object | None] = []
@@ -57,20 +60,19 @@ def test_resolve_manager_uses_default_driver_when_storage_config_missing(
         classmethod(_recording_factory),
     )
     monkeypatch.setattr(manager_module, "ChunkManager", _FakeChunkManager)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", _recorded_label)
     monkeypatch.setattr(manager_module, "get_config", lambda ctx: {})
     monkeypatch.setattr(manager_module, "get_storage_config", lambda *args, **kwargs: None)
 
-    manager = manager_module.resolve_manager(
-        _make_ctx(temp_workspace),
-        temp_workspace,
-        StorageUri.parse("file:///tmp/TEST_PRODUCT.zarr"),
-    )
+    manager = manager_module.target_product(
+        _make_ctx(temp_workspace), temp_workspace, "file:///tmp/TEST_PRODUCT.zarr"
+    ).manager
 
     assert calls == [None]
     assert manager.binding.driver == StorageDriverConfig.from_storage_config_or_default(None)
 
 
-def test_resolve_manager_uses_storage_config_driver_when_present(
+def test_target_product_uses_storage_config_driver_when_present(
     monkeypatch, temp_workspace
 ) -> None:
     storage_config = StorageConfig(
@@ -95,6 +97,7 @@ def test_resolve_manager_uses_storage_config_driver_when_present(
         classmethod(_recording_factory),
     )
     monkeypatch.setattr(manager_module, "ChunkManager", _FakeChunkManager)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", _recorded_label)
     monkeypatch.setattr(manager_module, "get_config", lambda ctx: {"storage": True})
     monkeypatch.setattr(
         manager_module,
@@ -102,11 +105,9 @@ def test_resolve_manager_uses_storage_config_driver_when_present(
         lambda *args, **kwargs: storage_config,
     )
 
-    manager = manager_module.resolve_manager(
-        _make_ctx(temp_workspace),
-        temp_workspace,
-        StorageUri.parse("s3://bucket/TEST_PRODUCT.zarr"),
-    )
+    manager = manager_module.target_product(
+        _make_ctx(temp_workspace), temp_workspace, "s3://bucket/TEST_PRODUCT.zarr"
+    ).manager
 
     assert calls == [storage_config]
     assert manager.binding.driver == StorageDriverConfig.from_storage_config(storage_config)

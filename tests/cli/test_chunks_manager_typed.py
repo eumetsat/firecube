@@ -16,11 +16,10 @@
 
 These tests pin the post-T16 contract:
 
-- The CLI helper that hands storage config to the deletion engine returns a
-  typed ``StorageConfig`` straight from ``ctx.obj["storage_config"]`` — no
-  fresh dict is built from its fields.
+- ``chunks delete`` hands no ``[storage]`` config to the deletion engine: the
+  manager is bound to the product and deletes through its own filesystem.
 - ``storage_config_dict_from_ctx`` (the typed→dict bridge introduced before
-  T16) is gone; callers now use ``storage_config_from_ctx``.
+  T16) is gone.
 - ``ChunkManager.execute_deletion`` and ``DeletionEngine.execute_deletion``
   accept ``StorageConfig | None`` instead of ``dict[str, Any] | None``.
 - Static guard: ``_manager.py`` does not synthesise dicts from storage-config
@@ -34,8 +33,6 @@ import inspect
 from types import SimpleNamespace
 from typing import Any
 
-import click
-import pytest
 from click.testing import CliRunner
 
 from firecube.cli.chunks import _delete as delete_module
@@ -44,39 +41,15 @@ from firecube.cli.main import cli
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane.deletion import DeletionEngine
 from firecube.core.controlplane.manager import ChunkManager
+from tests.helpers.chunks import bound
 
 
 def test_storage_config_dict_from_ctx_is_removed() -> None:
     """The dict-returning bridge function is gone after T16."""
     assert not hasattr(cli_manager, "storage_config_dict_from_ctx"), (
-        "T16: storage_config_dict_from_ctx must be removed; use the typed "
-        "storage_config_from_ctx instead"
+        "T16: storage_config_dict_from_ctx must be removed; the typed StorageConfig is "
+        "never turned into a dict"
     )
-
-
-def test_storage_config_from_ctx_returns_typed_storage_config() -> None:
-    """The replacement helper returns the same StorageConfig object stored in ctx."""
-    assert hasattr(cli_manager, "storage_config_from_ctx"), (
-        "T16: cli/chunks/_manager.py must export storage_config_from_ctx"
-    )
-    cfg = StorageConfig(storage_type="s3")
-    cfg.bucket = "my-bucket"  # type: ignore[attr-defined]
-    ctx = click.Context(click.Command("chunks"), obj={"storage_config": cfg})
-
-    result = cli_manager.storage_config_from_ctx(ctx)
-
-    assert isinstance(result, StorageConfig)
-    assert result is cfg, (
-        "T16: storage_config_from_ctx must return the typed instance unchanged "
-        "(no dict roundtrip, no fresh dataclass clone)"
-    )
-
-
-def test_storage_config_from_ctx_raises_when_missing() -> None:
-    """Behaviour parity: missing storage config still raises ClickException."""
-    ctx = click.Context(click.Command("chunks"), obj={})
-    with pytest.raises(click.ClickException):
-        cli_manager.storage_config_from_ctx(ctx)
 
 
 def test_chunk_manager_execute_deletion_signature_accepts_typed_storage_config() -> None:
@@ -107,7 +80,7 @@ def test_deletion_engine_execute_deletion_signature_accepts_typed_storage_config
     )
 
 
-def test_delete_command_passes_typed_storage_config_to_manager(monkeypatch: Any) -> None:
+def test_delete_command_passes_no_storage_config_to_manager(monkeypatch: Any) -> None:
     cfg = StorageConfig(storage_type="s3")
     captured: dict[str, object] = {}
 
@@ -148,17 +121,19 @@ def test_delete_command_passes_typed_storage_config_to_manager(monkeypatch: Any)
                 "records_without_storage": 0,
             }
 
-    monkeypatch.setattr(delete_module, "resolve_manager", lambda *args, **kwargs: FakeManager())
+    monkeypatch.setattr(
+        delete_module, "scoped_products", lambda *args, **kwargs: [bound(FakeManager())]
+    )
 
     result = CliRunner().invoke(
         cli,
-        ["chunks", "delete", "--product-name", "product", "--dry-run"],
+        ["chunks", "delete", "--target", "file:///tmp/product", "--dry-run"],
         obj={"storage_config": cfg},
     )
 
     assert result.exit_code == 0, result.output
     assert captured == {
-        "storage_config": cfg,
+        "storage_config": None,
         "delete_storage": True,
         "delete_manifest": True,
         "dry_run": True,

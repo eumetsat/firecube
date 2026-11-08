@@ -1,5 +1,113 @@
 # Done
 
+## 2026-11-08 — Migration contract lives in `core/zarr` and is exported from `firecube.sdk`
+
+**Decision.** The maintainer decided on 2026-11-08 that the Zarr metadata-migration contract moves to `src/firecube/core/zarr/migration.py`. Behaviour does not change, and `firecube.sdk` keeps exporting the seven names. The base is commit 2cc589b. This supersedes the row "`firecube.migrations`" of the 2026-11-05 zarr-layout-migration handoff, which made the contract internal.
+
+- Contract. The seven names are `MigrationStep`, `StoreView`, `AttributePatch`, `MetadataPlan`, `ReleaseRecord`, `ABSENT` and `NodeView`. A step author implements them and registers a step through the `firecube.migrations` entry-point group.
+- Home. The contract is Zarr by construction. `StoreView` wraps `NodeView`, which carries `zarr_format`, the fill value and the storage keys. The executor branches on `zarr_format` 2 and 3. The module imports nothing from `ingestor`.
+- Door. The door stays `firecube.sdk`. The verb `migrate_product` lives once in `firecube.operations`. The CLI and the planned user API both call it, so the two cannot drift.
+- Reason for the door. A step author uses the contract in the same way an ingestor author uses the plugin contract. The contract therefore belongs to the plugin-author door.
+- P12 of 2026-11-05 stands.
+- No shim. The old path `firecube.ingestor.contracts.migration` is in no `__all__`, and no plugin imports it. The Option Aliases rule of `plans/STYLE.md` applies.
+- Reviews. Two independent reviews were taken. One recommended `firecube.operations` as the door. The other recommended the plugin-author door, with Alembic and Django as precedent. The maintainer ruled for `firecube.sdk`.
+- No changelog entry. The change is an internal file move, and the public names and the door are unchanged.
+- What stays open. The executor and the built-in step `set-attrs` stay in `src/firecube/ingestor/runtime/`. The executor imports two release helpers from `src/firecube/ingestor/runtime/release.py`, so a move to core would fail the core independence test. Their move is the open item "plugin-free operations to core".
+
+---
+
+## 2026-11-08 — `firecube.sdk` is the one import module for plugins, and the two `api` modules are deprecated
+
+**Decision.** The maintainer decided on 2026-11-08 that plugins import from `firecube.sdk`. The modules `firecube.ingestor.api` and `firecube.core.api` keep every name and warn until v0.2.0. The base is commit 127ed11. The IDs below are the decisions of the plan `2026-11-08-sdk-door-and-api-deprecation`.
+
+- D1 (maintainer, 2026-11-08). The plugin import module is `firecube.sdk`. The name `firecube.plugin` is too close to the entry-point group `firecube.plugins`. The name `firecube.api` would be a third module called `api`.
+- D2 (maintainer, 2026-11-08). `firecube.sdk` carries every name that is plugin-facing by nature. Plugins exist that this repository does not see. A name stays out when the old module exported engine machinery by accident. The 102 names are in `src/firecube/sdk.py`, and 39 names stay out (P1).
+- D3 (maintainer, 2026-11-08). Exception to the Option Aliases rule of `plans/STYLE.md`. The rule forbids a shim and a transition period. The maintainer set it aside. Reason: plugins outside this repository need a release to migrate. Both old modules keep every name and warn.
+- D4 (maintainer, 2026-11-08). Every warning names v0.2.0 as the removal release. The `EngineConfig` warning uses the same version.
+- D5 (maintainer, 2026-11-08). The warning shows at run time and in the editor. A `DeprecationWarning` fires on use. A stub file marks functions with `@deprecated` from `typing_extensions`.
+- D6 (maintainer, 2026-11-08). `CHANGELOG.md` lists the old modules under `Deprecated`.
+- D7 (maintainer, 2026-11-08). The release is 0.1.9. The maintainer set aside the line of `plans/RELEASE.md` that requires a patch bump to stay backward compatible. The branch includes breaking changes listed under Changed and Removed in `CHANGELOG.md`.
+- S1. A codemod moved every import of the old modules in the tests and fixture plugins to `firecube.sdk`. A run with `-W error::DeprecationWarning` proves that no warning fires inside Firecube. The test configuration holds no warning filter.
+- S2. A stub file `api.pyi` beside each old module re-exports classes, constants and aliases plainly. Only functions carry `@deprecated`. A deprecated class in a stub must be a subclass. An instance from the new module would then not match an annotation of the old module. A type checker never flags a constant or an alias.
+- S2, amended (maintainer, 2026-11-08). The function declarations sit in the companion stubs `_api_deprecated.pyi` of each package. `api.pyi` re-exports them. Reason: a function declared inline in the stub made griffe drop the docstrings of 3 functions in `firecube.ingestor.api` and 19 in `firecube.core.api`.
+- S3. The scaffolder writes a boundary test, `tests/test_import_boundary.py`, into a generated plugin. The test allows only `firecube.sdk`.
+- S4 and S5 (maintainer, 2026-11-08). Declined. The old modules do not forward the moved execution parameters `write_mode` and `slot_*`. The hard refusals stay. The command `firecube chunks` gets no `--product-name` alias.
+- S6. Templates take names from `firecube.sdk`, which loads the templates lazily, so no import cycle exists. Templates take the names outside `firecube.sdk` from their defining modules.
+- S7. The new behaviour tests extend existing test files.
+- P1. The list of 102 names is the `__all__` of `src/firecube/sdk.py`. All 32 names that the five external plugin repositories import are in it.
+- P2. Each old module warns once per process. The first name accessed decides. If that name is not in `firecube.sdk`, the text adds that the sdk does not carry it.
+- P3 and P4. The module is `src/firecube/sdk.py`, beside `src/firecube/operations.py`. The reference page is `docs/reference/plugin-sdk.md`.
+- P5 and P9. The marker constants `ATTR_COORD_MANAGED` and `ATTR_PREALLOCATED` join `firecube.operations`, which the CLI gate admits. The module is new and unreleased, so the addition costs no compatibility.
+- P6. `typing_extensions>=4.5` is a declared dependency. Release 4.5 is the first with `deprecated`.
+- P7. `canonical_coordinate_value` stays importable from `firecube.ingestor.api`, with the warning, though `__all__` does not list it.
+- P8. A test that covers new behaviour runs once against commit 127ed11 and must fail there. The failing output is kept as evidence.
+- What stays open. The removal is the item "Remove the modules `firecube.ingestor.api` and `firecube.core.api` in v0.2.0" in `plans/TODO.md`.
+
+---
+
+## 2026-11-08 — `EngineConfig` forwards moved-field reads with a warning until v0.2.0
+
+**Decision.** The maintainer decided on 2026-11-08 that existing plugins keep working. A read of a moved field on the `EngineConfig` of a run returns the value of the run and emits a `DeprecationWarning`. Firecube will remove the forward in v0.2.0. This amends the tombstone and the no-alias bullets of the entry "`ExecutionParams` defaults to `direct`, and `EngineConfig` refuses the moved fields" below. The base is commit 5942d26.
+
+- Exception to the shim rule. `plans/STYLE.md` forbids a forwarding shim. This is a time-limited exception with one removal date, v0.2.0.
+- Reads. During a run, a read of one of the eight moved fields returns the `ExecutionParams` value. The warning names `ctx.execution.<field>` and v0.2.0.
+- Reason. The earlier refusal failed an external plugin run at its first read. The `EngineConfig` of a run now carries the `ExecutionParams` of that run, so the forward has a run to read from and invents no default.
+- Refusals that stay. Construction with a moved field raises `ConfigurationError`, because the field would have two sources. A read on an `EngineConfig` built outside a run raises `ConfigurationError`, because no run supplies a value.
+- Scope. The attachment is not an option key. It is not in `config_keys(EngineConfig)`, in `--option` or in the config file.
+- Changelog. The entry moved from `Changed` to `Deprecated` in `CHANGELOG.md`.
+- What stays open. The removal is the item "Remove the `EngineConfig` moved-field forward in v0.2.0" in `plans/TODO.md`.
+
+---
+
+## 2026-11-08 — `ExecutionParams` defaults to `direct`, and `EngineConfig` refuses the moved fields
+
+**Decision.** This entry supersedes the `staged` default of the 2026-11-07 entries "CLI and API building blocks" and "One CLI surface". Nothing shipped with that default, so `CHANGELOG.md` replaces its entry. The maintainer approved both changes on 2026-11-08.
+
+- Default. `ExecutionParams.write_mode` defaults to `direct`. The parameter defaults of `resolve_dataset_target` and `BaseIngestor.resolve_output_uri` match it.
+- Reason (D2). The scaffolder defaults to `direct`. The `staged` mode earns its workspace only on a remote target. The CLI stays explicit, and `--write-mode` stays required.
+- Cost (D2). An SDK caller that sets no mode loses the checks that only `staged` makes. These are the sparse-window refusal, the incomplete-units and promotion checks in the engine, and the second fresh-target check before upload. The first fresh-target check runs in both modes.
+- Trigger. A smoke run failed 79 rows. A plugin read `engine_config.write_mode`. Commit 9580758 moved that field, so the read raised a bare `AttributeError`. The ingest exited 70.
+- Tombstones. `EngineConfig` refuses all eight moved fields: `write_mode`, `dry_run`, `slot_start`, `slot_end`, `slot_size`, `slot_group`, `static_owner_slot_start` and `suppress_static_emission_for_non_owner`. Construction raises `ConfigurationError` naming `ExecutionParams(<field>=...)`. A read raises `ConfigurationError` naming `ctx.execution.<field>`. A read in a hook that runs before the batches, such as `discover_source_files`, exits 2. A read inside the batch-processing hook (`_process_batch`) fails that batch, and the run exits 1. The message is the same in both cases (D5).
+- No alias. `EngineConfig` holds no reference to the run, so a forwarding property has no run to read from and returns a default silently. `plans/STYLE.md` forbids such shims.
+- Propagation (D3). The read refusal passes through `hasattr` and `getattr` with a default, because `hasattr` swallows `AttributeError` only. A compatibility read that silently takes a default is what the refusal exists to stop. A test pins it.
+- What stays open. The reads in the AOD and FCI plugins are outside this repository.
+
+---
+
+## 2026-11-07 — CLI and API building blocks: `firecube.operations` and `open_product`
+
+**Decision.** The CLI calls one public Python facade, `firecube.operations`. A library caller reaches the same operations with the same refusals. The decisions D1 to D6 of 2026-11-07 govern it.
+
+- D1. `open_product` and `Product` are in `src/firecube/core/product/open.py`. The function reads the recorded label and refuses a store with another label or none. It closes the manager it built. The refusal is a core error that the root error boundary maps to exit 2. `src/firecube/cli/_product.py`, `recorded_identity`, `session_identity` and `check_recorded_label` are deleted.
+- D2. The precedence rules are pure core functions. `resolve_product_name` applies the order of the product name. `resolve_slot_window` applies the slot window rule. Both raise `ConfigurationError` and import no Click.
+- D3. An operation takes the `Product` as its first argument. The CLI opens the product and passes it. A library caller does the same.
+- D4. There is one facade, and no operation moves. The code stays where it is. The facade re-exports it.
+- D5. The facade is the module `src/firecube/operations.py`. It has 56 exports with canonical names and no alias. A moved name leaves no alias.
+- D6. The CLI import gate is check 7 of `tests/architecture/test_cli_boundary.py`. It allows only `firecube.cli*`, `firecube.operations`, `firecube.core.api`, `firecube.ingestor.api` and `firecube.core.errors`. Every other import is a tagged row. A new violation is not given a row.
+- Behaviour that changed. `archive create` and `archive restore` take `dry_run` and share one preflight with the real run. The real run checks again under the claim. `adopt_product` owns the label. `EngineConfig(write_mode=...)` raises `ConfigurationError`. `resolve_storage_config` exports nothing to the environment by default. The user-visible list is in `CHANGELOG.md`.
+- Evidence. `tests/architecture/test_cli_boundary.py` holds the import gate. `tests/cli/test_click_error_boundary.py` pins the operation table of the error boundary. `tests/unit/test_cli_zarr_preallocate.py` holds the run id shape test.
+- What stays open. The items under "Open after the CLI and API building blocks plan (2026-11-07)" in `plans/TODO.md`.
+
+---
+
+## 2026-11-07 — One CLI surface: the recorded label, `-t/--target` and one exit-code table
+
+**Decision.** A store records its product label once, and every command that needs a label reads it back. `-t/--target` is the one spelling of the product URI. One error boundary at the root maps every exception to one exit-code table. The entries below cite the node IDs of the plan `2026-11-06-cli-surface-rework`.
+
+- Label record (n2, n3, 2026-11-06). The first control-plane write creates `.firecube/product.json`. Nothing rewrites it. A store without it takes the label that its run records and held claims agree on. A writer, a claim read or a facade method that names another label raises `ProductLabelMismatchError`. The CLI never infers the label from the URI path. Rules: `plans/DESIGN.md`.
+- Unlabelled stores (n7, n9, n12, 2026-11-07). Every command that reads the recorded label refuses a store that records none. The refusal exits 2 and names `migrate adopt`. `zarr slots` refuses a name that differs from the recorded label. `ingest`, `zarr preallocate` and `zarr slots` read the label before any work.
+- Exclusivity (n2, 2026-11-06). The exclusive maintenance claim binds the recorded label. A second spelling of the URI no longer bypasses it. `chunks delete` binds each store by its recorded label. A probe showed that a label different from the directory name deleted the object of a sibling store. The maintainer widened n7 to `deletion.py` on 2026-11-07.
+- Flags (n6 to n12, 2026-11-07). `-t/--target` replaces `-s` and `--source` on `archive create`, `-p` and `--product` on `advise`, `catalog intake`, `parquet` and `zarr validate`, and `-n` and `--product-name` on `chunks`. The rework drops `--output-format`, `--option dry_run` and `chunks --quiet`. A rename hint names the new spelling. `plans/STYLE.md` records that 1.0 drops the hints.
+- Exit codes (n4, n5, 2026-11-07). One table behind a root error boundary, with the root option `--debug`. Library `ValueError` refusals exit 70 until the sites raise `ConfigurationError` (`plans/TODO.md`).
+- Formats and dry runs (n19, n20, 2026-11-07). `-f/--format` takes `table`, `json` or `csv` on every command that has it. `--dry-run` exists on `ingest`, `snapshot take`, `migrate run`, `migrate adopt`, `release create`, `zarr multires`, `zarr index rebuild` and `zarr preallocate`. `migrate run`, `migrate adopt` and `release create` ask for confirmation on a terminal and need `--yes-i-really-mean-it` off a terminal.
+- Execution parameters (n14, 2026-11-07). `ExecutionParams` is public in `firecube.ingestor.api` and holds the write mode, the slot window and the dry run. The plugin class owns the output format. An SDK run without a write mode uses staged (superseded 2026-11-08: the default is `direct`). The maintainer widened the scope to `src/firecube/cli/zarr/_common.py` on 2026-11-07.
+- `default_product_name` (n12, 2026-11-07). The engine consumes the key before plugin option validation (commit f9d0d4e). The ledger kept this change beyond the node because the precedence statement is untestable without it. Reverse with `git revert f9d0d4e`.
+- Fixed with the rework. The label-split bypass of exclusive maintenance, the exit codes of `parquet validate` and `zarr consolidate-time-coord`, and the refusal text for a half credential. `zarr compare` reports `attrs[<key>] <left> != <right>` and treats equal NaN attrs as equal.
+- Test budget (2026-11-07). The maintainer raised the test budget from 900 to 1700 added lines for this run. The count passed 1700 before the last tester nodes ended.
+- What stays open. The items under "Open after the CLI surface rework (2026-11-07)" in `plans/TODO.md`.
+
+---
+
 ## 2026-11-06 — Conditional claim transitions and the lost-claim stop
 
 **Decision.** Every transition of `FilesystemClaimService` is a compare-and-swap against the revision it last read, through the new `ConditionalWrite` capability of both storage drivers. A claim record has `state` (`held` or `released`), `incarnation` and `revision`. A run that loses a claim records the loss in a run-level latch, admits no further batch and records `failed` with `ClaimLostError`. The decisions of 2026-11-05 and the later decisions of the maintainer on 2026-11-06 govern it.

@@ -16,8 +16,8 @@
 
 When config or env points at a backend that does NOT hold the targeted run,
 ``--target`` overrides resolution and routes the command at the URI the
-operator named. Without ``--target`` the commands keep their original
-``resolve_cli_product`` fall-through.
+operator named. Every chunks leaf takes ``--target``; the label comes from the store, not
+the URI basename.
 """
 
 from __future__ import annotations
@@ -113,8 +113,6 @@ def test_abandon_with_target_routes_to_explicit_backend(tmp_path: Path) -> None:
             str(workspace),
             "runs",
             "abandon",
-            "--product-name",
-            product,
             "--target",
             target_uri,
             "--run-id",
@@ -138,9 +136,9 @@ def test_abandon_with_target_routes_to_explicit_backend(tmp_path: Path) -> None:
 def test_list_with_target_filters_to_target_backend(tmp_path: Path) -> None:
     """``--target`` on ``list`` restricts inspection to the targeted backend.
 
-    A holds a started run; B holds none. ``list --target file://<A>/prod1.zarr``
-    must surface A's run; ``list --target file://<B>/prod1.zarr`` must return
-    an empty list.
+    A holds a started run; B holds no store. ``list --target file://<A>/prod1.zarr``
+    must surface A's run; ``list --target file://<B>/prod1.zarr`` is refused
+    because that store records no label.
     """
     product = "prod1.zarr"
     root_a = tmp_path / "A"
@@ -161,8 +159,6 @@ def test_list_with_target_filters_to_target_backend(tmp_path: Path) -> None:
             str(workspace),
             "runs",
             "list",
-            "--product-name",
-            product,
             "--target",
             target_a_uri,
             "--format",
@@ -182,8 +178,6 @@ def test_list_with_target_filters_to_target_backend(tmp_path: Path) -> None:
             str(workspace),
             "runs",
             "list",
-            "--product-name",
-            product,
             "--target",
             target_b_uri,
             "--format",
@@ -191,43 +185,9 @@ def test_list_with_target_filters_to_target_backend(tmp_path: Path) -> None:
         ],
     )
 
-    assert result_b.exit_code == 0, result_b.output
+    assert result_b.exit_code == 2, result_b.output
+    assert "records no product label" in result_b.output, result_b.output
     assert "run-a-001" not in result_b.output, result_b.output
-
-
-def test_abandon_without_target_accepts_product_uri(tmp_path: Path) -> None:
-    """Without ``--target``, a product URI in ``--product-name`` still routes."""
-    workspace = tmp_path / "ws"
-    workspace.mkdir()
-    root = tmp_path / "store"
-    root.mkdir()
-    product = "prod1.zarr"
-    _populate_started_run(root, product=product, run_id="run-x", workspace=workspace)
-
-    product_uri = (root / product).as_uri()
-    result = CliRunner().invoke(
-        cli,
-        [
-            "chunks",
-            "--workspace",
-            str(workspace),
-            "runs",
-            "abandon",
-            "--product-name",
-            product_uri,
-            "--run-id",
-            "run-x",
-            "--reason",
-            "test",
-            "--yes-i-really-mean-it",
-        ],
-    )
-
-    assert result.exit_code == 0, result.output
-    statuses = {
-        run.run_id: run.status for run in _list_runs(root, product=product, workspace=workspace)
-    }
-    assert statuses == {"run-x": "abandoned"}
 
 
 def test_abandon_target_rejects_bare_path(tmp_path: Path) -> None:
@@ -243,8 +203,6 @@ def test_abandon_target_rejects_bare_path(tmp_path: Path) -> None:
             str(workspace),
             "runs",
             "abandon",
-            "--product-name",
-            "prod1",
             "--target",
             "/tmp/not-a-uri",
             "--run-id",
@@ -264,16 +222,16 @@ def test_abandon_target_rejects_bare_path(tmp_path: Path) -> None:
     ("opts", "text"),
     [
         (
-            ["--product-name", "p", "--target", "{p}"],
+            ["--target", "{p}"],
             "'--target': URI scheme required (file:// or s3://)",
         ),
         (
-            ["--product-name", "p", "--target", "FILE://{p}"],
+            ["--target", "FILE://{p}"],
             "'--target': URI scheme must be lowercase",
         ),
         (
-            ["--product-name", "gs://bucket/p.zarr"],
-            "'--product-name': URI scheme 'gs' not supported.",
+            ["--target", "gs://bucket/p.zarr"],
+            "'--target': URI scheme 'gs' not supported.",
         ),
     ],
 )
@@ -295,8 +253,6 @@ def test_runs_list_basename_mismatch(tmp_path: Path) -> None:
             "chunks",
             "runs",
             "list",
-            "--product-name",
-            product_name,
             "--target",
             target_root.as_uri(),
             "--format",
@@ -328,8 +284,6 @@ def test_runs_abandon_basename_mismatch_writes_to_target(tmp_path: Path) -> None
             "chunks",
             "runs",
             "abandon",
-            "--product-name",
-            product_name,
             "--target",
             target_root.as_uri(),
             "--run-id",
@@ -360,8 +314,6 @@ def test_runs_abandon_basename_mismatch_does_not_mutate_existing_sibling(tmp_pat
             "chunks",
             "runs",
             "abandon",
-            "--product-name",
-            product_name,
             "--target",
             target_root.as_uri(),
             "--run-id",

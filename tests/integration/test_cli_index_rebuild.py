@@ -39,6 +39,7 @@ from firecube.core.controlplane.types import (
 from firecube.core.errors import ManifestError, ResolvedIndexAttrsConflictError
 from firecube.core.index_resolve import resolve_index_spec
 from firecube.core.index_spec import IndexSpec, IntegerAxis, RegularTimeAxis
+from firecube.core.product.open import open_product
 from firecube.core.slot_index import SLOT_INDEX_MODEL_IDENTITY_HASH_ATTR
 from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.runtime.index_record import IndexRecordError, rebuild_index_record
@@ -168,6 +169,23 @@ def test_rebuild_help_lists_required_flags() -> None:
     assert "--target" in result.output
     assert "--plugin" in result.output
     assert "--product-name" in result.output
+
+
+@pytest.mark.contract
+def test_rebuild_dry_run_writes_no_record_run_or_claim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _register_plugins(monkeypatch)
+    cube = tmp_path / "dry_cube"
+    zarr.open_group(str(cube), mode="w", zarr_format=3).create_array("a", shape=(3,), dtype="f8")
+    before = {p: p.read_bytes() for p in cube.rglob("*") if p.is_file()}
+
+    result = CliRunner().invoke(cli, [*_args(cube), "--dry-run"])
+
+    assert result.exit_code == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert not (cube / ".firecube").exists()
+    assert {p: p.read_bytes() for p in cube.rglob("*") if p.is_file()} == before
+    assert _non_terminal_runs(cube) == []
 
 
 def test_rebuild_fresh_cube_lifecycle(
@@ -329,7 +347,7 @@ def test_rebuild_refuses_on_drifted_legacy_attr(
 
     result = CliRunner().invoke(cli, _args(cube, plugin="index-rebuild-regular"))
 
-    assert result.exit_code == 1, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert result.exit_code == 2, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     assert drifted_hash[:16] in result.output
     assert declared_hash[:16] in result.output
     assert "Refusing to rebuild" in result.output
@@ -477,7 +495,7 @@ def test_rebuild_none_spec_clear_error(tmp_path: Path, monkeypatch: pytest.Monke
 
     result = CliRunner().invoke(cli, _args(cube, plugin="index-rebuild-none"))
 
-    assert result.exit_code == 1, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert result.exit_code == 2, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     assert "does not opt into parallel ingestion" in result.output
     assert "index_spec() returned None" in result.output
     current_json = cube / ".firecube" / INDEX_DIRNAME / INDEX_CURRENT_FILENAME
@@ -509,23 +527,19 @@ def test_load_plugin_real_typeerror_propagates(
 
     result = CliRunner().invoke(cli, _args(cube, plugin="index-rebuild-broken"))
 
-    assert result.exit_code != 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
-    assert isinstance(result.exception, TypeError), (
-        f"Real plugin-side TypeError must not be masked; got: {result.exception!r}"
+    assert result.exit_code == 70, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert "TypeError" in result.stderr, (
+        f"Real plugin-side TypeError must not be masked; got: {result.stderr!r}"
     )
-    assert "my_custom_message" in str(result.exception), (
-        f"TypeError message must survive; got: {result.exception!r}"
+    assert "my_custom_message" in result.stderr, (
+        f"TypeError message must survive; got: {result.stderr!r}"
     )
 
 
-def _library_kwargs(cube: Path, manager: Any, plugin: _RebuildPlugin) -> dict[str, Any]:
-    return {
-        "ingestor": plugin,
-        "plugin_name": "index-rebuild",
-        "chunk_manager": manager,
-        "target": f"file://{cube}",
-        "product_name": "index_rebuild_product",
-    }
+def _open_cube(cube: Path) -> Any:
+    return open_product(
+        f"file://{cube}", format="zarr", product_name="index_rebuild_product", require_label=False
+    )
 
 
 def test_rebuild_library_fresh_cube_records_complete_run_and_prints_nothing(
@@ -533,12 +547,9 @@ def test_rebuild_library_fresh_cube_records_complete_run_and_prints_nothing(
 ) -> None:
     cube = tmp_path / "library_cube"
     cube.mkdir()
-    manager = _manager(f"file://{cube}", "index_rebuild_product")
-    try:
-        result = rebuild_index_record(**_library_kwargs(cube, manager, _RebuildPlugin()))
-        runs = manager.list_runs(product="index_rebuild_product", status="complete")
-    finally:
-        manager.close()
+    with _open_cube(cube) as product:
+        result = rebuild_index_record(product, _RebuildPlugin(), plugin_name="index-rebuild")
+        runs = product.manager.list_runs(product="index_rebuild_product", status="complete")
 
     captured = capsys.readouterr()
     assert (captured.out, captured.err) == ("", "")
@@ -552,7 +563,6 @@ def test_rebuild_library_reports_outcome_before_run_is_recorded_terminal(
 ) -> None:
     cube = tmp_path / "order_cube"
     cube.mkdir()
-    manager = _manager(f"file://{cube}", "index_rebuild_product")
     events: list[str] = []
     record_terminal = ChunkManager.record_run_terminal
 
@@ -561,13 +571,13 @@ def test_rebuild_library_reports_outcome_before_run_is_recorded_terminal(
         record_terminal(self, **kwargs)
 
     monkeypatch.setattr(ChunkManager, "record_run_terminal", spy)
-    try:
+    with _open_cube(cube) as product:
         rebuild_index_record(
-            **_library_kwargs(cube, manager, _RebuildPlugin()),
+            product,
+            _RebuildPlugin(),
+            plugin_name="index-rebuild",
             report=lambda message: events.append(f"report:{message}"),
         )
-    finally:
-        manager.close()
 
     assert len(events) == 2 and events[0].startswith("report:Rebuilt index record"), events
     assert events[1] == "terminal"
@@ -580,27 +590,21 @@ def test_rebuild_library_none_spec_raises_and_leaves_no_run_record(tmp_path: Pat
 
     cube = tmp_path / "library_none_spec_cube"
     cube.mkdir()
-    manager = _manager(f"file://{cube}", "index_rebuild_product")
-    try:
+    with _open_cube(cube) as product:
         with pytest.raises(IndexRecordError, match="index_spec\\(\\) returned None"):
-            rebuild_index_record(**_library_kwargs(cube, manager, _NoneSpecPlugin()))
-        assert manager.list_runs(product="index_rebuild_product") == []
-    finally:
-        manager.close()
+            rebuild_index_record(product, _NoneSpecPlugin(), plugin_name="index-rebuild")
+        assert product.manager.list_runs(product="index_rebuild_product") == []
 
 
 @pytest.mark.contract
 def test_rebuild_library_attrs_drift_raises_the_manifest_error_unchanged(tmp_path: Path) -> None:
     cube = tmp_path / "library_drift_cube"
     cube.mkdir()
-    manager = _manager(f"file://{cube}", "index_rebuild_product")
-    try:
-        rebuild_index_record(**_library_kwargs(cube, manager, _RebuildPlugin()))
+    with _open_cube(cube) as product:
+        rebuild_index_record(product, _RebuildPlugin(), plugin_name="index-rebuild")
         zarr.open(str(cube), mode="a").attrs[RESOLVED_INDEX_IDENTITY_HASH_ATTR] = "f" * 64
         with pytest.raises(ManifestError) as refused:
-            rebuild_index_record(**_library_kwargs(cube, manager, _RebuildPlugin()))
-    finally:
-        manager.close()
+            rebuild_index_record(product, _RebuildPlugin(), plugin_name="index-rebuild")
 
     assert type(refused.value) is ResolvedIndexAttrsConflictError
     assert not isinstance(refused.value, IndexRecordError)

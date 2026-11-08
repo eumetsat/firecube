@@ -14,13 +14,7 @@
 
 from dataclasses import dataclass
 
-from firecube.ingestor.api import (
-    BaseIngestor,
-    IngestContext,
-    IngestResult,
-    PluginConfig,
-    register_ingestor,
-)
+from firecube.sdk import BaseIngestor, IngestContext, IngestResult, PluginConfig, register_ingestor
 
 
 @dataclass

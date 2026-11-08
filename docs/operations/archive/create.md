@@ -11,7 +11,7 @@ ARCHIVE_URI="file:///data/archives/MY_PRODUCT.tgm"
 
 ```bash
 firecube archive create \
-  --source "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --archive-format tensogram \
   --compression zstd
@@ -32,7 +32,7 @@ Use `--archive-format zip` to pack the Zarr product into a single `.zip` file:
 
 ```bash
 firecube archive create \
-  --source "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --archive "file:///data/archives/MY_PRODUCT.zarr.zip" \
   --archive-format zip
 ```
@@ -54,7 +54,7 @@ them:
 
 ```bash
 firecube archive create \
-  --source "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --group data \
   --compression zstd
@@ -64,7 +64,7 @@ firecube archive create \
 
 ```bash
 firecube archive create \
-  --source "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --group F024 \
   --start-date 2024-01-01 \
@@ -78,17 +78,29 @@ Preview the command when replacing an existing file:
 
 ```bash
 firecube archive create \
-  --source "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --overwrite \
-  --dry-run
+  --dry-run \
+  --yes-i-really-mean-it
 ```
+
+In a non-interactive shell, the preview needs `--yes-i-really-mean-it` too. The
+preview writes nothing. Expected output resembles:
+
+```text
+[dry-run] Would archive: file:///data/products/MY_PRODUCT.zarr -> /data/archives/MY_PRODUCT.tgm
+  Compression: zstd
+```
+
+If the file exists and you omit `--overwrite`, the command exits 1 with the
+message `Target file already exists`.
 
 Overwrite in a non-interactive shell:
 
 ```bash
 firecube archive create \
-  --source "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --archive "$ARCHIVE_URI" \
   --overwrite \
   --yes-i-really-mean-it
@@ -110,7 +122,7 @@ Each create is recorded as an `archive-create-…` run in the source product,
 with status `complete` or `failed`:
 
 ```bash
-firecube chunks runs list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks runs list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 If Firecube cannot write the record, the run can stay `started`. See
@@ -139,14 +151,14 @@ source.
   2. List the runs that have the status `started`:
 
      ```bash
-     firecube chunks runs list --product-name "file:///data/products/MY_PRODUCT.zarr" --status started
+     firecube chunks runs list --target "file:///data/products/MY_PRODUCT.zarr" --status started
      ```
 
   3. Abandon the earlier `archive-create-…` run:
 
      ```bash
      firecube chunks runs abandon \
-       --product-name "file:///data/products/MY_PRODUCT.zarr" \
+       --target "file:///data/products/MY_PRODUCT.zarr" \
        --run-id <run-id> \
        --reason "archive create record failed" \
        --yes-i-really-mean-it

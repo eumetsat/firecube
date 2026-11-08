@@ -92,8 +92,6 @@ def _ingest(source: Path, target: Path, *, batch_size: int) -> subprocess.Comple
         "local",
         "--storage-driver",
         "fsspec",
-        "--output-format",
-        "zarr",
         "--write-mode",
         "direct",
         "--option",

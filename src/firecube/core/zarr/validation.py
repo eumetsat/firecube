@@ -329,7 +329,7 @@ def _discover_arrays_with_fs(fs: StorageFilesystem, store_uri: StorageUri) -> li
 
 
 def _public_attrs(attrs: Any) -> dict[str, Any]:
-    from firecube.core.api import RESERVED_ARRAY_ATTRS, assert_attrs_safe
+    from firecube.core.zarr._reserved_attrs import RESERVED_ARRAY_ATTRS, assert_attrs_safe
 
     filtered = {
         str(key): value
@@ -349,7 +349,7 @@ def _dimension_names(array: Any) -> tuple[str, ...] | None:
 
 
 def _static_marker(array: Any) -> Any:
-    from firecube.core.api import FIRECUBE_STATIC_WRITTEN_ATTR
+    from firecube.core.zarr._reserved_attrs import FIRECUBE_STATIC_WRITTEN_ATTR
 
     return dict(getattr(array, "attrs", {}) or {}).get(FIRECUBE_STATIC_WRITTEN_ATTR)
 
@@ -507,8 +507,17 @@ def compare_zarr_stores(
 
         left_attrs = _public_attrs(getattr(left, "attrs", {}))
         right_attrs = _public_attrs(getattr(right, "attrs", {}))
-        if left_attrs != right_attrs:
-            content_mismatches.append(f"{path_prefix}: attrs differ")
+        for key in sorted(left_attrs.keys() | right_attrs.keys()):
+            left_text = repr(left_attrs[key]) if key in left_attrs else "<missing>"
+            right_text = repr(right_attrs[key]) if key in right_attrs else "<missing>"
+            if (
+                key not in left_attrs
+                or key not in right_attrs
+                or {key: left_attrs[key]} != {key: right_attrs[key]}
+            ):
+                content_mismatches.append(
+                    f"{path_prefix}: attrs[{key}] {left_text} != {right_text}"
+                )
 
         left_marker = _static_marker(left)
         right_marker = _static_marker(right)

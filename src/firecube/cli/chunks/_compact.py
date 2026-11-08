@@ -19,11 +19,9 @@ from pathlib import Path
 
 import click
 
-from firecube.cli._errors import render
-from firecube.cli._shared_options import dry_run_flag
-from firecube.core.errors import ManifestError
+from firecube.cli._shared_options import dry_run_flag, format_option, target_uri_option
 
-from ._manager import resolve_cli_product, resolve_manager
+from ._manager import target_product
 
 
 @click.group("compact")
@@ -43,40 +41,27 @@ def snapshots_alias_group() -> None:
     epilog="""\b
 Examples:
   # preview a compact cache rebuild
-  firecube chunks compact rebuild --product-name file:///data/products/MY_PRODUCT.zarr --dry-run
+  firecube chunks compact rebuild --target file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # rebuild the compact cache for a product
-  firecube chunks compact rebuild --product-name file:///data/products/MY_PRODUCT.zarr
+  firecube chunks compact rebuild --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # rebuild and output result as JSON
-  firecube chunks compact rebuild --product-name file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks compact rebuild --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks compact status, firecube chunks list
 """,
 )
-@click.option(
-    "-n",
-    "--product-name",
-    "product_name",
-    required=True,
-    help="full product URI to rebuild into a fresh compact cache",
-)
+@target_uri_option("inspect")
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json"]),
-    default="table",
-    help="output format",
-)
+@format_option(("table", "json"))
 @dry_run_flag
 @click.pass_context
 def rebuild_cmd(
     ctx: click.Context,
-    product_name: str,
+    target: str,
     workspace: Path | None,
     output_format: str,
     dry_run: bool,
@@ -86,14 +71,14 @@ def rebuild_cmd(
     rebuild the derived compact cache for a product from the chunk event log.
     the compact cache is a cached read model; use after it is missing,
     corrupt, or very stale to restore fast query performance for chunks list"""
-    product_name, product_uri = resolve_cli_product(product_name)
+    product = target_product(ctx, workspace, target)
+    product_name = product.label
 
     if dry_run:
         click.echo(f"[dry-run] Would rebuild compact cache for product '{product_name}'")
         return
 
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    result = manager.rebuild_compact(product_name)
+    result = product.manager.rebuild_compact(product_name)
 
     if output_format == "json":
         click.echo(json.dumps(result, indent=2))
@@ -117,35 +102,22 @@ def rebuild_cmd(
     epilog="""\b
 Examples:
   # check compact cache status for a product
-  firecube chunks compact status --product-name file:///data/products/MY_PRODUCT.zarr
+  firecube chunks compact status --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # output as JSON
-  firecube chunks compact status --product-name file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks compact status --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks compact rebuild, firecube chunks list
 """,
 )
-@click.option(
-    "-n",
-    "--product-name",
-    "product_name",
-    required=True,
-    help="full product URI to check compact cache status for",
-)
+@target_uri_option("inspect")
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json"]),
-    default="table",
-    help="output format",
-)
+@format_option(("table", "json"))
 @click.pass_context
 def status_cmd(
     ctx: click.Context,
-    product_name: str,
+    target: str,
     workspace: Path | None,
     output_format: str,
 ) -> None:
@@ -154,12 +126,9 @@ def status_cmd(
     show compact cache age and status for a product's .firecube/ control plane.
     reports whether the compact cache exists, how many records it holds, and
     when it was last rebuilt. use to decide whether a rebuild is needed"""
-    product_name, product_uri = resolve_cli_product(product_name)
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    try:
-        result = manager.compact_status(product_name)
-    except ManifestError as exc:
-        raise click.ClickException(render(exc)) from exc
+    product = target_product(ctx, workspace, target)
+    product_name = product.label
+    result = product.manager.compact_status(product_name)
 
     if output_format == "json":
         click.echo(json.dumps(result, indent=2))

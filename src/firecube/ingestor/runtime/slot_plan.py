@@ -48,6 +48,7 @@ from firecube.ingestor.errors import ConfigurationError
 if TYPE_CHECKING:
     from firecube.core.config import StorageConfig
     from firecube.core.product.identity import ProductIdentity
+    from firecube.core.product.open import Product
     from firecube.ingestor.contracts.interfaces import PreallocateHost
     from firecube.ingestor.templates.direct_zarr import ZarrGroupSpec
     from firecube.ingestor.types.context import PluginContext
@@ -162,13 +163,11 @@ def _ignore_line(line: str) -> None:
 
 
 def plan_slots(
-    *,
+    product: Product,
     ingestor: PreallocateHost,
+    *,
     plugin_ctx: PluginContext,
     plugin_name: str,
-    chunk_manager: ChunkManager,
-    identity: ProductIdentity,
-    target: str,
     storage_config: StorageConfig,
     coverage_storage_config: Callable[[], StorageConfig],
     input_data: str | tuple[str, ...] | None = None,
@@ -185,12 +184,10 @@ def plan_slots(
     It writes nothing. Ranges are generated on demand, never stored.
 
     Args:
+        product: The open product, from `open_product`. Its manager is read for the index records.
         ingestor: The plugin, a `PreallocateHost` configured by `configure_ingestor`.
         plugin_ctx: The context `configure_ingestor` returned for `ingestor`.
         plugin_name: The plugin's registered name, used in messages.
-        chunk_manager: The control plane of the target product, read for its index records.
-        identity: The identity of the target product.
-        target: The target product URI.
         storage_config: Storage settings the stored array layout is read with.
         coverage_storage_config: Builds the storage settings the coverage lookup reads
             with; called only when resuming.
@@ -229,6 +226,8 @@ def plan_slots(
         warn_on_chunk_alignment,
     )
 
+    chunk_manager, identity = product.manager, product.identity
+    target = identity.product_uri.to_str()
     try:
         index_spec = ingestor.index_spec(plugin_ctx)
         if (

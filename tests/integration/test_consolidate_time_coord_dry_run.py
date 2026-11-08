@@ -41,6 +41,7 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from tests.integration.test_cli_index_show import stamp_label
 
 pytestmark = pytest.mark.integration
 
@@ -61,6 +62,7 @@ def _create_legacy_cube(cube: Path, total: int) -> None:
         [sys.executable, str(script), str(cube), str(total)],
         check=True,
     )
+    stamp_label(cube, cube.name)
 
 
 def _write_drifted_reference(cube: Path, *, size: int) -> None:
@@ -108,8 +110,6 @@ def _consolidate_args(cube: Path, *, dry_run: bool = True) -> list[str]:
         "consolidate-time-coord",
         "--target",
         f"file://{cube}",
-        "--product-name",
-        cube.name,
         "--storage-type",
         "local",
         "--storage-driver",

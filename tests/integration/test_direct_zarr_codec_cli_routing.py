@@ -62,8 +62,6 @@ def _ingest_args(tmp_path: Path, extra: list[str] | None = None) -> list[str]:
         "fsspec",
         "--write-mode",
         "direct",
-        "--output-format",
-        "zarr",
     ]
     if extra:
         args.extend(extra)

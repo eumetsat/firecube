@@ -24,7 +24,7 @@ import click
 from click.testing import CliRunner
 
 from firecube.cli.main import cli, ingest
-from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
+from firecube.sdk import IngestContext, IngestResult, OutputPaths
 from tests.helpers.rows import table_row
 
 
@@ -110,7 +110,7 @@ def test_ingest_accepts_uppercase_storage_flags(tmp_path: Path) -> None:
     assert "Invalid value" not in result.output, result.output
     assert "is not one of" not in result.output, result.output
     assert result.exit_code == 0, result.output
-    assert captured["ctx"].options["write_mode"] == "staged", (
+    assert captured["ctx"].execution.write_mode == "staged", (
         "Click normalises Choice values to canonical (lowercase) form when "
         "case_sensitive=False, so downstream code must keep seeing 'staged'"
     )

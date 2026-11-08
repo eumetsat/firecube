@@ -46,10 +46,10 @@ from multi_group_capable_test_plugin import (  # type: ignore[reportMissingImpor
 
 from firecube.core.index_spec import RegularTimeAxis
 from firecube.core.zarr.region_writer import RegionZarrWriter
-from firecube.ingestor.api import PluginContext
 from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 from firecube.ingestor.templates.direct_zarr import WriteIntent, ZarrGroupSpec
 from firecube.ingestor.types.context import PipelineBatch
+from firecube.sdk import PluginContext
 
 pytestmark = pytest.mark.integration
 

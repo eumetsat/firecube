@@ -201,17 +201,27 @@ def _version_inventory(session: StorageSession, *, version: str) -> Inventory:
     )
 
 
-def preflight_version_retention(session: StorageSession, *, version: str) -> None:
+def preflight_version_retention(session: StorageSession, *, version: str) -> dict[str, Any]:
     """Refuse a release whose product cannot retain object versions; write nothing.
 
     The release run takes its cut again under the claim, so this only moves the
     refusals ahead of the stamp and the snapshot.
 
+    Returns:
+        The retention the cut taken now would record, without an inventory id or run.
+
     Raises:
         ReleaseRefusedError: See `_version_inventory`.
         ManifestError: A key cannot be recorded literally.
     """
-    _version_inventory(session, version=version)
+    inventory = _version_inventory(session, version=version)
+    count = sum(1 for item in inventory.objects if not item.delete_marker)
+    return {
+        "kind": RETENTION_KIND_VERSIONS,
+        "bucket_versioning": inventory.bucket_versioning,
+        "object_count": count,
+        "delete_marker_count": len(inventory.objects) - count,
+    }
 
 
 def versions_retention(

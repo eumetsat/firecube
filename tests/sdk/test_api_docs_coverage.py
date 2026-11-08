@@ -15,7 +15,7 @@
 """Docs-coverage contract for the public SDK facades.
 
 Invariant: every name exported from a public facade (``firecube.ingestor.api``,
-``firecube.core.api``, ``firecube.ingestor.extensions``) is either rendered in
+``firecube.core.api``, ``firecube.ingestor.extensions``, ``firecube.operations``) is either rendered in
 the API reference through a mkdocstrings ``:::`` directive or listed in
 ``INTENTIONALLY_UNDOCUMENTED`` with a reason. A new export fails this test
 until it is documented or consciously excluded, and a documented name may not
@@ -30,6 +30,8 @@ required.
 from __future__ import annotations
 
 import re
+import warnings
+from collections.abc import Iterator
 from importlib import import_module
 from pathlib import Path
 
@@ -48,6 +50,8 @@ PUBLIC_MODULES = (
     "firecube.ingestor.api",
     "firecube.core.api",
     "firecube.ingestor.extensions",
+    "firecube.operations",
+    "firecube.sdk",
 )
 
 # Exports deliberately kept out of the public API reference. Each entry needs
@@ -119,7 +123,41 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "resolve_dataset_target": "engine target resolution helper",
     },
     "firecube.ingestor.extensions": {},
+    "firecube.operations": {},
+    # No sdk reference directive is planned for these names, so no reference page
+    # documents them yet. Remove an entry when a directive lands (the check fails
+    # on a documented, allowlisted name).
+    "firecube.sdk": {
+        "CatalogGroupInfo": "no reference directive documents this name yet",
+        "IngestContext": "no reference directive documents this name yet",
+        "Ingestor": "no reference directive documents this name yet",
+        "ItemManifestEntry": "no reference directive documents this name yet",
+        "SourceFile": "no reference directive documents this name yet",
+        "decode_time_array": "no reference directive documents this name yet",
+        "discover_ingestors": "no reference directive documents this name yet",
+        "read_chunk_grid_with_shards": "no reference directive documents this name yet",
+    },
 }
+
+
+@pytest.fixture(autouse=True)
+def _ignore_old_door_deprecation_message() -> Iterator[None]:
+    """Ignore only the old-door deprecation message while a test reads the old modules.
+
+    Every ``import_module`` and ``getattr`` on ``firecube.ingestor.api`` or
+    ``firecube.core.api`` below runs inside this context. Any other warning still surfaces.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=(
+                r"firecube\.(?:core|ingestor)\.api is deprecated and will be removed in v0\.2\.0\. "
+                r"Import from firecube\.sdk instead\."
+                r"(?: firecube\.sdk does not carry \S+; open an issue if your plugin needs it\.)?$"
+            ),
+            category=DeprecationWarning,
+        )
+        yield
 
 
 def _documented_targets() -> set[str]:

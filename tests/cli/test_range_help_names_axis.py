@@ -100,7 +100,7 @@ def _invoke_no_match_delete(tmp_path: Path, product_uri: str, *time_filter: str)
         [
             "chunks",
             "delete",
-            "--product-name",
+            "--target",
             product_uri,
             "--workspace",
             str(tmp_path),

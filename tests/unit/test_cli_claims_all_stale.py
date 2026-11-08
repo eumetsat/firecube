@@ -18,6 +18,7 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.controlplane.types import ClearSweepResult
+from tests.helpers.chunks import bound
 
 
 class _FakeClaimsManager:
@@ -49,7 +50,7 @@ def test_clear_domain_and_all_stale_are_mutually_exclusive(monkeypatch):
     runner = CliRunner()
     manager = _FakeClaimsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager", lambda *args, **kwargs: manager
+        "firecube.cli.chunks._claims.target_product", lambda *args, **kwargs: bound(manager)
     )
 
     result = runner.invoke(
@@ -58,7 +59,7 @@ def test_clear_domain_and_all_stale_are_mutually_exclusive(monkeypatch):
             "chunks",
             "claims",
             "clear",
-            "-n",
+            "-t",
             "file:///tmp/TEST_PRODUCT.zarr",
             "--domain",
             "TEST_PRODUCT.zarr:zarr_group:F024",
@@ -80,12 +81,12 @@ def test_clear_all_stale_defaults_to_dry_run(monkeypatch):
         )
     )
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager", lambda *args, **kwargs: manager
+        "firecube.cli.chunks._claims.target_product", lambda *args, **kwargs: bound(manager)
     )
 
     result = runner.invoke(
         cli,
-        ["chunks", "claims", "clear", "-n", "file:///tmp/TEST_PRODUCT.zarr", "--all-stale"],
+        ["chunks", "claims", "clear", "-t", "file:///tmp/TEST_PRODUCT.zarr", "--all-stale"],
     )
 
     assert result.exit_code == 0, result.output
@@ -105,7 +106,7 @@ def test_clear_all_stale_commits_with_yes(monkeypatch):
         )
     )
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager", lambda *args, **kwargs: manager
+        "firecube.cli.chunks._claims.target_product", lambda *args, **kwargs: bound(manager)
     )
 
     result = runner.invoke(
@@ -114,7 +115,7 @@ def test_clear_all_stale_commits_with_yes(monkeypatch):
             "chunks",
             "claims",
             "clear",
-            "-n",
+            "-t",
             "file:///tmp/TEST_PRODUCT.zarr",
             "--all-stale",
             "--yes-i-really-mean-it",
@@ -133,12 +134,12 @@ def test_clear_all_stale_empty_product_prints_no_stale_message(monkeypatch):
     runner = CliRunner()
     manager = _FakeClaimsManager(ClearSweepResult())
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager", lambda *args, **kwargs: manager
+        "firecube.cli.chunks._claims.target_product", lambda *args, **kwargs: bound(manager)
     )
 
     result = runner.invoke(
         cli,
-        ["chunks", "claims", "clear", "-n", "file:///tmp/TEST_PRODUCT.zarr", "--all-stale"],
+        ["chunks", "claims", "clear", "-t", "file:///tmp/TEST_PRODUCT.zarr", "--all-stale"],
     )
 
     assert result.exit_code == 0
@@ -150,7 +151,7 @@ def test_clear_domain_single_item_path_still_works(monkeypatch):
     runner = CliRunner()
     manager = _FakeClaimsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._claims.resolve_manager", lambda *args, **kwargs: manager
+        "firecube.cli.chunks._claims.target_product", lambda *args, **kwargs: bound(manager)
     )
 
     result = runner.invoke(
@@ -159,7 +160,7 @@ def test_clear_domain_single_item_path_still_works(monkeypatch):
             "chunks",
             "claims",
             "clear",
-            "-n",
+            "-t",
             "file:///tmp/TEST_PRODUCT.zarr",
             "--domain",
             "TEST_PRODUCT.zarr:zarr_group:F024",

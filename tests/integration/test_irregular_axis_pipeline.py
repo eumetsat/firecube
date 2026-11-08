@@ -152,11 +152,9 @@ def _index_show_args(
         "show",
         "--target",
         f"file://{target_path}",
-        "--product-name",
-        product,
     ]
     if json_flag:
-        args.append("--json")
+        args += ["-f", "json"]
     if derived:
         args.append("--derived")
     return args

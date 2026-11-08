@@ -24,8 +24,8 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import GenericZarrIngestor
 from firecube.ingestor.registry import loader
+from firecube.sdk import GenericZarrIngestor
 from tests.integration.test_slots_auto_input_data import (
     PLUGIN_NAME as SLOT_PLUGIN,
 )
@@ -176,7 +176,7 @@ def test_configuration_precedence_reaches_discovery(tmp_path, monkeypatch, comma
         captured.append(list(ctx.option("input_filters")))
         seen.append(Path(item).name)
         # Unique timestamps if [] clears exclusions.
-        from firecube.core.api import ItemInfo
+        from firecube.sdk import ItemInfo
 
         return ItemInfo(
             coordinate=np.datetime64(

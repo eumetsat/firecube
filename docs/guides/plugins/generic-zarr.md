@@ -108,7 +108,7 @@ from typing import Any, ClassVar
 
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericZarrIngestor,
     PluginContext,
     register_ingestor,
@@ -175,7 +175,6 @@ firecube ingest my_plugin \
   --input-data "file://$PWD/path/to/input" \
   --target file:///tmp/my_plugin_out.zarr \
   --product-name my_plugin \
-  --output-format zarr \
   --write-mode direct
 ```
 
@@ -243,6 +242,6 @@ print(xr.open_zarr("/tmp/my_plugin_out.zarr", consolidated=False))
 - **[Route Writes To Multiple Groups](multi-group-writes.md)** — write more than the single default group
 - **[Configure Zarr Chunking](configure-zarr-chunking.md)** — set chunk shape, and from there compression and sharding, before the first real run
 - **[Add Plugin Configuration Options](add-config-options.md)** — declare typed options the plugin validates before ingestion
-- **[NetCDF Preparation](../../reference/core-utilities.md#firecube.core.api.prepare_netcdf_for_zarr)** and **[String Normalization](../../reference/core-utilities.md#firecube.core.api.normalize_string_vars)** — prepare arrays for writing
+- **[NetCDF Preparation](../../reference/core-utilities.md#firecube.sdk.prepare_netcdf_for_zarr)** and **[String Normalization](../../reference/core-utilities.md#firecube.sdk.normalize_string_vars)** — prepare arrays for writing
 - **[Add Plugin Telemetry](observability.md)** — emit metrics and use standard module logging
 - **[Plugin Templates](../../reference/templates.md)** — look up the public template types

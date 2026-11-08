@@ -25,6 +25,7 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from tests.integration.test_cli_index_show import stamp_label
 
 pytestmark = pytest.mark.integration
 
@@ -60,8 +61,6 @@ def test_consolidate_time_coord_refuses_remote_s3_before_store_open(
             "consolidate-time-coord",
             "--target",
             target,
-            "--product-name",
-            "cube.zarr",
             "--storage-type",
             "s3",
             "--storage-driver",
@@ -77,24 +76,13 @@ def test_consolidate_time_coord_refuses_remote_s3_before_store_open(
     assert not called, "remote store open must be refused before IO"
 
 
-def test_consolidate_time_coord_local_still_works(tmp_path: Path) -> None:
+def test_consolidate_time_coord_local_works_without_storage_flags(tmp_path: Path) -> None:
     cube = tmp_path / "cube.zarr"
     _make_legacy_cube(cube)
+    stamp_label(cube, "recorded_label")
 
     result = CliRunner().invoke(
-        cli,
-        [
-            "zarr",
-            "consolidate-time-coord",
-            "--target",
-            f"file://{cube}",
-            "--product-name",
-            cube.name,
-            "--storage-type",
-            "local",
-            "--storage-driver",
-            "fsspec",
-        ],
+        cli, ["zarr", "consolidate-time-coord", "--target", f"file://{cube}"]
     )
 
     assert result.exit_code == 0, result.output

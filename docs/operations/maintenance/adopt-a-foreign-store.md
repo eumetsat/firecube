@@ -4,13 +4,16 @@ Use `firecube migrate adopt` to give a Zarr store that Firecube did not write a
 control plane. A foreign store is, for example, a store that xarray wrote.
 
 Adoption records the store as an imported product with unverified chunks. It
-writes `.firecube/schema.json` and one `adopt` run. It writes no Zarr document
-and no chunk, and it invents no history of ingested spans.
+writes `.firecube/schema.json`, the product label in `.firecube/product.json`
+and one `adopt` run. It writes no Zarr document and no chunk, and it invents no
+history of ingested spans.
 
-Two commands need a control plane: a real `firecube migrate run` and
-`firecube release create`. Both refuse a store that has none and write nothing.
-`firecube migrate run --dry-run` still prints the plan. The `firecube snapshot`
-commands work on a store that has no control plane.
+A command that needs the recorded product label refuses a store that records
+none. The refusal exits 2 and names `firecube migrate adopt`. This holds for
+`snapshot`, `release`, `migrate run` and `chunks`. Pure-storage readers and first
+writes, such as `zarr validate` and `archive create`, do not need the label.
+A real `migrate run` and `release create` also need the control plane that
+adoption writes.
 
 ## Prerequisites
 
@@ -54,22 +57,30 @@ zarr format: 2
 
 ## Adopt The Store
 
-1. Take a snapshot of the metadata before the adoption:
-
-   ```bash
-   firecube snapshot take \
-     --target "file:///data/products/MY_PRODUCT.zarr" \
-     --product-name MY_PRODUCT
-   ```
-
-   Copy the identifier from the `Snapshot:` line.
-
-2. Adopt the store:
+1. Preview the adoption. A dry run writes nothing:
 
    ```bash
    firecube migrate adopt \
      --target "file:///data/products/MY_PRODUCT.zarr" \
-     --product-name MY_PRODUCT
+     --product-name MY_PRODUCT \
+     --dry-run
+   ```
+
+   Expected output resembles:
+
+   ```text
+   would adopt the store as product MY_PRODUCT in one adopt run (Zarr format 2); nothing is written
+   product label MY_PRODUCT would be recorded
+   ```
+
+2. Adopt the store. On a terminal, the command asks for confirmation. Off a
+   terminal, the command exits 2 until you add `--yes-i-really-mean-it`:
+
+   ```bash
+   firecube migrate adopt \
+     --target "file:///data/products/MY_PRODUCT.zarr" \
+     --product-name MY_PRODUCT \
+     --yes-i-really-mean-it
    ```
 
    Expected output for a Zarr format 2 store resembles:
@@ -96,34 +107,47 @@ warning and exits 0:
 product MY_PRODUCT already has a control plane; nothing to adopt
 ```
 
+If the store records another label, the command exits 2 and writes nothing:
+
+```text
+Error: Product label 'OTHER' is refused: the product at file:///data/products/MY_PRODUCT.zarr records the label 'MY_PRODUCT'.
+```
+
 ## Verify
 
-1. Take a second snapshot and compare the two:
+1. Take a snapshot. The snapshot lists the control-plane document and the Zarr
+   documents that the store held before the adoption:
 
    ```bash
    firecube snapshot take \
-     --target "file:///data/products/MY_PRODUCT.zarr" \
-     --product-name MY_PRODUCT
-   firecube snapshot diff <before-id> latest \
-     --target "file:///data/products/MY_PRODUCT.zarr" \
-     --product-name MY_PRODUCT
+     --target "file:///data/products/MY_PRODUCT.zarr"
+   firecube snapshot show latest \
+     --target "file:///data/products/MY_PRODUCT.zarr"
    ```
 
    Expected output resembles:
 
    ```text
-   Before:  c8aef7318ceb252a…
-   After:   6d2973fa3e0188da…
-   + .firecube/schema.json
+   Snapshot:     9116405736e4a6e5c75489614fea736b4877f9737c763377fa792fb7f26dc4a8
+   Parent:       -
+   Manifest:     b567ed8dc5c0789cbc2e363d139351da3b579b443f3c993418c1ead112187b59
+   Taken:        2026-11-07T12:08:54+00:00
+   Consistency:  observation
+   Trigger:      cli
+   Run:          -
+   Documents:    8
+     .firecube/schema.json  firecube_schema  87 B  sha256:58d5516a75dc
+     .zattrs  v2_attrs  2 B  sha256:44136fa355b3
+     ...
    ```
 
-   The only change is the new control-plane document. No Zarr document
-   changed.
+   The adoption changed no Zarr document. The page
+   [Snapshot Metadata](snapshot.md) describes the other snapshot commands.
 
 2. List the runs of the product:
 
    ```bash
-   firecube chunks runs list --product-name "file:///data/products/MY_PRODUCT.zarr"
+   firecube chunks runs list --target "file:///data/products/MY_PRODUCT.zarr"
    ```
 
    Expected output resembles:
@@ -131,7 +155,7 @@ product MY_PRODUCT already has a control plane; nothing to adopt
    ```text
    Run ID                               Status     State    Parts Events
    --------------------------------------------------------------------------------
-   adopt-63a5a61d-e80f-416a-9e10-d70b64229859 complete   active   2     2
+   adopt-4d47c395-186c-494b-9a7f-f443999d852a complete   active   2     2
    ```
 
 ## Failure Recovery
@@ -140,8 +164,7 @@ product MY_PRODUCT already has a control plane; nothing to adopt
 |---|---|---|
 | `the store has no root group document (zarr.json or .zgroup)` | The target is not a Zarr store, or the path is wrong. The command wrote nothing. | Correct the `--target` path. Create the root group, then adopt again. |
 | `Warning: the store of product … is Zarr format 2` | The store is Zarr format 2. Firecube cannot append to it. | Convert the store to Zarr format 3 outside Firecube before you ingest into it. Maintenance commands still work on the store. |
-| `the store of product … has no control plane; adopt it with firecube migrate adopt before running a migration` | `migrate run` found no control plane. It exits 1 and writes nothing. | Run `firecube migrate adopt`. Run the migration again. |
-| `the store of product … has no control plane; a real run needs firecube migrate adopt first` | `migrate run --dry-run` found no control plane. It prints the plan and writes nothing. | Run `firecube migrate adopt` before the real run. |
+| `records no product label. Record one with firecube migrate adopt` (exit 2) | `migrate run` or `migrate run --dry-run` found a store that records no label. It writes nothing. | Run `firecube migrate adopt`. Run the migration again. |
 
 ## Next Steps
 

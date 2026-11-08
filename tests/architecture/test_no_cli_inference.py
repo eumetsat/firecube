@@ -31,7 +31,7 @@ from firecube.cli._uri_policy import parse_and_validate_uri as parse
 from firecube.cli.main import cli
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
+from firecube.sdk import IngestContext, IngestResult, OutputPaths
 
 
 def test_product_name_is_explicit_not_uri_basename() -> None:
@@ -123,8 +123,6 @@ def test_omitted_input_data_does_not_become_literal_none(tmp_path: Path) -> None
                 "cli_test_plugin",
                 "--target",
                 target.as_uri(),
-                "--output-format",
-                "zarr",
                 "--storage-type",
                 "local",
                 "--storage-driver",

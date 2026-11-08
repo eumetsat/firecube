@@ -24,6 +24,7 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
+from tests.integration.test_cli_index_show import stamp_label
 
 
 def _invoke_multires(args: list[str]):
@@ -39,8 +40,6 @@ def test_coherence_mismatch_rejected() -> None:
         [
             "--target",
             "file:///tmp/x.zarr",
-            "--product-name",
-            "pn",
             "--storage-type",
             "s3",
             "--storage-driver",
@@ -65,9 +64,10 @@ def test_multires_snapshot_never_created_and_refreshed_when_present(
         coords={"lat": [0.0, 1.0], "lon": [0.0, 1.0]},
     )
     ds.to_zarr(store, zarr_format=3, consolidated=had_snapshot)
+    stamp_label(store, "pn")
 
     flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "45"]
-    result = _invoke_multires(["--target", store.as_uri(), "--product-name", "pn", *flags])
+    result = _invoke_multires(["--target", store.as_uri(), *flags])
 
     assert result.exit_code == 0, result.output
     snapshot = json.loads((store / "zarr.json").read_text()).get("consolidated_metadata")
@@ -86,11 +86,10 @@ def test_repro_multires_named_group(tmp_path: Path) -> None:
         coords={"lat": axis, "lon": axis},
     )
     ds.to_zarr(store, group="g", zarr_format=3, consolidated=False)
+    stamp_label(store, "pn")
 
     flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "2"]
-    result = _invoke_multires(
-        ["--target", store.as_uri(), "--product-name", "pn", "-g", "g", *flags]
-    )
+    result = _invoke_multires(["--target", store.as_uri(), "-g", "g", *flags])
 
     assert result.exit_code == 0, result.output
     level = store / "g" / "multires" / "2.0deg"
@@ -107,14 +106,13 @@ def test_repro_multires_coordinate_names(tmp_path: Path) -> None:
         coords={"latitude": axis, "longitude": axis},
     )
     ds.to_zarr(store, zarr_format=3, consolidated=False)
+    stamp_label(store, "pn")
 
     flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "2"]
     result = _invoke_multires(
         [
             "--target",
             store.as_uri(),
-            "--product-name",
-            "pn",
             "--lat-name",
             "latitude",
             "--lon-name",
@@ -129,6 +127,27 @@ def test_repro_multires_coordinate_names(tmp_path: Path) -> None:
 
 
 @pytest.mark.contract
+def test_multires_dry_run_writes_no_level_and_leaves_snapshot_and_control_plane(
+    tmp_path: Path,
+) -> None:
+    store = tmp_path / "x.zarr"
+    ds = xr.Dataset(
+        {"FWI": (["lat", "lon"], np.ones((2, 2), dtype="f4"))},
+        coords={"lat": [0.0, 1.0], "lon": [0.0, 1.0]},
+    )
+    ds.to_zarr(store, zarr_format=3, consolidated=True)
+    stamp_label(store, "pn")
+    before = _store_bytes(store)  # includes `.firecube/`, so no claim, run or stamp either
+
+    flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "45"]
+    result = _invoke_multires(["--target", store.as_uri(), *flags, "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert "45" in result.output
+    assert _store_bytes(store) == before and not (store / "multires").exists()
+
+
+@pytest.mark.contract
 def test_repro_multires_missing_coordinate(tmp_path: Path) -> None:
     store = tmp_path / "x.zarr"
     ds = xr.Dataset(
@@ -136,13 +155,14 @@ def test_repro_multires_missing_coordinate(tmp_path: Path) -> None:
         coords={"latitude": [0.0, 1.0], "longitude": [0.0, 1.0]},
     )
     ds.to_zarr(store, zarr_format=3, consolidated=False)
+    stamp_label(store, "pn")
 
     before = _store_bytes(store)
 
     flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "45"]
-    result = _invoke_multires(["--target", store.as_uri(), "--product-name", "pn", *flags])
+    result = _invoke_multires(["--target", store.as_uri(), *flags])
 
-    assert result.exit_code == 1, result.output
+    assert result.exit_code == 2, result.output
     assert isinstance(result.exception, SystemExit), repr(result.exception)
     assert "Traceback" not in result.output
     lines = [line for line in result.output.splitlines() if line.strip()]
@@ -161,6 +181,7 @@ def test_repro_multires_2d_coordinates(tmp_path: Path) -> None:
         coords={"latitude": (["y", "x"], lat2d), "longitude": (["y", "x"], lon2d)},
     )
     ds.to_zarr(store, group="g", zarr_format=3, consolidated=False)
+    stamp_label(store, "pn")
     before = _store_bytes(store)
 
     flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "45"]
@@ -168,8 +189,6 @@ def test_repro_multires_2d_coordinates(tmp_path: Path) -> None:
         [
             "--target",
             store.as_uri(),
-            "--product-name",
-            "pn",
             "-g",
             "g",
             "--lat-name",
@@ -180,7 +199,7 @@ def test_repro_multires_2d_coordinates(tmp_path: Path) -> None:
         ]
     )
 
-    assert result.exit_code == 1, result.output
+    assert result.exit_code == 2, result.output
     assert isinstance(result.exception, SystemExit), repr(result.exception)
     assert "Traceback" not in result.output
     lines = [line for line in result.output.splitlines() if line.strip()]
@@ -195,8 +214,6 @@ def test_case_insensitive_flags_accepted(tmp_path: Path) -> None:
         [
             "--target",
             (tmp_path / "x.zarr").as_uri(),
-            "--product-name",
-            "pn",
             "--storage-type",
             "LOCAL",
             "--storage-driver",
@@ -226,7 +243,7 @@ def test_multires_refused_under_exclusive_maintenance(tmp_path: Path) -> None:
     before = {k: v for k, v in _store_bytes(store).items() if not k.startswith(".firecube")}
     try:
         flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "2"]
-        result = _invoke_multires(["--target", store.as_uri(), "--product-name", "x.zarr", *flags])
+        result = _invoke_multires(["--target", store.as_uri(), *flags])
     finally:
         claim.release()
         manager.close()
@@ -244,22 +261,29 @@ def test_library_multires_checks_written_store_when_name_differs(
     from firecube.core.config import StorageConfig
     from firecube.core.controlplane import ChunkManager
     from firecube.core.errors import ProductUnderMaintenanceError
+    from firecube.core.product.open import open_product
     from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
-    from tests.helpers.storage import make_test_binding, make_test_session
+    from tests.helpers.storage import make_test_binding
 
     store = tmp_path / (claimed if other else "physical.zarr")
     xr.Dataset({"v": (["lat", "lon"], np.ones((4, 4)))}, coords={"lat": range(4), "lon": range(4)}).to_zarr(store, zarr_format=3, consolidated=False)  # fmt: skip
     held = make_test_binding(tmp_path, product=store.name)
     held = replace(held, identity=replace(held.identity, product_name=claimed))
     holder = ChunkManager(binding=held, workspace=tmp_path)
-    builder = ZarrMultiresBuilder(
-        StorageConfig(storage_type="local", storage_driver="fsspec"),
-        product_name=other or claimed,
-        product_uri=StorageUri.from_local_path(tmp_path / (other or store.name)),
-        session=make_test_session(tmp_path, product=other) if other else None,
-    )
     claim = holder.acquire_exclusive_maintenance(product=claimed, run_id="other-run")
-    with claim, pytest.raises(ProductUnderMaintenanceError):
+    with (
+        open_product(
+            StorageUri.from_local_path(tmp_path / (other or store.name)),
+            format="zarr",
+            product_name=other or claimed,
+            require_label=False,
+        ) as product,
+        claim,
+        pytest.raises(ProductUnderMaintenanceError),
+    ):
+        builder = ZarrMultiresBuilder(
+            product, storage_config=StorageConfig(storage_type="local", storage_driver="fsspec")
+        )
         builder.build(MultiresConfig(product=claimed, group="", resolutions=[2.0]))
     assert not (store / "multires").exists()

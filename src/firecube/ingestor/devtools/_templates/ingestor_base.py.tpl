@@ -25,13 +25,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import ClassVar
 
-from firecube.core.api import is_remote_target, local_path_from_target
-from firecube.ingestor.api import (
+from firecube.sdk import (
     BaseIngestor,
     OutputPaths,
     PipelineBatch,
     PipelineResult,
     PluginContext,
+    is_remote_target,
+    local_path_from_target,
     register_ingestor,
 )
 

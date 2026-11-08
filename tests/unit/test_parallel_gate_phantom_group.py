@@ -22,13 +22,13 @@ import numpy as np
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import DirectZarrIngestor, PipelineBatch, PluginContext, WriteIntent
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.runtime.parallel_gate import (
     validate_global_expected_subset_of_schema,
     validate_parallel_capability,
 )
 from firecube.ingestor.templates.direct_zarr import ZarrArraySpec, ZarrGroupSpec
+from firecube.sdk import DirectZarrIngestor, PipelineBatch, PluginContext, WriteIntent
 
 pytestmark = pytest.mark.unit
 

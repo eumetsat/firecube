@@ -21,9 +21,9 @@ import pyarrow.parquet as pq
 import pytest
 
 from firecube.core.storage.completion import StorageCompleter
-from firecube.ingestor.api import GenericParquetIngestor, PluginContext
 from firecube.ingestor.errors import ResumeConflictError
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
+from firecube.sdk import ExecutionParams, GenericParquetIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration
@@ -50,13 +50,13 @@ def _context(root, mode, *, driver: Literal["fsspec", "obstore"] = "fsspec", **o
         format="parquet",
         driver=driver,
         options={
-            "write_mode": mode,
             "pipeline_workers": 1,
             "pipeline_batch_size": 1,
             "no_progress": True,
             "cleanup_workspace": True,
             **options,
         },
+        execution=ExecutionParams(write_mode=mode),
     )
 
 
@@ -216,13 +216,13 @@ def test_remote_lifecycle_preserves_parts(tmp_path, parquet_s3, driver, mode, co
             output_format="parquet",
             storage=StorageContext(output=session),
             options={
-                "write_mode": mode,
                 "pipeline_workers": 1 if collision else 2,
                 "pipeline_batch_size": 1,
                 "no_progress": True,
                 "x_path": "same.parquet" if collision else None,
                 **extra,
             },
+            execution=ExecutionParams(write_mode=mode),
         )
 
     host = _Parquet()

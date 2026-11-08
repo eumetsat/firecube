@@ -24,20 +24,23 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import IndexSpec, IntegerAxis, ItemInfo, RegularTimeAxis
 from firecube.core.zarr.guard.engine_owned import (
     materialize_engine_owned_array,
     require_engine_owned_slots,
 )
 from firecube.core.zarr.guard.metadata_authority import MetadataAuthority, MetadataScope
-from firecube.ingestor.api import (
+from firecube.ingestor.registry import loader
+from firecube.sdk import (
     DirectZarrIngestor,
     IndexedWrite,
+    IndexSpec,
+    IntegerAxis,
+    ItemInfo,
+    RegularTimeAxis,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.registry import loader
 
 pytestmark = pytest.mark.integration
 

@@ -21,6 +21,7 @@ from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
@@ -40,7 +41,7 @@ def test_file_uri_no_storage_flags(tmp_path: Path) -> None:
     parquet_path = tmp_path / "x.parquet"
     _write_parquet(parquet_path)
 
-    result = _invoke_validate(["-p", parquet_path.as_uri()])
+    result = _invoke_validate(["-t", parquet_path.as_uri()])
 
     assert result.exit_code == 0
     assert "Missing option" not in result.output
@@ -80,8 +81,9 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any) -> None:
         return FakeFS()
 
     monkeypatch.setattr(StorageSession, "fs", fake_fs)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
 
-    result = _invoke_validate(["-p", "s3://bucket/x.parquet"])
+    result = _invoke_validate(["-t", "s3://bucket/x.parquet"])
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -98,13 +100,30 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any) -> None:
     }
 
 
+def test_invalid_product_exits_1(tmp_path: Path) -> None:
+    (tmp_path / "bad.parquet").write_bytes(b"not a parquet file")
+
+    result = _invoke_validate(["-t", tmp_path.as_uri()])
+
+    assert json.loads(result.output)["valid"] is False
+    assert result.exit_code == 1, result.output
+
+
+@pytest.mark.parametrize("name", ["absent", "absent.parquet"])
+def test_missing_product_exits_4(tmp_path: Path, name: str) -> None:
+    result = _invoke_validate(["-t", (tmp_path / name).as_uri()])
+
+    assert result.exit_code == 4, result.output
+    assert "Traceback" not in result.output
+
+
 def test_coherence_mismatch_rejected(tmp_path: Path) -> None:
     parquet_path = tmp_path / "x.parquet"
     _write_parquet(parquet_path)
 
     result = _invoke_validate(
         [
-            "-p",
+            "-t",
             parquet_path.as_uri(),
             "--storage-type",
             "s3",

@@ -30,7 +30,7 @@ def _invoke_validate(args: list[str]):
 
 
 def test_file_uri_no_storage_flags(tmp_local_zarr: Path) -> None:
-    result = _invoke_validate(["-p", tmp_local_zarr.as_uri(), "-g", "g1"])
+    result = _invoke_validate(["-t", tmp_local_zarr.as_uri(), "-g", "g1"])
 
     # The fixture group has no time dimension, so nothing is checked and the report is not valid.
     assert result.exit_code == 1
@@ -40,7 +40,7 @@ def test_file_uri_no_storage_flags(tmp_local_zarr: Path) -> None:
 
 
 def test_bare_path_rejected_with_uri_required_error(tmp_local_zarr: Path) -> None:
-    result = _invoke_validate(["-p", str(tmp_local_zarr), "-g", "g1"])
+    result = _invoke_validate(["-t", str(tmp_local_zarr), "-g", "g1"])
 
     assert result.exit_code == 2
     assert "URI scheme required" in result.output
@@ -82,8 +82,9 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(StorageSession, "fs", fake_fs)
     monkeypatch.setattr(zarr_cli, "validate_group_with_fs", fake_validate_group_with_fs)
+    monkeypatch.setattr("firecube.core.product.open._recorded_label", lambda *a, **k: None)
 
-    result = _invoke_validate(["-p", "s3://bucket/x.zarr", "-g", "g1"])
+    result = _invoke_validate(["-t", "s3://bucket/x.zarr", "-g", "g1"])
 
     assert result.exit_code == 0, result.output
     assert '"product": "s3://bucket/x.zarr"' in result.output
@@ -101,7 +102,7 @@ def test_s3_uri_infers_storage_type(monkeypatch: Any) -> None:
 def test_coherence_mismatch_rejected(tmp_local_zarr: Path) -> None:
     result = _invoke_validate(
         [
-            "-p",
+            "-t",
             tmp_local_zarr.as_uri(),
             "-g",
             "g1",
@@ -118,7 +119,7 @@ def test_coherence_mismatch_rejected(tmp_local_zarr: Path) -> None:
 
 
 def test_missing_group_clean_error(tmp_local_zarr: Path) -> None:
-    result = _invoke_validate(["-p", tmp_local_zarr.as_uri(), "-g", "definitely-not-here"])
+    result = _invoke_validate(["-t", tmp_local_zarr.as_uri(), "-g", "definitely-not-here"])
 
     assert result.exit_code == 1
     assert "definitely-not-here" in result.output

@@ -5,6 +5,11 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 
 ## Active Work
 
+### Due in v0.2.0
+
+- **Remove the `EngineConfig` moved-field forward in v0.2.0 (accepted, 2026-11-08).** Remove the forward in `_refuse_moved_fields` and the read of the attached `ExecutionParams`. Keep the `ConfigurationError` for construction. Remove the attach in `TierConfigurator.configure` (`src/firecube/ingestor/runtime/configure.py`). Decide whether `_MOVED_TO_EXECUTION_PARAMS` (`src/firecube/ingestor/config/engine.py`) stays for the construction refusal. Move the `CHANGELOG.md` entry to `Removed`. Reason: `plans/DONE.md`, 2026-11-08.
+- **Remove the modules `firecube.ingestor.api` and `firecube.core.api` in v0.2.0 (accepted, 2026-11-08).** Remove `src/firecube/ingestor/api.py` and `src/firecube/core/api.py`. Remove the four stub files `src/firecube/ingestor/api.pyi`, `src/firecube/ingestor/_api_deprecated.pyi`, `src/firecube/core/api.pyi` and `src/firecube/core/_api_deprecated.pyi`. Move the `CHANGELOG.md` entry to `Removed`. Update `CONTRIBUTING.md` and `plans/RELEASE.md`, which still name the old modules. Reason: `plans/DONE.md`, 2026-11-08.
+
 ### Open after the metadata snapshots and migrate plan (2026-11-04)
 
 Internal contributor material. The plan landed the metadata snapshot store, release records, the migrate executor and the `snapshot`, `migrate` and `release` command groups (`plans/DONE.md`, 2026-11-04). Each item is recorded, not scheduled. The label names the evidence.
@@ -302,15 +307,75 @@ Internal contributor material. These are the gaps the snapshot-leftovers plan (`
 
 ---
 
+### Open after the CLI and API building blocks plan (2026-11-07)
+
+Internal contributor material. The plan added `firecube.operations` and `open_product` (`plans/DONE.md`, 2026-11-07). Each item is recorded, not scheduled. The label names the evidence.
+
+- **Phase B is not scheduled (recorded, read).** The gate in `tests/architecture/test_cli_boundary.py` keeps `UNTIL phase-b` rows for these commands. Each needs an operation behind it.
+    - `ingest` runs behind an operation.
+    - `chunks delete` and `chunks list` work on more than one store.
+    - `zarr index show` derives coordinates.
+    - `parquet validate` and `parquet consolidate`.
+    - `advise batch-size` and `advise compliance`.
+    - `archive inspect` dispatch.
+- **49 import rows carry `UNTIL unscheduled` (recorded, read).** The rows are CLI modules that import from outside the allowed list. Grouped by reason:
+    - Config (5 rows): `firecube.core.config` and `firecube.core.runtime`, from `_ctx.py`, `_input_filters.py`, `archive/_create.py` and `zarr/_slots.py`.
+    - Observability (11 rows): `firecube.core.observability`, from 11 modules, `_errors.py` among them.
+    - Plugin registry and tooling (12 rows): `firecube.ingestor.registry.loader`, `firecube.ingestor.registry.metadata`, `firecube.ingestor.devtools.scaffolding`, `firecube.ingestor.config.engine` and `firecube.ingestor.config.coercion`.
+    - Source admission (4 rows): `firecube.core.discovery`, from `_input_filters.py`, `_input_sources.py`, `_typed_options.py` and `_uri_policy.py`.
+    - Catalog (1 row): `firecube.core.intake`, from `catalog.py`.
+    - Render types (4 rows): `firecube.core.controlplane.types`, `firecube.core.controlplane.metadata_snapshots` and `firecube.core.zarr.metadata_documents`, from `chunks/` and `snapshot/`.
+    - Error classes (3 rows): `firecube.ingestor.errors` and `firecube.ingestor.runtime.preflight`.
+    - Runtime-defined errors (3 rows): `IndexRecordError`, `SlotWindowError`, the slot-plan errors and `PLAN_RANGE_CEILING`.
+    - Plugin setup helpers (6 rows): `configure_ingestor`, `capture_producer`, `DirectZarrIngestor`, `firecube.core.zarr.layers` and `firecube.core.zarr.validation`.
+- **`--codec` is interpolated into SQL (found, not fixed, read).** The option is in `src/firecube/cli/parquet.py`. Bind the value or check it against a list of codecs.
+- **`firecube.core.api` exports the private name `_compute_group_identity_hash` (found, not fixed, read).** Rename it or drop it from the facade.
+- **Two classes are named `SlotWindowError` (found, not fixed, read).** One is in `src/firecube/core/errors.py` and one in `src/firecube/ingestor/runtime/preallocate.py`. The runtime class is not a subclass of the core class.
+- **Plugin suites fail against this branch (found, not fixed, ran).** The suites of `firecube-mtg-fci-l1c` and `firecube-sentinel3-slstr-aod` read or pass `engine_config.write_mode`. Other plugin suites fail through the removed `--output-format` and `write_mode` option. Migrate each plugin to `ctx.execution.write_mode`.
+- **`tests/integration/test_cli_input_data_presence.py::test_override_discovery_no_input_data_succeeds` fails in the full lane (found, not fixed, ran).** It fails by test order with `tests/integration/test_phase3_single_group_preserved.py` and passes alone. It fails on the base commit too.
+- **`ChunkManager` allocates a `firecube_chunks_*` temporary workspace that close never removes (found, not fixed, read).** The code is in `src/firecube/core/controlplane/manager.py` and `repo.py`. The defect is older than the plan.
+- **Some `ChunkManager` method docstrings carry private-caller prose (found, not fixed, read).** A docs page that renders the members would publish it. `docs/reference/operations.md` renders the class without members for this reason.
+- **The archive dry runs are weaker than the real run (found, not fixed, read).** They do not read every entry of a standalone (full) zip archive for its CRC. An incremental backup chain is read in full, so its dry run does check the CRC. With `--overwrite` they do not refuse a symlink at a kept target path. The real run refuses it inside the run.
+- **`tgm_product_label` returns `None` for a missing or unopenable `.tgm` (found, not fixed, read).** `archive restore` without `--product-name` then says the archive records no label. It does not say the file is missing.
+- **A real archive restore validates the zip metadata, or the tensogram structure, twice (recorded, read).** The preflight and the run each validate.
+- **`zarr slots` resume coverage builds its own manager (found, not fixed, read).** It builds the manager from a storage configuration without the anonymous override.
+- **`zarr index rebuild` reports the label mismatch first (recorded, ran).** The case is an unknown plugin with a different `--product-name`. The error used to name the plugin first.
+- **`zarr index show`, `zarr index verify` and the `--all-products` scan of `chunks` read the label more than once (recorded, read).**
+- **The docs-coverage test checks the prefix of a `firecube.operations.` directive, not that the name is in `__all__` (found, not fixed, read).**
+- **Six literal aliases of result records are not exported from `firecube.operations` (recorded, read).** They are `ReleaseOutcome`, `ArchiveState`, `BackupChainState`, `RecordedState`, `InventoryState` and `CheckedScope`.
+- **Plugin hooks receive the run id `zarr-preallocate`, and the control plane records `preallocate:<hex>` (found, not fixed, read).** Decide which id the hooks get.
+- **`open_product` with `require_label=False` and no name labels an unlabelled store with its URI (recorded, read).**
+
+---
+
+### Open after the CLI surface rework (2026-11-07)
+
+Internal contributor material. The rework recorded the product label once and made `-t/--target` the one spelling of the product URI (`plans/DONE.md`, 2026-11-07). Each item below is recorded, not scheduled. The label names the evidence.
+
+- **Coherent snapshots do not capture the label record (recorded, read).** `_CONTROL_DOCUMENTS` in `src/firecube/core/zarr/metadata_documents.py` lists the schema, the index and the slot index, and not `.firecube/product.json`. A restore from a snapshot cannot recover the label.
+- **An unparsable claim record lets a foreign label through on an unlabelled store (recorded, read).** `_read_json` in `src/firecube/core/controlplane/product_label.py` returns `None` for text that is not JSON, so `_label_from_records` skips that record.
+- **`RunEventWriter` objects outlive a deleted store (recorded, read, inferred).** `repo._writers` in `src/firecube/core/controlplane/repo.py` caches a writer per product and run. `_wal_writer.py` reuses a cached writer, so a store that is deleted and created again can receive a stale writer. Same family as the stale label cache that the rework removed.
+- **Observation snapshot argument validation and compaction admission run after the label stamp (recorded, read).** `ChunkManager.take_snapshot` stamps an observation snapshot before `_check_take` in `src/firecube/core/controlplane/metadata_snapshots.py` validates the arguments. `rebuild_compact` stamps before `_assert_compaction_allowed` in `src/firecube/core/controlplane/repo.py` refuses. A refused call can leave a new `product.json` in a store that had none. A coherent snapshot checks its arguments before `verify_holder` stamps, so it is not affected.
+- **Library refusals that raise a plain `ValueError` exit 70 (recorded, read).** The slot range checks, the reserved attribute check and the tensogram decode check give "Error: ValueError: ..." and the debug hint. `zarr multires` converts the `ValueError` of its layer check to `click.ClickException` in `src/firecube/cli/zarr/_multires.py`, so that check exits 1 with no debug hint. Raise `ConfigurationError` at those sites so that they exit 2. `src/firecube/ingestor/extensions/patterns.py` raises a plain `ImportError` for a missing trollsift. It must raise `OptionalExtraMissingError` so that it exits 4.
+- **`_delete_from_s3` never deleted an object (recorded, read).** `DeletionEngine._delete_from_s3` in `src/firecube/core/controlplane/deletion.py` passes `StorageUri` representations to `fs.exists`. The defect is older than the rework.
+- **An obstore S3 store with an HTTP endpoint and `path_style=True` raises a `PanicException` when it is pickled (recorded, ran by the reviewer).** The message is "Expected config prefix to start with aws_". It comes from the pickle path of the obstore dependency, not from a Python raise in `src/firecube/core/filesystem/store_factory.py`. An in-memory pickle round trip reproduced it. Anonymous and ordinary credential configurations round-tripped. `firecube advise compliance` on S3 with the obstore driver can reach it. The failure does not come from the CLI identity code.
+- **`zarr validate` on a nonexistent store exits 1 with "Group ... not found" (recorded, ran in the smoke run).** `src/firecube/cli/zarr/_validate.py` turns `FileNotFoundError` into `click.ClickException`. The command must tell a missing store from a missing group and exit 4 for the store.
+- **A half credential pair given only through the environment reaches botocore (recorded, ran in the smoke run).** With `FIRECUBE_ACCESS_KEY` alone, the command exits 4 with "Unable to locate credentials". The refusal that names both environment variables appears only for a config file (`src/firecube/core/config.py`). Apply the refusal to the environment too.
+- **A supplied storage session of another format bypasses the format of the plugin class (recorded, read).** The rework moved the output format to the plugin class. A caller that passes its own `StorageSession` can still write another format through it.
+- **A configure-time refusal leaves the temporary workspace on disk (recorded, read).** The rework adds one more trigger. The workspace is created before the refusal.
+- **The dry run has no targeted claim read (recorded, read).** `ChunkManager` has no method that reads one claim. The dry run calls `manager.repo.read_claim_by_domain` in `src/firecube/ingestor/runtime/base.py` and `index_record.py`. That reads the repository behind the facade.
+- **The `migrate run`, `migrate adopt` and `zarr preallocate` previews skip the exclusive maintenance claim check (found by the final review, 2026-11-07, read).** The dry-run branches in `src/firecube/ingestor/runtime/migrate.py` (`migrate_product`, `adopt_product`) and `preallocate.py` (`preallocate_product`) return before any `check_exclusive_maintenance` call. A held claim makes the real run exit 1 and the preview exit 0. `index rebuild`, `snapshot take`, `release create` and the ingest dry run do refuse.
+- **The dry run does not cover three refusals of the real run (recorded, read).** They are the staged sparse-window refusal, the DirectZarr pod-startup check of dtype and schema drift, and the remote `AUTO` irregular axis.
+- **The release preflight reads the snapshot ref outside `ChunkManager` (recorded, read).** `latest_snapshot_id` in `src/firecube/core/controlplane/metadata_snapshots.py` takes a filesystem, and `src/firecube/ingestor/runtime/release.py` passes `session.fs()`.
+- **A `file://` URI that `Path.as_uri()` builds percent-encodes brackets, and the label lookup then reports no label (recorded, read).** `src/firecube/core/storage/uri.py` treats the path of a file URI literally by design. Decide whether a bracket in a store path is supported.
+- **A `ConfigurationError` raised inside the batch-processing hook (`_process_batch`) exits 1, not 2 (recorded 2026-11-08, read).** `PipelineFailedBatchesError` wraps the error, and the error boundary classifies the wrapper as `CHECK_FAILED` (1), not `USAGE` (2). A moved-field read in that hook is one case (`plans/DONE.md`, 2026-11-08). Whether batch aggregation should preserve the class of a configuration refusal is open for the maintainer.
+
 ### Open after structured errors (2026-10-20)
 
 Internal contributor material. These are the gaps the structured-errors plan (`plans/DONE.md`, 2026-10-20) left on purpose or found on the way. Each is recorded, not scheduled.
 
-- **Eight help and scaffold hints under `cli/` do not run (recorded, not scheduled, maintainer ruling, 2026-10-19).** Each hint was read in the tree at the commit of the plan, against the inventory of the 2026-10-18 hints review. The brief for the change names the group but not its rows. So this list is the one the inventory yields.
-    - `src/firecube/cli/advise.py:170` and `:174`: `compliance` examples pass `-p /path/to/cube.zarr` and `-p ./cube.zarr`; `--product` takes a strict product URI, so both exit 2 ("URI scheme required").
-    - `src/firecube/cli/catalog.py:63` and `:67`: `intake` examples pass `-o <path>/catalog.yaml`; `--output` takes a strict artifact URI.
+- **Three help and scaffold hints under `cli/` do not run (recorded, not scheduled, maintainer ruling 2026-10-19, five of eight closed 2026-11-07).** The CLI surface rework replaced the `advise compliance`, `catalog intake` and `archive restore` examples with long flags and `file:///` paths. A test parses every example against its own command (`tests/cli/test_help_conformance.py`). Two rows remain in the list, and they hold three hints.
     - `src/firecube/cli/plugins/commands.py:279` and `:284`: `create_plugin` prints `cd {project_path}` and `firecube plugins install --editable {project_path}` with the path unquoted, so a path with a space splits into two arguments.
-    - `src/firecube/cli/archive/_restore.py:61`: the `--overwrite` example omits `--yes-i-really-mean-it`, so it exits 2 without a terminal.
     - `src/firecube/cli/_shared_options.py:246`: the shared `--dry-run` help promises no changes in every command, but `chunks claims clear` refuses the flag without `--all-stale` (`src/firecube/cli/chunks/_claims.py:185`).
 - **Some refusals reach the operator only as a traceback (text change 17 of the structured-errors entry in `plans/DONE.md`, recorded, not scheduled, read).** Their last line is now the library sentence, with no flags in it. Three classes:
     - (a) Uncaught `ValueError`s on the CLI path, where an operator sees a traceback: `ZarrTemplateConfig.from_options` in `src/firecube/ingestor/templates/config.py:274` (`zarr_multi_res`) and `:279` (unknown template options); `src/firecube/ingestor/runtime/configure.py:120` (unknown options) and `:243` (the obstore driver with a storage type other than local or s3).
@@ -371,7 +436,7 @@ Internal contributor material. The CLI URI rule (`plans/DONE.md`, 2026-10-24) le
 - ~~**The `--input-data` flag stayed outside the CLI URI rule (recorded, not scheduled, inferred).**~~ Closed 2026-11-01 (issue #118). The `--input-data` of `ingest`, `zarr preallocate` and `zarr slots` goes through `parse_and_validate_source_uri`. `ingest` no longer calls `is_remote_target` or `local_path_from_target`, and the two gate rows are gone. See `plans/DONE.md`, 2026-11-01.
 - **`StorageUri.parse` keeps userinfo and a port of an `s3://` authority in the bucket name (recorded, not scheduled, inferred).** The authority is the parsed network location (`src/firecube/core/storage/uri.py:114`). Bucket-name validation is a separate policy.
 - **The CLI rule does not check the `[storage]` config of a config file (recorded, not scheduled, read, and the example values inferred).** `_storage_uri_from_base` in `src/firecube/cli/chunks/_manager.py` refuses a base URI without `://` and passes any other value to `StorageUri.parse`. `derive_target_uri` in `src/firecube/core/config.py` returns `target_path` unchanged. A config value such as `FILE:///data` or `file://localhost/data` passes the first check.
-- **The coherence refusal says "change --target" for every option (recorded, not scheduled, read).** `validate_uri_storage_coherence` in `src/firecube/cli/_uri_policy.py` ends its sentence with `change --target to ...`. The sentence is the same for `--product`, `--source` and `A_URI`. Pinned tests hold the text, so a fix needs a new text and a change to those tests.
+- **The coherence refusal says "change --target" for every option (recorded, not scheduled, read).** `validate_uri_storage_coherence` in `src/firecube/cli/_uri_policy.py` ends its sentence with `change --target to ...`. The sentence is the same for `--source` and `A_URI`, and for `--target` itself. Pinned tests hold the text, so a fix needs a new text and a change to those tests.
 
 ---
 
@@ -670,7 +735,7 @@ These items identify areas where the system used greedy logic to guess user inte
 
 - **BASENAME heuristics — DONE:** `output_name` is no longer guessed from the target path basename. `ProductIdentity.from_uri` hard-fails without an explicit product name, and the `default_output_name` config key is rejected at parse time.
 - **Magic output detection — DONE:** the CLI and engine read typed `PipelineResult.outputs` / `result.output_path` attributes; no dict key sniffing remains. The legacy `output_path=` constructor kwarg was removed entirely (DONE.md 2026-06-11).
-- **ingest `dry_run` — OPEN:** implement or remove the option. `EngineConfig.dry_run` only sets `RuntimeFlags.dry_run`; no write path reads it, so `firecube ingest --option dry_run=true` writes normally. The docstring marks it reserved and points at the maintenance commands' `--dry-run` for previews (2026-09-12).
+- **ingest `dry_run` — DONE (2026-11-07):** The rework drops `--option dry_run`. The `--dry-run` flag of `firecube ingest` sets `ExecutionParams.dry_run`. A dry run writes nothing. It reports the blocks that the real run would hit. See `plans/DONE.md`, 2026-11-07.
 - **Explicit safety — OPEN:** refusal to upload `HOME` or `/` is hardcoded in the engine's upload-source resolution; should be documented or configurable.
 - **Free-form option overload — DONE (2026-06-11):** keys owned by dedicated `firecube ingest` flags (`write_mode`, `slot_start`, `slot_end`, `slot_size`, `slot_group`) are hard-rejected at `--option` parse time with remediation naming the owning flag (`_TYPED_FLAG_OWNED_KEYS` in `cli/_typed_options.py`); the silent post-resolution override is closed. All other typed flags were never config fields and were already rejected as unknown keys. Engine options without a dedicated flag (`force_reingest`, `no_progress`, ...) remain the sanctioned `--option` surface.
 
@@ -694,17 +759,15 @@ These items identify areas where the system used greedy logic to guess user inte
   values; `--show-options` lists the keys only for compatible plugins; plugins
   without the capability reject them; public configuration docs describe the
   same surface.
-- **`default_product_name` leaks into plugin option validation — OPEN:**
-  `src/firecube/cli/main.py` reads the key from plugin defaults to resolve the
-  product name, but leaves it in the `options` mapping passed to
-  `IngestContext`. `TierConfigurator.configure()` in
-  `src/firecube/ingestor/runtime/configure.py` then rejects it because
-  `SYSTEM_KEYS` in `src/firecube/ingestor/config/engine.py` does not include the
-  key and `PluginConfig` in `src/firecube/ingestor/types/config.py` does not own
-  it. Consume this CLI-owned key before tier validation; do not weaken strict
-  unknown-key rejection. Acceptance: a config-only `default_product_name`
-  completes runtime configuration, while product-name precedence remains CLI
-  flag > config `default_product_name` > plugin `PRODUCT_NAME` > hard failure.
+- **`default_product_name` leaks into plugin option validation — DONE (2026-11-07):**
+  `src/firecube/cli/main.py` removes the key from the `options` mapping
+  with `options.pop("default_product_name", None)`. Then `TierConfigurator.configure()` in
+  `src/firecube/ingestor/runtime/configure.py` never sees it. Strict unknown-key
+  rejection is unchanged. Commit f9d0d4e. The precedence stays CLI flag > config
+  `default_product_name` > plugin `PRODUCT_NAME` > hard failure, and it applies
+  only to the run that records the label. Open: `tests/unit/test_config_file_strict.py` checks only that the config
+  accepts the key. No test runs `ingest` with a config-only `default_product_name`
+  (a search of `tests/` found none). Add one.
 
 ### §12.4 Plugin Heuristics
 

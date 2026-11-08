@@ -20,7 +20,6 @@ from typing import Any, ClassVar
 
 import pytest
 
-from firecube.ingestor.api import ZarrTemplateConfig
 from firecube.ingestor.config.engine import EngineConfig, config_keys
 from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.types.context import (
@@ -32,6 +31,7 @@ from firecube.ingestor.types.context import (
     PluginContext,
     RuntimeIngestContext,
 )
+from firecube.sdk import ZarrTemplateConfig
 
 
 class _BaseProbe(BaseIngestor):

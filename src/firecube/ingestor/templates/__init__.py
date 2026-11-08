@@ -14,6 +14,6 @@
 
 """Internal template implementations for Firecube ingestor.
 
-Plugin authors should import templates via ``firecube.ingestor.api``.
+Plugin authors import the templates from ``firecube.sdk``.
 This package is not part of the public SDK surface.
 """

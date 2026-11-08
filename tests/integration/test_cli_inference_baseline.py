@@ -21,7 +21,7 @@ from unittest.mock import patch
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
+from firecube.sdk import IngestContext, IngestResult, OutputPaths
 
 
 def _run_ingest(
@@ -54,8 +54,6 @@ def _run_ingest(
                 source.as_uri(),
                 "--target",
                 target,
-                "--output-format",
-                "zarr",
                 "--storage-type",
                 "local" if target.startswith("file://") else "s3",
                 "--storage-driver",

@@ -22,7 +22,7 @@ from zarr.codecs import BloscCodec, BytesCodec
 
 from firecube.core.errors import SchemaDriftError
 from firecube.core.zarr.region_writer import RegionZarrWriter
-from firecube.ingestor.api import ZarrArraySpec
+from firecube.sdk import ZarrArraySpec
 
 pytestmark = pytest.mark.unit
 

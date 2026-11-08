@@ -26,6 +26,7 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import WriteDomain
+from firecube.core.errors import ProductLabelMismatchError
 from firecube.core.storage.uri import StorageUri
 from tests.helpers.rows import table_row
 from tests.helpers.storage import make_test_binding
@@ -41,7 +42,8 @@ DOMAIN = WriteDomain(product=LOGICAL_PRODUCT, category="coord_materialization", 
 def _manager(tmp_path: Path, *, product: str = STORE_PRODUCT) -> ChunkManager:
     workspace = tmp_path / "workspace"
     workspace.mkdir(exist_ok=True)
-    return ChunkManager(binding=make_test_binding(tmp_path, product=product), workspace=workspace)
+    binding = make_test_binding(tmp_path, product=product, label=LOGICAL_PRODUCT)
+    return ChunkManager(binding=binding, workspace=workspace)
 
 
 def _claims_dir(tmp_path: Path, product: str) -> Path:
@@ -107,7 +109,9 @@ def _cli_env() -> dict[str, str]:
 
 
 def test_claim_clear_product_name_matching(subtests: Any, tmp_path: Path) -> None:
-    with table_row(subtests, "clear_claim_accepts_uri_when_domain_uses_logical_name", tmp_path) as (
+    with table_row(
+        subtests, "clear_claim_takes_the_recorded_label_and_refuses_the_uri", tmp_path
+    ) as (
         workdir,
         _,
     ):
@@ -115,8 +119,11 @@ def test_claim_clear_product_name_matching(subtests: Any, tmp_path: Path) -> Non
         manager = _manager(workdir)
 
         try:
+            with pytest.raises(ProductLabelMismatchError):
+                manager.clear_claim(product=STORE_PRODUCT, domain_id=DOMAIN.identifier, force=False)
+            assert claim_path.exists(), "a refused label must clear nothing"
             cleared = manager.clear_claim(
-                product=STORE_PRODUCT,
+                product=LOGICAL_PRODUCT,
                 domain_id=DOMAIN.identifier,
                 force=False,
             )
@@ -127,23 +134,27 @@ def test_claim_clear_product_name_matching(subtests: Any, tmp_path: Path) -> Non
         assert not claim_path.exists()
 
     with table_row(
-        subtests, "read_claim_by_domain_accepts_uri_when_domain_uses_logical_name", tmp_path
+        subtests, "read_claim_by_domain_takes_the_recorded_label_and_refuses_the_uri", tmp_path
     ) as (workdir, _):
         _stale_claim(workdir)
         manager = _manager(workdir)
 
         try:
-            manager.list_claims(product=STORE_PRODUCT)
+            manager.list_claims(product=LOGICAL_PRODUCT)
             assert manager.repo.claims is not None
+            with pytest.raises(ProductLabelMismatchError):
+                manager.repo.claims.read_claim_by_domain(
+                    product=STORE_PRODUCT, domain=DOMAIN.identifier
+                )
             claim = manager.repo.claims.read_claim_by_domain(
-                product=STORE_PRODUCT,
+                product=LOGICAL_PRODUCT,
                 domain=DOMAIN.identifier,
             )
         finally:
             manager.close()
 
         assert claim is not None
-        assert claim.product == STORE_PRODUCT
+        assert claim.product == LOGICAL_PRODUCT
         assert claim.domain == DOMAIN.identifier
 
     with table_row(subtests, "clear_claim_still_rejects_malformed_domain", tmp_path) as (
@@ -161,7 +172,9 @@ def test_claim_clear_product_name_matching(subtests: Any, tmp_path: Path) -> Non
             manager.close()
 
     with table_row(
-        subtests, "cli_all_stale_clears_claim_when_store_name_differs_from_logical_name", tmp_path
+        subtests,
+        "cli_all_stale_clears_claim_when_target_name_differs_from_recorded_label",
+        tmp_path,
     ) as (workdir, _):
         claim_path = _stale_claim(workdir)
         store_uri = StorageUri.from_local_path(workdir / STORE_PRODUCT).to_str()
@@ -172,7 +185,7 @@ def test_claim_clear_product_name_matching(subtests: Any, tmp_path: Path) -> Non
                 "chunks",
                 "claims",
                 "clear",
-                "--product-name",
+                "--target",
                 store_uri,
                 "--workspace",
                 str(workdir / "workspace"),

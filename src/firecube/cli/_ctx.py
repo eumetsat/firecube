@@ -23,7 +23,9 @@ import click
 
 from firecube.cli._errors import render
 from firecube.core.config import StorageConfig, load_config_file
-from firecube.core.runtime import identity_from_storage_config, resolve_storage_config
+from firecube.core.errors import FirecubeError
+from firecube.core.runtime import identity_from_storage_config
+from firecube.operations import resolve_storage_config
 
 log = logging.getLogger("firecube.cli")
 
@@ -51,7 +53,8 @@ def get_storage_config(
     This centralizes common CLI behavior:
     - reads `--config-file` stored in `ctx.obj["config_file"]`
     - caches the resolved StorageConfig in `ctx.obj["storage_config"]`
-    - wraps errors as Click-friendly exceptions
+    - turns a plain `ValueError` from config validation into a usage error; any
+      other exception reaches the CLI error boundary unchanged
     """
     ctx.ensure_object(dict)
     if cache and overrides is None:
@@ -63,12 +66,13 @@ def get_storage_config(
         storage_config = resolve_storage_config(
             config_file=get_config_file(ctx),
             overrides=dict(overrides) if overrides is not None else None,
+            export_env=True,
             set_global=set_global,
         )
-    except Exception as exc:
-        raise click.ClickException(
-            f"Failed to resolve storage configuration: {render(exc)}"
-        ) from exc
+    except FirecubeError:
+        raise
+    except ValueError as exc:
+        raise click.UsageError(f"Failed to resolve storage configuration: {render(exc)}") from exc
 
     if cache and overrides is None:
         ctx.obj["storage_config"] = storage_config

@@ -16,8 +16,7 @@ Firecube depends on a strict import boundary:
   configuration, ChunkManager, and observability primitives.
 - `firecube.ingestor` owns the ingestion SDK, plugin base classes, runtime
   engine, batching, registry, and template implementations.
-- plugins import public SDK symbols from `firecube.ingestor.api` and
-  `firecube.core.api`.
+- plugins import public SDK symbols from `firecube.sdk`.
 
 Core must not import ingestor code. Ingestor code must not import installed
 plugin packages except through dynamic plugin discovery. External plugins must
@@ -25,10 +24,8 @@ not deep-import runtime internals.
 
 ## Preserve Public Surfaces
 
-Public plugin code relies on the API modules:
-
-- `firecube.ingestor.api`
-- `firecube.core.api`
+Public plugin code relies on the SDK module `firecube.sdk`. The modules
+`firecube.ingestor.api` and `firecube.core.api` are deprecated until v0.2.0.
 
 If a change moves or renames a public symbol, update the API reference and keep a
 compatibility path for the documented deprecation window.

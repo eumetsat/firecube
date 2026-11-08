@@ -170,7 +170,7 @@ def _delete_run_with_cli(
         "--workspace",
         str(tmp_path),
         "delete-span",
-        "--product-name",
+        "--target",
         _store_root(tmp_path).as_uri(),
         "--run-id",
         run_id,
@@ -544,6 +544,39 @@ def test_delete_span_on_non_append_store_still_uses_chunk_delete(tmp_path: Path)
     assert "Deleted 1 chunk keys" in result.output
     assert not chunk_key.exists()
     assert "write_strategy" not in _replaced_span_meta(tmp_path, "run-raw")
+
+
+@pytest.mark.parametrize("driver", ["fsspec", "obstore"])
+def test_delete_span_target_deletes_its_own_stores_chunk_key_not_a_sibling_by_label(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, driver: str
+) -> None:
+    """A store labelled dirB in directory dirA deletes under dirA, never under the sibling dirB."""
+    monkeypatch.setitem(globals(), "PRODUCT", "dirB")
+    _seed_raw_store(tmp_path / "moved")
+    (tmp_path / "moved" / "dirB").rename(tmp_path / "dirA")
+    _seed_raw_store(tmp_path)
+    monkeypatch.setenv("FIRECUBE_STORAGE_TYPE", "local")
+    monkeypatch.setenv("FIRECUBE_STORAGE_DRIVER", driver)
+    own = tmp_path / "dirA" / GROUP / ARRAY_NAME / "c" / "0" / "0"
+    sibling = _append_chunk_key(tmp_path)
+    assert own.exists() and sibling.exists()
+    target = (tmp_path / "dirA").as_uri()
+    flags = ["--run-id", "run-raw", "--force", "--yes-i-really-mean-it"]
+
+    result = CliRunner().invoke(
+        cli,
+        ["chunks", "--workspace", str(tmp_path), "delete-span", "-t", target, *flags],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Deleted 1 chunk keys" in result.output
+    assert not own.exists(), "own chunk key survived its span deletion"
+    assert sibling.exists(), "span deletion reached the sibling store with the same label"
+    sibling_manager = _manager(tmp_path)
+    try:
+        assert len(sibling_manager.list_chunks(product=PRODUCT, chunk_type="span")) == 1
+    finally:
+        sibling_manager.close()
 
 
 def test_chunk_key_delete_skips_static_array_with_warning(tmp_path: Path) -> None:

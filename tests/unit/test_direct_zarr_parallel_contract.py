@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from firecube.ingestor.api import DirectZarrIngestor, IngestResult, PipelineBatch, PluginContext
+from firecube.sdk import DirectZarrIngestor, IngestResult, PipelineBatch, PluginContext
 from tests.helpers.rows import table_row
 
 

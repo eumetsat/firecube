@@ -20,11 +20,9 @@ import datetime
 
 import click
 
-from firecube.cli._errors import render
-from firecube.cli.migrate._common import echo_json, format_option, migrate_options, open_session
-from firecube.cli.plugins.registry import load_migration_steps
-from firecube.core.errors import FirecubeError
-from firecube.ingestor.runtime.migrate import list_migrations
+from firecube.cli._shared_options import format_option
+from firecube.cli.migrate._common import echo_json, migrate_options, open_target
+from firecube.operations import list_migrations, load_migration_steps
 
 
 def _iso(timestamp: float) -> str:
@@ -42,7 +40,7 @@ Examples:
 See also: firecube migrate run
 """,
 )
-@format_option
+@format_option(("table", "json"))
 def list_cmd(output_format: str) -> None:
     """list the installed migration steps
 
@@ -67,7 +65,7 @@ def list_cmd(output_format: str) -> None:
     epilog="""\b
 Examples:
   # list the migration runs recorded for a product
-  firecube migrate status --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube migrate status --target file:///data/products/MY_PRODUCT.zarr
 
 See also: firecube migrate run, firecube migrate list
 """,
@@ -77,7 +75,6 @@ See also: firecube migrate run, firecube migrate list
 def status(
     ctx: click.Context,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
@@ -89,22 +86,16 @@ def status(
     version, its outcome (executed or adopted) and its status. reads the
     maintenance records and changes nothing.
     """
-    session = open_session(
+    product = open_target(
         ctx,
         command="migrate status",
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=False,
     )
-    manager = session.control_plane()
-    ctx.call_on_close(manager.close)
-    try:
-        runs = list_migrations(manager=manager, product=session.product.product_name)
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+    runs = list_migrations(product)
 
     if output_format == "json":
         echo_json(

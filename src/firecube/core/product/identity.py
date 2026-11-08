@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from firecube.core.errors import ConfigurationError, Message, MissingProductNameError, Param
 from firecube.core.storage.uri import StorageUri
 
 VALID_FORMATS = frozenset({"zarr", "parquet", "tensogram"})
@@ -51,6 +52,31 @@ class ProductIdentity:
             control_root_uri=control_root,
             format=format,
         )
+
+
+def resolve_product_name(
+    flag: str | None, config_value: str | None, plugin_value: str | None, plugin: str
+) -> str:
+    """Return the product label from the first source that names one.
+
+    Precedence: `flag`, then `config_value`, then `plugin_value`. The caller reads each source.
+
+    Raises:
+        ConfigurationError: `flag` is an empty string.
+        MissingProductNameError: No source names a label. `plugin` is the plugin name it reports.
+    """
+    if flag == "":
+        raise ConfigurationError(
+            Message(
+                "{name} was provided but is empty. Either omit it (use plugin "
+                "PRODUCT_NAME or config default_product_name), or provide a non-empty value.",
+                name=Param("product_name"),
+            )
+        )
+    name = flag or config_value or plugin_value
+    if not name:
+        raise MissingProductNameError(plugin)
+    return str(name)
 
 
 def ensure_product_uri(base_uri: str, product: str) -> str:

@@ -295,14 +295,11 @@ def run_sequential(
     host: PipelineHost,
     product: str,
     batch_size: int,
-    engine_config: EngineConfig | None = None,
     log: logging.Logger | None = None,
 ) -> PipelineRunState:
     """Execute batches sequentially and return the populated PipelineRunState."""
     ingestion_start_time = time.time()
 
-    if engine_config is None:
-        engine_config = EngineConfig()
     if log is None:
         log = logging.getLogger(__name__)
 
@@ -311,7 +308,6 @@ def run_sequential(
         host=host,
         ctx=ctx,
         batch_size=batch_size,
-        engine_config=engine_config,
         log=log,
     )
     batch_creation_duration = time.time() - start_batch_time
@@ -645,16 +641,19 @@ def _create_batches_with_parallel_filter(
     host: PipelineHost,
     ctx: RuntimeIngestContext,
     batch_size: int,
-    engine_config: EngineConfig,
     log: logging.Logger,
+    refuse_sparse_window: bool = True,
 ) -> list[PipelineBatch]:
     """Create batches, optionally pre-filtering source items for slot-range parallel mode.
 
-    In single-pod mode (slot_start/slot_end not set), this is a pass-through
-    to ``host._create_batches(ctx, batch_size)`` with no behavior change.
+    The slot window comes from ``ctx.execution``. In single-pod mode (slot_start/slot_end
+    not set), this is a pass-through to ``host._create_batches(ctx, batch_size)``.
+    ``refuse_sparse_window=False`` skips the staged sparse-window check, which needs a
+    write session; a dry run plans without one.
     """
-    slot_start = engine_config.slot_start
-    slot_end = engine_config.slot_end
+    execution = ctx.execution
+    slot_start = execution.slot_start
+    slot_end = execution.slot_end
     from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 
     if slot_start is not None and slot_end is not None and isinstance(host, DirectZarrIngestor):
@@ -712,7 +711,7 @@ def _create_batches_with_parallel_filter(
                 binding.resolved,
                 slot_start,
                 slot_end,
-                engine_config.slot_group,
+                execution.slot_group,
                 _inspect_and_keep,
                 plugin_ctx,
             )
@@ -744,13 +743,13 @@ def _create_batches_with_parallel_filter(
             )
             return []
 
-        if str(engine_config.write_mode) == "staged":
+        if refuse_sparse_window and execution.write_mode == "staged":
             _refuse_sparse_staged_window(
                 host=host,
                 ctx=plugin_ctx,
                 resolved=binding.resolved,
                 window=(slot_start, slot_end),
-                slot_group=engine_config.slot_group,
+                slot_group=execution.slot_group,
                 items=filtered_items,
                 inspected=inspected,
             )
@@ -832,7 +831,6 @@ class PipelineExecutor:
             host=host,
             ctx=ctx,
             batch_size=batch_size,
-            engine_config=engine_config,
             log=self._log,
         )
         batch_creation_duration = time.time() - start_batch
@@ -995,7 +993,7 @@ class PipelineExecutor:
 
         from firecube.ingestor.types.manifest import IngestManifest
 
-        effective_write_mode = str(result.metrics.write_mode or ctx.option("write_mode") or "")
+        effective_write_mode = str(result.metrics.write_mode or ctx.execution.write_mode)
         plugin = host.name
         run_id = ctx.run_id or ""
         output_name = _output_product_name(ctx)

@@ -50,6 +50,7 @@ from firecube.ingestor.templates.direct_zarr import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
+from firecube.ingestor.types.context import ExecutionParams
 from tests.helpers.storage import begin_write_session, make_test_binding
 
 pytestmark = pytest.mark.unit
@@ -60,7 +61,6 @@ class _DummyDirectIngestor(DirectZarrIngestor):
 
     def __init__(self, *, intents: list[WriteIntent], chunk_manager: Any) -> None:
         super().__init__(name="dummy_direct", chunk_manager=chunk_manager)
-        self.engine_config = cast(Any, SimpleNamespace(write_mode="direct", slot_group=None))
         self._intents = intents
 
     def ingest(self, ctx):  # pragma: no cover - abstract hook not used here
@@ -106,7 +106,7 @@ def _patch_strategy_io(monkeypatch: pytest.MonkeyPatch, calls: list[object] | No
 
 
 def _run_direct_process_batch(monkeypatch: pytest.MonkeyPatch, intents: list[WriteIntent]):
-    import firecube.ingestor.api as api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
 
     class _FakeStrategy:
         def __init__(self, **kwargs) -> None:
@@ -127,11 +127,12 @@ def _run_direct_process_batch(monkeypatch: pytest.MonkeyPatch, intents: list[Wri
     )
     ingestor = _DummyDirectIngestor(intents=intents, chunk_manager=chunk_manager)
     monkeypatch.setattr(ingestor, "resolve_output_uri", lambda ctx, write_mode: "out.zarr")
-    monkeypatch.setattr(api, "IndexedRegionStrategy", _FakeStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _FakeStrategy)
 
     ctx = SimpleNamespace(
         run_id="run-1",
         storage=None,
+        execution=ExecutionParams(write_mode="direct"),
         option=lambda key, default=None: default,
     )
     batch = SimpleNamespace(items=["source"], metadata={})
@@ -195,7 +196,7 @@ def test_slot_claim_uses_correct_domain_name(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_empty_intents_acquires_no_slot_claim(monkeypatch: pytest.MonkeyPatch) -> None:
-    import firecube.ingestor.api as api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
 
     slot_claim = MagicMock(return_value=nullcontext())
 
@@ -209,8 +210,13 @@ def test_empty_intents_acquires_no_slot_claim(monkeypatch: pytest.MonkeyPatch) -
     chunk_manager = SimpleNamespace(storage_config=SimpleNamespace(), acquire_claim=slot_claim)
     ingestor = _DummyDirectIngestor(intents=[], chunk_manager=chunk_manager)
     monkeypatch.setattr(ingestor, "resolve_output_uri", lambda ctx, write_mode: "out.zarr")
-    monkeypatch.setattr(api, "IndexedRegionStrategy", _FakeStrategy)
-    ctx = SimpleNamespace(run_id="run-1", storage=None, option=lambda key, default=None: default)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _FakeStrategy)
+    ctx = SimpleNamespace(
+        run_id="run-1",
+        storage=None,
+        execution=ExecutionParams(write_mode="direct"),
+        option=lambda key, default=None: default,
+    )
 
     begin_write_session(ingestor, ctx)
     result = ingestor._process_batch(
@@ -715,7 +721,6 @@ class _StagedUnitsIngestor(DirectZarrIngestor):
 
     def __init__(self, *, chunk_manager: Any) -> None:
         super().__init__(name="staged_units", chunk_manager=chunk_manager)
-        self.engine_config = cast(Any, SimpleNamespace(write_mode="staged", slot_group=None))
 
     def ingest(self, ctx):  # pragma: no cover - abstract hook not used here
         raise NotImplementedError
@@ -746,7 +751,12 @@ def test_staged_direct_zarr_batch_records_written_and_absent_units(
     chunk_manager = SimpleNamespace(storage_config=None, acquire_claim=lambda **_kw: nullcontext())
     ingestor = _StagedUnitsIngestor(chunk_manager=chunk_manager)
     monkeypatch.setattr(ingestor, "resolve_output_uri", lambda ctx, write_mode: store_uri)
-    ctx = SimpleNamespace(run_id="run-1", storage=None, option=lambda key, default=None: default)
+    ctx = SimpleNamespace(
+        run_id="run-1",
+        storage=None,
+        execution=ExecutionParams(write_mode="staged"),
+        option=lambda key, default=None: default,
+    )
 
     session = begin_write_session(ingestor, ctx)
     batch = SimpleNamespace(items=["s"], metadata={})
@@ -767,9 +777,13 @@ def test_direct_batch_keeps_no_written_or_absent_units(
     store_uri = str(tmp_path / "target.zarr")
     chunk_manager = SimpleNamespace(storage_config=None, acquire_claim=lambda **_kw: nullcontext())
     ingestor = _StagedUnitsIngestor(chunk_manager=chunk_manager)
-    ingestor.engine_config = cast(Any, SimpleNamespace(write_mode="direct", slot_group=None))
     monkeypatch.setattr(ingestor, "resolve_output_uri", lambda ctx, write_mode: store_uri)
-    ctx = SimpleNamespace(run_id="run-1", storage=None, option=lambda key, default=None: default)
+    ctx = SimpleNamespace(
+        run_id="run-1",
+        storage=None,
+        execution=ExecutionParams(write_mode="direct"),
+        option=lambda key, default=None: default,
+    )
 
     session = begin_write_session(ingestor, ctx)
     batch = SimpleNamespace(items=["s"], metadata={})

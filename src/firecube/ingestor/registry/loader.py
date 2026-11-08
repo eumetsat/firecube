@@ -28,12 +28,15 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
-from collections.abc import Callable
-from importlib.metadata import entry_points
+from collections.abc import Callable, Mapping
+from importlib.metadata import EntryPoint, entry_points
 from types import ModuleType
-from typing import TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from firecube.ingestor.contracts.interfaces import Ingestor
+
+if TYPE_CHECKING:
+    from firecube.ingestor.runtime.migrate import InstalledStep
 
 AVAILABLE_INGESTORS: dict[str, type[Ingestor]] = {}
 _LOADED: bool = False
@@ -159,6 +162,44 @@ def discover_ingestors() -> dict[str, type[Ingestor]]:
 
     _LOADED = True
     return AVAILABLE_INGESTORS.copy()
+
+
+def load_migration_steps() -> list[InstalledStep]:
+    """List the migration steps that installed distributions register.
+
+    Reads the `firecube.migrations` entry-point group without importing any step.
+    The step class loads when its `create` is called and receives the step options
+    as one mapping. An entry point with no distribution gets `None` for the
+    distribution and the version, and the executor refuses it. Two entry points
+    with one name are both listed, and the executor refuses the id.
+
+    Returns:
+        One `InstalledStep` per entry point, sorted by id.
+    """
+
+    from firecube.ingestor.runtime.migrate import InstalledStep
+
+    steps = [
+        InstalledStep(
+            id=ep.name,
+            create=_step_factory(ep),
+            distribution=ep.dist.name if ep.dist is not None else None,
+            version=ep.dist.version if ep.dist is not None else None,
+        )
+        for ep in entry_points(group="firecube.migrations")
+    ]
+    return sorted(steps, key=lambda step: step.id)
+
+
+def _step_factory(ep: EntryPoint) -> Callable[[Mapping[str, Any]], Any]:
+    def create(options: Mapping[str, Any]) -> Any:
+        try:
+            step_cls = ep.load()
+        except Exception as exc:
+            raise ImportError(f"Failed to load migration step '{ep.name}': {exc}") from exc
+        return step_cls(options)
+
+    return create
 
 
 def reset_plugin_discovery_cache() -> None:

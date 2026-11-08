@@ -20,10 +20,10 @@ import pytest
 from tests.helpers.storage import make_test_binding, make_test_context
 
 from firecube.core.controlplane import ChunkManager
-from firecube.ingestor.api import IngestResult, OutputPaths
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.types.context import IngestContext, PluginContext, RuntimeIngestContext
+from firecube.sdk import IngestResult, OutputPaths
 
 
 class _DummyIngestor(BaseIngestor):

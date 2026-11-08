@@ -16,9 +16,9 @@
 
 from pathlib import Path
 
-from firecube.ingestor.api import PipelineBatch, PipelineResult
 from firecube.ingestor.errors import InsertRefusedError
 from firecube.ingestor.runtime.engine import _failed_batches_message
+from firecube.sdk import PipelineBatch, PipelineResult
 
 
 def test_insert_refusal_explains_rebuild():

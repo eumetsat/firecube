@@ -110,7 +110,7 @@ def test_database_duckdb_tier(
 @pytest.mark.unit
 @pytest.mark.parametrize("override", [None, False, True])
 def test_template_subclass_defaults_and_explicit_core_default_override(override):
-    from firecube.ingestor.api import ZarrTemplateConfig
+    from firecube.sdk import ZarrTemplateConfig
 
     @dataclass
     class MeasurementLayout(ZarrTemplateConfig):

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from collections.abc import Callable, Iterable, Mapping
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
@@ -40,7 +41,6 @@ from firecube.core.index_resolve import (
     resolve_index_spec,
 )
 from firecube.core.observability.metrics import TelemetryService, emit_index_ensured_full
-from firecube.core.storage.session import StorageSession
 from firecube.core.time.calendar import is_gregorian_axis
 from firecube.core.zarr._coord_common import (
     array_schema_mismatches,
@@ -81,6 +81,7 @@ from firecube.ingestor.errors import ConfigurationError, SchemaDriftError
 
 if TYPE_CHECKING:
     from firecube.core.config import StorageConfig
+    from firecube.core.product.open import Product
     from firecube.ingestor.contracts.interfaces import PreallocateHost
     from firecube.ingestor.types.context import PluginContext
 
@@ -133,15 +134,15 @@ def _ignore_line(line: str) -> None:
 
 
 def preallocate_product(
-    *,
+    product: Product,
     ingestor: PreallocateHost,
+    *,
     plugin_ctx: PluginContext,
     plugin_name: str,
-    chunk_manager: ChunkManager,
-    session: StorageSession,
+    chunk_manager: ChunkManager | None = None,
     storage_config: StorageConfig | None,
-    run_id: str,
     write_mode: str,
+    run_id: str | None = None,
     input_data: str | tuple[str, ...] | None = None,
     slot_start: int | None = None,
     slot_end: int | None = None,
@@ -164,16 +165,17 @@ def preallocate_product(
     records name the sources, search and items of a stac:// source.
 
     Args:
-        ingestor: The plugin, a `PreallocateHost` constructed with `chunk_manager` and
-            configured by `configure_ingestor`.
+        product: The open product, from `open_product`.
+        ingestor: The plugin, a `PreallocateHost` constructed with the control plane
+            and configured by `configure_ingestor`.
         plugin_ctx: The context `configure_ingestor` returned for `ingestor`.
         plugin_name: The plugin's registered name, used in messages, records and telemetry.
-        chunk_manager: The control plane of the target product. The caller closes it.
-        session: The storage session bound to the target product.
-        storage_config: Storage settings. When given, arrays are written through
-            `session`'s store; `None` lets the writer open the target URI itself.
-        run_id: The run id recorded in the control plane.
+        chunk_manager: The control plane the plugin was built with, closed by the caller.
+            `None` uses `product.manager`.
+        storage_config: Storage settings. When given, arrays are written through the
+            product's store; `None` lets the writer open the target URI itself.
         write_mode: The write mode recorded in telemetry.
+        run_id: The run id recorded in the control plane. `None` mints `preallocate:` and 16 hex characters.
         input_data: Raw plugin input, one source or several; `None` when there is none.
             Engine-owned arrays and observed coordinates need it.
         slot_start: First slot of the window. `None` starts at slot 0.
@@ -207,12 +209,16 @@ def preallocate_product(
         effective_regular_time_policy,
     )
     from firecube.core.uris import storage_uri_from_target
-    from firecube.ingestor.api import IndexedRegionStrategy
     from firecube.ingestor.runtime.zarr.root_group import (
         refuse_root_beside_named_groups,
         refuse_root_group_attrs,
     )
+    from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 
+    if run_id is None:
+        run_id = f"preallocate:{uuid.uuid4().hex[:16]}"
+    chunk_manager = product.manager if chunk_manager is None else chunk_manager
+    session = product.session
     identity = session.product
     plugin_target = identity.product_uri.to_str()
     # Run-lifecycle bookkeeping: the run's start record (the materialization
@@ -728,7 +734,7 @@ def preallocate_product(
                         error=exception_text(exc),
                         abandon=Operation(
                             "abandon_run",
-                            product_name=product_uri,
+                            target=product_uri,
                             run_id=run_id,
                             reason=Placeholder('"<reason>"'),
                         ),
@@ -760,7 +766,7 @@ def preallocate_product(
                         error=exception_text(exc),
                         clear=Operation(
                             "clear_claim",
-                            product_name=product_uri,
+                            target=product_uri,
                             domain_id=claim_domain,
                             force=True,  # the claim is fresh until its heartbeat times out
                         ),

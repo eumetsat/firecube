@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from firecube.core.errors import OptionalExtraMissingError
 from firecube.core.filesystem.protocol import unquoted_etag
 
 PutMode: Any
@@ -65,9 +66,10 @@ def update_put_mode(e_tag: str) -> dict[str, str]:
 
 
 def require_obstore() -> None:
-    """Raise ImportError with install instructions if obstore is not available."""
+    """Raise `OptionalExtraMissingError` with install instructions if obstore is missing."""
     if not HAS_OBSTORE:
-        raise ImportError(
+        raise OptionalExtraMissingError(
             "obstore is required for --storage-driver obstore. "
-            "Install it with: uv pip install 'firecube[obstore]'"
+            "Install it with: uv pip install 'firecube[obstore]'",
+            extra="obstore",
         )

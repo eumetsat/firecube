@@ -18,7 +18,7 @@ import pytest
 @pytest.mark.unit
 def test_directzarr_writeintent_has_timestamp_val_field():
     """The 'timestamp_val' field on WriteIntent is part of the stable plugin contract."""
-    from firecube.ingestor.api import WriteIntent
+    from firecube.sdk import WriteIntent
 
     fields_by_name = {f.name for f in WriteIntent.__dataclass_fields__.values()}
     assert "timestamp_val" in fields_by_name
@@ -27,7 +27,7 @@ def test_directzarr_writeintent_has_timestamp_val_field():
 @pytest.mark.unit
 def test_directzarr_has_index_spec_method():
     """The 'index_spec' method is part of the stable DirectZarrIngestor contract."""
-    from firecube.ingestor.api import DirectZarrIngestor
+    from firecube.sdk import DirectZarrIngestor
 
     assert hasattr(DirectZarrIngestor, "index_spec")
     assert callable(DirectZarrIngestor.index_spec)
@@ -36,7 +36,7 @@ def test_directzarr_has_index_spec_method():
 @pytest.mark.unit
 def test_writeintent_kind_timestamp_token():
     """The intent kind 'timestamp' is a stable dispatch token (not the dim name)."""
-    from firecube.ingestor.api import WriteIntent
+    from firecube.sdk import WriteIntent
 
     intent = WriteIntent(
         group="g",

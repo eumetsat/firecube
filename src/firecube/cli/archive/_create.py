@@ -23,11 +23,11 @@ import functools
 import click
 
 from firecube.cli._ctx import get_config, get_storage_config
-from firecube.cli._errors import echo_rendered, render
-from firecube.cli._product import resolve_product_identity
+from firecube.cli._errors import echo_rendered
 from firecube.cli._shared_options import (
     archive_uri_option,
     dry_run_flag,
+    target_uri_option,
     yes_flag,
 )
 from firecube.cli._uri_policy import (
@@ -36,9 +36,7 @@ from firecube.cli._uri_policy import (
 )
 from firecube.cli.archive._common import _require_overwrite_confirmation
 from firecube.core.config import get_archive_defaults
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
+from firecube.operations import StorageDriverConfig, open_product
 
 
 @click.command(
@@ -47,26 +45,30 @@ from firecube.core.storage.session import StorageSession
 Examples:
   # archive a local Zarr store with default compression
   firecube archive create \\
-    --source file:///path/to/product.zarr \\
-    --archive file:///tmp/archive.tgm
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --archive file:///data/archives/MY_PRODUCT.tgm
   # archive a specific time range
   firecube archive create \\
-    --source file:///path/to/product.zarr \\
-    --archive file:///tmp/archive.tgm \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
     --start-date 2024-01-01 \\
     --end-date 2024-02-01
   # archive a single group with explicit codec
   firecube archive create \\
-    --source file:///path/to/product.zarr \\
-    --archive file:///tmp/archive.tgm \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
     --group <group> \\
     --compression zstd
+  # write a zip archive and show the plan only
+  firecube archive create \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --archive file:///data/archives/MY_PRODUCT.zip \\
+    --archive-format zip \\
+    --dry-run
 See also: firecube archive restore, firecube archive info, firecube archive validate
 """,
 )
-@click.option(
-    "-s", "--source", required=True, help="Zarr store URI (file:///abs/path or s3://bucket/key)"
-)
+@target_uri_option(tier="write")
 @click.option(
     "--archive-format",
     "archive_format",
@@ -125,7 +127,7 @@ See also: firecube archive restore, firecube archive info, firecube archive vali
 @click.pass_context
 def create(
     ctx: click.Context,
-    source: str,
+    target: str,
     archive: str,
     archive_format: str,
     storage_type: str | None,
@@ -149,8 +151,8 @@ def create(
     and --end-date to archive a specific time window, or --group to select one
     product group.
     """
-    source_uri = parse_and_validate_uri(source, param_hint="--source")
-    storage_type = apply_smart_default(source_uri, storage_type)
+    target_uri = parse_and_validate_uri(target, param_hint="--target")
+    storage_type = apply_smart_default(target_uri, storage_type)
     archive_uri = parse_and_validate_uri(archive, param_hint="--archive")
     if archive_uri.is_remote():
         raise click.ClickException("Remote artifacts not yet supported")
@@ -167,7 +169,7 @@ def create(
     )
     if storage_config.anonymous:
         raise click.UsageError(
-            "archive create writes a record into the source's control plane and needs "
+            "archive create writes a record into the product's control plane and needs "
             "write access; anonymous storage access is not supported."
         )
 
@@ -185,60 +187,44 @@ def create(
 
     _require_overwrite_confirmation(overwrite=overwrite, yes_i_really_mean_it=yes_i_really_mean_it)
 
-    if dry_run:
-        click.echo(f"[dry-run] Would archive: {source} -> {archive_abs}")
-        if group:
-            click.echo(f"  Group: {group}")
-        if start_date or end_date:
-            click.echo(f"  Time range: {start_date or '*'} -> {end_date or '*'}")
-        click.echo(f"  Compression: {compression or 'zstd'}")
-        return
-
     variable_list = [v.strip() for v in variables.split(",")] if variables else None
 
-    driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    source_identity = resolve_product_identity(
-        source_uri,
-        format="zarr",
-        product_name=source.rstrip("/").rsplit("/", 1)[-1],
-    )
-    session = StorageSession(
-        StorageBinding(
-            identity=source_identity,
-            driver=driver_config,
+    # A store that records no label opens under its normalised URI.
+    product = ctx.with_resource(
+        open_product(
+            target_uri,
+            format="zarr",
+            driver=StorageDriverConfig.from_storage_config(storage_config),
+            require_label=False,
         )
     )
 
-    if archive_format == "zip" and (group or start_date or end_date or variable_list):
-        raise click.ClickException(
-            "Zip archive does not support --group, --start-date, --end-date, or --variables"
-        )
+    from firecube.operations import ArchiveCreatePlan, create_archive
 
-    from firecube.ingestor.runtime.archive import (
-        ArchiveClaimError,
-        ArchiveConversionError,
-        ArchiveRecordError,
-        create_archive,
+    created = create_archive(
+        product,
+        archive=archive,
+        archive_path=archive_abs,
+        archive_format=archive_format,
+        overwrite=overwrite,
+        group=group,
+        variables=variable_list,
+        start_date=start_date,
+        end_date=end_date,
+        compression=compression,
+        allow_nan=allow_nan,
+        allow_inf=allow_inf,
+        warn=functools.partial(echo_rendered, err=True),
+        dry_run=dry_run,
     )
-
-    try:
-        created = create_archive(
-            session=session,
-            archive=archive,
-            archive_path=archive_abs,
-            archive_format=archive_format,
-            overwrite=overwrite,
-            group=group,
-            variables=variable_list,
-            start_date=start_date,
-            end_date=end_date,
-            compression=compression,
-            allow_nan=allow_nan,
-            allow_inf=allow_inf,
-            warn=functools.partial(echo_rendered, err=True),
-        )
-    except (ArchiveClaimError, ArchiveConversionError, ArchiveRecordError) as exc:
-        raise click.ClickException(render(exc)) from exc
+    if isinstance(created, ArchiveCreatePlan):
+        click.echo(f"[dry-run] Would archive: {target} -> {created.archive_path}")
+        if created.group:
+            click.echo(f"  Group: {created.group}")
+        if created.start_date or created.end_date:
+            click.echo(f"  Time range: {created.start_date or '*'} -> {created.end_date or '*'}")
+        click.echo(f"  Compression: {created.compression or 'zstd'}")
+        return
 
     click.echo(f"Archive created: {created.target}")
     tgm_result = created.tgm_summary

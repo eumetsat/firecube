@@ -20,8 +20,9 @@ from typing import Any, cast
 
 import pytest
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     BaseIngestor,
+    ExecutionParams,
     PipelineBatch,
     PipelineResult,
     PipelineRunState,
@@ -64,7 +65,8 @@ def test_fixture_plugins_discover_instantiate_and_run_batch_lifecycle(
             tmp_path,
             source=str(source),
             product=f"{plugin_name}.zarr",
-            options={"batch_size": 1, "write_mode": "direct"},
+            options={"batch_size": 1},
+            execution=ExecutionParams(write_mode="direct"),
         ),
         run_id=f"{plugin_name}-run",
         temp_root=tmp_path,

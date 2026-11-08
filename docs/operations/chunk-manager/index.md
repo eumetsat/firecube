@@ -17,20 +17,21 @@ records, write claims, the compact cache, and cleanup state.
 
 ## Locate The Product
 
-Pass the full product URI through `--product-name` so the command locates the
-product directly:
+Pass the product URI through `-t/--target` so the command locates the product
+directly. Every ChunkManager command reads the product label back from the store.
+If the store records no label, the command exits 2 and names `firecube migrate adopt`.
 
 ```bash
-firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
 
 ```text
-Product      Key                       Type   Size (MB)  Date
------------------------------------------------------------------------
-MY_PRODUCT.zarr span_<run>_batch_0001...  span   0.0        2026-06-03 ...
-MY_PRODUCT.zarr span_<run>_batch_0000...  span   0.0        2026-06-03 ...
+Product    Key                       Type   Size (MB)  Date
+------------------------------------------------------------------
+MY_PRODUCT span_<run>_batch_0001...  span   0.0        2026-06-03 ...
+MY_PRODUCT span_<run>_batch_0000...  span   0.0        2026-06-03 ...
 
 Summary: 3 chunks, 0.0 MB total
 ```
@@ -40,7 +41,7 @@ is enabled. The command result is the table or JSON payload.
 
 ## Storage Configuration For Deletion
 
-If you pass the full product URI to `--product-name`, the URI names the product.
+If you pass the product URI to `--target`, the URI names the product.
 Then `chunks delete` needs no storage type, no storage driver and no `[storage]`
 section. The command deletes the storage objects through a filesystem bound to
 that product. This holds for a dry run and for a real run.
@@ -53,23 +54,14 @@ uses the default driver and the normal credential chain of that driver. Anonymou
 access is off. Make working credentials available before you run the command. If
 you use a custom endpoint, set it in the storage configuration.
 
-Two cases still need a storage configuration:
+`--all-products` still needs a storage configuration. Define a `[storage]` section
+with a base path in the configuration file, or set `FIRECUBE_TARGET_PATH`.
+Without a base, the run exits 2 before it deletes or previews any record. The
+run skips a product that records no label and prints a line on stderr.
 
-- A bare product name given to `--product-name`.
-- `--all-products`.
-
-For these, set the storage type and driver:
-
-```bash
-export FIRECUBE_STORAGE_TYPE=local
-export FIRECUBE_STORAGE_DRIVER=fsspec
-```
-
-Without it, these runs fail before they delete or preview any record.
-Record-only deletion with `--manifest-only` does not need it.
-
-`chunks delete` also needs a scope. A run with neither `--product-name` nor
-`--all-products` exits with code 2 and `MissingScope`. Pass one of the two flags.
+Every ChunkManager command needs a scope. A run with neither `--target` nor
+`--all-products` exits 2. A run with both flags exits 2 too. Both runs print
+`Provide exactly one of --target or --all-products.`
 
 ## Next Steps
 

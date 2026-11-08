@@ -39,8 +39,12 @@ from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.types import exclusive_maintenance_domain
+from firecube.core.errors import ProductLabelMismatchError
 from firecube.core.filesystem.conditional import GUARD_FILE_NAME
+from firecube.core.product.open import open_product
 from firecube.core.zarr.guard import metadata_authority
+from tests.helpers.cli_hints import run_hint
+from tests.helpers.storage import make_test_session
 
 pytestmark = [pytest.mark.integration, pytest.mark.contract]
 
@@ -73,9 +77,10 @@ def _store(base: Path, fmt: int, *, applied: bool = False, adopt: bool = True) -
 
 
 def _cli(store: Path, *args: str, exit_code: int = 0):
-    result = CliRunner().invoke(
-        cli, [*args, "--target", store.as_uri(), "--product-name", "p.zarr"]
-    )
+    label = ["--product-name", "p.zarr"] if args[:2] == ("migrate", "adopt") else []
+    asks = args[:2] in {("migrate", "adopt"), ("migrate", "run"), ("release", "create")}
+    confirm = ["--yes-i-really-mean-it"] if asks and "--dry-run" not in args else []
+    result = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), *label, *confirm])
     assert result.exit_code == exit_code, result.output
     return result
 
@@ -255,7 +260,8 @@ def test_interrupted_migration_resumes_under_its_run_or_refuses_a_hand_edit(
             crash.setattr(ChunkManager, "take_snapshot", snapshot)
         else:
             crash.setattr(metadata_authority, "publish_raw", publish)
-        _migrate(store, RETITLE, exit_code=1)
+        # The injected KeyboardInterrupt ends the run with 130; a lost claim (claim-swap) is a refusal, 1.
+        _migrate(store, RETITLE, exit_code=1 if checkpoint == "claim-swap" else 130)
     ((run_id, meta),) = _runs(store).items()
     assert meta["status"] == ("failed" if checkpoint == "claim-swap" else "started")
     assert _chunks(store) == chunks
@@ -277,7 +283,9 @@ def test_interrupted_migration_resumes_under_its_run_or_refuses_a_hand_edit(
         planned = {2: "temp/.zattrs", 3: "zarr.json"}[fmt]
         _hand_edit(store, planned)
         edited = _tree(store, firecube=False)
-        assert planned in _migrate(store, RETITLE, exit_code=1).output
+        refusal = _migrate(store, RETITLE, exit_code=1).output
+        assert planned in refusal
+        run_hint(refusal, "firecube chunks runs abandon", "--dry-run")
         assert _runs(store)[run_id]["status"] == "started"
         assert _tree(store, firecube=False) == edited
         return
@@ -308,14 +316,14 @@ def test_crash_left_claim_blocks_the_rerun_until_claims_clear(tmp_path, monkeypa
     with monkeypatch.context() as crash:
         crash.setattr(metadata_authority, "publish_raw", publish)
         crash.setattr(ClaimHandle, "release", lambda self: self._stop.set())  # a killed process
-        _migrate(store, RETITLE, exit_code=1)
+        _migrate(store, RETITLE, exit_code=130)
     ((run_id, _),) = _runs(store).items()
     assert len(_claim_files(store)) == 1
 
     _migrate(store, RETITLE, exit_code=1)
     assert {k: v["status"] for k, v in _runs(store).items()} == {run_id: "started"}
     domain = exclusive_maintenance_domain("p.zarr").identifier
-    clear = ["chunks", "claims", "clear", "--product-name", store.as_uri(), "--domain", domain]
+    clear = ["chunks", "claims", "clear", "--target", store.as_uri(), "--domain", domain]
     result = CliRunner().invoke(cli, [*clear, "--force", "--yes-i-really-mean-it"])
     assert result.exit_code == 0, result.output
     _migrate(store, RETITLE)
@@ -381,15 +389,55 @@ def test_attribute_classes_are_refused_unless_their_allow_flag_is_given(
 def test_dry_run_prints_the_plan_and_writes_nothing(tmp_path, fmt):
     store = _store(tmp_path, fmt, adopt=False)
     before = _tree(store)
-    result = _migrate(store, RETITLE, "--dry-run")
-    assert "has no control plane; a real run needs firecube migrate adopt first" in result.output
-    assert result.output.rstrip().splitlines()[-1].startswith("planned outcome:")
+    result = _migrate(store, RETITLE, "--dry-run", exit_code=2)
+    assert "records no product label" in result.output and "firecube migrate adopt" in result.output
     assert _tree(store) == before  # no .firecube/ directory is created either
     _cli(store, "migrate", "adopt")
     before = _tree(store)
-    _migrate(store, RETITLE, "--dry-run")
+    planned = _migrate(store, RETITLE, "--dry-run")
+    assert planned.output.rstrip().splitlines()[-1].startswith("planned outcome:")
     assert _tree(store) == before  # no claim, no run, no snapshot
     assert _runs(store) == {}
+
+
+@pytest.mark.parametrize(
+    ("args", "adopted"),
+    [
+        (("snapshot", "take"), True),
+        (("migrate", "adopt"), False),
+        (("release", "create", "1.0.0"), True),
+        (("release", "create", "1.0.0", "--archive", "{archive}"), True),
+    ],
+    ids=["snapshot-take", "migrate-adopt", "release-create", "release-archive"],
+)
+def test_maintenance_dry_run_leaves_store_claims_runs_and_archive_untouched(
+    tmp_path, args, adopted
+):
+    store, archive = _store(tmp_path, 3, adopt=adopted), tmp_path / "a.zip"
+
+    def state():  # byte map with `.firecube/`, then claims and runs listed through ChunkManager
+        if not adopted:  # opening a control plane would itself create `.firecube/`
+            return _tree(store), []
+        manager = make_test_session(tmp_path, product="p.zarr").control_plane()
+        try:
+            return _tree(store), [
+                manager.list_claims(product="p.zarr"),
+                manager.list_runs(product="p.zarr"),
+            ]
+        finally:
+            manager.close()
+
+    before = state()
+    _cli(store, *(a.format(archive=archive.as_uri()) for a in args), "--dry-run")
+    assert state() == before and not archive.exists()
+
+
+def test_migrate_run_off_a_tty_without_confirmation_exits_2_and_changes_nothing(tmp_path):
+    store = _store(tmp_path, 3)
+    before = _tree(store)
+    result = CliRunner().invoke(cli, ["migrate", "run", RETITLE, "--target", store.as_uri()])
+    assert result.exit_code == 2 and "--yes-i-really-mean-it" in result.output
+    assert _tree(store) == before and _runs(store) == {}
 
 
 @FORMATS
@@ -459,8 +507,8 @@ def test_depends_on_is_met_once_the_dependency_is_applied(tmp_path):
 def test_foreign_store_refuses_a_real_run_until_adopted(tmp_path, fmt):
     store = _store(tmp_path, fmt, adopt=False)
     before = _tree(store)
-    refused = _migrate(store, RETITLE, exit_code=1).output
-    assert "has no control plane; adopt it with firecube migrate adopt" in refused
+    refused = _migrate(store, RETITLE, exit_code=2).output
+    assert "records no product label" in refused and "firecube migrate adopt --target" in refused
     assert _tree(store) == before  # the refusal writes nothing, no .firecube/ either
     result = _cli(store, "migrate", "adopt")  # stdout: report; stderr: warnings; output: both
     warning = "is Zarr format 2. Firecube cannot append to it"
@@ -474,6 +522,74 @@ def test_foreign_store_refuses_a_real_run_until_adopted(tmp_path, fmt):
     again = _cli(store, "migrate", "adopt")
     assert "nothing to adopt" in again.output and warning not in again.output
     assert len(_runs(store, "adopt-")) == 1
+
+
+def test_adopt_stamps_the_label_and_refuses_a_different_one(tmp_path):
+    store = _store(tmp_path, 3)  # adopted with --product-name p.zarr
+    assert "p.zarr" in (store / ".firecube" / "product.json").read_text()
+    _migrate(store, RETITLE)  # no --product-name: the recorded label is read
+    before = _tree(store)
+    other = ["migrate", "adopt", "--target", store.as_uri(), "--product-name", "other"]
+    result = CliRunner().invoke(cli, other)
+    assert result.exit_code == 2 and "records the label 'p.zarr'" in result.output
+    assert _tree(store) == before  # the refusal writes nothing
+
+
+def test_adopt_of_an_already_product_store_without_a_stamp_records_the_label(tmp_path):
+    store = _store(tmp_path, 3)
+    stamp = store / ".firecube" / "product.json"
+    stamp.unlink()  # a control plane with no stamp, as a lone schema.json leaves it
+    result = _cli(store, "migrate", "adopt")
+    assert "nothing to adopt" in result.output
+    assert "p.zarr" in stamp.read_text()
+    assert len(_runs(store, "adopt-")) == 1  # the store was not adopted a second time
+
+
+def _open(store: Path):
+    """Open the store under the label ``p.zarr``, also when it records none."""
+    return open_product(store.as_uri(), format="zarr", product_name="p.zarr", require_label=False)
+
+
+def test_adopt_product_library_refuses_another_label_on_an_already_product_store(tmp_path):
+    store = _store(tmp_path, 3)  # adopted and stamped with p.zarr
+    stamp = store / ".firecube" / "product.json"
+    with _open(store) as product:
+        stamp.write_text(json.dumps({**json.loads(stamp.read_text()), "product": "other"}))
+        before = _tree(store)
+        with pytest.raises(ProductLabelMismatchError):
+            migrate_module.adopt_product(product)
+    assert _tree(store) == before  # the refusal writes nothing
+
+
+def test_adopt_product_library_stamps_the_label_on_an_already_product_store(tmp_path):
+    store = _store(tmp_path, 3)
+    stamp = store / ".firecube" / "product.json"
+    stamp.unlink()  # a control plane with no stamp, as a lone schema.json leaves it
+    with _open(store) as product:
+        result = migrate_module.adopt_product(product)
+    assert result.outcome == "already-product"
+    assert stamp.exists()
+    assert json.loads(stamp.read_text())["product"] == "p.zarr"
+
+
+@pytest.mark.parametrize("stamped", [False, True], ids=["unstamped", "stamped"])
+def test_adopt_product_library_dry_run_reports_the_label_and_writes_nothing(tmp_path, stamped):
+    store = _store(tmp_path, 3)
+    if not stamped:
+        (store / ".firecube" / "product.json").unlink()
+    before = _tree(store)
+    with _open(store) as product:
+        result = migrate_module.adopt_product(product, dry_run=True)
+    assert result.outcome == "already-product"
+    assert result.label_recorded is stamped
+    assert _tree(store) == before
+
+
+def test_migrate_list_prints_the_installed_needs_retitle_step(tmp_path):
+    result = CliRunner().invoke(cli, ["migrate", "list", "-f", "json"])
+    assert result.exit_code == 0, result.output
+    assert "cli-test:needs-retitle" in result.output
+    assert "cli-test:retitle" in result.output
 
 
 def test_ingest_during_a_running_migration_is_refused_and_the_migration_finishes(

@@ -23,7 +23,7 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericParquetIngestor,
     GenericTensogramIngestor,
     GenericZarrIngestor,
@@ -33,6 +33,7 @@ from firecube.ingestor.api import (
     PipelineBatch,
     PluginContext,
 )
+from tests.helpers.storage import make_test_context
 
 
 def _ingest_args(tmp_path, plugin: str) -> list[str]:
@@ -51,8 +52,6 @@ def _ingest_args(tmp_path, plugin: str) -> list[str]:
         "fsspec",
         "--write-mode",
         "direct",
-        "--output-format",
-        "tensogram",
     ]
 
 
@@ -84,21 +83,6 @@ class ZarrDatasetProducer(GenericZarrIngestor):
         )
 
 
-class NonProducerPlugin:
-    PRODUCT_NAME: ClassVar[str] = "non-producer"
-    name = "non_producer"
-
-    @classmethod
-    def describe_options(cls) -> dict[str, list[str]]:
-        return {"Product Name": [cls.PRODUCT_NAME]}
-
-    def run(self, ctx: IngestContext) -> IngestResult:
-        return IngestResult(output_format=str(ctx.output_format))
-
-    def ingest(self, ctx: IngestContext) -> IngestResult:
-        return self.run(ctx)
-
-
 def test_direct_generic_tensogram_subclass_is_cli_routable(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "firecube.cli.main.discover_ingestors",
@@ -111,20 +95,7 @@ def test_direct_generic_tensogram_subclass_is_cli_routable(tmp_path, monkeypatch
     assert '"output_format": "tensogram"' in result.output
 
 
-def test_non_producer_plugin_gets_dataset_producer_error(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        "firecube.cli.main.discover_ingestors",
-        lambda: {"non_producer": NonProducerPlugin},
-    )
-
-    result = CliRunner().invoke(cli, _ingest_args(tmp_path, "non_producer"))
-
-    assert result.exit_code != 0
-    assert "DatasetProducer" in result.output
-    assert "build_dataset + get_batch_groups" in result.output
-
-
-def test_tensogram_routing_does_not_synthesize_class_suffix(tmp_path, monkeypatch):
+def test_zarr_ingestor_runs_as_its_own_class_through_the_cli(tmp_path, monkeypatch):
     ZarrDatasetProducer.seen_class_name = ""
     monkeypatch.setattr(
         "firecube.cli.main.discover_ingestors",
@@ -147,31 +118,11 @@ class ParquetDatasetProducer(GenericParquetIngestor):
         return None
 
 
-def test_parquet_plugin_is_rejected_at_tensogram_gate(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        "firecube.cli.main.discover_ingestors",
-        lambda: {"parquet_producer": ParquetDatasetProducer},
-    )
-
-    result = CliRunner().invoke(cli, _ingest_args(tmp_path, "parquet_producer"))
-
-    assert result.exit_code != 0
-    assert "DatasetProducer" in result.output
-    assert "build_dataset + get_batch_groups" in result.output
-
-
-def test_parquet_plugin_is_rejected_at_runtime_strategy_gate(tmp_path):
+def test_parquet_plugin_refuses_a_context_naming_tensogram(tmp_path):
     from firecube.ingestor.errors import ConfigurationError
-    from firecube.ingestor.runtime.base import _select_output_format_strategy
 
-    ingestor = ParquetDatasetProducer()
-    ctx = IngestContext(
-        source=str(tmp_path),
-        target=str(tmp_path / "out.tgm"),
-        output_format="tensogram",
-    )
+    ctx = make_test_context(tmp_path, product="out.parquet", format="parquet")
+    ctx.output_format = "tensogram"
 
-    with pytest.raises(ConfigurationError) as exc_info:
-        _select_output_format_strategy(ingestor, ctx)
-
-    assert "DatasetProducer" in str(exc_info.value)
+    with pytest.raises(ConfigurationError, match="writes 'parquet'"):
+        ParquetDatasetProducer().run(ctx)

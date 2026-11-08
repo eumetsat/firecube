@@ -47,6 +47,7 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.zarr._sealing_markers import ATTR_CONSOLIDATED_AT, ATTR_PREALLOCATED
 from tests.helpers.rows import table_row
+from tests.integration.test_cli_index_show import stamp_label
 
 pytestmark = pytest.mark.integration
 
@@ -67,6 +68,7 @@ def _create_legacy_cube_with_coord(cube: Path, coord_name: str, total: int) -> n
         overwrite=True,
         dimension_names=(coord_name,),
     )
+    stamp_label(cube, cube.name)
     return values
 
 
@@ -76,8 +78,6 @@ def _consolidate_args(cube: Path, *, time_dim: str | None = None) -> list[str]:
         "consolidate-time-coord",
         "--target",
         f"file://{cube}",
-        "--product-name",
-        cube.name,
         "--storage-type",
         "local",
         "--storage-driver",

@@ -30,7 +30,7 @@ class TestArchiveHelp:
     def test_archive_create_help(self):
         result = CliRunner().invoke(cli, ["archive", "create", "--help"])
         assert result.exit_code == 0
-        assert "--source" in result.output
+        assert "--target" in result.output
         assert "--archive" in result.output
         assert "--storage-type" in result.output
         assert "--storage-driver" in result.output
@@ -46,15 +46,20 @@ class TestArchiveHelp:
         result = CliRunner().invoke(cli, ["archive", "info", "--help"])
         assert result.exit_code == 0
         assert "--archive" in result.output
-        assert "--format [table|json|csv]" in result.output
-        assert "firecube archive info --archive file:///tmp/archive.tgm" in result.output
+        assert "--format [table|json]" in result.output
+        assert (
+            "firecube archive info --archive file:///data/archives/MY_PRODUCT.tgm" in result.output
+        )
 
     def test_archive_validate_help(self):
         result = CliRunner().invoke(cli, ["archive", "validate", "--help"])
         assert result.exit_code == 0
         assert "--archive" in result.output
         assert "--quick" in result.output
-        assert "firecube archive validate --archive file:///tmp/archive.tgm" in result.output
+        assert (
+            "firecube archive validate --archive file:///data/archives/MY_PRODUCT.tgm"
+            in result.output
+        )
 
 
 class TestArchiveListCommand:
@@ -96,7 +101,7 @@ class TestArchiveCreateLocal:
                     coords={"t": [0, 1, 2], "y": [1, 2, 3, 4]},
                 )
                 ds.to_zarr(src)
-                args = ["archive", "create", "--source", f"file://{src}"]
+                args = ["archive", "create", "--target", f"file://{src}"]
                 args += ["--archive", f"file://{workdir / 'test.tgm'}", *_LOCAL_STORAGE_FLAGS]
                 result = CliRunner().invoke(cli, args)
                 assert result.exit_code == 0, result.output

@@ -21,13 +21,10 @@ from typing import Any
 
 import click
 
-from firecube.cli._errors import render
-from firecube.cli._shared_options import dry_run_flag, yes_flag
-from firecube.cli._uri_policy import parse_and_validate_uri
+from firecube.cli._shared_options import dry_run_flag, format_option, target_uri_option, yes_flag
 from firecube.core.controlplane.types import AbandonSweepResult
-from firecube.core.errors import ManifestError
 
-from ._manager import resolve_cli_product, resolve_manager
+from ._manager import target_product
 
 
 @click.group("runs")
@@ -105,48 +102,29 @@ def _echo_abandon_sweep_result(
     epilog="""\b
 Examples:
   # list all runs for a product
-  firecube chunks runs list --product-name file:///data/products/MY_PRODUCT.zarr
+  firecube chunks runs list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # filter by status
-  firecube chunks runs list --product-name file:///data/products/MY_PRODUCT.zarr --status started
+  firecube chunks runs list --target file:///data/products/MY_PRODUCT.zarr --status started
 
 \b
   # output as JSON
-  firecube chunks runs list --product-name file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks runs list --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks runs abandon, firecube chunks list
 """,
 )
-@click.option("-n", "--product-name", "product_name", required=True, help="full product URI")
-@click.option(
-    "--target",
-    "target",
-    default=None,
-    metavar="URI",
-    hidden=True,
-    help=(
-        "Legacy product target override. Prefer passing the full product URI "
-        "through --product-name."
-    ),
-)
+@target_uri_option("inspect")
 @click.option(
     "--status", default=None, help="filter runs by status (started, complete, failed, abandoned)"
 )
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json"]),
-    default="table",
-    help="output format",
-)
+@format_option(("table", "json"))
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
-    product_name: str,
-    target: str | None,
+    target: str,
     status: str | None,
     workspace: Path | None,
     output_format: str,
@@ -156,12 +134,9 @@ def list_cmd(
     list tracked ingestion runs for a product from the .firecube/ control
     plane. shows run status (started, complete, failed, abandoned), timestamps,
     and span counts. use to identify stuck or failed runs before abandoning"""
-    if target is not None:
-        product_uri = parse_and_validate_uri(target, param_hint="--target")
-    else:
-        product_name, product_uri = resolve_cli_product(product_name)
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    runs = manager.list_runs(product=product_name, status=status)
+    product = target_product(ctx, workspace, target)
+    product_name = product.label
+    runs = product.manager.list_runs(product=product_name, status=status)
 
     if output_format == "json":
         click.echo(
@@ -215,37 +190,26 @@ def list_cmd(
     epilog="""\b
 Examples:
   # preview what would be abandoned
-  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "crashed" --dry-run
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "crashed" --dry-run
 
 \b
   # abandon a stuck run in non-interactive context
-  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "process crashed" \\
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "process crashed" \\
       --yes-i-really-mean-it
 
 \b
   # preview every stale non-terminal run (bulk mode never prompts)
-  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash"
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash"
 
 \b
   # abandon every stale non-terminal run
-  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash" \\
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash" \\
       --yes-i-really-mean-it
 
 See also: firecube chunks runs list, firecube chunks list
 """,
 )
-@click.option("-n", "--product-name", "product_name", required=True, help="full product URI")
-@click.option(
-    "--target",
-    "target",
-    default=None,
-    metavar="URI",
-    hidden=True,
-    help=(
-        "Legacy product target override. Prefer passing the full product URI "
-        "through --product-name."
-    ),
-)
+@target_uri_option("inspect")
 @click.option(
     "--run-id",
     default=None,
@@ -267,8 +231,7 @@ See also: firecube chunks runs list, firecube chunks list
 @click.pass_context
 def abandon_cmd(
     ctx: click.Context,
-    product_name: str,
-    target: str | None,
+    target: str,
     run_id: str | None,
     all_stale: bool,
     reason: str,
@@ -294,27 +257,18 @@ def abandon_cmd(
     runs and the claims it would release as a dry run; with the flag it
     abandons them. single-run operations
     prompt in a terminal and require the flag in non-TTY contexts."""
-    if target is not None:
-        product_uri = parse_and_validate_uri(target, param_hint="--target")
-    else:
-        product_name, product_uri = resolve_cli_product(product_name)
-
     if (run_id is not None) == all_stale:
         raise click.UsageError("Provide exactly one of --run-id or --all-stale.")
 
     if all_stale:
-        manager = resolve_manager(
-            ctx, workspace, product_uri=product_uri, product_name=product_name
-        )
+        product = target_product(ctx, workspace, target)
+        product_name = product.label
         effective_dry_run = dry_run or not yes_i_really_mean_it
-        try:
-            result = manager.abandon_stale_runs(
-                product=product_name,
-                reason=reason,
-                dry_run=effective_dry_run,
-            )
-        except ManifestError as exc:
-            raise click.ClickException(render(exc)) from exc
+        result = product.manager.abandon_stale_runs(
+            product=product_name,
+            reason=reason,
+            dry_run=effective_dry_run,
+        )
         _echo_abandon_sweep_result(
             product_name=product_name,
             result=result,
@@ -331,6 +285,8 @@ def abandon_cmd(
             )
         click.confirm(f"Abandon run '{run_id}'?", abort=True)
 
+    product = target_product(ctx, workspace, target)
+    product_name = product.label
     if dry_run:
         click.echo(
             f"[dry-run] Would abandon run '{run_id}' for product "
@@ -338,10 +294,6 @@ def abandon_cmd(
         )
         return
 
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-    try:
-        result = manager.abandon_run(product=product_name, run_id=run_id, reason=reason)
-    except ManifestError as exc:
-        raise click.ClickException(render(exc)) from exc
+    result = product.manager.abandon_run(product=product_name, run_id=run_id, reason=reason)
 
     _echo_abandon_run_result(product_name=product_name, run_id=run_id, result=result)

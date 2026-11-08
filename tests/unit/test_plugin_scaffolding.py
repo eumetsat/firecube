@@ -25,6 +25,7 @@ only guard against the templates drifting from the Firecube API.
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import importlib.util
 import math
@@ -44,13 +45,8 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import (
-    IndexSpec,
-    PipelineResult,
-    ZarrTemplateConfig,
-    resolve_index_spec,
-)
 from firecube.ingestor.devtools.scaffolding import _load_template, create_plugin_structure
+from firecube.sdk import IndexSpec, PipelineResult, ZarrTemplateConfig, resolve_index_spec
 
 TEMPLATES = ["base", "zarr", "parquet", "direct_zarr"]
 
@@ -69,10 +65,10 @@ READER_PER_TEMPLATE: dict[str, str] = {
 }
 
 EXPECTED_DEPS: dict[str, list[str]] = {
-    "base": ["firecube>=0.1.5"],
-    "zarr": ["firecube>=0.1.5", "xarray"],
-    "parquet": ["firecube>=0.1.5", "pyarrow"],
-    "direct_zarr": ["firecube>=0.1.5", "numpy"],
+    "base": ["firecube>=0.1.9"],
+    "zarr": ["firecube>=0.1.9", "xarray"],
+    "parquet": ["firecube>=0.1.9", "pyarrow"],
+    "direct_zarr": ["firecube>=0.1.9", "numpy"],
 }
 
 FORBIDDEN_DEPS: dict[str, list[str]] = {
@@ -80,13 +76,6 @@ FORBIDDEN_DEPS: dict[str, list[str]] = {
     "zarr": ["pandas", "numpy", "pyarrow"],
     "parquet": ["xarray", "numpy"],
     "direct_zarr": ["xarray", "pandas", "pyarrow"],
-}
-
-OUTPUT_FORMAT_PER_TEMPLATE: dict[str, str] = {
-    "base": "zarr",
-    "zarr": "zarr",
-    "parquet": "parquet",
-    "direct_zarr": "zarr",
 }
 
 # Minimal stand-in for PluginContext: the generated hooks only touch these two.
@@ -181,6 +170,61 @@ def test_generated_pyproject_declares_deps_entry_point_and_tooling(
     assert data["tool"]["pyright"]["include"] == ["src", "tests"]
 
 
+@pytest.mark.contract
+@pytest.mark.parametrize("template_type", TEMPLATES)
+def test_generated_python_files_import_firecube_only_through_the_sdk(
+    template_type: str, tmp_path: Path
+) -> None:
+    root = create_plugin_structure("demo-foo", tmp_path, template_type=template_type)
+
+    modules: set[str] = set()
+    for path in root.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                modules.add(node.module)
+            elif isinstance(node, ast.Import):
+                modules.update(alias.name for alias in node.names)
+
+    firecube_modules = {m for m in modules if m == "firecube" or m.startswith("firecube.")}
+    assert firecube_modules == {"firecube.sdk"}
+
+
+def _run_generated_boundary_test(root: Path) -> subprocess.CompletedProcess[str]:
+    env = {**os.environ, "PYTHONPATH": str(root / "src")}
+    target = "tests/test_import_boundary.py"
+    return subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", target],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+
+@pytest.mark.contract
+def test_generated_import_boundary_test_passes_on_a_fresh_scaffold(tmp_path: Path) -> None:
+    root = create_plugin_structure("demo-foo", tmp_path)
+
+    completed = _run_generated_boundary_test(root)
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "1 passed" in completed.stdout, completed.stdout
+
+
+@pytest.mark.contract
+def test_generated_import_boundary_test_fails_on_a_deep_firecube_import(tmp_path: Path) -> None:
+    root = create_plugin_structure("demo-foo", tmp_path)
+    ingestor = root / "src" / "firecube_demo_foo" / "ingestor.py"
+    ingestor.write_text(ingestor.read_text() + "\nfrom firecube.core.api import AUTO\n")
+
+    completed = _run_generated_boundary_test(root)
+
+    assert completed.returncode == 1, completed.stdout + completed.stderr
+    assert "1 failed" in completed.stdout, completed.stdout
+    assert "ingestor.py" in completed.stdout
+    assert "import of 'firecube.core.api'" in completed.stdout
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize("template_type", TEMPLATES)
 def test_generated_readme_names_reader_and_documents_the_flow(
@@ -195,12 +239,12 @@ def test_generated_readme_names_reader_and_documents_the_flow(
         "--input-data file:///path/to/your/input",
         "--target file:///tmp/demo_foo_out",
         "--product-name demo_foo",
-        f"--output-format {OUTPUT_FORMAT_PER_TEMPLATE[template_type]}",
         "--write-mode",
         "--input-filters",
     ):
         assert flag in readme, flag
-    # Storage type and driver are inferred from the file:// URI.
+    # The ingestor class owns its output format; storage type and driver are inferred from the URI.
+    assert "--output-format" not in readme
     assert "--storage-type" not in readme
     assert "--storage-driver" not in readme
     for command in ("plugins install --editable .", "plugins list", "plugins describe demo_foo"):

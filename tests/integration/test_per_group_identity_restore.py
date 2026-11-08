@@ -33,13 +33,13 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
 from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import SchemaDriftError
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
+from firecube.core.zarr._reserved_attrs import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
 from firecube.ingestor.registry import loader as _loader
 
 pytestmark = pytest.mark.integration

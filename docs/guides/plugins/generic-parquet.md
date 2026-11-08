@@ -37,7 +37,7 @@ from typing import ClassVar
 import pyarrow as pa
 import pyarrow.csv
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericParquetIngestor,
     PipelineBatch,
     PluginContext,
@@ -87,7 +87,6 @@ firecube ingest my_plugin \
   --product-name my_product \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format parquet \
   --write-mode direct
 ```
 

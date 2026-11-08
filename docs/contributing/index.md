@@ -12,8 +12,7 @@ because external plugins use the public SDK and do not need engine internals.
 
 ## Boundaries
 
-Plugin code should import public symbols from `firecube.ingestor.api` and
-`firecube.core.api`.
+Import public symbols from `firecube.sdk` in plugin code.
 
 Firecube contributor work may touch internals, but it must preserve the public
 SDK boundary, CLI contract, storage-driver boundary, ChunkManager behavior, and

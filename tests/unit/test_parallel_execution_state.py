@@ -32,7 +32,7 @@ def test_dataclass_construction_with_global_expected() -> None:
 
 
 def test_dataclass_is_not_in_api() -> None:
-    import firecube.ingestor.api as api
+    import firecube.sdk as api
 
     assert not hasattr(api, "_ParallelExecutionState")
 

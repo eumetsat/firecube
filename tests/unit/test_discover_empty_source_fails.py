@@ -24,6 +24,7 @@ from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     OutputPaths,
     PipelineBatch,
@@ -51,8 +52,10 @@ class _MinimalIngestor(BaseIngestor):
         return {}
 
 
-def _make_plugin_ctx(source: str) -> PluginContext:
-    runtime_ctx = RuntimeIngestContext(source=source, target="/tmp/target")
+def _make_plugin_ctx(source: str, execution: ExecutionParams | None = None) -> PluginContext:
+    runtime_ctx = RuntimeIngestContext(
+        source=source, target="/tmp/target", execution=execution or ExecutionParams()
+    )
     return PluginContext(runtime_ctx)
 
 
@@ -71,7 +74,11 @@ class _OverridesAndCallsSuper(BaseIngestor):
 
 
 def _discover(
-    ingestor_cls: type[BaseIngestor], config: EngineConfig | None, source: Path, found: list[str]
+    ingestor_cls: type[BaseIngestor],
+    config: EngineConfig | None,
+    source: Path,
+    found: list[str],
+    execution: ExecutionParams | None = None,
 ) -> list[Any]:
     """Discover from an existing *source* while the filesystem walk returns *found*."""
     source.mkdir()
@@ -79,7 +86,7 @@ def _discover(
     if config is not None:  # None: the attribute stays unset, as on a bare ingestor
         ingestor.engine_config = config
     with patch(_DISCOVERY_TARGET, return_value=found):
-        return list(ingestor.discover_source_files(_make_plugin_ctx(str(source))))
+        return list(ingestor.discover_source_files(_make_plugin_ctx(str(source), execution)))
 
 
 # (row id, ingestor class, engine config, ConfigurationError message pattern)
@@ -155,8 +162,8 @@ def test_empty_discovery_text_follows_the_kind_of_source(
     assert (".he5" in text) is suffix_list_named
 
 
-# (row id, ingestor class, engine config, files the walk finds)
-_DISCOVERY_PASSES: tuple[tuple[str, type[BaseIngestor], EngineConfig, list[str]], ...] = (
+# (row id, ingestor class, engine config, files the walk finds[, execution parameters])
+_DISCOVERY_PASSES: tuple[tuple[Any, ...], ...] = (
     (
         "test_allow_empty_source_bypasses_check_even_with_pattern",
         _MinimalIngestor,
@@ -166,8 +173,9 @@ _DISCOVERY_PASSES: tuple[tuple[str, type[BaseIngestor], EngineConfig, list[str]]
     (
         "test_slot_range_context_bypasses_empty_source_check",
         _MinimalIngestor,
-        EngineConfig(allow_empty_source=False, slot_start=0, slot_end=10, input_filters=["*.nc"]),
+        EngineConfig(allow_empty_source=False, input_filters=["*.nc"]),
         [],
+        ExecutionParams(slot_start=0, slot_end=10),
     ),
     (
         "test_non_empty_discovery_does_not_raise",
@@ -186,8 +194,8 @@ _DISCOVERY_PASSES: tuple[tuple[str, type[BaseIngestor], EngineConfig, list[str]]
 
 @pytest.mark.unit
 def test_discovery_returns_what_was_found(subtests: Any, tmp_path: Path) -> None:
-    for row_id, ingestor_cls, config, names in _DISCOVERY_PASSES:
+    for row_id, ingestor_cls, config, names, *execution in _DISCOVERY_PASSES:
         with table_row(subtests, row_id, tmp_path) as (workdir, _):
             files = [str(workdir / "source" / name) for name in names]
 
-            assert _discover(ingestor_cls, config, workdir / "source", files) == files
+            assert _discover(ingestor_cls, config, workdir / "source", files, *execution) == files

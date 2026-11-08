@@ -18,10 +18,16 @@ from __future__ import annotations
 
 import click
 
-from firecube.cli._errors import render
-from firecube.cli.snapshot._common import open_manager, snapshot_options
-from firecube.cli.snapshot._render import echo_json, echo_record, record_payload
-from firecube.core.errors import FirecubeError
+from firecube.cli._shared_options import dry_run_flag
+from firecube.cli.snapshot._common import open_target, snapshot_options
+from firecube.cli.snapshot._render import (
+    echo_json,
+    echo_plan,
+    echo_record,
+    plan_payload,
+    record_payload,
+)
+from firecube.operations import take_snapshot_for_product
 
 
 @click.command(
@@ -29,48 +35,57 @@ from firecube.core.errors import FirecubeError
     epilog="""\b
 Examples:
   # take a snapshot of the metadata of a local product
-  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
+  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # print the new snapshot record as JSON
-  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT -f json
+  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr -f json
+
+\b
+  # show what a snapshot would write, and write nothing
+  firecube snapshot take --target file:///data/products/MY_PRODUCT.zarr --dry-run
 
 See also: firecube snapshot list, firecube snapshot diff
 """,
 )
 @snapshot_options(tier="write")
+@dry_run_flag
 @click.pass_context
 def take(
     ctx: click.Context,
     target: str,
-    product_name: str,
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
     output_format: str,
+    dry_run: bool,
 ) -> None:
     """capture the metadata documents of a product
 
     stores the exact bytes of every Zarr metadata document under
     .firecube/metadata/ and prints the new snapshot record. no chunk is read.
     the snapshot is an observation: a writer running at the same time can make
-    it mix states. it takes no maintenance claim.
+    it mix states. it takes no maintenance claim. --dry-run prints the documents,
+    the manifest and the parent the snapshot would record, and writes nothing.
     """
-    manager, product = open_manager(
+    opened = open_target(
         ctx,
         target=target,
-        product_name=product_name,
         storage_type=storage_type,
         storage_driver=storage_driver,
         storage_anonymous=storage_anonymous,
         writable=True,
     )
-    try:
-        record = manager.take_snapshot(
-            product, run_id=None, trigger="cli", consistency="observation"
+    if dry_run:
+        preview = take_snapshot_for_product(
+            opened, dry_run=True, trigger="cli", consistency="observation"
         )
-    except FirecubeError as exc:
-        raise click.ClickException(render(exc)) from exc
+        if output_format == "json":
+            echo_json(plan_payload(preview.plan, label_recorded=preview.label_recorded))
+            return
+        echo_plan(preview.plan, label=opened.label, label_recorded=preview.label_recorded)
+        return
+    record = take_snapshot_for_product(opened, trigger="cli", consistency="observation")
 
     if output_format == "json":
         echo_json(record_payload(record))

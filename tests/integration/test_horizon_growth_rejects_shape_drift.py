@@ -27,10 +27,10 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.zarr.region_writer import RegionZarrWriter
-from firecube.ingestor.api import IndexSpec, RegularTimeAxis, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.errors import SchemaSizeMismatchError
 from firecube.ingestor.registry import loader as _loader
 from firecube.ingestor.templates.direct_zarr import _setup_global_zarr_schema
+from firecube.sdk import IndexSpec, RegularTimeAxis, ZarrArraySpec, ZarrGroupSpec
 from tests.helpers.cli_hints import parse_hint
 
 pytestmark = pytest.mark.integration

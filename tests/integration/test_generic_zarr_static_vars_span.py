@@ -36,8 +36,8 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import GenericZarrIngestor, PluginContext
 from firecube.ingestor.runtime.zarr.resume_cache import clear_resume_cache
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration
@@ -122,7 +122,6 @@ def _engine_run(
     static_only: bool = False,
 ) -> None:
     options: dict[str, Any] = {
-        "write_mode": "direct",
         "x_days": days,
         "x_static_only": static_only,
         "pipeline_workers": 1,
@@ -131,7 +130,12 @@ def _engine_run(
     }
     if resume_existing:
         options["resume_existing"] = True
-    ctx = make_test_context(tmp_path, product=_PRODUCT, options=options)
+    ctx = make_test_context(
+        tmp_path,
+        product=_PRODUCT,
+        options=options,
+        execution=ExecutionParams(write_mode="direct"),
+    )
     _StaticMixIngestor().run(ctx)
 
 
@@ -141,9 +145,8 @@ def _spans(tmp_path: Path) -> list[dict[str, Any]]:
         cli,
         [
             "chunks",
-            "--quiet",
             "list",
-            "--product-name",
+            "--target",
             (tmp_path / _PRODUCT).as_uri(),
             "--include-span",
             "--format",

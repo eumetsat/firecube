@@ -23,6 +23,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from firecube.core.controlplane.product_label import stamp_product_label
 from firecube.core.controlplane.types import (
     DEFAULT_RUN_STALE_THRESHOLD_S,
     SCHEMA_FILENAME,
@@ -88,7 +89,11 @@ class ConsolidatedTimeCoord:
 
 
 class RunEventWriter:
-    """Append immutable event segments for a single run."""
+    """Append immutable event segments for a single run.
+
+    The constructor stamps the product label on a store without one. It raises
+    `ProductLabelMismatchError` when the store records another label.
+    """
 
     def __init__(
         self,
@@ -140,6 +145,8 @@ class RunEventWriter:
             else (resumed_slot_group if isinstance(resumed_slot_group, str) else None)
         )
 
+        # Refuse another product's label before this writer makes a directory or a record.
+        stamp_product_label(self._fs, control_uri, product)
         try:
             self._fs.makedirs(control_uri, exist_ok=True)  # pyright: ignore[reportAttributeAccessIssue]
         except Exception:

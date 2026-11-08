@@ -24,6 +24,7 @@ from click.testing import CliRunner
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.storage.uri import StorageUri
+from tests.helpers.chunks import bound
 from tests.helpers.storage import make_test_binding
 
 
@@ -47,8 +48,8 @@ def test_rebuild_help_advertises_dry_run_only():
 def test_rebuild_dry_run_does_not_invoke_manager(monkeypatch):
     manager = _FakeSnapshotsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._compact.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._compact.target_product",
+        lambda *args, **kwargs: bound(manager),
     )
 
     r = CliRunner().invoke(
@@ -57,7 +58,7 @@ def test_rebuild_dry_run_does_not_invoke_manager(monkeypatch):
             "chunks",
             "compact",
             "rebuild",
-            "--product-name",
+            "--target",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
             "--dry-run",
         ],
@@ -71,8 +72,8 @@ def test_rebuild_dry_run_does_not_invoke_manager(monkeypatch):
 def test_rebuild_without_dry_run_does_not_require_confirmation(monkeypatch):
     manager = _FakeSnapshotsManager()
     monkeypatch.setattr(
-        "firecube.cli.chunks._compact.resolve_manager",
-        lambda *args, **kwargs: manager,
+        "firecube.cli.chunks._compact.target_product",
+        lambda *args, **kwargs: bound(manager),
     )
 
     r = CliRunner().invoke(
@@ -81,7 +82,7 @@ def test_rebuild_without_dry_run_does_not_require_confirmation(monkeypatch):
             "chunks",
             "compact",
             "rebuild",
-            "--product-name",
+            "--target",
             "file:///tmp/wk/TEST_PRODUCT.zarr",
         ],
     )
@@ -94,9 +95,9 @@ def test_rebuild_without_dry_run_does_not_require_confirmation(monkeypatch):
 @pytest.mark.contract
 @pytest.mark.parametrize("group", ["compact", "snapshots"])
 def test_compact_and_alias_rebuild_and_status_use_compact_dir(group, tmp_path):
-    uri = StorageUri.from_local_path(tmp_path / "P.zarr").to_str()
+    uri = _product_with_a_completed_span(tmp_path)
     base = ["chunks", group]
-    opts = ["--product-name", uri, "--workspace", str(tmp_path / "ws"), "-f", "json"]
+    opts = ["--target", uri, "--workspace", str(tmp_path / "ws"), "-f", "json"]
 
     rebuilt = CliRunner().invoke(cli, [*base, "rebuild", *opts])
     status = CliRunner().invoke(cli, [*base, "status", *opts])
@@ -129,7 +130,7 @@ def _product_with_a_completed_span(tmp_path: Path) -> str:
 
 
 def _compact(uri: str, tmp_path: Path, verb: str):
-    opts = ["--product-name", uri, "--workspace", str(tmp_path / "ws"), "-f", "json"]
+    opts = ["--target", uri, "--workspace", str(tmp_path / "ws"), "-f", "json"]
     return CliRunner().invoke(cli, ["chunks", "compact", verb, *opts])
 
 

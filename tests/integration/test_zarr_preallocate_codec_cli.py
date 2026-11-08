@@ -212,8 +212,8 @@ def test_preallocate_rejects_per_array_codecs_when_compression_false(
     ensures the CLI and the test target the same object under full-suite
     ordering.
     """
-    from firecube.ingestor.api import PluginContext, ZarrArraySpec, ZarrGroupSpec
     from firecube.ingestor.registry.loader import discover_ingestors
+    from firecube.sdk import PluginContext, ZarrArraySpec, ZarrGroupSpec
 
     plugins = discover_ingestors()
     plugin_cls = plugins["direct_zarr_capable_test_plugin"]
@@ -249,10 +249,9 @@ def test_preallocate_rejects_per_array_codecs_when_compression_false(
         "preallocate must reject per-array codecs + zarr_compression=false, "
         f"but exited 0 with output:\n{result.output}"
     )
-    # ConfigurationError is a FirecubeError, so the CLI decorator
-    # ``wrap_user_facing_errors`` converts it to ``click.ClickException`` which
-    # exits ``SystemExit(1)``. The original ``ConfigurationError`` remains on
-    # the exception chain via ``ClickException.__cause__``.
+    # ConfigurationError reaches the CLI error boundary, which ends the command
+    # with exit code 2. The original ``ConfigurationError`` remains on the
+    # exception chain via ``__cause__``.
     original_exc: BaseException | None = result.exception
     while original_exc is not None and not isinstance(original_exc, ConfigurationError):
         original_exc = original_exc.__cause__ or original_exc.__context__

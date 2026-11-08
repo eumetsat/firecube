@@ -118,8 +118,8 @@ def test_plan_error_message_format(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     # Phase 3.7: error must name real remediation primitives (delete-span, not bare delete --range)
     assert "firecube chunks delete-span" in output_lower, result.output
     assert "force_reingest=true" in output_lower, result.output
-    # Phase 3.8: lock the full runnable command shape (--product/--dry-run/--force/--yes-i-really-mean-it)
-    assert "--product" in output_lower, result.output
+    # Phase 3.8: lock the full runnable command shape (--target/--dry-run/--force/--yes-i-really-mean-it)
+    assert "--target" in output_lower, result.output
     assert "--dry-run" in output_lower, result.output
     assert "--force" in output_lower, result.output
     assert "--yes-i-really-mean-it" in output_lower, result.output
@@ -133,6 +133,6 @@ def test_repro_blocked_ranges_delete_span_command_carries_the_target_uri(
     )
     result = CliRunner().invoke(cli, _plan_args(tmp_path))
     assert result.exit_code != 0, result.output
-    match = re.search(r"firecube chunks delete-span --product-name (<[^>]+>|\S+)", result.output)
+    match = re.search(r"firecube chunks delete-span --target (<[^>]+>|\S+)", result.output)
     assert match, result.output
     assert match.group(1) == "<target URI>" or match.group(1).endswith("/out.zarr"), match.group(0)

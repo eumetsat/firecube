@@ -19,40 +19,40 @@ from pathlib import Path
 
 import click
 
-from firecube.cli._errors import render
-from firecube.core.controlplane.repo import UnparseableSpanBoundsError
+from firecube.cli._shared_options import all_products_flag, format_option, target_uri_option
+from firecube.core.controlplane.types import ChunkInfo
 
 from ._common import parse_datetime, parse_meta_filters, parse_time_range
-from ._manager import resolve_cli_product, resolve_manager
+from ._manager import BoundProduct, scoped_products
 
 
 @click.command(
     "list",
     epilog="""\b
 Examples:
-  # list all chunks across all products
-  firecube chunks list
+  # list chunks for a specific product
+  firecube chunks list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
-  # list chunks for a specific product
-  firecube chunks list --product-name file:///data/products/MY_PRODUCT.zarr
+  # list all chunks across all products under the [storage] base URI
+  firecube chunks list --all-products
 
 \b
   # filter by date range
-  firecube chunks list --start-date 2024-01-01 --end-date 2024-06-30
+  firecube chunks list --target file:///data/products/MY_PRODUCT.zarr --start-date 2024-01-01 --end-date 2024-06-30
 
 \b
   # output as JSON for scripting
-  firecube chunks list --product-name file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks list --target file:///data/products/MY_PRODUCT.zarr -f json
 
-See also: firecube chunks delete, firecube chunks runs list,
-          firecube chunks compact status
+See also: firecube chunks delete, firecube chunks runs list, firecube chunks compact status
 """,
 )
 @click.option(
     "--pattern", multiple=True, help="glob pattern to match chunk keys (can specify multiple)"
 )
-@click.option("-n", "--product-name", "product_name", help="full product URI to inspect")
+@target_uri_option("inspect", required=False)
+@all_products_flag
 @click.option("--end-date", "end_date", help="show chunks created before date (YYYY-MM-DD)")
 @click.option("--start-date", "start_date", help="show chunks created after date (YYYY-MM-DD)")
 @click.option(
@@ -73,14 +73,7 @@ See also: firecube chunks delete, firecube chunks runs list,
     type=click.Path(path_type=Path),
     help="workspace directory override (local path)",
 )
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json", "csv"]),
-    default="table",
-    help="output format",
-)
+@format_option()
 @click.option("--limit", type=int, help="limit number of results")
 @click.option(
     "--include-span",
@@ -99,7 +92,8 @@ See also: firecube chunks delete, firecube chunks runs list,
 def list_cmd(
     ctx: click.Context,
     pattern,
-    product_name,
+    target,
+    all_products,
     end_date,
     start_date,
     time_range,
@@ -113,44 +107,26 @@ def list_cmd(
 ) -> None:
     """list tracked chunk records
 
-    list chunk records tracked in the .firecube/ control plane for one or
-    all products. filter by product, date range, span, or chunk type.
-    supports table and JSON output for scripting"""
-    product_name, product_uri = resolve_cli_product(product_name)
-    manager = resolve_manager(ctx, workspace, product_uri=product_uri, product_name=product_name)
-
+    list chunk records tracked in the .firecube/ control plane for one
+    product (--target) or every product under the [storage] base URI
+    (--all-products). filter by date range, span, or chunk type. supports
+    table and JSON output for scripting"""
     before_dt = parse_datetime(end_date)
     after_dt = parse_datetime(start_date)
     time_range_dt = parse_time_range(time_range)
     meta = parse_meta_filters(meta_filters) if meta_filters else None
 
-    try:
-        if pattern:
-            chunks = []
-            for p in pattern:
-                entries = manager.list_chunks(
-                    pattern=p,
-                    product=product_name,
-                    before=before_dt,
-                    after=after_dt,
-                    chunk_type=chunk_type,
-                    meta=meta,
-                    time_overlaps=time_range_dt,
-                    include_replaced=include_replaced,
-                    refuse_unparseable=True,
-                )
-                chunks.extend(entries)
-            deduped = []
-            seen = set()
-            for chunk in chunks:
-                key = (chunk.product, chunk.key)
-                if key not in seen:
-                    seen.add(key)
-                    deduped.append(chunk)
-            all_chunks = deduped
-        else:
-            all_chunks = manager.list_chunks(
-                product=product_name,
+    products = scoped_products(ctx, workspace, target, all_products)
+    rows: list[tuple[BoundProduct, ChunkInfo]] = []
+    # Two patterns can match one key. A key is unique within its store only.
+    seen: set[tuple[BoundProduct, str]] = set()
+    for p in pattern or (None,):
+        matched = [
+            (product, chunk)
+            for product in products
+            for chunk in product.manager.list_chunks(
+                pattern=p,
+                product=product.label,
                 before=before_dt,
                 after=after_dt,
                 chunk_type=chunk_type,
@@ -159,11 +135,19 @@ def list_cmd(
                 include_replaced=include_replaced,
                 refuse_unparseable=True,
             )
-    except UnparseableSpanBoundsError as exc:
-        raise click.ClickException(render(exc)) from exc
+        ]
+        # Newest first across stores, as one manager's listing orders its products; stable.
+        matched.sort(key=lambda row: row[1].timestamp, reverse=True)
+        for product, chunk in matched:
+            if pattern and (product, chunk.key) in seen:
+                continue
+            seen.add((product, chunk.key))
+            rows.append((product, chunk))
 
     if limit:
-        all_chunks = all_chunks[:limit]
+        rows = rows[:limit]
+    all_chunks = [chunk for _product, chunk in rows]
+    listed = list(dict.fromkeys(product for product, _chunk in rows))
 
     def _span_payload(chunk) -> dict | None:
         if not include_span:
@@ -351,7 +335,6 @@ def list_cmd(
             )
 
     total_size_mb = sum(chunk.size_mb for chunk in all_chunks)
-    products = {chunk.product for chunk in all_chunks}
     click.echo(f"\nSummary: {len(all_chunks):,} chunks, {total_size_mb:.1f} MB total")
-    if len(products) > 1:
-        click.echo(f"Products: {', '.join(sorted(products))}")
+    if len(listed) > 1:
+        click.echo(f"Products: {', '.join(f'{p.label} ({p.uri.to_str()})' for p in listed)}")

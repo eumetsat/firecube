@@ -20,15 +20,16 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.ingestor.errors import ConfigurationError
+from firecube.sdk import (
     DirectZarrIngestor,
+    ExecutionParams,
     PipelineBatch,
     PluginContext,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.errors import ConfigurationError
 from tests.helpers.storage import make_test_context
 
 
@@ -72,7 +73,8 @@ def test_direct_zarr_existing_cube_check_uses_schema_declared_groups(tmp_path):
         tmp_path,
         source=str(tmp_path),
         product="out.zarr",
-        options={"no_progress": True, "pipeline_batch_size": 1, "write_mode": "direct"},
+        options={"no_progress": True, "pipeline_batch_size": 1},
+        execution=ExecutionParams(write_mode="direct"),
     )
     plugin = _DirectZarrTestIngestor()  # type: ignore[abstract]
 

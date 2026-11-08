@@ -41,7 +41,7 @@ def _run_advise_compliance(product_uri: str, group_path: str):
             "compliance",
             "--profile",
             "cf-18",
-            "--product",
+            "--target",
             product_uri,
             "--group",
             group_path,
@@ -85,7 +85,7 @@ def test_advise_compliance_cf18_clean_zero_errors(clean_cube):
             "compliance",
             "--profile",
             "cf-18",
-            "--product",
+            "--target",
             clean_cube,
             "--group",
             ".",
@@ -113,7 +113,7 @@ def test_advise_compliance_cf18_broken_reports_cf001(broken_cube):
             "compliance",
             "--profile",
             "cf-18",
-            "--product",
+            "--target",
             broken_cube,
             "--group",
             ".",
@@ -131,7 +131,7 @@ def test_advise_compliance_cf18_broken_reports_cf001(broken_cube):
 
 
 @pytest.mark.integration
-def test_advise_compliance_cf18_text_format(broken_cube):
+def test_advise_compliance_cf18_table_format(broken_cube):
     r = subprocess.run(
         [
             "uv",
@@ -141,13 +141,13 @@ def test_advise_compliance_cf18_text_format(broken_cube):
             "compliance",
             "--profile",
             "cf-18",
-            "--product",
+            "--target",
             broken_cube,
             "--group",
             ".",
             *_LOCAL_STORAGE_FLAGS,
             "--format",
-            "text",
+            "table",
         ],
         capture_output=True,
         text=True,
@@ -177,7 +177,7 @@ def test_advise_compliance_rejects_unknown_profile(clean_cube):
             "compliance",
             "--profile",
             "not-real",
-            "--product",
+            "--target",
             clean_cube,
             "--group",
             ".",

@@ -16,115 +16,176 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
-from typing import overload
 
 import click
 
 from firecube.cli._ctx import get_config, get_storage_config
-from firecube.cli._product import resolve_product_identity
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.core.config import StorageConfig
-from firecube.core.controlplane import ChunkManager
 from firecube.core.product.identity import ProductIdentity
 from firecube.core.runtime import identity_from_storage_config
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
-from firecube.core.storage.uri import StorageUri
+from firecube.operations import ChunkManager, Product, StorageDriverConfig, StorageUri, open_product
 
 log = logging.getLogger("firecube.cli")
 
+# The path under the base URI that the scanning binding opens; it names no product.
+_SCAN_LABEL = "__firecube_controlplane__"
 
-def resolve_manager(
+
+@dataclass(frozen=True, eq=False)
+class BoundProduct:
+    """A ChunkManager bound to one product store.
+
+    Attributes:
+        manager: The manager bound to the store.
+        label: The product label the store records.
+        uri: The URI of the store.
+    """
+
+    manager: ChunkManager
+    label: str
+    uri: StorageUri
+
+
+def require_one_scope(target: str | None, all_products: bool) -> None:
+    """Refuse a call that passes both or neither of `--target` and `--all-products`."""
+    if bool(target) == all_products:
+        raise click.UsageError("Provide exactly one of --target or --all-products.")
+
+
+def scoped_products(
     ctx: click.Context,
     workspace: Path | None,
-    product_uri: StorageUri | None = None,
+    target: str | None,
+    all_products: bool,
     *,
-    product_name: str | None = None,
+    product_filesystem: bool = False,
+) -> list[BoundProduct]:
+    """Bind the product at `target`, or with `all_products` every product under the base URI.
+
+    With `product_filesystem`, each manager deletes objects through a filesystem bound to
+    its own product.
+
+    Raises:
+        click.UsageError: Both or neither of `--target` and `--all-products` are given.
+    """
+    require_one_scope(target, all_products)
+    if target:
+        return [target_product(ctx, workspace, target, product_filesystem=product_filesystem)]
+    return scan_products(ctx, workspace, product_filesystem=product_filesystem)
+
+
+def target_product(
+    ctx: click.Context, workspace: Path | None, target: str, *, product_filesystem: bool = False
+) -> BoundProduct:
+    """Bind a ChunkManager to the product at `target`, under the label the store records.
+
+    The [storage] configuration supplies driver settings only, never a base URI.
+
+    Raises:
+        click.BadParameter: `target` is not an admitted product URI.
+        ProductLabelMissingError: The store records no product label.
+    """
+    uri = parse_and_validate_uri(target, param_hint="--target")
+    driver = StorageDriverConfig.from_storage_config_or_default(_optional_storage_config(ctx))
+    product = ctx.with_resource(open_product(uri, format="zarr", driver=driver))
+    manager = _product_manager(ctx, workspace, product, product_filesystem)
+    log.debug("Chunks using product URI target (product_uri=%s)", uri.to_str())
+    return BoundProduct(manager=manager, label=product.label, uri=uri)
+
+
+def scan_products(
+    ctx: click.Context, workspace: Path | None, *, product_filesystem: bool = False
+) -> list[BoundProduct]:
+    """Bind a ChunkManager to each product store under the [storage] base URI.
+
+    Prints the base URI to stderr before any storage call. Binds each store by its own
+    URI and label; skips a store that records no label, with a stderr line.
+
+    Raises:
+        click.UsageError: No [storage] configuration names a base URI.
+    """
+    storage_config = _optional_storage_config(ctx)
+    base = _base_uri_from_storage_config(storage_config) if storage_config is not None else None
+    if storage_config is None or base is None:
+        raise click.UsageError(
+            "--all-products scans the base URI of the [storage] configuration, and none is "
+            "set. Define [storage] in config.toml, or pass --target."
+        )
+    base_uri = _storage_uri_from_base(base.to_str())
+    click.echo(f"[chunks] scanning base {base_uri.to_str()}", err=True)
+    driver = StorageDriverConfig.from_storage_config_or_default(storage_config)
+    # The scan root names no product, so no label is expected of whatever is stored there.
+    scan_root = ctx.with_resource(
+        open_product(base_uri.join(_SCAN_LABEL), format="zarr", driver=driver, require_label=False)
+    )
+    scanner = _product_manager(ctx, workspace, scan_root, product_filesystem=False)
+    products: list[BoundProduct] = []
+    for uri, label in scanner.discover_products():
+        if label is None:
+            click.echo(f"[chunks] skipping {uri.to_str()}: it records no product label", err=True)
+            continue
+        store = ProductIdentity.from_uri(uri, format="zarr", product_name=label)
+        manager = _bound_manager(ctx, workspace, store, driver, product_filesystem)
+        products.append(BoundProduct(manager=manager, label=label, uri=uri))
+    return products
+
+
+def _optional_storage_config(ctx: click.Context) -> StorageConfig | None:
+    """Return the [storage] configuration when the config file or the environment sets one."""
+    if get_config(ctx).get("storage") or os.environ.get("FIRECUBE_STORAGE_TYPE"):
+        return get_storage_config(ctx, set_global=False)
+    return None
+
+
+def _bound_manager(
+    ctx: click.Context,
+    workspace: Path | None,
+    identity: ProductIdentity,
+    driver: StorageDriverConfig,
     product_filesystem: bool = False,
 ) -> ChunkManager:
-    """Resolve a ChunkManager for chunk operations using shared config + overrides.
+    """Return a ChunkManager for `identity` that closes with the command.
 
-    With ``product_filesystem``, a manager for a product URI deletes storage objects
-    through a filesystem bound to that product and ignores the [storage] base.
+    With `product_filesystem`, the manager deletes objects through a filesystem bound to
+    `identity`.
+
+    Raises:
+        ProductLabelMismatchError: The store records a label other than `identity`'s.
+    """
+    product = ctx.with_resource(
+        open_product(
+            identity.product_uri,
+            format=identity.format,
+            driver=driver,
+            product_name=identity.product_name,
+            require_label=False,
+        )
+    )
+    return _product_manager(ctx, workspace, product, product_filesystem)
+
+
+def _product_manager(
+    ctx: click.Context, workspace: Path | None, product: Product, product_filesystem: bool
+) -> ChunkManager:
+    """Return a ChunkManager bound like `product`'s session that closes with the command.
+
+    With `product_filesystem`, the manager deletes objects through the session's filesystem.
     """
     ctx.ensure_object(dict)
     base_workspace = workspace if workspace is not None else ctx.obj.get("workspace")
-    cfg = get_config(ctx)
-    storage_config: StorageConfig | None = None
-    env_storage_type_present = bool(os.environ.get("FIRECUBE_STORAGE_TYPE"))
-    if cfg.get("storage") or env_storage_type_present:
-        storage_config = get_storage_config(ctx, set_global=False)
-
-    if product_uri is not None and product_name is not None:
-        driver = StorageDriverConfig.from_storage_config_or_default(storage_config)
-        binding = StorageBinding(
-            identity=ProductIdentity.from_uri(
-                uri=product_uri,
-                format="zarr",
-                product_name=product_name,
-            ),
-            driver=driver,
-        )
-        filesystem = StorageSession(binding).fs() if product_filesystem else None
-        manager = ChunkManager(binding=binding, workspace=base_workspace, filesystem=filesystem)
-        ctx.call_on_close(manager.close)
-        log.debug("Chunks using product URI target (product_uri=%s)", manager.base_uri)
-        return manager
-
-    base_output = None
-    if product_uri is not None:
-        base_output = product_uri.to_str()
-
-    if base_output is None and storage_config is not None:
-        base_uri_from_config = _base_uri_from_storage_config(storage_config)
-        base_output = base_uri_from_config.to_str() if base_uri_from_config is not None else None
-
-    if base_output is None:
-        msg = (
-            "Chunk operations require a full product URI or a [storage] configuration in config.toml "
-            "(no product URI or storage configuration found)."
-        )
-        log.error(msg)
-        raise click.ClickException(msg)
-
-    base_uri = _storage_uri_from_base(base_output)
-    driver = StorageDriverConfig.from_storage_config_or_default(storage_config)
-    binding = StorageBinding(
-        identity=ProductIdentity.from_uri(
-            base_uri.join("__firecube_controlplane__"),
-            "zarr",
-            product_name="__firecube_controlplane__",
-        ),
-        driver=driver,
+    filesystem = product.session.fs() if product_filesystem else None
+    manager = ChunkManager(
+        binding=product.session.binding, workspace=base_workspace, filesystem=filesystem
     )
-    manager = ChunkManager(binding=binding, workspace=base_workspace)
     ctx.call_on_close(manager.close)
-
-    if storage_config is not None:
-        config_identity = identity_from_storage_config(storage_config)
-        bucket = config_identity.product_uri.authority if config_identity is not None else None
-        log.debug(
-            "Chunks using storage configuration (storage_type=%s, bucket=%s, base_uri=%s)",
-            storage_config.storage_type,
-            bucket,
-            manager.base_uri,
-        )
-        if not ctx.obj.get("chunks_quiet"):
-            source = "env" if env_storage_type_present else "config"
-            click.echo(
-                f"[chunks] storage: type={storage_config.storage_type} "
-                f"base_uri={manager.base_uri} (from {source})",
-                err=True,
-            )
-    else:
-        log.debug("Chunks using product URI base (base_uri=%s)", manager.base_uri)
-
     return manager
 
 
 def _storage_uri_from_base(raw: str) -> StorageUri:
+    """Parse the base URI of the [storage] configuration; refuse a bare path."""
     if "://" not in raw:
         raise click.UsageError(
             "Product target must resolve to a full URI like 's3://bucket/path' or "
@@ -134,35 +195,6 @@ def _storage_uri_from_base(raw: str) -> StorageUri:
 
 
 def _base_uri_from_storage_config(storage_config: StorageConfig) -> StorageUri | None:
+    """Return the base URI the [storage] configuration names, or `None` when it names none."""
     identity = identity_from_storage_config(storage_config)
     return identity.product_uri if identity is not None else None
-
-
-@overload
-def resolve_cli_product(product: str, *, format: str = "zarr") -> tuple[str, StorageUri]: ...
-
-
-@overload
-def resolve_cli_product(product: None, *, format: str = "zarr") -> tuple[None, None]: ...
-
-
-def resolve_cli_product(
-    product: str | None, *, format: str = "zarr"
-) -> tuple[str | None, StorageUri | None]:
-    if product is None:
-        return None, None
-    if "://" not in product:
-        return product, None
-    product_uri = parse_and_validate_uri(product, param_hint="--product-name")
-    product_label = product.rstrip("/").rsplit("/", 1)[-1]
-    identity = resolve_product_identity(product_uri, format=format, product_name=product_label)
-    return identity.product_name, identity.product_uri
-
-
-def storage_config_from_ctx(ctx: click.Context) -> StorageConfig:
-    storage_config_obj: StorageConfig | None = ctx.obj.get("storage_config")
-    if storage_config_obj is None:
-        raise click.ClickException(
-            "Storage configuration not available. Define [storage] in config.toml or use --manifest-only."
-        )
-    return storage_config_obj

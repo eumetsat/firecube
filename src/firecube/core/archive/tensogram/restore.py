@@ -28,7 +28,7 @@ from typing import Any, cast
 import xarray as xr
 from zarr.errors import ZarrUserWarning
 
-from firecube.core.archive._common import clear_target
+from firecube.core.archive._common import clear_target, refuse_other_product_label
 from firecube.core.config import StorageConfig
 from firecube.core.controlplane.types import CONTROL_DIRNAME
 from firecube.core.product.identity import ProductIdentity
@@ -65,6 +65,55 @@ def _make_archive_session(target: str, storage_config: Any | None) -> StorageSes
             driver=driver_config,
         )
     )
+
+
+def _controlplane_label(tensogram_file: Any, source: str) -> str | None:
+    """Return the label the control-plane message of an open archive names, or `None`.
+
+    An archive without a control-plane message records no label.
+
+    Raises:
+        ValueError: A message's metadata cannot be decoded, or the control-plane
+            message names no label.
+    """
+    # The converter appends the control-plane message last.
+    for index in reversed(range(tensogram_file.message_count())):
+        meta = tensogram_file.file_decode_metadata(index)
+        extra = (meta.extra or {}) if hasattr(meta, "extra") else {}
+        firecube_meta = extra.get("firecube", {})
+        if firecube_meta.get("role", ROLE_DATA) != ROLE_CONTROLPLANE:
+            continue
+        label = firecube_meta.get("product")
+        if not isinstance(label, str) or not label:
+            raise ValueError(
+                f"The control-plane message {index} of archive {source} names no product label"
+            )
+        return label
+    return None
+
+
+def tgm_product_label(source: str) -> str | None:
+    """Return the product label a .tgm archive's control-plane message records, or `None`.
+
+    An archive without a control-plane message records none. A file that cannot be opened
+    returns `None`; the restore refuses it.
+
+    Raises:
+        ImportError: The tensogram extras are not installed.
+        ValueError: A message's metadata cannot be decoded, or the control-plane
+            message names no label.
+    """
+    require_tensogram("tgm_product_label")
+    import tensogram as _tensogram  # pyright: ignore[reportMissingImports]
+
+    tensogram = cast(Any, _tensogram)
+    source_path = str(local_path_from_target(source))
+    try:
+        opened = tensogram.TensogramFile.open(source_path)
+    except OSError:
+        return None
+    with opened as tensogram_file:
+        return _controlplane_label(tensogram_file, source)
 
 
 def _prepare_target(target: str, *, overwrite: bool, keep_run_id: str | None) -> None:
@@ -257,10 +306,12 @@ def tgm_to_zarr(
     the message count and checks the archive version of the first message.
     It then runs the quick structural check of every message. An archive
     without messages returns an empty summary and leaves the target untouched.
+    It refuses a target that records another product label than the archive's
+    control-plane message before any write.
 
     An overwrite of a local target then removes the existing store. It keeps
-    ``.firecube/claims/``, ``.firecube/schema.json`` and
-    ``.firecube/runs/<keep_run_id>/``. No write to a local target removes
+    ``.firecube/claims/``, ``.firecube/schema.json``, ``.firecube/product.json``
+    and ``.firecube/runs/<keep_run_id>/``. No write to a local target removes
     anything under ``.firecube/``.
 
     A remote target is never cleared. The first group's write replaces that
@@ -286,8 +337,10 @@ def tgm_to_zarr(
         ImportError: If tensogram extras are not installed.
         ConfigurationError: If ``session`` is passed and ``target`` is not its
             product, or an overwrite finds a symlink on a kept local path.
-        ValueError: If the archive version is unsupported or the structural
-            check reports an issue.
+        ValueError: If the archive version is unsupported, the structural
+            check reports an issue, or the control-plane message names no label.
+        ProductLabelMismatchError: If the target records another product label.
+        ProductLabelConflictError: If an unstamped target's records name several labels.
         FileExistsError: If target exists and overwrite is False.
     """
     require_tensogram("tgm_to_zarr")
@@ -323,9 +376,12 @@ def tgm_to_zarr(
                 f"Expected {ARCHIVE_VERSION!r}."
             )
         _refuse_structural_issues(tensogram, source_path)
+        session = session or _make_archive_session(target, storage_config)
+        # The control-plane replay logs and skips a refused run, so the label is checked here.
+        if (label := _controlplane_label(tensogram_file, source)) is not None:
+            refuse_other_product_label(session, label)
 
         _prepare_target(target, overwrite=overwrite, keep_run_id=keep_run_id)
-        session = session or _make_archive_session(target, storage_config)
 
         restored_groups: list[str] = []
         restored_variables: list[str] = []

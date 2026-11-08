@@ -44,7 +44,6 @@ temperature sum: 276.0
 ```bash
 firecube migrate run firecube:set-attrs \
   --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT \
   --set title="Daily temperature" \
   --dry-run
 ```
@@ -67,9 +66,12 @@ The command wrote nothing.
 ```bash
 firecube migrate run firecube:set-attrs \
   --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT \
-  --set title="Daily temperature"
+  --set title="Daily temperature" \
+  --yes-i-really-mean-it
 ```
+
+Omit `--yes-i-really-mean-it` when you run on a terminal. The command then asks
+for confirmation.
 
 Expected output resembles:
 
@@ -93,8 +95,7 @@ hexadecimal digits.
 
 ```bash
 firecube snapshot diff <before-id> <after-id> \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
@@ -119,10 +120,9 @@ Two documents changed. Two root attributes appeared: your `title` and
 firecube release create 1.0.0 \
   --note "title added" \
   --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --yes-i-really-mean-it
 firecube release verify 1.0.0 \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output of `release verify`:

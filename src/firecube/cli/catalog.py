@@ -23,12 +23,10 @@ from pathlib import Path
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import render
-from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
-    product_uri_option,
     storage_driver_option,
     storage_type_option,
+    target_uri_option,
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
 from firecube.core import observability
@@ -37,10 +35,8 @@ from firecube.core.intake import (
     build_intake_catalog,
     discover_catalog_groups,
 )
-from firecube.core.storage.binding import StorageBinding
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.session import StorageSession
 from firecube.ingestor.registry.loader import discover_ingestors
+from firecube.operations import StorageDriverConfig, open_product
 
 log = logging.getLogger("firecube.cli")
 
@@ -60,17 +56,19 @@ def catalog() -> None:
     epilog="""\b
 Examples:
   # generate an Intake catalog for a product
-  firecube catalog intake <plugin> -p <product> -o <path>/catalog.yaml --collection-id <id>
+  firecube catalog intake <plugin> --target file:///data/products/MY_PRODUCT.zarr \\
+      --output file:///data/catalogs/catalog.yaml --collection-id <id>
 
 \b
   # generate without storage_options (for local or public stores)
-  firecube catalog intake <plugin> -p <product> -o <path>/catalog.yaml --collection-id <id> --no-storage-options
+  firecube catalog intake <plugin> --target file:///data/products/MY_PRODUCT.zarr \\
+      --output file:///data/catalogs/catalog.yaml --collection-id <id> --no-storage-options
 
 See also: firecube plugins list, firecube zarr validate
 """,
 )
 @click.argument("plugin")
-@product_uri_option(tier="inspect")
+@target_uri_option(tier="inspect")
 @click.option(
     "-o",
     "--output",
@@ -95,7 +93,7 @@ See also: firecube plugins list, firecube zarr validate
 def intake(
     ctx: click.Context,
     plugin: str,
-    product: str,
+    target: str,
     output: str,
     collection_id: str,
     include_storage_options: bool,
@@ -108,7 +106,7 @@ def intake(
     Generates an Intake YAML catalog for a supported product store. Discovers
     dataset groups using the specified plugin and writes a catalog file with
     source specs and optional storage_options placeholders. Requires
-    --product, --output, and --collection-id.
+    --target, --output, and --collection-id.
     """
     observability.init_observability("firecube-catalog-intake")
 
@@ -119,8 +117,8 @@ def intake(
 
     ingestor_cls = plugins[plugin]
 
-    product_uri = parse_and_validate_uri(product, param_hint="--product")
-    storage_type = apply_smart_default(product_uri, storage_type)
+    target_uri = parse_and_validate_uri(target, param_hint="--target")
+    storage_type = apply_smart_default(target_uri, storage_type)
     output_uri = parse_and_validate_uri(output, param_hint="--output")
     if output_uri.is_remote():
         raise click.ClickException("Remote artifact output not yet supported")
@@ -136,29 +134,19 @@ def intake(
     )
 
     driver_config = StorageDriverConfig.from_storage_config(storage_config)
-    identity = resolve_product_identity(
-        product_uri,
-        format="zarr",
-        product_name=product_uri.to_str(),
+    product = ctx.with_resource(
+        open_product(target_uri, format="zarr", driver=driver_config, require_label=False)
     )
-    session = StorageSession(
-        StorageBinding(
-            identity=identity,
-            driver=driver_config,
-        )
-    )
+    session = product.session
 
-    store_uri = identity.product_uri.to_str()
+    store_uri = product.identity.product_uri.to_str()
 
     # Instantiate ingestor and let Firecube discover/annotate catalog groups.
     ingestor = ingestor_cls()
-    try:
-        groups = discover_catalog_groups(store_uri, storage_session=session)
-    except Exception as exc:
-        raise click.ClickException(render(exc)) from exc
+    groups = discover_catalog_groups(store_uri, storage_session=session)
     source_specs = build_catalog_source_specs(
         plugin_name=plugin,
-        product=product_uri.to_str(),
+        product=target_uri.to_str(),
         store_uri=store_uri,
         groups=groups,
         group_info_resolver=getattr(ingestor, "catalog_group_info", None),
@@ -166,11 +154,11 @@ def intake(
     )
     if not source_specs:
         raise click.ClickException(
-            f"No catalogable dataset groups found for plugin '{plugin}' under product '{product_uri.to_str()}'."
+            f"No catalogable dataset groups found for plugin '{plugin}' under product '{target_uri.to_str()}'."
         )
 
     catalog_name = plugin
-    catalog_description = f"Firecube product '{product_uri.to_str()}' for plugin '{plugin}'."
+    catalog_description = f"Firecube product '{target_uri.to_str()}' for plugin '{plugin}'."
     catalog_dict = build_intake_catalog(
         catalog_name=catalog_name,
         catalog_description=catalog_description,

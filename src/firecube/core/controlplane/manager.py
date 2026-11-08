@@ -35,6 +35,7 @@ from firecube.core.controlplane._paths import run_dir_for
 from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.deletion import DeletionEngine
 from firecube.core.controlplane.events import ConsolidatedTimeCoord
+from firecube.core.controlplane.product_label import recorded_product_label, stamp_product_label
 from firecube.core.controlplane.repo import ClaimOwner, ManifestRepository, _owner_candidates
 from firecube.core.controlplane.types import (
     EVENT_SLOT_INDEX_MODEL_RECORDED,
@@ -74,6 +75,8 @@ from firecube.core.errors import (
     Message,
     Operation,
     Placeholder,
+    ProductLabelConflictError,
+    ProductLabelMismatchError,
     ProductUnderMaintenanceError,
     ResolvedIndexAttrsConflictError,
     ResolvedIndexClaimTimeoutError,
@@ -90,6 +93,7 @@ from firecube.core.slot_index import (
     SlotIndexModel,
 )
 from firecube.core.storage.binding import StorageBinding
+from firecube.core.storage.uri import StorageUri
 from firecube.core.zarr.guard._unit_locks import _store_identity
 from firecube.core.zarr.guard.metadata_authority import (
     HeldClaim,
@@ -110,7 +114,6 @@ if TYPE_CHECKING:
         SnapshotRecord,
     )
     from firecube.core.controlplane.releases import ReleaseVerification, StoredRelease
-    from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.metadata_documents import MetadataDocument
 
 log = logging.getLogger(__name__)
@@ -355,6 +358,8 @@ class ChunkManager:
         Raises:
             ProductUnderMaintenanceError: Another owner holds that claim, or it cannot be
                 read. The run is recorded failed with the refusal text before the raise.
+            ProductLabelMismatchError: The store records another product label; no run
+                is recorded.
         """
         self.repo.record_run_started(
             product=product,
@@ -420,6 +425,7 @@ class ChunkManager:
 
         Raises:
             ProductUnderMaintenanceError: Another owner holds the claim, or it cannot be read.
+            ProductLabelMismatchError: The store records another product label.
         """
         check_exclusive_maintenance(repo=self.repo, product=product, owner_id=owner_id)
 
@@ -719,6 +725,22 @@ class ChunkManager:
     def discover_manifests(self) -> list[str]:
         """Scan the workspace for products with control-plane roots."""
         return self.repo.discover_manifests()
+
+    def discover_products(self) -> list[tuple[StorageUri, str | None]]:
+        """Return the URI and recorded label of each product with a `.firecube/` under the base URI.
+
+        A product that records no label pairs with `None`. Writes nothing.
+
+        Raises:
+            ManifestError: A product's stamp, run record or claim record cannot be read.
+            ProductLabelConflictError: An unstamped product's records name several labels.
+        """
+        products: list[tuple[StorageUri, str | None]] = []
+        for control_uri in self.repo.discover_manifests():
+            root = StorageUri.parse(control_uri).parent()
+            fs = cast(StorageFilesystemFull, self.repo._fs)
+            products.append((root, recorded_product_label(fs, root)))
+        return products
 
     def parse_manifest(self, manifest_uri: str) -> Generator[ChunkInfo, None, None]:
         """Yield ChunkInfo records from a manifest URI."""
@@ -1277,7 +1299,12 @@ class ChunkManager:
         )
 
     def rebuild_compact(self, product: str) -> dict[str, Any]:
-        """Compact completed-run WAL events into the compact cache for faster reads."""
+        """Compact completed-run WAL events into the compact cache for faster reads.
+
+        Raises:
+            ProductLabelMismatchError: The store records another label. Nothing is written.
+        """
+        self._stamp_label(product)
         return self.repo.rebuild_compact(product)
 
     def compact_status(self, product: str) -> dict[str, Any]:
@@ -1445,7 +1472,9 @@ class ChunkManager:
         forcibly overridden. The mutation retires only the previewed acquisition, so a
         claim renewed or retaken since the preview lands in ``skipped_fresh``. The sweep
         continues past a single-claim race. It collects no errors: a read or retirement
-        I/O error propagates and aborts the sweep.
+        I/O error propagates and aborts the sweep. A store without a label stamp gets
+        one before the first retirement; another recorded label raises
+        ProductLabelMismatchError.
         """
         result = ClearSweepResult()
         stale = self.list_stale_claims(product=product)
@@ -1455,6 +1484,9 @@ class ChunkManager:
         if self.repo.claims is None:
             self.repo._ensure_bound()
         assert self.repo.claims is not None
+        if stale:
+            # Stamp before the first retire, so each re-check below reads the stamp only.
+            self._stamp_label(product)
         for claim in stale:
             current = self.repo.claims.read_claim_by_domain(product=product, domain=claim.domain)
             if current is None:
@@ -2265,6 +2297,18 @@ class ChunkManager:
         fs, product_root = self.repo._get_fs(self.repo.get_product_root_uri(product))
         return cast(StorageFilesystemFull, fs), product_root
 
+    def _stamp_label(self, product: str) -> None:
+        """Stamp label `product` on a store without one; refuse a store that records another.
+
+        Raises:
+            ProductLabelMismatchError: The store records another label; nothing is written.
+            ProductLabelConflictError: The records of an unstamped store name several labels.
+        """
+        self.repo._ensure_bound()
+        assert self.repo._resolver is not None
+        control_path, _control_uri = self.repo._resolver(product)
+        stamp_product_label(cast(StorageFilesystemFull, self.repo._fs), control_path, product)
+
     def take_snapshot(
         self,
         product: str,
@@ -2283,6 +2327,7 @@ class ChunkManager:
             ManifestError: A coherent snapshot's claim is absent, unreadable or owned by
                 another run. Nothing is written.
             ControlPlaneCorruptionError: `refs/latest.json` does not parse. Nothing is written.
+            ProductLabelMismatchError: The store records another label. Nothing is written.
         """
         from firecube.core.controlplane import metadata_snapshots
 
@@ -2295,7 +2340,11 @@ class ChunkManager:
             )
             if refusal is not None:
                 raise ManifestError(refusal)
+            # The holder check has refused another label; an unstamped store gets the stamp.
+            self._stamp_label(product)
 
+        if consistency != metadata_snapshots.CONSISTENCY_COHERENT:
+            self._stamp_label(product)
         fs, product_root = self._metadata_store(product)
         return metadata_snapshots.take_snapshot(
             fs,
@@ -2349,9 +2398,13 @@ class ChunkManager:
         """Store `data` under `.firecube/metadata/blobs/` unless it exists; return its sha256 hex.
 
         An existing blob is never rewritten.
+
+        Raises:
+            ProductLabelMismatchError: The store records another label. Nothing is written.
         """
         from firecube.core.controlplane import metadata_snapshots
 
+        self._stamp_label(product)
         fs, product_root = self._metadata_store(product)
         return metadata_snapshots.write_blob(
             fs, metadata_snapshots.metadata_root(product_root), data
@@ -2395,8 +2448,10 @@ class ChunkManager:
         Raises:
             ValueError: `run_id` is not a single path segment.
             ManifestError: The journal exists with other bytes; nothing is written.
+            ProductLabelMismatchError: The store records another label. Nothing is written.
         """
         uri = self._run_journal_uri(product, run_id)
+        self._stamp_label(product)
         fs = cast(StorageFilesystemFull, self.repo._fs)
         with contextlib.suppress(Exception):
             fs.makedirs(uri.parent(), exist_ok=True)
@@ -2466,6 +2521,20 @@ class ChunkManager:
             return True
         runs, unreadable = self.repo.scan_runs(product=product)
         return bool(runs or unreadable)
+
+    def recorded_product_label(self) -> str | None:
+        """Return the label the bound product records, or `None` when it records none.
+
+        Reads the label stamp, else the label every run record and held claim names.
+        Writes nothing.
+
+        Raises:
+            ManifestError: The stamp, a run record or a claim record cannot be read, or the
+                stamp is malformed.
+            ProductLabelConflictError: The run records and held claims name more than one label.
+        """
+        fs, product_root = self._metadata_store(self.repo.binding.identity.product_name)
+        return recorded_product_label(fs, product_root)
 
     def _releases_store(self, product: str) -> tuple[StorageFilesystemFull, StorageUri]:
         """Return the driver and the `.firecube/releases/` directory of the product."""
@@ -2546,6 +2615,7 @@ class ChunkManager:
         from firecube.core.controlplane import releases
 
         self._require_maintenance_holder(product, run_id, "release create")
+        self._stamp_label(product)
         snapshot = self.read_snapshot(product, snapshot_id)
         if snapshot.record.consistency != "coherent":
             raise ManifestError(
@@ -2601,6 +2671,7 @@ class ChunkManager:
         from firecube.core.controlplane import releases
 
         self._require_maintenance_holder(product, run_id, "release create")
+        self._stamp_label(product)
         fs, root = self._releases_store(product)
         if releases.find_release(fs, root, version) is None:
             raise releases.ReleaseNotFoundError(
@@ -2707,9 +2778,11 @@ class ChunkManager:
 
         Raises:
             ControlPlaneCorruptionError: A file with that id holds other bytes; it is kept.
+            ProductLabelMismatchError: The store records another label. Nothing is written.
         """
         from firecube.core.controlplane import inventories
 
+        self._stamp_label(product)
         fs, root = self._releases_store(product)
         return inventories.write_inventory(fs, root, inventory)
 
@@ -2729,13 +2802,13 @@ class ChunkManager:
 def _abandon_operation(product_uri: str, run_id: str) -> Operation:
     """Name the abandon of one run, its reason left as a placeholder."""
     return Operation(
-        "abandon_run", product_name=product_uri, run_id=run_id, reason=Placeholder('"<reason>"')
+        "abandon_run", target=product_uri, run_id=run_id, reason=Placeholder('"<reason>"')
     )
 
 
 def _clear_operation(product_uri: str, domain_id: str, *, force: bool) -> Operation:
     """Name the clear of one claim domain; pass `force=True` for a claim that is not stale."""
-    return Operation("clear_claim", product_name=product_uri, domain_id=domain_id, force=force)
+    return Operation("clear_claim", target=product_uri, domain_id=domain_id, force=force)
 
 
 def maintenance_refusal_message(
@@ -2802,10 +2875,14 @@ def check_exclusive_maintenance(*, repo: ManifestRepository, product: str, owner
 
     Raises:
         ProductUnderMaintenanceError: Another owner holds the claim, or it cannot be read.
+        ProductLabelMismatchError: The store records another product label.
+        ProductLabelConflictError: The records of an unstamped store name several labels.
     """
     domain = exclusive_maintenance_domain(product)
     try:
         claim = repo.read_claim_by_domain(product=product, domain=domain.identifier)
+    except (ProductLabelMismatchError, ProductLabelConflictError):
+        raise
     except Exception as exc:
         raise ProductUnderMaintenanceError(
             Message(
@@ -2864,10 +2941,16 @@ def exclusive_maintenance_holder_refusal(
 
     Reads the one claim file by name. An absent claim, another owner's claim and an
     unreadable claim each refuse. Return `None` when `holder_run_id` owns the claim.
+
+    Raises:
+        ProductLabelMismatchError: The store records another product label.
+        ProductLabelConflictError: The records of an unstamped store name several labels.
     """
     domain = exclusive_maintenance_domain(product)
     try:
         claim = repo.read_claim_by_domain(product=product, domain=domain.identifier)
+    except (ProductLabelMismatchError, ProductLabelConflictError):
+        raise
     except Exception as exc:
         return Message(
             "The exclusive maintenance claim {claim_domain} of product {product} could "

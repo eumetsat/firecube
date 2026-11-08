@@ -21,11 +21,12 @@ the user input.
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 import warnings
 from dataclasses import dataclass, fields
-from typing import Any, TypeVar, get_type_hints
+from typing import Any, TypeVar, cast, get_type_hints
 
 from firecube.core.discovery import (
     StacSearchError,
@@ -33,10 +34,11 @@ from firecube.core.discovery import (
     validate_input_filters,
     validate_stac_search,
 )
-from firecube.core.errors import Message, Param
-from firecube.ingestor.errors import ConfigurationError
+from firecube.core.errors import ConfigurationError
 
 T = TypeVar("T", bound="EngineConfig")
+
+_UNSET: object = object()
 
 SYSTEM_KEYS = {
     "run_id",
@@ -50,9 +52,6 @@ EXPERIMENTAL_OPTION_PREFIX_RE = re.compile(r"^x_[a-z0-9_]+$")
 def is_experimental_option_key(key: str) -> bool:
     """Return True if ``key`` is in the reserved ``x_*`` experimental namespace."""
     return bool(EXPERIMENTAL_OPTION_PREFIX_RE.match(key))
-
-
-_SLOT_GROUP_SAFE = re.compile(r"^[A-Za-z0-9_.\-]+$")
 
 
 def config_keys(cls: type) -> set[str]:
@@ -72,6 +71,70 @@ def _parse_stac_search(value: Any) -> dict[str, Any] | None:
     return validate_stac_search(value)
 
 
+_MOVED_TO_EXECUTION_PARAMS: tuple[str, ...] = (
+    "write_mode",
+    "dry_run",
+    "slot_start",
+    "slot_end",
+    "slot_size",
+    "slot_group",
+    "static_owner_slot_start",
+    "suppress_static_emission_for_non_owner",
+)
+
+
+def _refuse_moved_fields[C](cls: type[C]) -> type[C]:
+    """Make a class refuse the fields that `ExecutionParams` now holds.
+
+    The constructor raises `ConfigurationError` for each moved field passed as a keyword. A read
+    of a moved field forwards to the attached `_execution` with a `DeprecationWarning` that names
+    `ctx.execution.<name>`; the forward will be removed in v0.2.0. With nothing attached, the read raises
+    `ConfigurationError`. No value is stored and no default is invented. Any other missing
+    attribute raises `AttributeError`, so `copy`, `pickle` and `dataclasses.replace` work. It is a
+    wrapper, not an `InitVar`: an `InitVar` default stays readable as `EngineConfig().write_mode`.
+
+    Args:
+        cls: The dataclass to guard.
+
+    Returns:
+        The same class, with `__init__` wrapped and `__getattr__` added.
+    """
+    init = cls.__init__
+    moved = frozenset(_MOVED_TO_EXECUTION_PARAMS)
+
+    @functools.wraps(init)
+    def __init__(self: C, *args: Any, **kwargs: Any) -> None:
+        for name in _MOVED_TO_EXECUTION_PARAMS:
+            if kwargs.get(name, _UNSET) is not _UNSET:
+                raise ConfigurationError(
+                    f"{cls.__name__} takes no {name}: it is now a field of "
+                    f"ExecutionParams, so pass ExecutionParams({name}=...) instead."
+                )
+        init(self, *args, **kwargs)
+
+    def __getattr__(self: C, name: str) -> Any:
+        if name in moved:
+            execution = self.__dict__.get("_execution")
+            if execution is not None:
+                warnings.warn(
+                    f"Reading {cls.__name__}.{name} is deprecated: read ctx.execution.{name} "
+                    f"instead. The read will be removed in v0.2.0.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                return getattr(execution, name)
+            raise ConfigurationError(
+                f"{cls.__name__} has no {name}: it is now a field of ExecutionParams, "
+                f"so read ctx.execution.{name} instead."
+            )
+        raise AttributeError(f"{cls.__name__!r} object has no attribute {name!r}")
+
+    cls.__init__ = __init__  # type: ignore[method-assign]
+    cls.__getattr__ = __getattr__  # type: ignore[attr-defined]
+    return cls
+
+
+@_refuse_moved_fields
 @dataclass
 class EngineConfig:
     """Configuration for the Firecube Engine (Runtime & Workspace).
@@ -106,7 +169,6 @@ class EngineConfig:
             ``datetime``, ``bbox``, ``intersects`` and ``ids``. The collection
             always comes from the source URI. Supply one JSON object through
             ``--stac-search`` or a table in plugin configuration.
-        write_mode: Write strategy, either ``"staged"`` or ``"direct"``.
         resume_existing: Continue a compatible incomplete or overlapping run.
         force_reingest: Re-process existing spans intentionally. Overlapping
             timestamps are overwritten in-place (region overwrite); new tail
@@ -114,10 +176,6 @@ class EngineConfig:
             Refuses inserts, duplicates, and NaT values. Use
             ``chunks delete`` first when physical chunk removal is needed.
         incremental: Reserved incremental-mode switch.
-        dry_run: Reserved: ``ingest`` does not implement a dry run yet and
-            writes normally. Use ``--dry-run`` on maintenance commands
-            (``chunks delete``, ``chunks delete-span``, ``zarr preallocate``)
-            for previews.
         duckdb_persist_batches: Persist intermediate DuckDB batch data.
         upload_workers: Number of staged upload workers.
         no_progress: Disable progress logging.
@@ -131,15 +189,16 @@ class EngineConfig:
         validate_zarr_max_chunks: Optional validation chunk-scan limit.
         validate_zarr_on_timeout: Timeout behavior, usually ``"warn"``.
         skip_preflight: Skip storage preflight checks.
-        slot_start: First slot index for orchestrated parallel ingestion.
-        slot_end: One-past-last slot index for orchestrated parallel ingestion.
-        slot_size: Slot width used when deriving slot ranges from the environment.
-        slot_group: Zarr group owned by this worker in multi-group slot runs.
-        suppress_static_emission_for_non_owner: Skip static writes in slot-range
-            workers whose ``slot_start`` does not match ``static_owner_slot_start``.
-        static_owner_slot_start: V1 scalar static-owner slot start for one group
-            per run; required when static suppression is enabled.
+
+    The write mode, the slot window and the dry run are not options: `ExecutionParams` holds them.
+    A run attaches its `ExecutionParams` as `_execution`, so a plugin that still reads a moved
+    field gets the value and a `DeprecationWarning` until v0.2.0. Read `ctx.execution` instead.
     """
+
+    # The run's ExecutionParams, set by TierConfigurator.configure. Without an annotation this is
+    # no dataclass field, so it is not an option key and not in repr or equality. The class
+    # default also keeps a read of it from reaching __getattr__.
+    _execution = cast(Any, None)
 
     # Execution (Pipeline)
     pipeline_workers: int = 1
@@ -155,11 +214,9 @@ class EngineConfig:
     stac_search: dict[str, Any] | None = None
 
     # Write Strategy
-    write_mode: str = "staged"  # staged | direct
     resume_existing: bool = False
     force_reingest: bool = False
     incremental: bool = False
-    dry_run: bool = False
 
     # Extension Strategy (Temporary Stabilization)
     duckdb_persist_batches: bool = False
@@ -183,14 +240,6 @@ class EngineConfig:
     # Storage preflight
     skip_preflight: bool = False
 
-    # Slot-range parallelism (Phase 3)
-    slot_start: int | None = None
-    slot_end: int | None = None
-    slot_size: int | None = None
-    slot_group: str | None = None
-    suppress_static_emission_for_non_owner: bool = False
-    static_owner_slot_start: int | None = None
-
     def __post_init__(self) -> None:
         self.input_filters = validate_input_filters(self.input_filters)
         if self.stac_search is not None:
@@ -201,49 +250,6 @@ class EngineConfig:
             raise ValueError(f"pipeline_batch_size must be >= 1, got {self.pipeline_batch_size}")
         if self.extract_workers < 1:
             raise ValueError(f"extract_workers must be >= 1, got {self.extract_workers}")
-        if self.suppress_static_emission_for_non_owner and self.static_owner_slot_start is None:
-            raise ConfigurationError(
-                "suppress_static_emission_for_non_owner=True requires static_owner_slot_start"
-            )
-        if self.suppress_static_emission_for_non_owner and self.slot_start is None:
-            raise ConfigurationError(
-                "suppress_static_emission_for_non_owner=True requires slot_start to be set "
-                "(serial runs would silently skip all static writes without a slot boundary)"
-            )
-
-        if self.slot_group is not None and not self.slot_group.strip():
-            raise ValueError(
-                "slot_group must be a non-empty string when set; got empty or whitespace string."
-            )
-        if self.slot_group is not None and not _SLOT_GROUP_SAFE.match(self.slot_group):
-            warnings.warn(
-                f"slot_group={self.slot_group!r} contains characters outside [A-Za-z0-9_.-]; "
-                f"will be URL-encoded in run_id and WAL paths. This works correctly but may "
-                f"make run IDs less human-readable. Consider sanitizing your zarr_schema() "
-                f"group names if you control them.",
-                stacklevel=2,
-            )
-
-        if self.slot_start is None and self.slot_end is None:
-            return
-
-        if self.slot_start is None or self.slot_end is None:
-            raise ValueError(
-                Message(
-                    "{slot_start} and {slot_end} must be provided together",
-                    slot_start=Param("slot_start"),
-                    slot_end=Param("slot_end"),
-                )
-            )
-
-        if self.slot_start < 0:
-            raise ValueError(f"slot_start must be non-negative, got {self.slot_start}")
-        if self.slot_end < 0:
-            raise ValueError(f"slot_end must be non-negative, got {self.slot_end}")
-        if self.slot_start >= self.slot_end:
-            raise ValueError(
-                f"slot_start must be < slot_end, got [{self.slot_start}, {self.slot_end})"
-            )
 
     @classmethod
     def from_options(cls: type[T], options: dict[str, Any]) -> T:

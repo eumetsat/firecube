@@ -30,6 +30,7 @@ from firecube.core.controlplane.types import (
     compute_resolved_index_identity_hash,
 )
 from tests.helpers.rows import table_row
+from tests.helpers.storage import stamp_test_label
 
 pytestmark = pytest.mark.integration
 
@@ -69,6 +70,7 @@ def _seed_regular_time_record(
     index_dir = cube_dir / ".firecube" / INDEX_DIRNAME
     index_dir.mkdir(parents=True, exist_ok=True)
     (index_dir / INDEX_CURRENT_FILENAME).write_bytes(record.to_json_bytes())
+    stamp_test_label(cube_dir)
     return record
 
 
@@ -97,6 +99,7 @@ def _seed_irregular_time_record(cube_dir: Path) -> ResolvedIndexRecord:
     index_dir = cube_dir / ".firecube" / INDEX_DIRNAME
     index_dir.mkdir(parents=True, exist_ok=True)
     (index_dir / INDEX_CURRENT_FILENAME).write_bytes(record.to_json_bytes())
+    stamp_test_label(cube_dir)
     return record
 
 
@@ -122,6 +125,7 @@ def _seed_integer_record(cube_dir: Path) -> ResolvedIndexRecord:
     index_dir = cube_dir / ".firecube" / INDEX_DIRNAME
     index_dir.mkdir(parents=True, exist_ok=True)
     (index_dir / INDEX_CURRENT_FILENAME).write_bytes(record.to_json_bytes())
+    stamp_test_label(cube_dir)
     return record
 
 
@@ -150,6 +154,7 @@ def _seed_regular_time_record_missing_epoch(cube_dir: Path) -> ResolvedIndexReco
     index_dir = cube_dir / ".firecube" / INDEX_DIRNAME
     index_dir.mkdir(parents=True, exist_ok=True)
     (index_dir / INDEX_CURRENT_FILENAME).write_bytes(record.to_json_bytes())
+    stamp_test_label(cube_dir)
     return record
 
 
@@ -160,8 +165,6 @@ def _show_args(cube_dir: Path, *extras: str) -> list[str]:
         "show",
         "--target",
         f"file://{cube_dir}",
-        "--product-name",
-        "test_product",
         *extras,
     ]
 

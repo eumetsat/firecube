@@ -155,7 +155,7 @@ def test_coverage_tracker_contract(subtests: Any, tmp_path: Path) -> None:
         assert cov.timestamps_written == 5
 
     with table_row(subtests, "api_not_reexported", tmp_path):
-        import firecube.ingestor.api as api_module
+        import firecube.sdk as api_module
 
         assert not hasattr(api_module, "CoverageTracker")
         assert "CoverageTracker" not in getattr(api_module, "__all__", ())

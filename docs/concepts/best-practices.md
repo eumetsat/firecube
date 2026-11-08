@@ -26,8 +26,8 @@ that matches the bottleneck.
 For most production runs:
 
 - run one `firecube ingest` command per product target;
-- pass `--product-name`, `--target`, `--storage-type`, `--storage-driver`,
-  `--output-format`, and `--write-mode` explicitly;
+- pass `--target`, `--storage-type`, `--storage-driver`, and `--write-mode`
+  explicitly;
 - keep ChunkManager records with the product when moving, copying, packaging, or
   restoring data;
 - start with one worker, then add parallelism from the output format and plugin

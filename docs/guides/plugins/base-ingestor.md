@@ -44,13 +44,13 @@ import shutil
 from pathlib import Path
 from typing import ClassVar
 
-from firecube.core.api import local_path_from_target
-from firecube.ingestor.api import (
+from firecube.sdk import (
     BaseIngestor,
     OutputPaths,
     PipelineBatch,
     PipelineResult,
     PluginContext,
+    local_path_from_target,
     register_ingestor,
 )
 
@@ -122,7 +122,6 @@ firecube ingest my_plugin \
   --product-name my_product \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct
 ```
 

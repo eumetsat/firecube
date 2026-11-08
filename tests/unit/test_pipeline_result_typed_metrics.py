@@ -14,7 +14,7 @@
 
 from pathlib import Path
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     OutputPaths,
     PipelineBatch,
     PipelineMetrics,

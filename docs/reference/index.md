@@ -1,15 +1,30 @@
 # API Reference
 
-Plugins are written against three public import surfaces:
+Firecube has two public Python modules.
 
-- `firecube.ingestor.api` — templates, hooks, context, and result types
-- `firecube.core.api` — storage, URI, time, and dataset-preparation utilities
-- `firecube.ingestor.extensions` — optional regridding and DuckDB helpers
+- `firecube.sdk` is for plugin authors. Import from it to build a plugin. It provides templates, hooks, context and result types, array specs, errors, and storage and time helpers.
+- `firecube.operations` is for scripts and tools. It holds the Python functions that do what the `firecube` commands do on a finished product.
 
-Import only from these modules. Deep imports into other Firecube modules are
-not part of the public contract and are rejected by the plugin contract test.
+Plugins can also import the optional module `firecube.ingestor.extensions`. It holds regridding and DuckDB helpers.
+
+Import only from these modules. Other Firecube modules can change without notice.
+
+!!! warning "Deprecated modules"
+
+    The modules `firecube.ingestor.api` and `firecube.core.api` are deprecated. Import from `firecube.sdk` instead. Firecube will remove both modules in v0.2.0.
+
+The Plugin SDK pages document `firecube.sdk` and `firecube.ingestor.extensions`. The Operations page documents `firecube.operations`.
 
 <div class="grid cards" markdown>
+
+-   :material-package-variant-closed:{ .lg .middle } **Plugin SDK**
+
+    ---
+
+    The import rule for `firecube.sdk`, the deprecated `api` modules, and a
+    map of the Plugin SDK pages.
+
+    [:octicons-arrow-right-24: Plugin SDK](plugin-sdk.md)
 
 -   :material-puzzle:{ .lg .middle } **Templates**
 
@@ -72,12 +87,22 @@ not part of the public contract and are rejected by the plugin contract test.
 
     [:octicons-arrow-right-24: Metadata Migration](migration.md)
 
+-   :material-cog-play:{ .lg .middle } **Operations**
+
+    ---
+
+    The Python functions that do what the `firecube` commands do on a
+    finished product: archive, snapshot, migrate, release, and maintain
+    its Zarr arrays.
+
+    [:octicons-arrow-right-24: Operations](operations.md)
+
 -   :material-tools:{ .lg .middle } **Core Utilities**
 
     ---
 
     URI parsing, filesystem access, time conversion, and netCDF/HDF5
-    preparation helpers from `firecube.core.api`.
+    preparation helpers from `firecube.sdk`.
 
     [:octicons-arrow-right-24: Core Utilities](core-utilities.md)
 

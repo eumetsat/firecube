@@ -12,34 +12,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""The CLI error boundary: exit codes for exceptions, and their operator text.
+
+The root group runs every command through `invoke_with_boundary`. A Click exception
+passes unchanged; any other exception prints one `Error:` line and exits with the code
+`classify` gives it.
+"""
+
 from __future__ import annotations
 
-import errno
-import functools
-from collections.abc import Callable
+import os
+import traceback
+from collections.abc import Callable, Iterator
+from typing import NoReturn
 
 import click
 
-from firecube.core.errors import ConfigFileError, FirecubeError
-from firecube.ingestor.errors import RemovedConfigKeyError
+from firecube.cli._exit_codes import ExitCode
+from firecube.core.errors import (
+    ConfigurationError,
+    FirecubeError,
+    OptionalExtraMissingError,
+    StorageError,
+)
+from firecube.core.observability.logging import debug_enabled
 
-# Config refusals that mean a wrong invocation: the CLI reports them as usage errors (exit 2).
-USAGE_ERRORS: tuple[type[FirecubeError], ...] = (ConfigFileError, RemovedConfigKeyError)
+# Packages whose exceptions mean a remote storage call failed, wherever they sit in the chain.
+_REMOTE_CLIENT_PACKAGES = frozenset({"aiobotocore", "botocore"})
 
-# Explicit membership for user-facing exceptions that are NOT part of the
-# ``FirecubeError`` hierarchy (built-in OS errors and third-party library
-# errors). ``FirecubeError`` and its
-# subclasses are covered by the ``isinstance`` branch in ``_is_known_user_error``
-# and must NOT be added here — reparent them under ``FirecubeError`` instead.
-_KNOWN_NON_FIRECUBE_USER_ERRORS: frozenset[str] = frozenset(
-    {
-        "FileNotFoundError",
-        "GroupNotFoundError",
-        "NodeNotFoundError",
-        "NotADirectoryError",
-        "PathNotFoundError",
-        "PermissionError",
-    }
+# OS errors about a path: it is missing, of the wrong kind, or not accessible.
+_OS_PATH_ERRORS: tuple[type[OSError], ...] = (
+    FileNotFoundError,
+    IsADirectoryError,
+    NotADirectoryError,
+    PermissionError,
+)
+
+# The frames whose local `ctx` is the context of the command that runs in them.
+_COMMAND_FRAME_CODES = frozenset(
+    {click.Context.invoke.__code__, click.Command.make_context.__code__}
 )
 
 
@@ -59,45 +70,136 @@ def echo_rendered(line: str, *, err: bool = False) -> None:
     click.echo(render(line), err=err)
 
 
-def _is_known_user_error(exc: BaseException) -> bool:
-    if isinstance(exc, FirecubeError):
-        return True
-    return type(exc).__name__ in _KNOWN_NON_FIRECUBE_USER_ERRORS
+def exit_with_error(text: str, code: ExitCode) -> NoReturn:
+    """Print `Error: ` and `text` to stderr, then end the command with `code`."""
+    click.echo(f"Error: {text}", err=True)
+    raise click.exceptions.Exit(code)
 
 
-def _is_known_user_oserror(exc: BaseException) -> bool:
-    """True when exc is an OS-level error that is the user's fault (not infra)."""
-    return isinstance(exc, OSError) and exc.errno in {errno.ENOENT, errno.ENOTDIR, errno.EACCES}
+def _chain(exc: BaseException) -> Iterator[BaseException]:
+    """Yield `exc` and each explicit cause set by `raise ... from`; implicit context is skipped."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        yield current
+        current = current.__cause__
 
 
-def wrap_user_facing_errors[**P, R](func: Callable[P, R]) -> Callable[P, R]:
-    """Convert known downstream errors to ``click.ClickException`` at the CLI boundary.
+def _is_remote_client_error(exc: BaseException) -> bool:
+    """Return whether `exc` is an exception class of botocore or aiobotocore, or derives from one."""
+    return any(
+        cls.__module__.partition(".")[0] in _REMOTE_CLIENT_PACKAGES for cls in type(exc).__mro__
+    )
 
-    Exceptions that are ``FirecubeError`` subclasses are wrapped via the
-    ``isinstance`` branch in ``_is_known_user_error``. Non-Firecube user
-    errors whose class name appears in ``_KNOWN_NON_FIRECUBE_USER_ERRORS``
-    are also wrapped. The wrapped text is ``render(exc)``. ``ConfigFileError`` and
-    ``RemovedConfigKeyError`` become ``click.UsageError`` (exit 2). ``click.ClickException``
-    and ``click.exceptions.Exit`` pass through unchanged, and any other exception
-    propagates so operators see the real traceback.
+
+def _is_zarr_not_found(exc: BaseException) -> bool:
+    """Return whether `exc` is zarr's refusal for a missing array or group."""
+    from zarr.errors import NodeNotFoundError
+
+    return isinstance(exc, NodeNotFoundError)
+
+
+def classify(exc: BaseException) -> ExitCode:
+    """Return the exit code for an exception that is not a Click exception.
+
+    The first matching rung wins:
+
+    - 130: an interrupt or `click.Abort`.
+    - 2: a `ConfigurationError`.
+    - 4: an `OptionalExtraMissingError` or a botocore error anywhere in the chain.
+    - 4: a `StorageError` or a `StoragePreflightError`.
+    - 1: any other `FirecubeError`, or zarr's missing-node error.
+    - 4: a missing or inaccessible path.
+    - 70: anything else.
     """
+    from firecube.ingestor.runtime.preflight import StoragePreflightError
 
-    @functools.wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        try:
-            return func(*args, **kwargs)
-        except click.exceptions.Exit:
-            raise
-        except click.ClickException:
-            raise
-        except Exception as exc:
-            if isinstance(exc, USAGE_ERRORS):
-                raise click.UsageError(render(exc)) from exc
-            if _is_known_user_error(exc) or _is_known_user_oserror(exc):
-                raise click.ClickException(render(exc)) from exc
-            raise
+    if isinstance(exc, click.Abort | KeyboardInterrupt):
+        return ExitCode.INTERRUPTED
+    if isinstance(exc, ConfigurationError):
+        return ExitCode.USAGE
+    chain = list(_chain(exc))
+    if any(isinstance(e, OptionalExtraMissingError) or _is_remote_client_error(e) for e in chain):
+        return ExitCode.RUNTIME_ERROR
+    if isinstance(exc, StorageError | StoragePreflightError):
+        return ExitCode.RUNTIME_ERROR
+    # zarr's NodeNotFoundError subclasses FileNotFoundError, so it is checked before path errors.
+    if isinstance(exc, FirecubeError) or _is_zarr_not_found(exc):
+        return ExitCode.CHECK_FAILED
+    if isinstance(exc, _OS_PATH_ERRORS):
+        return ExitCode.RUNTIME_ERROR
+    return ExitCode.INTERNAL
 
-    return wrapper
+
+def _running_context(exc: BaseException, default: click.Context) -> click.Context:
+    """Return the context of the innermost command that the traceback of `exc` passes through.
+
+    The command's context has left Click's context stack by the time `exc` reaches the
+    root, and `render` needs it to name the running command's options.
+    """
+    found = default
+    tb = exc.__traceback__
+    while tb is not None:
+        if tb.tb_frame.f_code in _COMMAND_FRAME_CODES:
+            candidate = tb.tb_frame.f_locals.get("ctx")
+            if isinstance(candidate, click.Context):
+                found = candidate
+        tb = tb.tb_next
+    return found
+
+
+def _error_line(exc: BaseException, code: ExitCode, ctx: click.Context) -> str:
+    """Return the one `Error:` line for `exc`; an unexpected error also names its type."""
+    text = render(exc, ctx)
+    if code is ExitCode.INTERNAL:
+        name = type(exc).__name__
+        return f"Error: {name}: {text}" if text else f"Error: {name}"
+    return f"Error: {text}" if text else f"Error: {type(exc).__name__}"
+
+
+def invoke_with_boundary[R](ctx: click.Context, invoke: Callable[[], R]) -> R:
+    """Run `invoke`; turn any exception except a Click one into an `Error:` line and an exit.
+
+    The exit code comes from `classify`. Under root `--debug` or `FIRECUBE_DEBUG=1` the
+    traceback prints first; otherwise an unexpected error adds a hint naming both.
+
+    Raises:
+        click.exceptions.Exit: With the code `classify` gives the exception.
+    """
+    try:
+        return invoke()
+    except (click.ClickException, click.exceptions.Exit):
+        raise
+    except (Exception, KeyboardInterrupt) as exc:
+        code = classify(exc)
+        debug = bool(ctx.params.get("debug")) or debug_enabled()
+        if debug:
+            click.echo("".join(traceback.format_exception(exc)), err=True, nl=False)
+        if code is ExitCode.INTERRUPTED:
+            click.echo("Aborted!", err=True)
+        else:
+            click.echo(_error_line(exc, code, _running_context(exc, ctx)), err=True)
+        if code is ExitCode.INTERNAL and not debug:
+            click.echo(
+                "Hint: rerun with --debug, or set FIRECUBE_DEBUG=1, to print the traceback.",
+                err=True,
+            )
+        raise click.exceptions.Exit(code) from exc
+
+
+def enable_debug(ctx: click.Context) -> None:
+    """Set `FIRECUBE_DEBUG=1` for the run of `ctx`; its previous value returns when `ctx` closes."""
+    previous = os.environ.get("FIRECUBE_DEBUG")
+    os.environ["FIRECUBE_DEBUG"] = "1"
+
+    def restore() -> None:
+        if previous is None:
+            os.environ.pop("FIRECUBE_DEBUG", None)
+        else:
+            os.environ["FIRECUBE_DEBUG"] = previous
+
+    ctx.call_on_close(restore)
 
 
 class UnknownOptionError(click.BadParameter):
@@ -109,16 +211,6 @@ class UnknownOptionError(click.BadParameter):
             f"Experimental options must use the x_ prefix (e.g. --option x_foo=...)."
         )
         super().__init__(msg)
-
-
-class MissingProductNameError(click.UsageError):
-    def __init__(self, plugin: str) -> None:
-        super().__init__(
-            f"Missing product name for plugin '{plugin}'. Provide one of:\n"
-            f"  1. CLI flag:  --product-name <name>\n"
-            f"  2. Config file:  [plugins.{plugin}]\n  default_product_name = '<name>'\n"
-            f"  3. Plugin class attr:  {plugin}.PRODUCT_NAME = '<name>'  (preferred; declared at plugin source)"
-        )
 
 
 class MissingStorageDriverError(click.UsageError):

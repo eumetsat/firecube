@@ -22,16 +22,16 @@ from unittest.mock import MagicMock
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.runtime import engine as engine_module
+from firecube.ingestor.runtime.engine import _create_batches_with_parallel_filter
+from firecube.sdk import (
     DirectZarrIngestor,
-    EngineConfig,
+    ExecutionParams,
     PipelineBatch,
     PluginContext,
     RuntimeIngestContext,
 )
-from firecube.ingestor.errors import ConfigurationError
-from firecube.ingestor.runtime import engine as engine_module
-from firecube.ingestor.runtime.engine import _create_batches_with_parallel_filter
 from tests.helpers.storage import begin_write_session
 
 pytestmark = pytest.mark.unit
@@ -57,8 +57,10 @@ class _RecordingBatchPlanner:
         return iter(self.return_value)
 
 
-def _make_runtime_ctx() -> RuntimeIngestContext:
-    return RuntimeIngestContext(source="/tmp/source", target="/tmp/target")
+def _make_runtime_ctx(execution: ExecutionParams | None = None) -> RuntimeIngestContext:
+    return RuntimeIngestContext(
+        source="/tmp/source", target="/tmp/target", execution=execution or ExecutionParams()
+    )
 
 
 class _MockCapableIngestor(DirectZarrIngestor):
@@ -145,11 +147,8 @@ def test_no_slot_flags_uses_standard_path() -> None:
     host = _MockCapableIngestor(items=list(range(50)))
     host._batch_planner = _RecordingBatchPlanner()  # type: ignore[assignment]
     ctx = _make_runtime_ctx()
-    cfg = EngineConfig()
 
-    result = _create_batches_with_parallel_filter(
-        host=host, ctx=ctx, batch_size=10, engine_config=cfg, log=_log()
-    )
+    result = _create_batches_with_parallel_filter(host=host, ctx=ctx, batch_size=10, log=_log())
 
     assert result == []
     assert host._create_batches_calls == 1
@@ -162,14 +161,11 @@ def test_parallel_mode_filters_items() -> None:
     host = _MockCapableIngestor(items=list(range(200)))
     planner = _RecordingBatchPlanner()
     host._batch_planner = planner  # type: ignore[assignment]
-    ctx = _make_runtime_ctx()
-    cfg = EngineConfig(slot_start=0, slot_end=100)
+    ctx = _make_runtime_ctx(ExecutionParams(slot_start=0, slot_end=100))
     host._bind_index_at_startup(PluginContext(ctx))
-    begin_write_session(host, PluginContext(ctx), engine_config=cfg)
+    begin_write_session(host, PluginContext(ctx))
 
-    result = _create_batches_with_parallel_filter(
-        host=host, ctx=ctx, batch_size=10, engine_config=cfg, log=_log()
-    )
+    result = _create_batches_with_parallel_filter(host=host, ctx=ctx, batch_size=10, log=_log())
 
     assert host._create_batches_calls == 0
     assert host.discover_calls == 1
@@ -189,13 +185,10 @@ def test_filter_returns_empty_gives_empty_batches() -> None:
     )
     planner = _RecordingBatchPlanner()
     host._batch_planner = planner  # type: ignore[assignment]
-    ctx = _make_runtime_ctx()
-    cfg = EngineConfig(slot_start=0, slot_end=100)
+    ctx = _make_runtime_ctx(ExecutionParams(slot_start=0, slot_end=100))
     host._bind_index_at_startup(PluginContext(ctx))
 
-    result = _create_batches_with_parallel_filter(
-        host=host, ctx=ctx, batch_size=10, engine_config=cfg, log=_log()
-    )
+    result = _create_batches_with_parallel_filter(host=host, ctx=ctx, batch_size=10, log=_log())
 
     assert result == []
     assert planner.calls == []
@@ -208,17 +201,14 @@ def test_filter_raises_wrapped_as_config_error() -> None:
 
     host = _MockCapableIngestor(items=list(range(10)))
     host._batch_planner = _RecordingBatchPlanner()  # type: ignore[assignment]
-    ctx = _make_runtime_ctx()
-    cfg = EngineConfig(slot_start=0, slot_end=5)
+    ctx = _make_runtime_ctx(ExecutionParams(slot_start=0, slot_end=5))
     host._bind_index_at_startup(PluginContext(ctx))
 
     original = engine_module.filter_items_by_index
     engine_module.filter_items_by_index = _boom  # type: ignore[method-assign]
     try:
         with pytest.raises(ConfigurationError) as exc_info:
-            _create_batches_with_parallel_filter(
-                host=host, ctx=ctx, batch_size=10, engine_config=cfg, log=_log()
-            )
+            _create_batches_with_parallel_filter(host=host, ctx=ctx, batch_size=10, log=_log())
     finally:
         engine_module.filter_items_by_index = original  # type: ignore[method-assign]
 
@@ -231,8 +221,7 @@ def test_filter_raises_wrapped_as_config_error() -> None:
 def test_filter_returns_wrong_type_raises_typeerror() -> None:
     host = _MockCapableIngestor(items=list(range(10)))
     host._batch_planner = _RecordingBatchPlanner()  # type: ignore[assignment]
-    ctx = _make_runtime_ctx()
-    cfg = EngineConfig(slot_start=0, slot_end=5)
+    ctx = _make_runtime_ctx(ExecutionParams(slot_start=0, slot_end=5))
     host._bind_index_at_startup(PluginContext(ctx))
 
     original = engine_module.filter_items_by_index
@@ -240,9 +229,7 @@ def test_filter_returns_wrong_type_raises_typeerror() -> None:
 
     try:
         with pytest.raises(TypeError, match="must return a Sequence"):
-            _create_batches_with_parallel_filter(
-                host=host, ctx=ctx, batch_size=10, engine_config=cfg, log=_log()
-            )
+            _create_batches_with_parallel_filter(host=host, ctx=ctx, batch_size=10, log=_log())
     finally:
         engine_module.filter_items_by_index = original  # type: ignore[method-assign]
 
@@ -251,11 +238,8 @@ def test_non_capable_plugin_uses_standard_path() -> None:
     host = _MockNonCapableIngestor()
     host._batch_planner = _RecordingBatchPlanner()  # type: ignore[assignment]
     ctx = _make_runtime_ctx()
-    cfg = EngineConfig()
 
-    result = _create_batches_with_parallel_filter(
-        host=host, ctx=ctx, batch_size=10, engine_config=cfg, log=_log()
-    )
+    result = _create_batches_with_parallel_filter(host=host, ctx=ctx, batch_size=10, log=_log())
 
     assert result == []
     assert host._create_batches_calls == 1
@@ -269,12 +253,9 @@ def test_non_direct_zarr_host_uses_standard_path() -> None:
     host = MagicMock()
     host._create_batches = MagicMock(return_value=iter([]))
     host.discover_source_files = MagicMock()
-    ctx = _make_runtime_ctx()
-    cfg = EngineConfig(slot_start=0, slot_end=100)
+    ctx = _make_runtime_ctx(ExecutionParams(slot_start=0, slot_end=100))
 
-    result = _create_batches_with_parallel_filter(
-        host=host, ctx=ctx, batch_size=10, engine_config=cfg, log=_log()
-    )
+    result = _create_batches_with_parallel_filter(host=host, ctx=ctx, batch_size=10, log=_log())
 
     assert result == []
     host._create_batches.assert_called_once_with(ctx, 10)
