@@ -25,9 +25,9 @@ import numpy as np
 import pytest
 
 from firecube.core.zarr.planning import resolve_per_group_slot_sizes
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.errors import ConfigurationError
 from firecube.ingestor.types.planned_range import validate_chunk_alignment
+from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 
 pytestmark = pytest.mark.slow
 

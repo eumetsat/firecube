@@ -17,12 +17,12 @@ from __future__ import annotations
 import pytest
 
 from firecube.core.errors import ConfigurationError
-from firecube.ingestor.api import IngestContext, ZarrTemplateConfig
 from firecube.ingestor.runtime.configure import TierConfigurator
 from firecube.ingestor.templates.config import (
     validate_zarr_template_config,
     validate_zarr_writer_dict,
 )
+from firecube.sdk import IngestContext, ZarrTemplateConfig
 
 
 def test_time_encoding_is_rejected_when_binding_template_options():

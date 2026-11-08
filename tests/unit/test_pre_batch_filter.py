@@ -22,16 +22,16 @@ from unittest.mock import MagicMock
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.runtime import engine as engine_module
+from firecube.ingestor.runtime.engine import _create_batches_with_parallel_filter
+from firecube.sdk import (
     DirectZarrIngestor,
     ExecutionParams,
     PipelineBatch,
     PluginContext,
     RuntimeIngestContext,
 )
-from firecube.ingestor.errors import ConfigurationError
-from firecube.ingestor.runtime import engine as engine_module
-from firecube.ingestor.runtime.engine import _create_batches_with_parallel_filter
 from tests.helpers.storage import begin_write_session
 
 pytestmark = pytest.mark.unit

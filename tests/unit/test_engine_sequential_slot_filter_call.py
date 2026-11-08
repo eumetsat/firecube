@@ -23,7 +23,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.runtime import engine as engine_module
+from firecube.ingestor.runtime.batching import BatchPlanner
+from firecube.sdk import (
     DirectZarrIngestor,
     ExecutionParams,
     IngestContext,
@@ -34,8 +36,6 @@ from firecube.ingestor.api import (
     PluginContext,
     RuntimeIngestContext,
 )
-from firecube.ingestor.runtime import engine as engine_module
-from firecube.ingestor.runtime.batching import BatchPlanner
 from tests.helpers.storage import begin_write_session
 
 pytestmark = pytest.mark.unit

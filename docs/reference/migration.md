@@ -1,11 +1,11 @@
 # Metadata Migration
 
 This reference covers the types that a plugin imports from
-`firecube.ingestor.api` to declare a metadata migration step. A step reads a
+`firecube.sdk` to declare a metadata migration step. A step reads a
 `StoreView` and returns a `MetadataPlan`. To write a step, follow
 [Write A Migration Step](../guides/plugins/write-a-migration-step.md).
 
-{{ render_api_summary("firecube.ingestor.api", [
+{{ render_api_summary("firecube.sdk", [
     "MigrationStep",
     "StoreView",
     "AttributePatch",
@@ -17,23 +17,23 @@ This reference covers the types that a plugin imports from
 
 ## Step Contract
 
-::: firecube.ingestor.api.MigrationStep
+::: firecube.sdk.MigrationStep
 
 ## Plan Types
 
-::: firecube.ingestor.api.AttributePatch
+::: firecube.sdk.AttributePatch
 
-::: firecube.ingestor.api.MetadataPlan
+::: firecube.sdk.MetadataPlan
 
 ## Store View
 
-::: firecube.ingestor.api.StoreView
+::: firecube.sdk.StoreView
 
-::: firecube.ingestor.api.NodeView
+::: firecube.sdk.NodeView
 
-::: firecube.ingestor.api.ABSENT
+::: firecube.sdk.ABSENT
 
-::: firecube.ingestor.api.ReleaseRecord
+::: firecube.sdk.ReleaseRecord
 
 ## See Also
 

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from firecube.core import api as core_api
+from firecube import sdk
 from firecube.core.errors import (
     ConfigurationError,
     FirecubeError,
@@ -22,7 +22,6 @@ from firecube.core.errors import (
     NoDiscoveredItemsError,
     SchemaDriftError,
 )
-from firecube.ingestor import api as ingestor_api
 from firecube.ingestor import errors as ingestor_errors
 
 
@@ -52,9 +51,8 @@ def test_missing_irregular_coordinate_error_contract() -> None:
     )
 
 
-def test_missing_irregular_coordinate_error_reexported_from_facades() -> None:
-    assert core_api.MissingIrregularCoordinateError is MissingIrregularCoordinateError
-    assert ingestor_api.MissingIrregularCoordinateError is MissingIrregularCoordinateError
+def test_missing_irregular_coordinate_error_reexported_from_sdk() -> None:
+    assert sdk.MissingIrregularCoordinateError is MissingIrregularCoordinateError
 
 
 def test_no_discovered_items_error_contract() -> None:
@@ -75,6 +73,5 @@ def test_no_discovered_items_error_contract() -> None:
     )
 
 
-def test_no_discovered_items_error_reexported_from_facades() -> None:
-    assert core_api.NoDiscoveredItemsError is NoDiscoveredItemsError
-    assert ingestor_api.NoDiscoveredItemsError is NoDiscoveredItemsError
+def test_no_discovered_items_error_reexported_from_sdk() -> None:
+    assert sdk.NoDiscoveredItemsError is NoDiscoveredItemsError

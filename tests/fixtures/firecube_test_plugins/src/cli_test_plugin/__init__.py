@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     AttributePatch,
     BaseIngestor,
     MetadataPlan,

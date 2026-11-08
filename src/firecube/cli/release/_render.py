@@ -23,13 +23,13 @@ from typing import TYPE_CHECKING, Any
 
 import click
 
-from firecube.ingestor.api import ReleaseRecord
 from firecube.operations import (
     ReleaseCreateResult,
     ReleaseListing,
     ReleasePlan,
     ReleaseVerification,
 )
+from firecube.sdk import ReleaseRecord
 
 if TYPE_CHECKING:
     from firecube.operations import RetentionVerification

@@ -31,8 +31,9 @@ import numpy as np
 import pytest
 import zarr
 
-from firecube.core.api import FIRECUBE_GROUP_IDENTITY_HASH_ATTR, FIRECUBE_STATIC_WRITTEN_ATTR
+from firecube.core.zarr._reserved_attrs import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
 from firecube.ingestor.runtime.zarr.staged_metadata import seed_staged_store_metadata
+from firecube.sdk import FIRECUBE_STATIC_WRITTEN_ATTR
 from tests.helpers.storage import make_local_session
 
 pytestmark = pytest.mark.integration

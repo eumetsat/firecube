@@ -50,17 +50,20 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 from firecube.cli.main import cli
-from firecube.core.api import IndexedWrite, IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.registry import loader as _loader
+from firecube.ingestor.runtime.zarr import append as append_module
+from firecube.sdk import (
     DirectZarrIngestor,
     ExecutionParams,
     GenericZarrIngestor,
+    IndexedWrite,
+    IndexSpec,
+    ItemInfo,
     PluginContext,
+    RegularTimeAxis,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.registry import loader as _loader
-from firecube.ingestor.runtime.zarr import append as append_module
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration

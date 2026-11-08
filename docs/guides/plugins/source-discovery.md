@@ -12,7 +12,7 @@ By default a plugin discovers files below each `--input-data` value. Each value
 is a `file://`, `s3://` or `stac://` URI. The plugin receives it as given in
 `ctx.sources`. If the run has exactly one value, `ctx.source` is that value.
 To get the local path of a `file://` value, call `local_path_from_target` from
-`firecube.core.api`. A library caller can pass a local path instead of a URI.
+`firecube.sdk`. A library caller can pass a local path instead of a URI.
 The default selection for a `file://` or `s3://` source is:
 
 - files ending in `.zip`, `.h5`, `.nc`, `.nc4`, `.hdf`, or `.he5`, in any letter case
@@ -113,9 +113,9 @@ stops with `No source files found after applying input filters`. Check the input
 
 - **[Read Paired Source Files](paired-source-files.md)** — use a custom discovery
   hook to keep measurements and metadata together.
-- **[Discovery Hook](../../reference/hooks.md#firecube.ingestor.api.BaseIngestor.discover_source_files)**
+- **[Discovery Hook](../../reference/hooks.md#firecube.sdk.BaseIngestor.discover_source_files)**
   — override discovery for catalogs or custom ordering. If file names do not
   sort chronologically, order items by timestamp before batching for appends.
-- **[Discovery Helper](../../reference/core-utilities.md#firecube.core.api.discover_input_files)**
+- **[Discovery Helper](../../reference/core-utilities.md#firecube.sdk.discover_input_files)**
   — apply filters in a custom hook; replacing built-in discovery does not
   apply them automatically.

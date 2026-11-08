@@ -21,8 +21,8 @@ import dask.config
 import pytest
 import zarr
 
-from firecube.ingestor.api import ConfigurationError
 from firecube.ingestor.runtime.zarr.write_context import _VALID_SCHEDULERS, ZarrWriteContext
+from firecube.sdk import ConfigurationError
 from tests.helpers.rows import table_row
 
 _NO_VALUE = object()

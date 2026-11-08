@@ -19,7 +19,7 @@ from typing import ClassVar
 import numpy as np
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
     GenericZarrIngestor,
     PipelineBatch,

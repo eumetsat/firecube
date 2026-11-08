@@ -7,7 +7,7 @@ finished products with `firecube migrate run`. A step changes attributes in the
 Zarr metadata documents of a product. A step never moves or rewrites a chunk.
 A change that moves chunks, such as a renamed dimension, is not a step.
 
-The public types are in `firecube.ingestor.api`. Each link in this guide goes
+The public types are in `firecube.sdk`. Each link in this guide goes
 to the generated entry of one type in the
 [Metadata Migration reference](../../reference/migration.md). The operator runs
 the step as described in [Migrate Metadata](../../operations/maintenance/migrate.md).
@@ -26,7 +26,7 @@ objects.
 from collections.abc import Mapping
 from typing import Any
 
-from firecube.ingestor.api import ABSENT, AttributePatch, MetadataPlan, StoreView
+from firecube.sdk import ABSENT, AttributePatch, MetadataPlan, StoreView
 
 
 class NameVariables:
@@ -55,20 +55,20 @@ class NameVariables:
 ```
 
 Declare the five class attributes of
-[`MigrationStep`](../../reference/migration.md#firecube.ingestor.api.MigrationStep).
+[`MigrationStep`](../../reference/migration.md#firecube.sdk.MigrationStep).
 Name the `id` `<namespace>:<from>-><to>`, as in `my-plugin:0.1.0->0.2.0`.
 Firecube enforces one rule on the `id`: it must equal the entry-point name.
 The form is a naming convention.
 
 Read the store only through the
-[`StoreView`](../../reference/migration.md#firecube.ingestor.api.StoreView).
+[`StoreView`](../../reference/migration.md#firecube.sdk.StoreView).
 A field that the document lacks holds
-[`ABSENT`](../../reference/migration.md#firecube.ingestor.api.ABSENT).
+[`ABSENT`](../../reference/migration.md#firecube.sdk.ABSENT).
 Test `node.attributes is ABSENT` before you read it.
 
 Return the changes as
-[`AttributePatch`](../../reference/migration.md#firecube.ingestor.api.AttributePatch)
-objects. Keep [`plan`](../../reference/migration.md#firecube.ingestor.api.MigrationStep.plan)
+[`AttributePatch`](../../reference/migration.md#firecube.sdk.AttributePatch)
+objects. Keep [`plan`](../../reference/migration.md#firecube.sdk.MigrationStep.plan)
 pure.
 
 If the store already holds the values that the step sets, the plan changes
@@ -237,7 +237,7 @@ The root group now holds `processing_level` `L3` and the attribute
 
 ## Next Steps
 
-- **[`MigrationStep`](../../reference/migration.md#firecube.ingestor.api.MigrationStep)**: the contract of a step
+- **[`MigrationStep`](../../reference/migration.md#firecube.sdk.MigrationStep)**: the contract of a step
 - **[Migrate Metadata](../../operations/maintenance/migrate.md)**: run, resume and inspect a migration
 - **[Create A Release](../../operations/maintenance/create-a-release.md)**: what `to_release` creates
 - **[Declare The Schema And Index](direct-zarr.md)**: the root attributes that a plugin must not declare

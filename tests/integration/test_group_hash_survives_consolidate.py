@@ -32,7 +32,7 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
+from firecube.core.zarr._reserved_attrs import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
 from tests.helpers.storage import stamp_test_label
 
 pytestmark = pytest.mark.integration

@@ -42,8 +42,8 @@ product:
 |---|---|
 | Fixed cadence, real timestamps can be slightly off the nominal slot time (most sensors) | [`TimeAxis.observed(...)`](../../reference/parallelism.md#index-types) |
 | Fixed cadence, every timestamp is exactly `epoch + n * cadence` | [`TimeAxis.grid(...)`](../../reference/parallelism.md#index-types) |
-| Unevenly spaced, all timestamps known before ingestion | [`TimeAxis.explicit(...)`](../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.explicit) |
-| Unevenly spaced, timestamps only known after reading the source files | [`TimeAxis.discovered(...)`](../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.discovered) |
+| Unevenly spaced, all timestamps known before ingestion | [`TimeAxis.explicit(...)`](../../reference/parallelism.md#firecube.sdk.TimeAxis.explicit) |
+| Unevenly spaced, timestamps only known after reading the source files | [`TimeAxis.discovered(...)`](../../reference/parallelism.md#firecube.sdk.TimeAxis.discovered) |
 
 The first row is the common case and is what the example below uses. The
 last row has its own guide:
@@ -53,7 +53,7 @@ write verification, read the
 [DirectZarrIngestor write model](../../concepts/output-formats/zarr/direct-region.md).
 Products whose items map to an integer position instead of a timestamp
 declare `IntegerAxis`; see the
-[Index Specification Reference](../../reference/parallelism.md#firecube.ingestor.api.IntegerAxis).
+[Index Specification Reference](../../reference/parallelism.md#firecube.sdk.IntegerAxis).
 
 ## Implement The Plugin
 
@@ -70,7 +70,7 @@ from typing import ClassVar
 import numpy as np
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
     IndexedWrite,
     IndexSpec,
@@ -202,7 +202,7 @@ out.append(WriteIntent.slot(group="data", array="value", index=index, data=value
 On this path you also emit the coordinate write explicitly; Firecube
 auto-emits it only for slots it resolved from `IndexedWrite` elements. Both
 element types mix freely in one returned list. See
-[Plugin Templates](../../reference/templates.md#firecube.ingestor.api.DirectZarrIngestor.build_write_intents) for
+[Plugin Templates](../../reference/templates.md#firecube.sdk.DirectZarrIngestor.build_write_intents) for
 the full contract.
 
 ### Write The Cube At The Store Root
@@ -305,7 +305,7 @@ For an integer array, `firecube zarr preallocate` refuses these values:
 It refuses the value before it creates or writes any array. The message names
 the array, the item, the value and the reason. Firecube can round a finite
 float to the dtype of the array.
-[`ItemInfo`](../../reference/parallelism.md#firecube.ingestor.api.ItemInfo)
+[`ItemInfo`](../../reference/parallelism.md#firecube.sdk.ItemInfo)
 lists the casting rules and all refusals.
 
 Run `firecube zarr preallocate` with `--input-data` before ingest. Run it once
@@ -320,7 +320,7 @@ value. A mismatch fails the batch.
 
 See [Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md#1-preallocate-the-product)
 for the operator steps and
-[`ZarrArraySpec`](../../reference/templates.md#firecube.ingestor.api.ZarrArraySpec)
+[`ZarrArraySpec`](../../reference/templates.md#firecube.sdk.ZarrArraySpec)
 for the full field reference.
 
 ## Verify
@@ -363,7 +363,7 @@ for the refusals and their fixes.
 | Returning raw source indexes from `inspect_item` | Return `ItemInfo(coordinate=...)` and let Firecube resolve the slot index. |
 | Returning rounded slot times from `inspect_item` with `TimeAxis.observed` | Return the real observation timestamp; Firecube does the slot mapping. |
 | Sizing arrays from the input files | Use `resolved_index(ctx).size(group)` in `zarr_schema`. |
-| Importing private runtime modules | Import from `firecube.ingestor.api`. |
+| Importing private runtime modules | Import from `firecube.sdk`. |
 | Writing a per-slot scalar from every worker into a shared chunk | Declare the array `engine_owned=True`; see [Per-Slot Scalars](#per-slot-scalars). |
 | Starting workers with ranges that split a stored chunk or shard | Plan ranges with `firecube zarr slots`. |
 | Calling `.position()` for every write by hand | Return `IndexedWrite` elements with `coordinate=` and let Firecube resolve the slot. |

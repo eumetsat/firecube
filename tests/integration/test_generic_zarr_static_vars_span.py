@@ -36,8 +36,8 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import ExecutionParams, GenericZarrIngestor, PluginContext
 from firecube.ingestor.runtime.zarr.resume_cache import clear_resume_cache
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration

@@ -26,8 +26,8 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import WriteIntent, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.registry import loader as _loader
+from firecube.sdk import WriteIntent, ZarrArraySpec, ZarrGroupSpec
 
 pytestmark = [pytest.mark.integration, pytest.mark.contract]
 

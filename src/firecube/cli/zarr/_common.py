@@ -24,9 +24,9 @@ import click
 
 from firecube.cli._errors import render
 from firecube.cli._typed_options import coerce_options_for_plugin
-from firecube.ingestor.api import ExecutionParams, PluginContext
 from firecube.ingestor.errors import RemovedConfigKeyError
 from firecube.ingestor.runtime.configure import configure_ingestor
+from firecube.sdk import ExecutionParams, PluginContext
 
 logger = logging.getLogger("firecube.cli.zarr")
 

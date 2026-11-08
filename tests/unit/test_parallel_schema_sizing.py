@@ -123,7 +123,7 @@ def test_parallel_schema_uses_global_expected_not_batch_local(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import firecube.ingestor.api as api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
     import firecube.ingestor.templates.direct_zarr as direct_zarr
 
     captured: dict[str, Any] = {}
@@ -145,7 +145,7 @@ def test_parallel_schema_uses_global_expected_not_batch_local(
     monkeypatch.setattr(
         ingestor, "resolve_output_uri", lambda ctx, write_mode: str(tmp_path / "out.zarr")
     )
-    monkeypatch.setattr(api, "IndexedRegionStrategy", _FakeStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _FakeStrategy)
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", fail_setup)
     ingestor._parallel_execution_state = _ParallelExecutionState(global_expected={"data": 1000})
 
@@ -225,7 +225,7 @@ def test_no_slot_range_uses_phase2_batch_local_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import firecube.ingestor.api as api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
     import firecube.ingestor.templates.direct_zarr as direct_zarr
 
     captured: dict[str, Any] = {}
@@ -246,7 +246,7 @@ def test_no_slot_range_uses_phase2_batch_local_path(
     monkeypatch.setattr(
         ingestor, "resolve_output_uri", lambda ctx, write_mode: str(tmp_path / "out.zarr")
     )
-    monkeypatch.setattr(api, "IndexedRegionStrategy", _FakeStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _FakeStrategy)
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", fail_setup)
 
     ctx = SimpleNamespace(

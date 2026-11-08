@@ -1,9 +1,9 @@
 # Exceptions
 
-This reference covers the error types exported from `firecube.ingestor.api`.
-Ingestor-layer errors inherit from `IngestorError`; `ManifestError`,
-`SchemaDriftError`, and `StorageError` are shared error types re-exported
-through the same facade.
+This reference covers the error types exported from `firecube.sdk`.
+Ingestor-layer errors inherit from `IngestorError`. `ManifestError`,
+`SchemaDriftError`, and `StorageError` are shared error types that
+`firecube.sdk` re-exports.
 
 `ExtentUnknownError` is the core resolver error raised when a regular axis has
 no fixed extent.
@@ -15,7 +15,7 @@ the same unbounded-axis case.
 `NoDiscoveredItemsError` are raised during `IrregularTimeAxis(values=AUTO)`
 discovery.
 
-{{ render_api_summary("firecube.ingestor.api", [
+{{ render_api_summary("firecube.sdk", [
     "IngestorError",
     "ConfigurationError",
     "ExtentUnknownError",
@@ -35,50 +35,50 @@ discovery.
 
 ## Ingestor Errors
 
-::: firecube.ingestor.api.IngestorError
+::: firecube.sdk.IngestorError
 
-::: firecube.ingestor.api.ConfigurationError
+::: firecube.sdk.ConfigurationError
 
-::: firecube.ingestor.api.ExtentUnknownError
+::: firecube.sdk.ExtentUnknownError
 
-::: firecube.ingestor.api.UnboundedAxisError
+::: firecube.sdk.UnboundedAxisError
 
-::: firecube.ingestor.api.SchemaSizeMismatchError
+::: firecube.sdk.SchemaSizeMismatchError
 
-::: firecube.ingestor.api.ResumeConflictError
+::: firecube.sdk.ResumeConflictError
 
-::: firecube.ingestor.api.RangeOverlapError
+::: firecube.sdk.RangeOverlapError
 
-::: firecube.ingestor.api.WriteIntentRangeError
+::: firecube.sdk.WriteIntentRangeError
 
 ## Irregular Axis Discovery Errors
 
 These errors are raised when `IrregularTimeAxis(values=AUTO)` discovery fails.
 All three inherit from `ConfigurationError`.
 
-::: firecube.ingestor.api.MissingIrregularCoordinateError
+::: firecube.sdk.MissingIrregularCoordinateError
 
-::: firecube.ingestor.api.DuplicateIrregularCoordinateError
+::: firecube.sdk.DuplicateIrregularCoordinateError
 
-::: firecube.ingestor.api.NoDiscoveredItemsError
+::: firecube.sdk.NoDiscoveredItemsError
 
 ## Shared Errors
 
-::: firecube.ingestor.api.ManifestError
+::: firecube.sdk.ManifestError
 
-::: firecube.ingestor.api.SchemaDriftError
+::: firecube.sdk.SchemaDriftError
 
-::: firecube.ingestor.api.StorageError
+::: firecube.sdk.StorageError
 
 ## IndexedWrite Compilation Errors
 
 `IndexedWriteCompilationError` is raised when the engine cannot map an
 `IndexedWrite.coordinate` to a slot index at compile time.
 
-::: firecube.ingestor.api.IndexedWriteCompilationError
+::: firecube.sdk.IndexedWriteCompilationError
 
 ## See Also
 
-- [Discovery failure modes](parallelism.md#firecube.ingestor.api.TimeAxis.discovered)
-- [`build_write_intents`](templates.md#firecube.ingestor.api.DirectZarrIngestor.build_write_intents)
+- [Discovery failure modes](parallelism.md#firecube.sdk.TimeAxis.discovered)
+- [`build_write_intents`](templates.md#firecube.sdk.DirectZarrIngestor.build_write_intents)
 - [Declare The Schema And Index](../guides/plugins/direct-zarr.md)

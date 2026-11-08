@@ -21,7 +21,7 @@ from unittest.mock import patch
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
+from firecube.sdk import IngestContext, IngestResult, OutputPaths
 
 
 def _base_args(tmp_path: Path) -> list[str]:

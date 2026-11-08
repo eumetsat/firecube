@@ -34,13 +34,13 @@ import xarray as xr
 from precip_daily_test_plugin.ingestor import PrecipDailyIngestor
 
 from firecube.core.controlplane import ChunkManager
-from firecube.ingestor.api import ExecutionParams
 from firecube.ingestor.types.context import (
     IngestContext,
     PipelineBatch,
     PluginContext,
     StorageContext,
 )
+from firecube.sdk import ExecutionParams
 from tests.helpers.storage import make_test_binding, make_test_session
 
 pytestmark = pytest.mark.integration

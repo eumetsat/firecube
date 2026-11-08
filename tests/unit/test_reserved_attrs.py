@@ -16,12 +16,13 @@ from __future__ import annotations
 
 import pytest
 
-from firecube.core.api import ATTR_CONSOLIDATED_AT, ATTR_COORD_MANAGED, ATTR_PREALLOCATED
 from firecube.core.zarr._reserved_attrs import (  # pyright: ignore[reportMissingImports]
     FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
     RESERVED_ARRAY_ATTRS,
     assert_attrs_safe,
 )
+from firecube.core.zarr._sealing_markers import ATTR_CONSOLIDATED_AT
+from firecube.operations import ATTR_COORD_MANAGED, ATTR_PREALLOCATED
 
 
 @pytest.mark.parametrize("key", sorted(RESERVED_ARRAY_ATTRS))

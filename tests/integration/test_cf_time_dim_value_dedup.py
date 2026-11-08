@@ -33,7 +33,7 @@ from click.testing import CliRunner, Result
 
 from firecube.cli.main import cli
 from firecube.core.zarr.time_decode import decode_time_array
-from firecube.ingestor.api import ExecutionParams
+from firecube.sdk import ExecutionParams
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration

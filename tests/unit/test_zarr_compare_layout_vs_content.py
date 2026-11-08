@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 import zarr
 
-from firecube.core.api import compare_zarr_stores
+from firecube.sdk import compare_zarr_stores
 
 pytestmark = pytest.mark.unit
 

@@ -28,7 +28,7 @@ import datetime as dt
 import cftime
 import pytest
 
-from firecube.core.api import (
+from firecube.sdk import (
     AUTO,
     AxisSpec,
     IndexSpec,

@@ -24,26 +24,9 @@ from typing import Any, ClassVar, cast
 
 import xarray as xr
 
-from firecube.core.api import (
-    create_filesystem_for_uri,  # type: ignore
-    is_remote_target,
-    local_path_from_target,
-)
+from firecube.core.controlplane.types import WriteDomain
 from firecube.core.errors import FirecubeError, Message, Param
 from firecube.core.filesystem import fs_kwargs_for_uri
-from firecube.ingestor.api import (
-    BaseIngestor,
-    ConfigurationError,
-    OutputPaths,
-    ParquetTemplateConfig,
-    PipelineBatch,
-    PipelineResult,
-    PipelineRunState,
-    PluginContext,
-    RuntimeIngestContext,
-    WriteDomain,
-    ZarrTemplateConfig,
-)
 from firecube.ingestor.extensions.duck import DuckDbMixin
 from firecube.ingestor.runtime.zarr import batch_runner
 from firecube.ingestor.runtime.zarr.alignment import AlignmentMonitor
@@ -53,6 +36,21 @@ from firecube.ingestor.runtime.zarr.ordered_gate import ExclusiveSection, Ordere
 from firecube.ingestor.templates._parquet import relative_data_path
 from firecube.ingestor.templates.config import validate_zarr_writer_dict
 from firecube.ingestor.types import write_mode_policy
+from firecube.sdk import (
+    BaseIngestor,
+    ConfigurationError,
+    OutputPaths,
+    ParquetTemplateConfig,
+    PipelineBatch,
+    PipelineResult,
+    PipelineRunState,
+    PluginContext,
+    RuntimeIngestContext,
+    ZarrTemplateConfig,
+    create_filesystem_for_uri,
+    is_remote_target,
+    local_path_from_target,
+)
 
 
 def _ctx_output_session(ctx: PluginContext) -> Any | None:

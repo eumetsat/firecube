@@ -140,7 +140,7 @@ def _ctx() -> Any:
 
 
 def _patch_strategy(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    import firecube.ingestor.api as api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
 
     class _FakeStrategy:
         def __init__(self, **kwargs: Any) -> None:
@@ -152,7 +152,7 @@ def _patch_strategy(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
             _ = kwargs
             return {"coverage": []}
 
-    monkeypatch.setattr(api, "IndexedRegionStrategy", _FakeStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _FakeStrategy)
     monkeypatch.setattr(
         _CapableIngestor,
         "resolve_output_uri",

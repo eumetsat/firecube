@@ -30,8 +30,8 @@ import numpy as np
 import zarr
 
 from firecube.core.zarr.region_writer import RegionZarrWriter, group_schema_satisfied
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.templates.direct_zarr import _setup_global_zarr_schema
+from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 
 
 def _strategy(store_uri: str) -> SimpleNamespace:

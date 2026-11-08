@@ -28,7 +28,8 @@ from typing import Any, ClassVar, cast
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.runtime.index_binding import resolve_index_spec_for_ingestor
+from firecube.sdk import (
     DirectZarrIngestor,
     PipelineBatch,
     PluginContext,
@@ -36,7 +37,6 @@ from firecube.ingestor.api import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.runtime.index_binding import resolve_index_spec_for_ingestor
 
 pytestmark = pytest.mark.integration
 
@@ -136,7 +136,8 @@ def test_resolved_index_different_per_context() -> None:
 
 def test_as_legacy_slot_index_model_byte_parity() -> None:
     """as_legacy_slot_index_model produces a byte-identical SlotIndexModel."""
-    from firecube.core.api import SlotAxis, SlotIndexModel, normalize_epoch_iso
+    from firecube.core.slot_index import SlotAxis, SlotIndexModel
+    from firecube.sdk import normalize_epoch_iso
 
     plugin = _IntegrationPlugin.__new__(_IntegrationPlugin)
     ctx = cast(PluginContext, _plugin_ctx())

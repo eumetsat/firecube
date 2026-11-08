@@ -25,10 +25,10 @@ import xarray as xr
 import zarr
 
 from firecube.core.storage.session import storage_config_from_binding
-from firecube.ingestor.api import ConfigurationError
 from firecube.ingestor.errors import SchemaDriftError
 from firecube.ingestor.runtime.zarr.strategies.append import AppendStrategy
 from firecube.ingestor.runtime.zarr.write import write_dataset_to_zarr
+from firecube.sdk import ConfigurationError
 from tests.helpers.storage import local_zarr_handle, make_local_session
 
 pytestmark = pytest.mark.integration

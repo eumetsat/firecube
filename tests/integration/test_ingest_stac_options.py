@@ -28,20 +28,24 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import AUTO, IndexSpec, IrregularTimeAxis, ItemInfo, RegularTimeAxis
 from firecube.core.discovery import DiscoveryRequest, discover
 from firecube.core.product.open import open_product
 from firecube.core.runtime import resolve_storage_config
-from firecube.ingestor.api import (
-    DirectZarrIngestor,
-    OutputPaths,
-    PipelineResult,
-    ZarrArraySpec,
-    ZarrGroupSpec,
-)
 from firecube.ingestor.registry import loader
 from firecube.ingestor.runtime.configure import configure_ingestor
 from firecube.ingestor.runtime.preallocate import preallocate_product
+from firecube.sdk import (
+    AUTO,
+    DirectZarrIngestor,
+    IndexSpec,
+    IrregularTimeAxis,
+    ItemInfo,
+    OutputPaths,
+    PipelineResult,
+    RegularTimeAxis,
+    ZarrArraySpec,
+    ZarrGroupSpec,
+)
 from tests.helpers.fake_stac import FakeStacApi, install_fake_stac, stac_item
 
 pytestmark = pytest.mark.integration

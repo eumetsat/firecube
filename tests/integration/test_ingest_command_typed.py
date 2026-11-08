@@ -27,11 +27,11 @@ import pytest
 from click.testing import CliRunner
 
 import firecube.cli.zarr._common as zarr_common
-import firecube.ingestor.api as api
+import firecube.sdk as api
 from firecube.cli.main import cli
 from firecube.core.errors import ConfigurationError, MissingProductNameError
 from firecube.core.product.identity import resolve_product_name
-from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
+from firecube.sdk import IngestContext, IngestResult, OutputPaths
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.contract

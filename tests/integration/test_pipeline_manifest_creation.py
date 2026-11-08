@@ -21,12 +21,7 @@ import xarray as xr
 
 from firecube.core.controlplane import ChunkManager
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import (
-    ExecutionParams,
-    GenericZarrIngestor,
-    PluginContext,
-    register_ingestor,
-)
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext, register_ingestor
 from tests.helpers.storage import make_test_binding, make_test_context
 
 

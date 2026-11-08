@@ -25,7 +25,6 @@ import pytest
 from firecube.core.controlplane import ChunkManager
 from firecube.core.product import resolve_dataset_target
 from firecube.core.storage.completion import StorageCompleter
-from firecube.ingestor.api import IngestResult, OutputPaths
 from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.runtime.zarr import batch_runner
 from firecube.ingestor.templates import generic as generic_module
@@ -42,6 +41,7 @@ from firecube.ingestor.types.context import (
     PluginContext,
     RuntimeIngestContext,
 )
+from firecube.sdk import IngestResult, OutputPaths
 from tests.helpers.storage import begin_write_session, make_test_binding, make_test_context
 
 
@@ -197,7 +197,8 @@ def test_direct_zarr_storage_handled_metric_matches_write_mode(
     )
     strategy = SimpleNamespace(write_groups=MagicMock(return_value={"coverage": ["data"]}))
     monkeypatch.setattr(
-        "firecube.ingestor.api.IndexedRegionStrategy", MagicMock(return_value=strategy)
+        "firecube.ingestor.runtime.zarr.strategies.indexed_region.IndexedRegionStrategy",
+        MagicMock(return_value=strategy),
     )
     monkeypatch.setattr(
         ingestor, "resolve_output_uri", MagicMock(return_value=str(tmp_path / "out.zarr"))

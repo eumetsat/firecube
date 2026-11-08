@@ -56,19 +56,21 @@ from click.testing import CliRunner
 
 from firecube.cli._errors import render
 from firecube.cli.main import cli
-from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.controlplane.claims import ClaimHandle
 from firecube.core.controlplane.manager import ChunkManager
 from firecube.core.filesystem.conditional import GUARD_FILE_NAME
-from firecube.ingestor.api import (
+from firecube.ingestor.registry import loader as _loader
+from firecube.sdk import (
     DirectZarrIngestor,
+    IndexSpec,
+    ItemInfo,
     PipelineBatch,
     PluginContext,
+    RegularTimeAxis,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.registry import loader as _loader
 from tests.helpers.cli_hints import run_hint
 
 pytestmark = pytest.mark.integration

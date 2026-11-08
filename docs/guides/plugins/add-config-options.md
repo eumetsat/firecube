@@ -12,7 +12,7 @@ Define the configuration next to an already working plugin:
 ```python
 from dataclasses import dataclass
 
-from firecube.ingestor.api import PluginConfig
+from firecube.sdk import PluginConfig
 
 
 @dataclass
@@ -49,7 +49,7 @@ from typing import Any, ClassVar
 
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericZarrIngestor,
     PluginConfig,
     PluginContext,

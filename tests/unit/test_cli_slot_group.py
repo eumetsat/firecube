@@ -23,7 +23,7 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.runtime import resolve_slot_window
-from firecube.ingestor.api import ExecutionParams, IngestContext, IngestResult, OutputPaths
+from firecube.sdk import ExecutionParams, IngestContext, IngestResult, OutputPaths
 
 
 def _base_args(tmp_path: Path) -> list[str]:

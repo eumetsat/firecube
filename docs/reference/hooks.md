@@ -13,7 +13,7 @@ output code. A new external custom pipeline cannot be implemented using only
 stable, typed public storage APIs. Do not import the concrete storage session
 from an internal module as a workaround.
 
-{{ render_api_summary("firecube.ingestor.api", [
+{{ render_api_summary("firecube.sdk", [
     "BaseIngestor",
     "BaseIngestor.discover_source_files",
     "BaseIngestor._process_batch",
@@ -37,7 +37,7 @@ from an internal module as a workaround.
 
 ## Base Class
 
-::: firecube.ingestor.api.BaseIngestor
+::: firecube.sdk.BaseIngestor
     options:
         members: false
 
@@ -55,37 +55,37 @@ from an internal module as a workaround.
 
 ## Core Hooks
 
-::: firecube.ingestor.api.BaseIngestor.discover_source_files
+::: firecube.sdk.BaseIngestor.discover_source_files
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor._process_batch
+::: firecube.sdk.BaseIngestor._process_batch
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.resolve_output_uri
+::: firecube.sdk.BaseIngestor.resolve_output_uri
     options:
         inherited_members: true
 
 ## Batch Shaping
 
-::: firecube.ingestor.api.BaseIngestor.filter_item
+::: firecube.sdk.BaseIngestor.filter_item
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.item_size_bytes
+::: firecube.sdk.BaseIngestor.item_size_bytes
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.get_batch_groups
+::: firecube.sdk.BaseIngestor.get_batch_groups
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.prepare_batch_data
+::: firecube.sdk.BaseIngestor.prepare_batch_data
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.cleanup_batch_data
+::: firecube.sdk.BaseIngestor.cleanup_batch_data
     options:
         inherited_members: true
 
@@ -94,45 +94,45 @@ from an internal module as a workaround.
 Cooperative hooks: overrides of `batch_setup` and `batch_teardown` must call
 `super()` so mixins in the class hierarchy run their own setup and teardown.
 
-::: firecube.ingestor.api.BaseIngestor.batch_setup
+::: firecube.sdk.BaseIngestor.batch_setup
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.batch_teardown
+::: firecube.sdk.BaseIngestor.batch_teardown
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.on_pipeline_start
+::: firecube.sdk.BaseIngestor.on_pipeline_start
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.on_batch_success
+::: firecube.sdk.BaseIngestor.on_batch_success
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.on_batch_failure
+::: firecube.sdk.BaseIngestor.on_batch_failure
     options:
         inherited_members: true
 
 ## Validation And Metadata
 
-::: firecube.ingestor.api.BaseIngestor.slice_meta_keys
+::: firecube.sdk.BaseIngestor.slice_meta_keys
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.slice_meta
+::: firecube.sdk.BaseIngestor.slice_meta
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.validation_group
+::: firecube.sdk.BaseIngestor.validation_group
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.catalog_group_info
+::: firecube.sdk.BaseIngestor.catalog_group_info
     options:
         inherited_members: true
 
-::: firecube.ingestor.api.BaseIngestor.default_aggregate_metrics
+::: firecube.sdk.BaseIngestor.default_aggregate_metrics
     options:
         inherited_members: true
 
@@ -142,7 +142,7 @@ Cooperative hooks: overrides of `batch_setup` and `batch_teardown` must call
 It is not the context type passed to plugin hooks and must not be reused
 across runs.
 
-::: firecube.ingestor.api.RuntimeIngestContext
+::: firecube.sdk.RuntimeIngestContext
 
 ## See Also
 

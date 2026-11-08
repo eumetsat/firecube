@@ -36,7 +36,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from firecube.ingestor.api import ExecutionParams, GenericZarrIngestor, PluginContext
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.unit

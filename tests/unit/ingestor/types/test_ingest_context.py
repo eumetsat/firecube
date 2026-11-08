@@ -14,8 +14,9 @@
 
 from pathlib import Path
 
-from firecube.ingestor.api import IngestContext, IngestManifest, StorageContext
 from firecube.ingestor.types.context import RuntimeFlags, RuntimeIngestContext
+from firecube.ingestor.types.manifest import IngestManifest
+from firecube.sdk import IngestContext, StorageContext
 
 
 def test_ingest_context_optimization():

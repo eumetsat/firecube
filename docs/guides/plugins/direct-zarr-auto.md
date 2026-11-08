@@ -30,7 +30,7 @@ from typing import ClassVar
 import numpy as np
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
     IndexedWrite,
     IndexSpec,
@@ -137,7 +137,7 @@ Discovery makes `inspect_item` load-bearing. It must follow three rules:
 so it must be idempotent and must not depend on the order items arrive in.
 Duplicate timestamps are refused at discovery time, before any array is
 created. The
-[`TimeAxis.discovered` reference](../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.discovered)
+[`TimeAxis.discovered` reference](../../reference/parallelism.md#firecube.sdk.TimeAxis.discovered)
 names each discovery error and its cause.
 
 ## Verify
@@ -191,7 +191,7 @@ workflow.
 
 ## Next Steps
 
-- **[`TimeAxis.discovered` Reference](../../reference/parallelism.md#firecube.ingestor.api.TimeAxis.discovered)** — exact constructor contract and failure modes
+- **[`TimeAxis.discovered` Reference](../../reference/parallelism.md#firecube.sdk.TimeAxis.discovered)** — exact constructor contract and failure modes
 - **[DirectZarrIngestor (Region)](../../concepts/output-formats/zarr/direct-region.md)** — how each axis regime owns the coordinate array
 - **[Declare The Schema And Index](direct-zarr.md)** — the full plugin contract this page builds on
 - **[Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md)** — preallocate, plan, and launch workers

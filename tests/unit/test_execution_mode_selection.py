@@ -26,13 +26,13 @@ import pytest
 
 from firecube.core.errors import ConfigurationError
 from firecube.core.product.resolver import resolve_dataset_target
-from firecube.ingestor.api import BaseIngestor, ExecutionParams, IngestContext
 from firecube.ingestor.config.engine import EngineConfig, config_keys
 from firecube.ingestor.runtime.configure import (
     ExecutionMode,
     TierConfigurator,
     determine_execution_mode,
 )
+from firecube.sdk import BaseIngestor, ExecutionParams, IngestContext
 
 pytestmark = pytest.mark.unit
 

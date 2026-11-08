@@ -34,10 +34,10 @@ import numpy as np
 import pytest
 import zarr
 
-from firecube.core.api import ATTR_COORD_MANAGED
 from firecube.core.errors import SchemaDriftError
 from firecube.core.zarr._sealing_markers import ATTR_PREALLOCATED
 from firecube.core.zarr.region_writer import RegionZarrWriter
+from firecube.operations import ATTR_COORD_MANAGED
 
 pytestmark = pytest.mark.integration
 

@@ -16,7 +16,8 @@
 
 Open a product with `open_product`, then pass the `Product` handle to an operation.
 Each name keeps the name of its defining module, with no alias. The module exports the
-phase A operations and the request and result types their signatures use. It does not
+phase A operations and the request and result types their signatures use. It also exports
+the two marker attribute names that `firecube zarr preallocate` stamps. It does not
 re-export errors. Most are in `firecube.core.errors`; a few live in the runtime module
 that raises them, such as `SlotWindowError` in `firecube.ingestor.runtime.preallocate`.
 """
@@ -38,6 +39,7 @@ from firecube.core.product.open import Product, open_product
 from firecube.core.runtime import resolve_slot_window, resolve_storage_config
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
+from firecube.core.zarr._sealing_markers import ATTR_COORD_MANAGED, ATTR_PREALLOCATED
 from firecube.core.zarr.coord_consolidation import ConsolidationSummary, consolidate_time_coords
 from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
 from firecube.ingestor.contracts.interfaces import PreallocateHost
@@ -85,6 +87,8 @@ from firecube.ingestor.runtime.release_retention import RetentionVerification
 from firecube.ingestor.runtime.slot_plan import GroupSlotPlan, plan_slots
 
 __all__ = [
+    "ATTR_COORD_MANAGED",
+    "ATTR_PREALLOCATED",
     "AdoptionResult",
     "ArchiveCreatePlan",
     "ArchiveCreateResult",

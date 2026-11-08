@@ -30,7 +30,7 @@ the resume request now sees ``zarr_compression=True`` from the flipped default.
 
 The codec-drift guard in
 :mod:`firecube.core.zarr.region_writer` only fires when the plugin's
-:class:`~firecube.ingestor.api.ZarrArraySpec` declares explicit
+:class:`~firecube.sdk.ZarrArraySpec` declares explicit
 ``filters``/``serializer``/``compressors`` fields, so plugins that leave those
 fields blank (the common case, including the ``cf_time_dim`` fixture used here)
 should never observe drift on resume regardless of the ``zarr_compression``
@@ -145,7 +145,7 @@ def test_resume_uncompressed_store_with_new_default_behavior(tmp_path: Path) -> 
     """Document behavior: create uncompressed, resume WITHOUT the option (new default=True).
 
     The codec-drift check in ``region_writer.py`` only runs when the
-    :class:`~firecube.ingestor.api.ZarrArraySpec` declares explicit
+    :class:`~firecube.sdk.ZarrArraySpec` declares explicit
     ``filters``/``serializer``/``compressors``. The ``cf_time_dim`` fixture
     declares none of those, so the drift guard is a no-op on this store and the
     second run (now compressed-by-default) is expected to succeed cleanly.

@@ -21,8 +21,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from firecube.ingestor.api import GenericZarrIngestor, PluginContext
 from firecube.ingestor.errors import ConfigurationError
+from firecube.sdk import GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 

@@ -14,13 +14,7 @@
 
 from pathlib import Path
 
-from firecube.ingestor.api import (
-    IngestResult,
-    OutputPaths,
-    PipelineMetrics,
-    ResultMetrics,
-    StorageMetrics,
-)
+from firecube.sdk import IngestResult, OutputPaths, PipelineMetrics, ResultMetrics, StorageMetrics
 
 
 def test_empty_ingest_result_constructs() -> None:

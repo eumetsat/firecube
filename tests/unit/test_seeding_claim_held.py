@@ -46,8 +46,8 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from firecube.ingestor.api import ExecutionParams, GenericZarrIngestor, PluginContext
 from firecube.ingestor.runtime.zarr import batch_runner, staged_metadata
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.unit

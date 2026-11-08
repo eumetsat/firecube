@@ -87,7 +87,7 @@ in `plans/TODO.md`.
 
 - Plugin contract: `src/firecube/ingestor/runtime/base.py` (`BaseIngestor`) and `src/firecube/ingestor/contracts/interfaces.py` (Protocols).
 - Engine/pipeline runner: `src/firecube/ingestor/runtime/engine.py`.
-- Public surfaces for plugins: `src/firecube/ingestor/api.py` and `src/firecube/core/api.py` (prefer these over deep imports).
+- Public surface for plugins: `src/firecube/sdk.py`, imported as `firecube.sdk`. Do not use deep imports. `src/firecube/ingestor/api.py` and `src/firecube/core/api.py` are deprecated until v0.2.0 and warn.
 - External plugins: installed via entry points under `firecube.plugins`; plugin-specific usage belongs in each plugin repository.
 - Storage: `src/firecube/core/filesystem/` (`StorageFilesystem` Protocol, `FsspecFilesystem`, `ObstoreFilesystem`) and `src/firecube/core/storage/`. Create a driver with `create_filesystem(binding)`. All I/O goes through the chosen driver, no mixing. URI helpers: `src/firecube/core/uris.py`. The optional `obstore` import guard is `_obstore_compat.py`.
 - Literal session removal: `StorageSession.delete_literal(uri)` in `src/firecube/core/storage/session.py` removes one object and expands no glob character. `StorageSession.delete` is recursive and is not for this.

@@ -21,8 +21,8 @@ from firecube.core.controlplane import ChunkManager
 from firecube.core.index_resolve import resolve_index_spec
 from firecube.core.index_spec import IndexSpec, RegularTimeAxis
 from firecube.core.zarr.planning import coord_chunk_sizes_by_group
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.errors import ConfigurationError
+from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 from tests.helpers.cli_hints import run_hint
 from tests.helpers.storage import make_test_binding
 

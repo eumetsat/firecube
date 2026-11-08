@@ -23,7 +23,7 @@ import xarray as xr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericParquetIngestor,
     GenericTensogramIngestor,
     GenericZarrIngestor,

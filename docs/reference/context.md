@@ -2,9 +2,9 @@
 
 This reference covers the context object passed to plugin hooks, the storage
 sessions it exposes, batch inputs, and the result and metrics types. Import
-all symbols from `firecube.ingestor.api`.
+all symbols from `firecube.sdk`.
 
-{{ render_api_summary("firecube.ingestor.api", [
+{{ render_api_summary("firecube.sdk", [
     "PluginContext",
     "StorageContext",
     "ExecutionParams",
@@ -20,7 +20,7 @@ all symbols from `firecube.ingestor.api`.
 
 ## PluginContext
 
-::: firecube.ingestor.api.PluginContext
+::: firecube.sdk.PluginContext
     options:
         show_bases: false
         members:
@@ -41,13 +41,13 @@ all symbols from `firecube.ingestor.api`.
 
 ## StorageContext
 
-::: firecube.ingestor.api.StorageContext
+::: firecube.sdk.StorageContext
     options:
         show_bases: false
 
 ## ExecutionParams
 
-::: firecube.ingestor.api.ExecutionParams
+::: firecube.sdk.ExecutionParams
     options:
         show_bases: false
 
@@ -56,27 +56,27 @@ all symbols from `firecube.ingestor.api`.
 `GenericParquetIngestor` and `DirectZarrIngestor` receive a `PipelineBatch`.
 `GenericZarrIngestor` receives the batch's source items directly.
 
-::: firecube.ingestor.api.PipelineBatch
+::: firecube.sdk.PipelineBatch
 
 ## Run State
 
-::: firecube.ingestor.api.PipelineRunState
+::: firecube.sdk.PipelineRunState
 
 ## Results
 
-::: firecube.ingestor.api.IngestResult
+::: firecube.sdk.IngestResult
 
-::: firecube.ingestor.api.PipelineResult
+::: firecube.sdk.PipelineResult
 
-::: firecube.ingestor.api.OutputPaths
+::: firecube.sdk.OutputPaths
 
 ## Metrics
 
-::: firecube.ingestor.api.ResultMetrics
+::: firecube.sdk.ResultMetrics
 
-::: firecube.ingestor.api.PipelineMetrics
+::: firecube.sdk.PipelineMetrics
 
-::: firecube.ingestor.api.StorageMetrics
+::: firecube.sdk.StorageMetrics
 
 ## See Also
 

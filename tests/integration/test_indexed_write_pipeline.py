@@ -41,25 +41,23 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import (
+from firecube.core.index_resolve import resolve_index_spec
+from firecube.ingestor.registry import loader as _loader
+from firecube.ingestor.templates.direct_zarr import _compile_indexed_write
+from firecube.sdk import (
     AUTO,
+    DirectZarrIngestor,
     IndexedWrite,
     IndexedWriteCompilationError,
     IndexSpec,
     IrregularTimeAxis,
     ItemInfo,
-    RegularTimeAxis,
-)
-from firecube.core.index_resolve import resolve_index_spec
-from firecube.ingestor.api import (
-    DirectZarrIngestor,
     PluginContext,
+    RegularTimeAxis,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.registry import loader as _loader
-from firecube.ingestor.templates.direct_zarr import _compile_indexed_write
 
 pytestmark = pytest.mark.integration
 

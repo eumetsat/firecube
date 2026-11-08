@@ -28,10 +28,16 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import IndexSpec, RegularTimeAxis
 from firecube.core.zarr._sealing_markers import ATTR_PREALLOCATED
-from firecube.ingestor.api import DirectZarrIngestor, PluginContext, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.registry import loader as _loader
+from firecube.sdk import (
+    DirectZarrIngestor,
+    IndexSpec,
+    PluginContext,
+    RegularTimeAxis,
+    ZarrArraySpec,
+    ZarrGroupSpec,
+)
 
 pytestmark = pytest.mark.integration
 

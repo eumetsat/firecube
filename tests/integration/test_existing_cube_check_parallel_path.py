@@ -23,7 +23,8 @@ import pytest
 import zarr
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.errors import ConfigurationError
+from firecube.sdk import (
     DirectZarrIngestor,
     ExecutionParams,
     PipelineBatch,
@@ -32,7 +33,6 @@ from firecube.ingestor.api import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.errors import ConfigurationError
 from tests.helpers.storage import make_test_context
 
 

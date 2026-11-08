@@ -67,7 +67,7 @@ def test_chunk_aligned_remaining(subtests: Any, tmp_path: Path) -> None:
 
 def test_resolve_per_group_slot_sizes_explicit() -> None:
     """Explicit slot size must be multiple of all group time-chunk sizes."""
-    from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
+    from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 
     schema = [
         ZarrGroupSpec(
@@ -83,7 +83,7 @@ def test_resolve_per_group_slot_sizes_explicit() -> None:
 
 def test_resolve_per_group_slot_sizes_invalid_explicit() -> None:
     """Explicit size not divisible by group LCM should raise ConfigurationError."""
-    from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
+    from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 
     schema = [
         ZarrGroupSpec(
@@ -99,7 +99,7 @@ def test_resolve_per_group_slot_sizes_invalid_explicit() -> None:
 
 def test_resolve_per_group_slot_sizes_auto() -> None:
     """Without explicit, should compute LCM of time-chunks per group."""
-    from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
+    from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 
     schema = [
         ZarrGroupSpec(

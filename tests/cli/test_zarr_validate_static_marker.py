@@ -23,7 +23,7 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import FIRECUBE_STATIC_WRITTEN_ATTR
+from firecube.sdk import FIRECUBE_STATIC_WRITTEN_ATTR
 from tests.helpers.rows import table_row
 
 pytestmark = pytest.mark.unit

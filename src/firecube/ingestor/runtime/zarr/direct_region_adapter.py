@@ -29,8 +29,8 @@ from collections.abc import Iterator, Sequence
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
-from firecube.core.api import ExtentUnknownError
 from firecube.core.errors import ConfigurationError
+from firecube.core.index_resolve import ExtentUnknownError
 from firecube.core.zarr.guard._layout import resolve_effective_layout
 from firecube.core.zarr.guard.engine_owned import (
     is_engine_owned_spec,

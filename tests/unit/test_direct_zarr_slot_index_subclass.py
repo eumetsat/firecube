@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from firecube.ingestor.api import DirectZarrIngestor, IngestResult
+from firecube.sdk import DirectZarrIngestor, IngestResult
 from tests.helpers.rows import table_row
 
 

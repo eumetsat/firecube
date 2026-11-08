@@ -370,7 +370,9 @@ class TestDirectZarrLifecycleHooks:
         batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
 
         with (
-            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch(
+                "firecube.ingestor.runtime.zarr.strategies.indexed_region.IndexedRegionStrategy"
+            ) as MockStrategy,
             patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
         ):
             MockStrategy.return_value.write_groups.return_value = {
@@ -465,7 +467,9 @@ class TestDirectZarrLifecycleHooks:
         batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
 
         with (
-            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch(
+                "firecube.ingestor.runtime.zarr.strategies.indexed_region.IndexedRegionStrategy"
+            ) as MockStrategy,
             patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
         ):
             MockStrategy.return_value.write_groups.side_effect = RuntimeError(
@@ -503,7 +507,9 @@ class TestDirectZarrLifecycleHooks:
         batch = PipelineBatch(batch_id="b1", data_path=Path("/tmp"), items=["f1.nc"])
 
         with (
-            patch("firecube.ingestor.api.IndexedRegionStrategy") as MockStrategy,
+            patch(
+                "firecube.ingestor.runtime.zarr.strategies.indexed_region.IndexedRegionStrategy"
+            ) as MockStrategy,
             patch.object(ingestor, "resolve_output_uri", return_value="/tmp/test.zarr"),
         ):
             MockStrategy.return_value.write_groups.return_value = {
@@ -673,23 +679,18 @@ class TestRunStateClose:
 
 class TestApiReExports:
     def test_direct_zarr_ingestor_importable(self) -> None:
-        from firecube.ingestor.api import DirectZarrIngestor as D
+        from firecube.sdk import DirectZarrIngestor as D
 
         assert D is DirectZarrIngestor
 
-    def test_indexed_region_strategy_importable(self) -> None:
-        from firecube.ingestor.api import IndexedRegionStrategy as I
-
-        assert I is IndexedRegionStrategy
-
     def test_write_intent_importable(self) -> None:
-        from firecube.ingestor.api import WriteIntent as W
+        from firecube.sdk import WriteIntent as W
 
         assert W is WriteIntent
 
     def test_zarr_specs_importable(self) -> None:
-        from firecube.ingestor.api import ZarrArraySpec as PublicArraySpec
-        from firecube.ingestor.api import ZarrGroupSpec as PublicGroupSpec
+        from firecube.sdk import ZarrArraySpec as PublicArraySpec
+        from firecube.sdk import ZarrGroupSpec as PublicGroupSpec
 
         assert PublicArraySpec is ZarrArraySpec
         assert PublicGroupSpec is ZarrGroupSpec

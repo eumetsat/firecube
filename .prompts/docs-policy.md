@@ -94,8 +94,9 @@ Move interrupting sections to their canonical owner and link them.
 - Start with the reader's question and dominant need.
 - Explain the user consequence before the architecture.
 - Use public CLI flags and public SDK imports only. Public SDK imports come from
-  `firecube.ingestor.api`, `firecube.core.api` and `firecube.operations`. An
-  explicitly internal page is the exception.
+  `firecube.sdk` and `firecube.operations`. `firecube.ingestor.api` and
+  `firecube.core.api` are deprecated until v0.2.0. An explicitly internal page is
+  the exception.
 - Default terminal examples to an activated virtual environment: show
   `source .venv/bin/activate` in setup, then use `firecube` and `python` directly.
   Installation may mention `uv run firecube` as an alternative to activation.
@@ -124,8 +125,9 @@ source-code concern. Docstring conventions live in `plans/STYLE.md`.
 - **One canonical `:::` directive per symbol.** Two directives for the same
   symbol fail `mkdocs build --strict` with an ambiguous-anchor error. A second
   page covers the symbol with prose and a link, never a second render.
-- **Directives target public facades only** (`firecube.ingestor.api`,
-  `firecube.core.api`, `firecube.ingestor.extensions`, `firecube.operations`).
+- **Directives target public facades only** (`firecube.sdk`,
+  `firecube.ingestor.extensions`, `firecube.operations`). The modules
+  `firecube.ingestor.api` and `firecube.core.api` are deprecated until v0.2.0.
   Internal module paths must not appear in the reference.
 - **Every facade export is documented or allowlisted.** Exports with no
   directive need an entry in the docs-coverage test allowlist stating why.

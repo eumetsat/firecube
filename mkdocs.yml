@@ -230,6 +230,7 @@ nav:
       - Extensions: reference/extensions.md
       - Metadata Migration: reference/migration.md
     - Python API:
+      - SDK: reference/python-api/sdk.md
       - Operations: reference/python-api/operations.md
     - Core Utilities: reference/core-utilities.md
     - CLI Reference: reference/cli.md

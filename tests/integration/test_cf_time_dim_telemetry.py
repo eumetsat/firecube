@@ -43,8 +43,8 @@ import pytest
 import xarray as xr
 
 from firecube.core.controlplane import SpanCoverage
-from firecube.ingestor.api import ExecutionParams
 from firecube.ingestor.runtime.zarr.append_services import AppendCoverageBuilder
+from firecube.sdk import ExecutionParams
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration

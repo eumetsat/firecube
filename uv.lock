@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14' and platform_machine == 'ARM64' and sys_platform == 'win32'",
@@ -924,6 +924,7 @@ dependencies = [
     { name = "psutil" },
     { name = "pyarrow" },
     { name = "s3fs" },
+    { name = "typing-extensions" },
     { name = "xarray" },
     { name = "zarr" },
 ]
@@ -1018,6 +1019,7 @@ requires-dist = [
     { name = "tensogram-zarr", marker = "extra == 'test'", specifier = ">=0.22.0,<0.23" },
     { name = "trollsift", marker = "extra == 'patterns'", specifier = ">=1.0.1,<2" },
     { name = "trollsift", marker = "extra == 'test'", specifier = ">=1.0.1,<2" },
+    { name = "typing-extensions", specifier = ">=4.5" },
     { name = "virtualizarr", marker = "extra == 'virtualzarr'", specifier = ">=2.7.0,<3" },
     { name = "xarray", specifier = ">=2026.2.0" },
     { name = "zarr", specifier = ">=3.2.1" },

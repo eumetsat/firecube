@@ -21,7 +21,7 @@ from tests.helpers.rows import table_row
 
 @pytest.mark.unit
 def test_field_defaults(subtests, tmp_path):
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     for row_id, field, expected in [
         ("test_shards_default_is_none", "shards", None),
@@ -37,7 +37,7 @@ def test_field_defaults(subtests, tmp_path):
 
 @pytest.mark.unit
 def test_shards_length_mismatch_raises():
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     with pytest.raises(ValueError, match=r"shards.*length|rank"):
         ZarrArraySpec(name="x", shape=(10, 4, 5), dtype="float32", shards=(1, 2))
@@ -45,7 +45,7 @@ def test_shards_length_mismatch_raises():
 
 @pytest.mark.unit
 def test_dimension_names_length_mismatch_raises():
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     with pytest.raises(ValueError, match="dimension_names"):
         ZarrArraySpec(
@@ -58,7 +58,7 @@ def test_dimension_names_length_mismatch_raises():
 
 @pytest.mark.unit
 def test_attrs_invalid_type_raises():
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     attrs: Any = [1, 2, 3]
     with pytest.raises(ValueError, match="attrs"):
@@ -67,7 +67,7 @@ def test_attrs_invalid_type_raises():
 
 @pytest.mark.unit
 def test_all_new_fields_constructible():
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     attrs = {"units": "K"}
     spec = ZarrArraySpec(
@@ -88,7 +88,7 @@ def test_all_new_fields_constructible():
 
 @pytest.mark.unit
 def test_expected_time_count_with_time_indexed_false_raises() -> None:
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     with pytest.raises(
         ValueError,
@@ -105,7 +105,7 @@ def test_expected_time_count_with_time_indexed_false_raises() -> None:
 
 @pytest.mark.unit
 def test_static_spec_without_expected_time_count_constructs() -> None:
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     spec = ZarrArraySpec(name="lat", shape=(4,), dtype="float64", time_indexed=False)
 
@@ -115,7 +115,7 @@ def test_static_spec_without_expected_time_count_constructs() -> None:
 
 @pytest.mark.unit
 def test_time_indexed_spec_with_expected_time_count_constructs() -> None:
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     spec = ZarrArraySpec(name="data", shape=(10, 4), dtype="float32", expected_time_count=10)
 
@@ -125,7 +125,7 @@ def test_time_indexed_spec_with_expected_time_count_constructs() -> None:
 
 @pytest.mark.unit
 def test_time_indexed_spec_with_zero_expected_time_count_constructs() -> None:
-    from firecube.ingestor.api import ZarrArraySpec
+    from firecube.sdk import ZarrArraySpec
 
     spec = ZarrArraySpec(name="data", shape=(0, 4), dtype="float32", expected_time_count=0)
 

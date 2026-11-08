@@ -1,5 +1,34 @@
 # Done
 
+## 2026-11-08 — `firecube.sdk` is the one plugin door, and the two `api` modules are deprecated
+
+**Decision.** The maintainer decided on 2026-11-08 that plugins import from `firecube.sdk`. The modules `firecube.ingestor.api` and `firecube.core.api` keep every name and warn until v0.2.0. The base is commit 127ed11. The IDs below are the decisions of the plan `2026-11-08-sdk-door-and-api-deprecation`.
+
+- D1 (maintainer, 2026-11-08). The door is `firecube.sdk`. The name `firecube.plugin` is too close to the entry-point group `firecube.plugins`. The name `firecube.api` would be a third module called `api`.
+- D2 (maintainer, 2026-11-08). `firecube.sdk` carries every name that is plugin-facing by nature. Plugins exist that this repository does not see. A name stays out when the old module exported engine machinery by accident. The 102 names are in `src/firecube/sdk.py`, and 39 names stay out (P1).
+- D3 (maintainer, 2026-11-08). Exception to the Option Aliases rule of `plans/STYLE.md`. The rule forbids a shim and a transition period. The maintainer set it aside. Reason: plugins outside this repository need a release to migrate. Both old modules keep every name and warn.
+- D4 (maintainer, 2026-11-08). Every warning names v0.2.0 as the removal release. The `EngineConfig` warning uses the same version.
+- D5 (maintainer, 2026-11-08). The warning shows at run time and in the editor. A `DeprecationWarning` fires on use. A stub file marks functions with `@deprecated` from `typing_extensions`.
+- D6 (maintainer, 2026-11-08). `CHANGELOG.md` lists the old modules under `Deprecated`.
+- D7 (maintainer, 2026-11-08). The release is 0.1.9. The maintainer set aside the line of `plans/RELEASE.md` that requires a patch bump to stay backward compatible. The branch includes breaking changes listed under Changed and Removed in `CHANGELOG.md`.
+- S1. A codemod moved every import of the old modules in the tests and fixture plugins to `firecube.sdk`. A run with `-W error::DeprecationWarning` proves that no warning fires inside Firecube. The test configuration holds no warning filter.
+- S2. A stub file `api.pyi` beside each old module re-exports classes, constants and aliases plainly. Only functions carry `@deprecated`. A deprecated class in a stub must be a subclass. An instance from the new door would then not match an annotation of the old door. A type checker never flags a constant or an alias.
+- S2, amended (maintainer, 2026-11-08). The function declarations sit in the companion stubs `_api_deprecated.pyi` of each package. `api.pyi` re-exports them. Reason: a function declared inline in the stub made griffe drop the docstrings of 3 functions in `firecube.ingestor.api` and 19 in `firecube.core.api`.
+- S3. The scaffolder writes a boundary test, `tests/test_import_boundary.py`, into a generated plugin. The test allows only `firecube.sdk`.
+- S4 and S5 (maintainer, 2026-11-08). Declined. The old modules do not forward the moved execution parameters `write_mode` and `slot_*`. The hard refusals stay. The command `firecube chunks` gets no `--product-name` alias.
+- S6. Templates take names from `firecube.sdk`, which loads the templates lazily, so no import cycle exists. Templates take the names outside `firecube.sdk` from their defining modules.
+- S7. The new behaviour tests extend existing test files.
+- P1. The list of 102 names is the `__all__` of `src/firecube/sdk.py`. All 32 names that the five external plugin repositories import are in it.
+- P2. Each old module warns once per process. The first name accessed decides. If that name is not in `firecube.sdk`, the text adds that the sdk does not carry it.
+- P3 and P4. The module is `src/firecube/sdk.py`, beside `src/firecube/operations.py`. The reference page is `docs/reference/python-api/sdk.md`.
+- P5 and P9. The marker constants `ATTR_COORD_MANAGED` and `ATTR_PREALLOCATED` join `firecube.operations`, which the CLI gate admits. The module is new and unreleased, so the addition costs no compatibility.
+- P6. `typing_extensions>=4.5` is a declared dependency. Release 4.5 is the first with `deprecated`.
+- P7. `canonical_coordinate_value` stays importable from `firecube.ingestor.api`, with the warning, though `__all__` does not list it.
+- P8. A test that covers new behaviour runs once against commit 127ed11 and must fail there. The failing output is kept as evidence.
+- What stays open. The removal is the item "Remove the modules `firecube.ingestor.api` and `firecube.core.api` in v0.2.0" in `plans/TODO.md`.
+
+---
+
 ## 2026-11-08 — `EngineConfig` forwards moved-field reads with a warning until v0.2.0
 
 **Decision.** The maintainer decided on 2026-11-08 that existing plugins keep working. A read of a moved field on the `EngineConfig` of a run returns the value of the run and emits a `DeprecationWarning`. Firecube will remove the forward in v0.2.0. This amends the tombstone and the no-alias bullets of the entry "`ExecutionParams` defaults to `direct`, and `EngineConfig` refuses the moved fields" below. The base is commit 5942d26.

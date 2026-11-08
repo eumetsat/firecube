@@ -14,7 +14,7 @@ of the file inside the archive.
 
 The only change is `read_dataset`. Replace it with the version below and add
 the imports it needs. It unpacks the archive into a temporary folder with the
-[`extract_all_from_zips`](../../reference/core-utilities.md#firecube.core.api.extract_all_from_zips)
+[`extract_all_from_zips`](../../reference/core-utilities.md#firecube.sdk.extract_all_from_zips)
 helper, reads the file inside, and lets the folder disappear at the end of the
 `with` block:
 
@@ -24,7 +24,7 @@ from tempfile import TemporaryDirectory
 
 import xarray as xr
 
-from firecube.core.api import extract_all_from_zips
+from firecube.sdk import extract_all_from_zips
 
 
 # CHANGE THIS: the pattern of the data file inside your archives, e.g. "*.nc", "*.h5", "*.csv"
@@ -79,5 +79,5 @@ Check that the output contains the timestamps and values from both input files.
 
 ## Next Steps
 
-- [`extract_all_from_zips`](../../reference/core-utilities.md#firecube.core.api.extract_all_from_zips) — unpack archives, in parallel with `workers=`
+- [`extract_all_from_zips`](../../reference/core-utilities.md#firecube.sdk.extract_all_from_zips) — unpack archives, in parallel with `workers=`
 - **[Append Datasets To Zarr](generic-zarr.md)** — where `read_dataset` and `TIME_DIM` fit

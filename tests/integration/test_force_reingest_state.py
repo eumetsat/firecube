@@ -24,7 +24,6 @@ from firecube.cli._errors import render
 from firecube.core.controlplane import ChunkManager, SpanCoverage
 from firecube.core.controlplane.types import EVENT_REPLACEMENT_COMMITTED
 from firecube.core.errors import ManifestError, StorageError
-from firecube.ingestor.api import ExecutionParams
 from firecube.ingestor.runtime.recording import SpanRecorder
 from firecube.ingestor.types.context import (
     IngestResult,
@@ -32,6 +31,7 @@ from firecube.ingestor.types.context import (
     ResultMetrics,
 )
 from firecube.ingestor.types.result_metrics import PipelineMetrics, StorageMetrics
+from firecube.sdk import ExecutionParams
 from tests.helpers.cli_hints import run_hint
 from tests.helpers.rows import table_row
 from tests.helpers.storage import make_test_binding
@@ -282,7 +282,7 @@ def test_force_reingest_of_a_real_run_replaces_prior_spans_and_spans_carry_no_pr
     import numpy as np
     import xarray as xr
 
-    from firecube.ingestor.api import GenericZarrIngestor
+    from firecube.sdk import GenericZarrIngestor
     from tests.helpers.storage import make_test_context
 
     class _Plugin(GenericZarrIngestor):

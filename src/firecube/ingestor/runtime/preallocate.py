@@ -209,11 +209,11 @@ def preallocate_product(
         effective_regular_time_policy,
     )
     from firecube.core.uris import storage_uri_from_target
-    from firecube.ingestor.api import IndexedRegionStrategy
     from firecube.ingestor.runtime.zarr.root_group import (
         refuse_root_beside_named_groups,
         refuse_root_group_attrs,
     )
+    from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 
     if run_id is None:
         run_id = f"preallocate:{uuid.uuid4().hex[:16]}"

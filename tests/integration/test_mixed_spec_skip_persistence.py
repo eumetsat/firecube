@@ -39,12 +39,12 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
 from firecube.core.controlplane.types import (
     INDEX_CURRENT_FILENAME,
     INDEX_DIRNAME,
     ResolvedIndexRecord,
 )
+from firecube.core.zarr._reserved_attrs import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
 from firecube.ingestor.registry import loader as _loader
 
 pytestmark = pytest.mark.integration
@@ -208,7 +208,7 @@ class _RelayIngestor(_mixed_plugin_module.MixedBoundedUnboundedTestIngestor):
     PRODUCT_NAME = "mixed_later_bounded_test"
 
     def index_spec(self, ctx: Any) -> Any:
-        from firecube.core.api import IndexSpec, RegularTimeAxis
+        from firecube.sdk import IndexSpec, RegularTimeAxis
 
         return IndexSpec(
             name="mixed_later_bounded_v1",

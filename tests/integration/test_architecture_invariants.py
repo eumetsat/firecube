@@ -34,7 +34,6 @@ from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import StorageError
 from firecube.core.filesystem.store_factory import create_zarr_store
 from firecube.core.storage import StorageWriteResult
-from firecube.ingestor.api import BaseIngestor, ExecutionParams, OutputPaths, PluginContext
 from firecube.ingestor.templates.direct_zarr import (
     DirectZarrIngestor,
     WriteIntent,
@@ -49,6 +48,7 @@ from firecube.ingestor.types.context import (
     RuntimeIngestContext,
     StorageContext,
 )
+from firecube.sdk import BaseIngestor, ExecutionParams, OutputPaths, PluginContext
 from tests.helpers.storage import begin_write_session, make_test_binding, make_test_session
 
 ProductTarget = __import__(

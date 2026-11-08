@@ -24,7 +24,7 @@ import click
 from click.testing import CliRunner
 
 from firecube.cli.main import cli, ingest
-from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
+from firecube.sdk import IngestContext, IngestResult, OutputPaths
 from tests.helpers.rows import table_row
 
 

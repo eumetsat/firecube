@@ -329,7 +329,7 @@ def _discover_arrays_with_fs(fs: StorageFilesystem, store_uri: StorageUri) -> li
 
 
 def _public_attrs(attrs: Any) -> dict[str, Any]:
-    from firecube.core.api import RESERVED_ARRAY_ATTRS, assert_attrs_safe
+    from firecube.core.zarr._reserved_attrs import RESERVED_ARRAY_ATTRS, assert_attrs_safe
 
     filtered = {
         str(key): value
@@ -349,7 +349,7 @@ def _dimension_names(array: Any) -> tuple[str, ...] | None:
 
 
 def _static_marker(array: Any) -> Any:
-    from firecube.core.api import FIRECUBE_STATIC_WRITTEN_ATTR
+    from firecube.core.zarr._reserved_attrs import FIRECUBE_STATIC_WRITTEN_ATTR
 
     return dict(getattr(array, "attrs", {}) or {}).get(FIRECUBE_STATIC_WRITTEN_ATTR)
 

@@ -33,16 +33,6 @@ from firecube.core.config import StorageConfig
 from firecube.core.controlplane import ChunkManager
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.product.open import open_product
-from firecube.ingestor.api import (
-    DirectZarrIngestor,
-    PipelineBatch,
-    PluginConfig,
-    PluginContext,
-    WriteIntent,
-    ZarrArraySpec,
-    ZarrGroupSpec,
-    register_ingestor,
-)
 from firecube.ingestor.registry import loader
 from firecube.ingestor.runtime import slot_plan
 from firecube.ingestor.runtime.configure import configure_ingestor
@@ -51,6 +41,16 @@ from firecube.ingestor.runtime.slot_plan import (
     SlotPlanBlockedError,
     SlotPlanCeilingError,
     plan_slots,
+)
+from firecube.sdk import (
+    DirectZarrIngestor,
+    PipelineBatch,
+    PluginConfig,
+    PluginContext,
+    WriteIntent,
+    ZarrArraySpec,
+    ZarrGroupSpec,
+    register_ingestor,
 )
 from tests.helpers.rows import table_row
 

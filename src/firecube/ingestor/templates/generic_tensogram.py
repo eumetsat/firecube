@@ -24,17 +24,19 @@ from typing import Any, ClassVar, cast
 
 import xarray as xr
 
-from firecube.core.api import is_remote_target, local_path_from_target, require_tensogram
+from firecube.core.archive.tensogram._compat import require_tensogram
 from firecube.core.errors import FirecubeError
-from firecube.ingestor.api import (
+from firecube.ingestor.runtime.tensogram.strategy import TensogramWriteStrategy
+from firecube.ingestor.templates.config import TensogramTemplateConfig
+from firecube.sdk import (
     BaseIngestor,
     OutputPaths,
     PipelineBatch,
     PipelineResult,
     PluginContext,
-    TensogramWriteStrategy,
+    is_remote_target,
+    local_path_from_target,
 )
-from firecube.ingestor.templates.config import TensogramTemplateConfig
 
 
 def process_tensogram_batch(self: Any, batch: PipelineBatch, ctx: PluginContext) -> PipelineResult:

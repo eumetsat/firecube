@@ -33,8 +33,8 @@ from direct_zarr_capable_test_plugin import DirectZarrCapableTestIngestor
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.types import WriteDomain
-from firecube.ingestor.api import GenericParquetIngestor
 from firecube.ingestor.registry import loader
+from firecube.sdk import GenericParquetIngestor
 from tests.helpers.storage import make_test_binding
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent

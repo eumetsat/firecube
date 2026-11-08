@@ -20,7 +20,7 @@ from typing import Any, cast
 
 import pytest
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     BaseIngestor,
     ExecutionParams,
     PipelineBatch,

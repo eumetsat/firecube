@@ -89,8 +89,8 @@ import pytest
 import xarray as xr
 import zarr
 
-from firecube.ingestor.api import ExecutionParams, GenericZarrIngestor, PluginContext
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration

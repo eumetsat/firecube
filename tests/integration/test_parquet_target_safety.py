@@ -21,9 +21,9 @@ import pyarrow.parquet as pq
 import pytest
 
 from firecube.core.storage.completion import StorageCompleter
-from firecube.ingestor.api import ExecutionParams, GenericParquetIngestor, PluginContext
 from firecube.ingestor.errors import ResumeConflictError
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
+from firecube.sdk import ExecutionParams, GenericParquetIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration

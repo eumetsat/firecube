@@ -22,7 +22,8 @@ from typing import Any, cast
 import pytest
 
 from firecube.core.index_spec import IndexSpec, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor, WriteIntent
+from firecube.sdk import (
     ConfigurationError,
     EngineConfig,
     ExecutionParams,
@@ -30,7 +31,6 @@ from firecube.ingestor.api import (
     PluginContext,
     RuntimeIngestContext,
 )
-from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor, WriteIntent
 from tests.helpers.storage import begin_write_session, make_test_context
 
 pytestmark = pytest.mark.unit

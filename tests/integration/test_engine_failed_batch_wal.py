@@ -21,7 +21,6 @@ from typing import Any
 import pytest
 
 from firecube.core.controlplane import ChunkManager
-from firecube.ingestor.api import BaseIngestor, ExecutionParams, OutputPaths
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
 from firecube.ingestor.types.context import (
     IngestContext,
@@ -31,6 +30,7 @@ from firecube.ingestor.types.context import (
     RuntimeIngestContext,
     StorageContext,
 )
+from firecube.sdk import BaseIngestor, ExecutionParams, OutputPaths
 from tests.helpers.storage import make_test_binding, make_test_session
 
 

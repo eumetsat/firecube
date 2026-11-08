@@ -23,11 +23,11 @@ import zarr
 
 from firecube.core.config import StorageConfig
 from firecube.core.zarr.validation import validate_group_with_fs
-from firecube.ingestor.api import ExecutionParams, GenericZarrIngestor, PluginContext
 from firecube.ingestor.errors import AppendOverwriteRefused, SchemaDriftReingestError
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
 from firecube.ingestor.runtime.zarr.append_failure import AppendBatchFailed
 from firecube.ingestor.runtime.zarr.strategies.append import AppendStrategy
+from firecube.sdk import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_local_session, make_test_context
 
 pytestmark = pytest.mark.integration

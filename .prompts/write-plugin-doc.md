@@ -15,7 +15,7 @@ Use this prompt for public SDK and plugin-author documentation.
 
 - Apply `.prompts/docs-policy.md` first.
 - Write for plugin authors using the public SDK.
-- Use imports from `firecube.ingestor.api` unless the page is explicitly about an advanced public API.
+- Use imports from `firecube.sdk` unless the page is explicitly about an advanced public API.
 - Classify the page with the action/cognition and acquisition/application
   compass before choosing its structure.
 - Avoid private runtime modules, internal service names, and implementation history.
@@ -52,13 +52,13 @@ uses.
 
 ## Minimal Example
 
-Use imports from `firecube.ingestor.api` unless the page is explicitly about an
+Use imports from `firecube.sdk` unless the page is explicitly about an
 advanced public API.
 
 ```python
 from typing import ClassVar
 
-from firecube.ingestor.api import GenericZarrIngestor, PluginContext, register_ingestor
+from firecube.sdk import GenericZarrIngestor, PluginContext, register_ingestor
 
 
 @register_ingestor("my_plugin")
@@ -86,7 +86,7 @@ uv run firecube ingest my_plugin ...
 
 | Mistake | Fix |
 |---------|-----|
-| Importing private runtime modules | Import from `firecube.ingestor.api` |
+| Importing private runtime modules | Import from `firecube.sdk` |
 
 ## Next Steps
 

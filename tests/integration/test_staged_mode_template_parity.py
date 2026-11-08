@@ -49,7 +49,7 @@ import pytest
 import xarray as xr
 import zarr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
     ExecutionParams,
     GenericParquetIngestor,

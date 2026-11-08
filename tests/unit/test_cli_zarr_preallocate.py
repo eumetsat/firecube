@@ -27,11 +27,9 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis, ResolvedIndex
 from firecube.core.product.open import open_product
 from firecube.core.runtime import resolve_storage_config
 from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.ingestor.api import ConfigurationError, ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.contracts.interfaces import PreallocateHost
 from firecube.ingestor.registry import loader as _loader
 from firecube.ingestor.runtime.configure import configure_ingestor, ensure_run_id
@@ -43,6 +41,15 @@ from firecube.ingestor.runtime.preallocate import (
 from firecube.ingestor.templates.config import TemplateConfig
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 from firecube.ingestor.types.context import IngestContext, PluginContext
+from firecube.sdk import (
+    ConfigurationError,
+    IndexSpec,
+    ItemInfo,
+    RegularTimeAxis,
+    ResolvedIndex,
+    ZarrArraySpec,
+    ZarrGroupSpec,
+)
 from tests.helpers.rows import table_row
 
 pytestmark = pytest.mark.unit

@@ -9,10 +9,16 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- The module `firecube.sdk` is the one import door for plugin authors. It
+  carries 102 names from the two modules `firecube.ingestor.api` and
+  `firecube.core.api`. It loads no Click and no CLI module. Import the Firecube
+  names that your plugin uses from `firecube.sdk`. The page `docs/reference/python-api/sdk.md`
+  lists them.
 - The module `firecube.operations` is the public Python surface of the CLI.
   The commands below call it, and so can your code. `ingest` and the other
   deferred commands do not run through it yet. The module keeps the original
-  name of each function and defines no alias.
+  name of each function and defines no alias. It also exports the marker
+  constants `ATTR_COORD_MANAGED` and `ATTR_PREALLOCATED`.
 - `open_product` in `firecube.operations` opens a product store. Use it as a
   context manager. It yields a `Product` and reads the recorded label. It
   refuses a store that records a label other than the one you pass. By default,
@@ -200,6 +206,13 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Changed
 
+- `firecube plugins create` generates a plugin that imports only `firecube.sdk`.
+  The plugin requires `firecube>=0.1.9`. It carries the test
+  `tests/test_import_boundary.py`, which fails on any other Firecube import. An
+  existing plugin is not changed.
+- `typing_extensions>=4.5` is now a declared dependency of Firecube. It was
+  installed only as a dependency of another package. Firecube needs it for the
+  `deprecated` decorator in the stub files of the two deprecated modules.
 - `resolve_storage_config` no longer exports storage settings to the
   environment by default. Pass `export_env=True` to export storage settings.
   The CLI passes it.
@@ -367,6 +380,16 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Deprecated
 
+- Firecube deprecates the modules `firecube.ingestor.api` and
+  `firecube.core.api`. Import from `firecube.sdk` instead.
+  - Every name stays importable until v0.2.0. That release drops both modules.
+  - Each module emits one `DeprecationWarning` per process. It fires on the
+    first attribute access of any name of the module. The warning names
+    `firecube.sdk` and v0.2.0.
+  - If that name is not in `firecube.sdk`, the warning says so. Keep the old
+    import for that name and open an issue.
+  - A type checker flags a call to a deprecated function. It does not flag a
+    class or a constant.
 - Firecube deprecates a plugin read of `self.engine_config.<field>` for the eight
   fields that moved to `ExecutionParams`: `write_mode`, `dry_run`,
   `slot_start`, `slot_end`, `slot_size`, `slot_group`,

@@ -21,9 +21,9 @@ from typing import Any
 import numpy as np
 import pytest
 
-from firecube.core.api import AUTO, IrregularTimeAxis, ItemInfo, RegularTimeAxis
+from firecube.core import index_spec
 from firecube.core.index_spec import _canonical_coordinate_value
-from firecube.ingestor.api import AUTO as INGESTOR_AUTO
+from firecube.sdk import AUTO, IrregularTimeAxis, ItemInfo, RegularTimeAxis
 from tests.helpers.rows import table_row
 
 
@@ -68,8 +68,8 @@ def test_regular_time_axis_rejects_zero_slot_count() -> None:
         )
 
 
-def test_auto_is_singleton_across_facades() -> None:
-    assert AUTO is INGESTOR_AUTO
+def test_sdk_auto_is_the_index_spec_singleton() -> None:
+    assert AUTO is index_spec.AUTO
 
 
 @pytest.mark.parametrize(

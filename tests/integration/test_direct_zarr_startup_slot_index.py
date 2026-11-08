@@ -47,7 +47,10 @@ from firecube.core.product.identity import ProductIdentity
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import (
+from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
+from firecube.ingestor.templates import direct_zarr
+from firecube.sdk import (
     DirectZarrIngestor,
     ExecutionParams,
     PipelineBatch,
@@ -56,9 +59,6 @@ from firecube.ingestor.api import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.errors import ConfigurationError
-from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
-from firecube.ingestor.templates import direct_zarr
 
 pytestmark = pytest.mark.integration
 

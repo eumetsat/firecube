@@ -50,7 +50,10 @@ from firecube.core.filesystem import FsspecFilesystem, ObstoreFilesystem
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import (
+from firecube.ingestor.runtime.zarr import append as append_module
+from firecube.ingestor.runtime.zarr.append import append_time_groups
+from firecube.ingestor.runtime.zarr.write_session import ZarrWriteSession
+from firecube.sdk import (
     DirectZarrIngestor,
     ExecutionParams,
     GenericParquetIngestor,
@@ -60,9 +63,6 @@ from firecube.ingestor.api import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.runtime.zarr import append as append_module
-from firecube.ingestor.runtime.zarr.append import append_time_groups
-from firecube.ingestor.runtime.zarr.write_session import ZarrWriteSession
 from tests.helpers.storage import (
     local_zarr_handle,
     make_local_session,

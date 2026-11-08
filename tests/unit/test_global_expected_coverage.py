@@ -24,9 +24,9 @@ import numpy as np
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import ConfigurationError, DirectZarrIngestor, ExecutionParams
 from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
 from firecube.ingestor.templates.direct_zarr import WriteIntent, ZarrArraySpec, ZarrGroupSpec
+from firecube.sdk import ConfigurationError, DirectZarrIngestor, ExecutionParams
 from tests.helpers.storage import begin_write_session
 
 pytestmark = pytest.mark.unit
@@ -129,7 +129,7 @@ def _run_process_batch(
     setup_stub: Any,
     execution: ExecutionParams | None = None,
 ):
-    import firecube.ingestor.api as api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
     import firecube.ingestor.templates.direct_zarr as direct_zarr
 
     captured: dict[str, Any] = {}
@@ -145,7 +145,7 @@ def _run_process_batch(
     monkeypatch.setattr(
         ingestor, "resolve_output_uri", lambda ctx, write_mode: str(tmp_path / "out.zarr")
     )
-    monkeypatch.setattr(api, "IndexedRegionStrategy", _FakeStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _FakeStrategy)
     monkeypatch.setattr(direct_zarr, "_setup_global_zarr_schema", setup_stub)
     ingestor._parallel_execution_state = _ParallelExecutionState(global_expected=global_schema)
 

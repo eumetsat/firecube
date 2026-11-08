@@ -6,7 +6,7 @@ This reference covers the public types used to declare and resolve direct-Zarr i
 
 `ResolvedIndexRecord` is the on-disk control-plane record written after the engine resolves an `IndexSpec`.
 
-{{ render_api_summary("firecube.core.api", [
+{{ render_api_summary("firecube.sdk", [
     "TimeAxis",
     "AxisSpec",
     "IndexSpec",
@@ -23,36 +23,35 @@ This reference covers the public types used to declare and resolve direct-Zarr i
 
 ## Index Types
 
-Import these from `firecube.ingestor.api`.
+Import these from `firecube.sdk`.
 
-::: firecube.ingestor.api.TimeAxis
+::: firecube.sdk.TimeAxis
 
-::: firecube.ingestor.api.AxisSpec
+::: firecube.sdk.AxisSpec
 
-::: firecube.ingestor.api.IndexSpec
+::: firecube.sdk.IndexSpec
 
-::: firecube.ingestor.api.IntegerAxis
+::: firecube.sdk.IntegerAxis
 
-::: firecube.ingestor.api.IrregularTimeAxis
+::: firecube.sdk.IrregularTimeAxis
 
-::: firecube.ingestor.api.AUTO
+::: firecube.sdk.AUTO
 
-::: firecube.ingestor.api.RegularTimeAxis
+::: firecube.sdk.RegularTimeAxis
 
-::: firecube.ingestor.api.ItemInfo
+::: firecube.sdk.ItemInfo
 
-::: firecube.ingestor.api.ResolvedIndex
+::: firecube.sdk.ResolvedIndex
 
-::: firecube.ingestor.api.ResolvedIndexRecord
+::: firecube.sdk.ResolvedIndexRecord
 
-::: firecube.ingestor.api.resolve_index_spec
+::: firecube.sdk.resolve_index_spec
 
-## Core API
+## Time Conversion
 
-`coerce_to_epoch_s()` is exported from `firecube.core.api` only; the ingestor
-facade does not re-export it.
+Import `coerce_to_epoch_s()` from `firecube.sdk`.
 
-::: firecube.core.api.coerce_to_epoch_s
+::: firecube.sdk.coerce_to_epoch_s
 
 ## See Also
 

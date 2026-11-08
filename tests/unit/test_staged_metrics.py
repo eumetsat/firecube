@@ -24,7 +24,6 @@ from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
 from firecube.core.uris import local_path_from_target
-from firecube.ingestor.api import IngestResult, OutputPaths
 from firecube.ingestor.contracts.interfaces import PipelineHost
 from firecube.ingestor.runtime.engine import PipelineExecutor
 from firecube.ingestor.types.context import (
@@ -33,6 +32,7 @@ from firecube.ingestor.types.context import (
     RuntimeIngestContext,
     StorageContext,
 )
+from firecube.sdk import IngestResult, OutputPaths
 
 
 class _FakeHost:

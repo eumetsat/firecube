@@ -24,8 +24,7 @@ Key concepts:
 - `PipelineHost`: the contract implemented by an ingestor that can be executed
   by the pipeline runner (callbacks + batch processing).
 
-Plugins should prefer importing public types from `firecube.ingestor.api` rather
-than deep-importing from `firecube.ingestor.*`.
+Plugins import the public types from `firecube.sdk`, not from `firecube.ingestor.*`.
 """
 
 from __future__ import annotations
@@ -49,7 +48,8 @@ from firecube.ingestor.types.context import (
 )
 
 if TYPE_CHECKING:
-    from firecube.core.api import IndexSpec, ItemInfo, ResolvedIndex
+    from firecube.core.index_resolve import ResolvedIndex
+    from firecube.core.index_spec import IndexSpec, ItemInfo
     from firecube.core.storage.completion import StagedPromotionUnits
     from firecube.core.zarr.guard.metadata_authority import MetadataAuthority
     from firecube.ingestor.templates.config import TemplateConfig

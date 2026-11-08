@@ -123,7 +123,7 @@ cover empty, partial, and malformed input.
 
 from importlib.metadata import entry_points
 
-from firecube.ingestor.api import discover_ingestors
+from firecube.sdk import discover_ingestors
 
 from {import_name} import {class_name}
 
@@ -142,14 +142,14 @@ _DEPENDENCY_HINT = (
 )
 
 _DEPS_STRING_PER_TEMPLATE: dict[str, str] = {
-    "base": f'    "firecube>=0.1.5",\n{_DEPENDENCY_HINT}',
-    "zarr": f'    "firecube>=0.1.5",\n    "xarray",\n{_DEPENDENCY_HINT}',
+    "base": f'    "firecube>=0.1.9",\n{_DEPENDENCY_HINT}',
+    "zarr": f'    "firecube>=0.1.9",\n    "xarray",\n{_DEPENDENCY_HINT}',
     "parquet": (
-        '    "firecube>=0.1.5",\n'
+        '    "firecube>=0.1.9",\n'
         '    "pyarrow",\n'
         '    # "pandas",  # uncomment if your build_dataset returns pandas.DataFrame'
     ),
-    "direct_zarr": f'    "firecube>=0.1.5",\n    "numpy",\n{_DEPENDENCY_HINT}',
+    "direct_zarr": f'    "firecube>=0.1.9",\n    "numpy",\n{_DEPENDENCY_HINT}',
 }
 
 _DIRECT_ZARR_EXTRA_INCOMPLETE_NOTE = (
@@ -448,6 +448,12 @@ def create_plugin_structure(
             class_name=class_name,
             import_name=import_name,
             plugin_name=plugin_name,
+        )
+    )
+    (root / "tests" / "test_import_boundary.py").write_text(
+        _load_template("test_import_boundary.py.tpl").format(
+            import_name=import_name,
+            copyright_header=copyright_header,
         )
     )
 

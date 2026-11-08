@@ -43,9 +43,12 @@ from typing import Any, ClassVar
 import numpy as np
 from regular_axis_test_plugin import RegularAxisCalendarConfig, RegularAxisCalendarIngestor
 
-from firecube.core.api import AUTO, IndexSpec, IrregularTimeAxis, ItemInfo
-from firecube.ingestor.api import (
+from firecube.sdk import (
+    AUTO,
     DirectZarrIngestor,
+    IndexSpec,
+    IrregularTimeAxis,
+    ItemInfo,
     PipelineBatch,
     PluginContext,
     WriteIntent,

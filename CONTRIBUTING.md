@@ -59,7 +59,8 @@ and broad refactors from behavior changes when that makes review clearer.
 
 Prefer small, explicit changes that match the existing module boundaries.
 
-- Use public plugin imports from `firecube.ingestor.api` and `firecube.core.api`.
+- Import plugin code from `firecube.sdk`, the plugin import door. The modules
+  `firecube.ingestor.api` and `firecube.core.api` are deprecated until v0.2.0.
 - Do not add deep plugin imports into runtime or core internals.
 - Do not call `fsspec.filesystem(...)` directly in write-domain code; use the
   storage abstractions and factories already in `src/firecube/core/filesystem/`.

@@ -181,7 +181,7 @@ from firecube.core.product.identity import ProductIdentity  # noqa: E402
 from firecube.core.storage.binding import StorageBinding  # noqa: E402
 from firecube.core.storage.driver_config import StorageDriverConfig  # noqa: E402
 from firecube.core.storage.uri import StorageUri  # noqa: E402
-from firecube.ingestor.api import IngestContext  # noqa: E402
+from firecube.sdk import IngestContext  # noqa: E402
 from tests.helpers.storage import (  # noqa: E402
     make_test_binding,
     make_test_context,

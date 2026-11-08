@@ -50,8 +50,8 @@ from firecube.operations import ChunkManager, open_product
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from firecube.ingestor.api import PluginContext
     from firecube.operations import IndexVerification
+    from firecube.sdk import PluginContext
 
 logger = logging.getLogger(__name__)
 

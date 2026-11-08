@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 from typing import Any, ClassVar
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     BaseIngestor,
     OutputPaths,
     PipelineBatch,

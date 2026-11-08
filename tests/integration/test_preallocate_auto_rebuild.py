@@ -30,7 +30,9 @@ from firecube.core.index_spec import (
     ItemInfo,
     RegularTimeAxis,
 )
-from firecube.ingestor.api import (
+from firecube.ingestor.registry import loader as _loader
+from firecube.ingestor.registry.loader import register_ingestor
+from firecube.sdk import (
     DirectZarrIngestor,
     PipelineBatch,
     PluginContext,
@@ -38,8 +40,6 @@ from firecube.ingestor.api import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.registry import loader as _loader
-from firecube.ingestor.registry.loader import register_ingestor
 
 pytestmark = pytest.mark.integration
 

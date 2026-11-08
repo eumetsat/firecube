@@ -31,9 +31,8 @@ FORBIDDEN_PREFIXES = [
 ]
 
 ALLOWED_PREFIXES = [
-    "firecube.core.api",
-    "firecube.ingestor.api",
     "firecube.ingestor.extensions",
+    "firecube.sdk",
 ]
 
 PLUGIN_ROOTS = (

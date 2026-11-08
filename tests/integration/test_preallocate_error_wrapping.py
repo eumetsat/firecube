@@ -25,10 +25,16 @@ import pytest
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.core.errors import SchemaDriftError
-from firecube.ingestor.api import DirectZarrIngestor, PluginContext, ZarrGroupSpec
 from firecube.ingestor.registry import loader as _loader
+from firecube.sdk import (
+    DirectZarrIngestor,
+    IndexSpec,
+    ItemInfo,
+    PluginContext,
+    RegularTimeAxis,
+    ZarrGroupSpec,
+)
 
 pytestmark = pytest.mark.integration
 

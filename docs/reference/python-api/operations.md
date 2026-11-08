@@ -138,8 +138,20 @@ The module `firecube.operations` is the public Python facade over the operations
 
 ::: firecube.operations.MultiresConfig
 
+## Sealing Markers
+
+The sealing markers record who owns the values of a time-coordinate array.
+`firecube zarr preallocate` stamps `ATTR_PREALLOCATED` on grid-valued coordinates
+and `ATTR_COORD_MANAGED` on the observed-values coordinates it materializes.
+
+::: firecube.operations.ATTR_PREALLOCATED
+
+::: firecube.operations.ATTR_COORD_MANAGED
+
 ## See Also
 
+- [SDK](sdk.md)
+- [Core Utilities](../core-utilities.md)
 - [CLI Reference](../cli.md)
 - [Exceptions](../exceptions.md)
 - [Storage Drivers](../storage-drivers.md)

@@ -17,7 +17,7 @@ from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import IngestContext, StorageContext
+from firecube.sdk import IngestContext, StorageContext
 
 
 def test_context_carries_runtime_config():

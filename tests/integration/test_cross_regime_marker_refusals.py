@@ -37,10 +37,10 @@ import zarr
 from click.testing import CliRunner
 
 from firecube.cli.main import cli
-from firecube.core.api import ATTR_COORD_MANAGED, ATTR_PREALLOCATED
 from firecube.core.errors import SchemaDriftError
 from firecube.core.zarr.coord_materialization import materialize_regular_coord_array
 from firecube.core.zarr.region_writer import RegionZarrWriter
+from firecube.operations import ATTR_COORD_MANAGED, ATTR_PREALLOCATED
 from tests.helpers.storage import stamp_test_label
 
 pytestmark = pytest.mark.integration

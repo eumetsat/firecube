@@ -44,19 +44,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from firecube.core.api import (
-    ATTR_PREALLOCATED,
-    FIRECUBE_GROUP_IDENTITY_HASH_ATTR,
-    AxisSpec,
-    ExtentUnknownError,
-    IndexSpec,
-    IntegerAxis,
-    IrregularTimeAxis,
-    ItemInfo,
-    RegularTimeAxis,
-    ResolvedIndex,
-    compute_group_identity_hash,
-)
+from firecube.core.controlplane.types import WriteDomain
 from firecube.core.errors import (
     ClaimConflictError,
     FirecubeError,
@@ -65,27 +53,17 @@ from firecube.core.errors import (
     Operation,
     Placeholder,
 )
+from firecube.core.index_resolve import (
+    _compute_group_identity_hash as compute_group_identity_hash,
+)
 from firecube.core.indexed_write import IndexedWrite
 from firecube.core.time.calendar import is_gregorian_axis
+from firecube.core.zarr._reserved_attrs import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
+from firecube.core.zarr._sealing_markers import ATTR_PREALLOCATED
 from firecube.core.zarr.guard._layout import resolve_effective_layout, warn_default_layout
 from firecube.core.zarr.guard.engine_owned import is_engine_owned_spec, preallocate_operation
 from firecube.core.zarr.guard.metadata_authority import MetadataAuthority, hold_authority
-from firecube.ingestor.api import (
-    BaseIngestor,
-    ConfigurationError,
-    OutputPaths,
-    PipelineBatch,
-    PipelineResult,
-    PipelineRunState,
-    PluginContext,
-    RuntimeIngestContext,
-    SchemaDriftError,
-    SchemaSizeMismatchError,
-    UnboundedAxisError,
-    WriteDomain,
-    ZarrTemplateConfig,
-    merge_batch_metrics,
-)
+from firecube.ingestor.runtime.aggregation import merge_batch_metrics
 from firecube.ingestor.runtime.zarr.direct_region_adapter import (
     DirectRegionAdapter,
     open_zarr_array,
@@ -101,6 +79,28 @@ from firecube.ingestor.runtime.zarr.strategies.indexed_region import (
 from firecube.ingestor.runtime.zarr.write import derive_effective_codecs_for_spec
 from firecube.ingestor.runtime.zarr.write_session import ZarrWriteSession
 from firecube.ingestor.types import write_mode_policy
+from firecube.sdk import (
+    AxisSpec,
+    BaseIngestor,
+    ConfigurationError,
+    ExtentUnknownError,
+    IndexSpec,
+    IntegerAxis,
+    IrregularTimeAxis,
+    ItemInfo,
+    OutputPaths,
+    PipelineBatch,
+    PipelineResult,
+    PipelineRunState,
+    PluginContext,
+    RegularTimeAxis,
+    ResolvedIndex,
+    RuntimeIngestContext,
+    SchemaDriftError,
+    SchemaSizeMismatchError,
+    UnboundedAxisError,
+    ZarrTemplateConfig,
+)
 
 if TYPE_CHECKING:
     from firecube.core.storage.completion import StagedPromotionUnits
@@ -1496,7 +1496,7 @@ class DirectZarrIngestor(BaseIngestor):
 
     def _verify_schema_at_pod_startup(self, ctx: PluginContext) -> None:
         """Verify global direct-Zarr schema once per pod process before batches run."""
-        from firecube.ingestor.api import IndexedRegionStrategy
+        from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 
         # Called once per run, on the main thread before any batch: every run
         # kind gets its own session here (empty ledger, ownership unchecked),
@@ -1725,7 +1725,7 @@ class DirectZarrIngestor(BaseIngestor):
         `GenericZarrIngestor._process_batch` verbatim so plugin authors
         get the same lifecycle contract across both templates.
         """
-        from firecube.ingestor.api import IndexedRegionStrategy
+        from firecube.ingestor.runtime.zarr.strategies.indexed_region import IndexedRegionStrategy
 
         self.batch_setup(ctx)
 

@@ -118,7 +118,8 @@ An unexpected error exits with code 70. The command prints one error line and on
 
 ### StorageConfig
 
-Public import: `from firecube.core.api import StorageConfig`
+`StorageConfig` is not in `firecube.sdk`. Its import path
+`from firecube.core.api import StorageConfig` is deprecated until v0.2.0.
 
 ::: firecube.core.api.StorageConfig
     options:
@@ -129,13 +130,13 @@ Public import: `from firecube.core.api import StorageConfig`
 
 ### EngineConfig
 
-Public import: `from firecube.ingestor.api import EngineConfig`
+Public import: `from firecube.sdk import EngineConfig`
 
 See [Discover Source Data](../guides/plugins/source-discovery.md)
 for input-filter commands and
 [Configuration Model](../concepts/configuration.md) for configuration precedence.
 
-::: firecube.ingestor.api.EngineConfig
+::: firecube.sdk.EngineConfig
     options:
         show_root_heading: false
         show_source: false
@@ -144,13 +145,13 @@ for input-filter commands and
 
 ### TemplateConfig
 
-Public import: `from firecube.ingestor.api import TemplateConfig`
+Public import: `from firecube.sdk import TemplateConfig`
 
 Base class of the template config tier. Each template declares its config
 dataclass through `template_config_class`; the dataclass fields become
 validated `--option key=value` settings.
 
-::: firecube.ingestor.api.TemplateConfig
+::: firecube.sdk.TemplateConfig
     options:
         show_root_heading: false
         docstring_section_style: table
@@ -158,9 +159,9 @@ validated `--option key=value` settings.
 
 ### ZarrTemplateConfig
 
-Public import: `from firecube.ingestor.api import ZarrTemplateConfig`
+Public import: `from firecube.sdk import ZarrTemplateConfig`
 
-::: firecube.ingestor.api.ZarrTemplateConfig
+::: firecube.sdk.ZarrTemplateConfig
     options:
         show_root_heading: false
         show_source: false
@@ -169,13 +170,13 @@ Public import: `from firecube.ingestor.api import ZarrTemplateConfig`
 
 ### ParquetTemplateConfig
 
-Public import: `from firecube.ingestor.api import ParquetTemplateConfig`
+Public import: `from firecube.sdk import ParquetTemplateConfig`
 
 The current default Parquet writer does not apply `parquet_partition_by` or
 `parquet_row_group_size`. Do not configure these fields until the corresponding
 writer support is implemented.
 
-::: firecube.ingestor.api.ParquetTemplateConfig
+::: firecube.sdk.ParquetTemplateConfig
     options:
         show_root_heading: false
         show_source: false
@@ -184,9 +185,9 @@ writer support is implemented.
 
 ### TensogramTemplateConfig
 
-Public import: `from firecube.ingestor.api import TensogramTemplateConfig`
+Public import: `from firecube.sdk import TensogramTemplateConfig`
 
-::: firecube.ingestor.api.TensogramTemplateConfig
+::: firecube.sdk.TensogramTemplateConfig
     options:
         show_root_heading: false
         show_source: false
@@ -195,11 +196,11 @@ Public import: `from firecube.ingestor.api import TensogramTemplateConfig`
 
 ### PluginConfig
 
-Public import: `from firecube.ingestor.api import PluginConfig`
+Public import: `from firecube.sdk import PluginConfig`
 
 Plugin authors subclass this dataclass to declare product-specific options.
 
-::: firecube.ingestor.api.PluginConfig
+::: firecube.sdk.PluginConfig
     options:
         show_root_heading: false
         show_source: false

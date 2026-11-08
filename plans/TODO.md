@@ -8,6 +8,7 @@ New decisions are recorded in [DONE.md](DONE.md) with a date.
 ### Due in v0.2.0
 
 - **Remove the `EngineConfig` moved-field forward in v0.2.0 (accepted, 2026-11-08).** Remove the forward in `_refuse_moved_fields` and the read of the attached `ExecutionParams`. Keep the `ConfigurationError` for construction. Remove the attach in `TierConfigurator.configure` (`src/firecube/ingestor/runtime/configure.py`). Decide whether `_MOVED_TO_EXECUTION_PARAMS` (`src/firecube/ingestor/config/engine.py`) stays for the construction refusal. Move the `CHANGELOG.md` entry to `Removed`. Reason: `plans/DONE.md`, 2026-11-08.
+- **Remove the modules `firecube.ingestor.api` and `firecube.core.api` in v0.2.0 (accepted, 2026-11-08).** Remove `src/firecube/ingestor/api.py` and `src/firecube/core/api.py`. Remove the four stub files `src/firecube/ingestor/api.pyi`, `src/firecube/ingestor/_api_deprecated.pyi`, `src/firecube/core/api.pyi` and `src/firecube/core/_api_deprecated.pyi`. Move the `CHANGELOG.md` entry to `Removed`. Update `CONTRIBUTING.md` and `plans/RELEASE.md`, which still name the old modules. Reason: `plans/DONE.md`, 2026-11-08.
 
 ### Open after the metadata snapshots and migrate plan (2026-11-04)
 

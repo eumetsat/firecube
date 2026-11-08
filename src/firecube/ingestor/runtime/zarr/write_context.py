@@ -27,7 +27,7 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
-from firecube.ingestor.api import ConfigurationError
+from firecube.core.errors import ConfigurationError
 
 _VALID_SCHEDULERS: frozenset[str] = frozenset(
     {

@@ -1,13 +1,16 @@
 # API Reference
 
-Plugins are written against three public import surfaces:
+Firecube has two public Python doors. A user-facing `import firecube` namespace is planned.
 
-- `firecube.ingestor.api` — templates, hooks, context, and result types
-- `firecube.core.api` — storage, URI, time, and dataset-preparation utilities
-- `firecube.ingestor.extensions` — optional regridding and DuckDB helpers
+- `firecube.sdk` — the door for plugin authors: templates, hooks, context and result types, and utilities
+- `firecube.operations` — the door for tooling: open a product, then archive, migrate, release and snapshot it
+
+Plugins can also import the optional `firecube.ingestor.extensions` module for regridding and DuckDB helpers.
 
 Import only from these modules. Deep imports into other Firecube modules are
 not part of the public contract and are rejected by the plugin contract test.
+The modules `firecube.ingestor.api` and `firecube.core.api` are deprecated
+until v0.2.0. Import from `firecube.sdk` instead.
 
 <div class="grid cards" markdown>
 
@@ -76,9 +79,11 @@ not part of the public contract and are rejected by the plugin contract test.
 
     ---
 
-    The `firecube.operations` facade: open a product, then archive,
-    migrate, release, snapshot, and maintain its Zarr arrays from Python.
+    The `firecube.sdk` door for plugin authors, and the `firecube.operations`
+    facade: open a product, then archive, migrate, release, snapshot, and
+    maintain its Zarr arrays from Python.
 
+    [:octicons-arrow-right-24: SDK](python-api/sdk.md)
     [:octicons-arrow-right-24: Operations](python-api/operations.md)
 
 -   :material-tools:{ .lg .middle } **Core Utilities**
@@ -86,7 +91,7 @@ not part of the public contract and are rejected by the plugin contract test.
     ---
 
     URI parsing, filesystem access, time conversion, and netCDF/HDF5
-    preparation helpers from `firecube.core.api`.
+    preparation helpers from `firecube.sdk`.
 
     [:octicons-arrow-right-24: Core Utilities](core-utilities.md)
 

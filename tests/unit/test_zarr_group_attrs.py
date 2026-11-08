@@ -57,11 +57,11 @@ from firecube.core.zarr.guard.metadata_authority import (
 )
 from firecube.core.zarr.metadata_documents import ABSENT, metadata_document_digest
 from firecube.core.zarr.region_writer import RegionZarrWriter
-from firecube.ingestor.api import ZarrArraySpec, ZarrGroupSpec
 from firecube.ingestor.templates.direct_zarr import (
     _compute_schema_hash,
     _setup_global_zarr_schema,
 )
+from firecube.sdk import ZarrArraySpec, ZarrGroupSpec
 from tests.helpers.storage import make_test_binding
 
 _ATTRS = {"title": "demo dataset", "owner": "team-x"}

@@ -55,10 +55,10 @@ from firecube.cli._uri_policy import parse_and_validate_source_uri
 from firecube.core.config import get_plugin_defaults, load_config_file
 from firecube.core.observability import set_current_span_attribute, span
 from firecube.core.product.resolver import ProductResolver
-from firecube.ingestor.api import BaseIngestor, ExecutionParams, IngestContext, StorageContext
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.runtime.configure import ensure_run_id
 from firecube.operations import StorageDriverConfig, StorageUri, open_product, resolve_slot_window
+from firecube.sdk import BaseIngestor, ExecutionParams, IngestContext, StorageContext
 
 log = logging.getLogger("firecube.cli")
 

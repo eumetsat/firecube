@@ -105,7 +105,7 @@ from typing import Any, ClassVar
 
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericZarrIngestor,
     PluginContext,
     register_ingestor,

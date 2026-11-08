@@ -37,7 +37,7 @@ from typing import ClassVar
 import pyarrow as pa
 import pyarrow.csv
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     GenericParquetIngestor,
     PipelineBatch,
     PluginContext,

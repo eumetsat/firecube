@@ -44,7 +44,6 @@ from firecube.core.zarr.guard.metadata_authority import (
     update_document,
 )
 from firecube.core.zarr.guard.unit_ownership import StagedSlotWrite, WriteFootprint
-from firecube.ingestor.api import IngestResult, OutputPaths, PipelineMetrics, ResultMetrics
 from firecube.ingestor.runtime.engine import PipelineExecutor, _zarr_pre_batch_hook
 from firecube.ingestor.runtime.zarr.write_session import WriteSessionStateError, ZarrWriteSession
 from firecube.ingestor.templates.direct_zarr import (
@@ -60,6 +59,7 @@ from firecube.ingestor.types.context import (
     StorageContext,
 )
 from firecube.ingestor.types.result_metrics import StorageMetrics
+from firecube.sdk import IngestResult, OutputPaths, PipelineMetrics, ResultMetrics
 from tests.helpers.storage import begin_write_session, make_test_binding
 
 

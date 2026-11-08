@@ -20,7 +20,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.ingestor.errors import ConfigurationError
+from firecube.sdk import (
     DirectZarrIngestor,
     ExecutionParams,
     PipelineBatch,
@@ -29,7 +30,6 @@ from firecube.ingestor.api import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.errors import ConfigurationError
 from tests.helpers.storage import make_test_context
 
 

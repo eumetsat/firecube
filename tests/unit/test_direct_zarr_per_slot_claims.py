@@ -106,7 +106,7 @@ def _patch_strategy_io(monkeypatch: pytest.MonkeyPatch, calls: list[object] | No
 
 
 def _run_direct_process_batch(monkeypatch: pytest.MonkeyPatch, intents: list[WriteIntent]):
-    import firecube.ingestor.api as api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
 
     class _FakeStrategy:
         def __init__(self, **kwargs) -> None:
@@ -127,7 +127,7 @@ def _run_direct_process_batch(monkeypatch: pytest.MonkeyPatch, intents: list[Wri
     )
     ingestor = _DummyDirectIngestor(intents=intents, chunk_manager=chunk_manager)
     monkeypatch.setattr(ingestor, "resolve_output_uri", lambda ctx, write_mode: "out.zarr")
-    monkeypatch.setattr(api, "IndexedRegionStrategy", _FakeStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _FakeStrategy)
 
     ctx = SimpleNamespace(
         run_id="run-1",
@@ -196,7 +196,7 @@ def test_slot_claim_uses_correct_domain_name(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_empty_intents_acquires_no_slot_claim(monkeypatch: pytest.MonkeyPatch) -> None:
-    import firecube.ingestor.api as api
+    import firecube.ingestor.runtime.zarr.strategies.indexed_region as indexed_region
 
     slot_claim = MagicMock(return_value=nullcontext())
 
@@ -210,7 +210,7 @@ def test_empty_intents_acquires_no_slot_claim(monkeypatch: pytest.MonkeyPatch) -
     chunk_manager = SimpleNamespace(storage_config=SimpleNamespace(), acquire_claim=slot_claim)
     ingestor = _DummyDirectIngestor(intents=[], chunk_manager=chunk_manager)
     monkeypatch.setattr(ingestor, "resolve_output_uri", lambda ctx, write_mode: "out.zarr")
-    monkeypatch.setattr(api, "IndexedRegionStrategy", _FakeStrategy)
+    monkeypatch.setattr(indexed_region, "IndexedRegionStrategy", _FakeStrategy)
     ctx = SimpleNamespace(
         run_id="run-1",
         storage=None,

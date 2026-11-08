@@ -37,13 +37,11 @@ from firecube.cli._uri_policy import (
     parse_and_validate_uri,
 )
 from firecube.cli.zarr._common import _configure_ingestor_for_cli, logger
-from firecube.core.api import (
-    ATTR_COORD_MANAGED,
-    ATTR_PREALLOCATED,
-)
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 from firecube.operations import (
+    ATTR_COORD_MANAGED,
+    ATTR_PREALLOCATED,
     ChunkManager,
     StorageDriverConfig,
     open_product,
@@ -181,10 +179,10 @@ def preallocate(
 
     input_filters = resolve_input_filters(ctx, plugin, input_filters)
 
-    from firecube.ingestor.api import BaseIngestor, ExecutionParams
     from firecube.ingestor.runtime.preallocate import SlotWindowError
     from firecube.ingestor.runtime.producer import capture_producer
     from firecube.operations import preallocate_product
+    from firecube.sdk import BaseIngestor, ExecutionParams
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)

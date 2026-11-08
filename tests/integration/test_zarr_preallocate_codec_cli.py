@@ -212,8 +212,8 @@ def test_preallocate_rejects_per_array_codecs_when_compression_false(
     ensures the CLI and the test target the same object under full-suite
     ordering.
     """
-    from firecube.ingestor.api import PluginContext, ZarrArraySpec, ZarrGroupSpec
     from firecube.ingestor.registry.loader import discover_ingestors
+    from firecube.sdk import PluginContext, ZarrArraySpec, ZarrGroupSpec
 
     plugins = discover_ingestors()
     plugin_cls = plugins["direct_zarr_capable_test_plugin"]

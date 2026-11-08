@@ -20,7 +20,7 @@ These patterns have caused real bugs or maintenance pain. If a change introduces
 
 - **Database Leakage**: A plugin pulling global `[database.duckdb]` settings implicitly from the top-level config. Forbidden because it creates invisible coupling between unrelated config sections. Plugin config must be self-contained under its own namespace.
 
-- **Option Aliases**: Dual-naming the same Zarr config key (e.g. `zarr_chunk` vs `chunk_shape`). Forbidden because it creates confusion about which name is canonical and which is deprecated. Pick one name, document it, reject the other at parse time.
+- **Option Aliases**: Dual-naming the same Zarr config key (e.g. `zarr_chunk` vs `chunk_shape`). Forbidden because it creates confusion about which name is canonical and which is deprecated. Pick one name, document it, reject the other at parse time. The deprecation shims of `firecube.ingestor.api` and `firecube.core.api` are a recorded exception (`plans/DONE.md`, 2026-11-08).
 
   **Note**: internal or verified-zero-caller dual hook names for the same concern (e.g. `groups_for_items` and `get_batch_groups`) are this same anti-pattern at the API surface. When unification is required, the canonical name MUST be declared and the duplicate MUST be DELETED in the same change — no `DeprecationWarning`, no back-compat shim, no transitional period. Carrying two names "for safety" is the anti-pattern this rule exists to prevent.
 
@@ -76,5 +76,5 @@ These are the short-form rules that cut across all three sections above. They ap
 - **One driver everywhere**: `StorageConfig.storage_driver` selects fsspec or obstore for the entire write domain. No mixing. Source-side fsspec reads are allowlisted in `test_no_raw_fsspec_usage.py`.
 - **Engine owns bookkeeping**: plugins must not write manifests or control-plane files directly. All lifecycle state goes through `SpanRecorder` and `ChunkManager`.
 - **No mixin creep, no god base classes**: if `BaseIngestor` or any template grows too large, split into composed services. The base class hook surface must stay small and documented.
-- **Public surfaces only**: plugins import from `firecube.ingestor.api` and `firecube.core.api`. Deep imports from internal submodules are a coupling violation and will break on refactor.
+- **Public surfaces only**: plugins import from `firecube.sdk`. The modules `firecube.ingestor.api` and `firecube.core.api` are deprecated until v0.2.0. Deep imports from internal submodules are a coupling violation and will break on refactor.
 - **One container, one run**: do not add internal schedulers or queues. Concurrency comes from orchestrating disjoint slices at the job level, not from shared writers inside a single process.

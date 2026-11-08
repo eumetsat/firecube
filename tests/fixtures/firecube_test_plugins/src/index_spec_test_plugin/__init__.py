@@ -19,11 +19,13 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any, ClassVar
 
-from firecube.core.api import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
+    IndexSpec,
+    ItemInfo,
     PipelineBatch,
     PluginContext,
+    RegularTimeAxis,
     WriteIntent,
     ZarrArraySpec,
     ZarrGroupSpec,

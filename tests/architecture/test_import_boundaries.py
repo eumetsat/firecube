@@ -20,12 +20,19 @@ from pathlib import Path
 import pytest
 
 ALLOWED_TEMPLATES_FIRECUBE_PREFIXES = (
-    "firecube.core.api",
+    "firecube.sdk",
+    "firecube.core.archive.tensogram._compat",  # require_tensogram guard, out of sdk
+    "firecube.core.controlplane.types",  # WriteDomain, out of sdk
+    "firecube.core.index_resolve",  # group identity hash helper, out of sdk
+    "firecube.core.zarr._reserved_attrs",  # group identity hash attribute name, out of sdk
+    "firecube.core.zarr._sealing_markers",  # preallocated marker, out of sdk
+    "firecube.ingestor.runtime.aggregation",  # merge_batch_metrics, out of sdk
+    "firecube.ingestor.runtime.tensogram.strategy",  # TensogramWriteStrategy, out of sdk
     "firecube.core.errors",  # error classes needed for exception handling in templates
     "firecube.core.time",  # calendar predicates (is_gregorian_axis) used by the DirectZarr start-up checks
     "firecube.core.filesystem",
     "firecube.core.indexed_write",  # IndexedWrite dataclass lives in core; imported by direct_zarr compiler
-    "firecube.core.slot_index",  # direct import avoids circular-load via firecube.core.api
+    "firecube.core.slot_index",  # direct import avoids a circular load through the plugin door
     "firecube.core.uris",
     "firecube.core.zarr.guard._layout",  # creation layout of DirectZarr arrays (schema setup)
     "firecube.core.zarr._zarr_compat",  # the one place that imports zarr.core
@@ -34,7 +41,6 @@ ALLOWED_TEMPLATES_FIRECUBE_PREFIXES = (
     "firecube.core.zarr.guard.metadata_authority",  # zarr.json changes under the schema setup claim
     "firecube.core.zarr.region_writer",
     "firecube.core.zarr.guard.unit_ownership",  # stored-unit and staged-coverage checks (DirectZarr)
-    "firecube.ingestor.api",
     "firecube.ingestor.config",
     "firecube.ingestor.extensions",
     "firecube.ingestor.runtime.zarr",
@@ -44,8 +50,7 @@ ALLOWED_TEMPLATES_FIRECUBE_PREFIXES = (
 )
 
 ALLOWED_PLUGINS_FIRECUBE_PREFIXES = (
-    "firecube.core.api",
-    "firecube.ingestor.api",
+    "firecube.sdk",
     "firecube.ingestor.extensions",
     "firecube.plugins",
 )

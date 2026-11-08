@@ -87,7 +87,7 @@ def test_no_cli_private_cross_subsystem_imports() -> None:
             messages.append(
                 f"{display_path}:{violation.line} imports underscore-prefixed name "
                 f"'{violation.name}' from cross-subsystem module '{violation.module}'. "
-                "Use a public alias exported from firecube.ingestor.api or "
+                "Use a public alias exported from firecube.sdk or "
                 "firecube.ingestor.runtime.zarr.write."
             )
 

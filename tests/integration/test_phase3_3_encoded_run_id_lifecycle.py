@@ -26,7 +26,8 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import (
+from firecube.ingestor.registry import loader as _loader
+from firecube.sdk import (
     DirectZarrIngestor,
     PipelineBatch,
     PluginContext,
@@ -35,7 +36,6 @@ from firecube.ingestor.api import (
     ZarrGroupSpec,
     register_ingestor,
 )
-from firecube.ingestor.registry import loader as _loader
 
 pytestmark = pytest.mark.integration
 

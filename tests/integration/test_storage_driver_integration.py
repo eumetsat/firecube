@@ -23,7 +23,7 @@ import xarray as xr
 from firecube.core.config import StorageConfig
 from firecube.core.filesystem.store_factory import ZarrStoreHandle, create_zarr_store
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import ExecutionParams
+from firecube.sdk import ExecutionParams
 from tests.helpers.rows import table_row
 from tests.helpers.storage import make_test_session
 
@@ -199,7 +199,7 @@ class TestPipelineWithBothDrivers:
 
         target_dir = (tmp_path / f"pipeline_{driver}.zarr").resolve()
 
-        from firecube.ingestor.api import (
+        from firecube.sdk import (
             GenericZarrIngestor,
             IngestContext,
             StorageContext,

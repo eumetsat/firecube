@@ -36,12 +36,7 @@ from irregular_axis_test_plugin import (
     _canonical_timestamps,  # type: ignore[attr-defined]
 )
 
-from firecube.core.api import (
-    AUTO,
-    IndexSpec,
-    IrregularTimeAxis,
-    ItemInfo,
-)
+from firecube.sdk import AUTO, IndexSpec, IrregularTimeAxis, ItemInfo
 
 
 def _fake_ctx() -> Any:

@@ -50,7 +50,8 @@ from firecube.core.slot_index import SlotAxis, SlotIndexModel
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import (
+from firecube.ingestor.registry import loader
+from firecube.sdk import (
     DirectZarrIngestor,
     PipelineBatch,
     PluginContext,
@@ -59,7 +60,6 @@ from firecube.ingestor.api import (
     ZarrGroupSpec,
     register_ingestor,
 )
-from firecube.ingestor.registry import loader
 from tests.helpers.cli_hints import parse_hint
 
 pytestmark = pytest.mark.integration

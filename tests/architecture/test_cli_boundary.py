@@ -26,7 +26,7 @@ Seven checks walk ``src/firecube`` with :mod:`ast`:
 5. Every ``cli/`` module stays at or under ``CLI_MODULE_LINE_CEILING`` lines.
 6. Only ``cli/_uri_policy.py`` parses URIs; other ``cli/`` calls are rows keyed by function.
 7. ``cli/`` imports from ``firecube`` only ``firecube.cli``, ``firecube.operations``,
-   ``firecube.core.api``, ``firecube.ingestor.api`` and ``firecube.core.errors``; imports
+   ``firecube.sdk`` and ``firecube.core.errors``; imports
    under ``TYPE_CHECKING`` and inside functions count. Other imports are rows.
 
 Existing debt is listed in the row tables below. Each row carries a tag,
@@ -101,8 +101,7 @@ _PUBLIC_SURFACE = frozenset(
     {
         "firecube.cli",
         "firecube.operations",
-        "firecube.core.api",
-        "firecube.ingestor.api",
+        "firecube.sdk",
         "firecube.core.errors",
     }
 )

@@ -44,12 +44,12 @@ from firecube.cli._uri_policy import (
 )
 from firecube.cli.zarr._common import _configure_ingestor_for_cli
 from firecube.core.errors import Message, Operation, Placeholder
-from firecube.ingestor.api import ExecutionParams
 from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.runtime import slot_plan
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
 from firecube.operations import StorageDriverConfig, open_product, plan_slots
+from firecube.sdk import ExecutionParams
 
 if TYPE_CHECKING:
     from firecube.core.config import StorageConfig

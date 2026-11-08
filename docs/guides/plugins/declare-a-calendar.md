@@ -78,7 +78,7 @@ from typing import Any, ClassVar
 import numpy as np
 import xarray as xr
 
-from firecube.ingestor.api import (
+from firecube.sdk import (
     DirectZarrIngestor,
     IndexedWrite,
     IndexSpec,
@@ -337,5 +337,5 @@ Compare the calendar, the count and the two dates with the example. Xarray choos
 ## Next Steps
 
 - **[Declare The Schema And Index](direct-zarr.md)** - the full plugin contract this page builds on
-- **[Index Specification Reference](../../reference/parallelism.md#firecube.ingestor.api.RegularTimeAxis)** - `calendar`, `units` and `slot_count` on the time axes
+- **[Index Specification Reference](../../reference/parallelism.md#firecube.sdk.RegularTimeAxis)** - `calendar`, `units` and `slot_count` on the time axes
 - **[Run Parallel Zarr Writes](../../operations/parallel-zarr-writes.md)** - preallocate, plan and start workers

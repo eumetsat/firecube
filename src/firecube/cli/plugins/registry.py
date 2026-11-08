@@ -28,9 +28,9 @@ import importlib.metadata
 from dataclasses import dataclass
 from typing import Any
 
-from firecube.ingestor.api import PluginConfig, TemplateConfig
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.registry.loader import discover_ingestors, get_ingestor
+from firecube.sdk import PluginConfig, TemplateConfig
 
 
 @dataclass
