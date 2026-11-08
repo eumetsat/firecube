@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Collection, Iterable, Mapping
 from typing import Any
 
-from firecube.ingestor.contracts.migration import AttributePatch, MetadataPlan, StoreView
+from firecube.core.zarr.migration import AttributePatch, MetadataPlan, StoreView
 
 __all__ = ["SetAttrs"]
 

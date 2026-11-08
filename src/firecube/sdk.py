@@ -87,6 +87,13 @@ from firecube.core.zarr.guard.chunk_geometry import (
     physical_chunk_keys_for_region,
 )
 from firecube.core.zarr.metadata_documents import ABSENT, NodeView
+from firecube.core.zarr.migration import (
+    AttributePatch,
+    MetadataPlan,
+    MigrationStep,
+    ReleaseRecord,
+    StoreView,
+)
 from firecube.core.zarr.time_decode import decode_time_array
 from firecube.core.zarr.validation import (
     ZarrCompareReport,
@@ -95,13 +102,6 @@ from firecube.core.zarr.validation import (
 )
 from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.contracts.interfaces import Ingestor, SourceFile
-from firecube.ingestor.contracts.migration import (
-    AttributePatch,
-    MetadataPlan,
-    MigrationStep,
-    ReleaseRecord,
-    StoreView,
-)
 from firecube.ingestor.errors import (
     IngestorError,
     RangeOverlapError,

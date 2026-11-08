@@ -1,5 +1,21 @@
 # Done
 
+## 2026-11-08 — Migration contract lives in `core/zarr` and is exported from `firecube.sdk`
+
+**Decision.** The maintainer decided on 2026-11-08 that the Zarr metadata-migration contract moves to `src/firecube/core/zarr/migration.py`. Behaviour does not change, and `firecube.sdk` keeps exporting the seven names. The base is commit 2cc589b. This supersedes the row "`firecube.migrations`" of the 2026-11-05 zarr-layout-migration handoff, which made the contract internal.
+
+- Contract. The seven names are `MigrationStep`, `StoreView`, `AttributePatch`, `MetadataPlan`, `ReleaseRecord`, `ABSENT` and `NodeView`. A step author implements them and registers a step through the `firecube.migrations` entry-point group.
+- Home. The contract is Zarr by construction. `StoreView` wraps `NodeView`, which carries `zarr_format`, the fill value and the storage keys. The executor branches on `zarr_format` 2 and 3. The module imports nothing from `ingestor`.
+- Door. The door stays `firecube.sdk`. The verb `migrate_product` lives once in `firecube.operations`. The CLI and the planned user API both call it, so the two cannot drift.
+- Reason for the door. A step author uses the contract in the same way an ingestor author uses the plugin contract. The contract therefore belongs to the plugin-author door.
+- P12 of 2026-11-05 stands.
+- No shim. The old path `firecube.ingestor.contracts.migration` is in no `__all__`, and no plugin imports it. The Option Aliases rule of `plans/STYLE.md` applies.
+- Reviews. Two independent reviews were taken. One recommended `firecube.operations` as the door. The other recommended the plugin-author door, with Alembic and Django as precedent. The maintainer ruled for `firecube.sdk`.
+- No changelog entry. The change is an internal file move, and the public names and the door are unchanged.
+- What stays open. The executor and the built-in step `set-attrs` stay in `src/firecube/ingestor/runtime/`. The executor imports two release helpers from `src/firecube/ingestor/runtime/release.py`, so a move to core would fail the core independence test. Their move is the open item "plugin-free operations to core".
+
+---
+
 ## 2026-11-08 — `firecube.sdk` is the one plugin door, and the two `api` modules are deprecated
 
 **Decision.** The maintainer decided on 2026-11-08 that plugins import from `firecube.sdk`. The modules `firecube.ingestor.api` and `firecube.core.api` keep every name and warn until v0.2.0. The base is commit 127ed11. The IDs below are the decisions of the plan `2026-11-08-sdk-door-and-api-deprecation`.
@@ -84,7 +100,7 @@
 - Flags (n6 to n12, 2026-11-07). `-t/--target` replaces `-s` and `--source` on `archive create`, `-p` and `--product` on `advise`, `catalog intake`, `parquet` and `zarr validate`, and `-n` and `--product-name` on `chunks`. The rework drops `--output-format`, `--option dry_run` and `chunks --quiet`. A rename hint names the new spelling. `plans/STYLE.md` records that 1.0 drops the hints.
 - Exit codes (n4, n5, 2026-11-07). One table behind a root error boundary, with the root option `--debug`. Library `ValueError` refusals exit 70 until the sites raise `ConfigurationError` (`plans/TODO.md`).
 - Formats and dry runs (n19, n20, 2026-11-07). `-f/--format` takes `table`, `json` or `csv` on every command that has it. `--dry-run` exists on `ingest`, `snapshot take`, `migrate run`, `migrate adopt`, `release create`, `zarr multires`, `zarr index rebuild` and `zarr preallocate`. `migrate run`, `migrate adopt` and `release create` ask for confirmation on a terminal and need `--yes-i-really-mean-it` off a terminal.
-- Execution parameters (n14, 2026-11-07). `ExecutionParams` is public in `firecube.ingestor.api` and holds the write mode, the slot window and the dry run. The plugin class owns the output format. An SDK run without a write mode uses staged. The maintainer widened the scope to `src/firecube/cli/zarr/_common.py` on 2026-11-07.
+- Execution parameters (n14, 2026-11-07). `ExecutionParams` is public in `firecube.ingestor.api` and holds the write mode, the slot window and the dry run. The plugin class owns the output format. An SDK run without a write mode uses staged (superseded 2026-11-08: the default is `direct`). The maintainer widened the scope to `src/firecube/cli/zarr/_common.py` on 2026-11-07.
 - `default_product_name` (n12, 2026-11-07). The engine consumes the key before plugin option validation (commit f9d0d4e). The ledger kept this change beyond the node because the precedence statement is untestable without it. Reverse with `git revert f9d0d4e`.
 - Fixed with the rework. The label-split bypass of exclusive maintenance, the exit codes of `parquet validate` and `zarr consolidate-time-coord`, and the refusal text for a half credential. `zarr compare` reports `attrs[<key>] <left> != <right>` and treats equal NaN attrs as equal.
 - Test budget (2026-11-07). The maintainer raised the test budget from 900 to 1700 added lines for this run. The count passed 1700 before the last tester nodes ended.

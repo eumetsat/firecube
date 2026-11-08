@@ -58,15 +58,7 @@ if TYPE_CHECKING:
         RESERVED_ARRAY_ATTRS,
         assert_attrs_safe,
     )
-    from firecube.ingestor.config.engine import EngineConfig, config_keys
-    from firecube.ingestor.contracts.interfaces import (
-        DatasetProducer,
-        Ingestor,
-        PipelineHost,
-        SourceFile,
-        is_dataset_producer,
-    )
-    from firecube.ingestor.contracts.migration import (
+    from firecube.core.zarr.migration import (
         ABSENT,
         AttributePatch,
         MetadataPlan,
@@ -74,6 +66,14 @@ if TYPE_CHECKING:
         NodeView,
         ReleaseRecord,
         StoreView,
+    )
+    from firecube.ingestor.config.engine import EngineConfig, config_keys
+    from firecube.ingestor.contracts.interfaces import (
+        DatasetProducer,
+        Ingestor,
+        PipelineHost,
+        SourceFile,
+        is_dataset_producer,
     )
     from firecube.ingestor.errors import (
         ConfigurationError,
@@ -272,7 +272,7 @@ _SOURCES: dict[str, tuple[str, ...]] = {
         "SourceFile",
         "is_dataset_producer",
     ),
-    "firecube.ingestor.contracts.migration": (
+    "firecube.core.zarr.migration": (
         "ABSENT",
         "AttributePatch",
         "MetadataPlan",

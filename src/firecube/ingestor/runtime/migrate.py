@@ -64,7 +64,7 @@ from firecube.core.zarr.metadata_documents import (
     parse_node_document,
     patch_attributes,
 )
-from firecube.ingestor.contracts.migration import (
+from firecube.core.zarr.migration import (
     AttributePatch,
     MetadataPlan,
     MigrationStep,

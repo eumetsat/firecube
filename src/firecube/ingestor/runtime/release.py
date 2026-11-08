@@ -42,7 +42,7 @@ from firecube.core.controlplane.types import (
 )
 from firecube.core.errors import ExclusiveMaintenanceRefusedError, FirecubeError, Message, Param
 from firecube.core.zarr.metadata_documents import ABSENT
-from firecube.ingestor.contracts.migration import AttributePatch, ReleaseRecord
+from firecube.core.zarr.migration import AttributePatch, ReleaseRecord
 
 if TYPE_CHECKING:
     from firecube.core.controlplane.manager import ChunkManager

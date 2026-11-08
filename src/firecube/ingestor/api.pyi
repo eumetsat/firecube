@@ -40,6 +40,13 @@ from firecube.core.zarr._reserved_attrs import (
     FIRECUBE_STATIC_WRITTEN_ATTR as FIRECUBE_STATIC_WRITTEN_ATTR,
 )
 from firecube.core.zarr._reserved_attrs import RESERVED_ARRAY_ATTRS as RESERVED_ARRAY_ATTRS
+from firecube.core.zarr.migration import ABSENT as ABSENT
+from firecube.core.zarr.migration import AttributePatch as AttributePatch
+from firecube.core.zarr.migration import MetadataPlan as MetadataPlan
+from firecube.core.zarr.migration import MigrationStep as MigrationStep
+from firecube.core.zarr.migration import NodeView as NodeView
+from firecube.core.zarr.migration import ReleaseRecord as ReleaseRecord
+from firecube.core.zarr.migration import StoreView as StoreView
 from firecube.ingestor._api_deprecated import assert_attrs_safe as assert_attrs_safe
 from firecube.ingestor._api_deprecated import (
     canonical_coordinate_value as canonical_coordinate_value,
@@ -62,13 +69,6 @@ from firecube.ingestor.contracts.interfaces import DatasetProducer as DatasetPro
 from firecube.ingestor.contracts.interfaces import Ingestor as Ingestor
 from firecube.ingestor.contracts.interfaces import PipelineHost as PipelineHost
 from firecube.ingestor.contracts.interfaces import SourceFile as SourceFile
-from firecube.ingestor.contracts.migration import ABSENT as ABSENT
-from firecube.ingestor.contracts.migration import AttributePatch as AttributePatch
-from firecube.ingestor.contracts.migration import MetadataPlan as MetadataPlan
-from firecube.ingestor.contracts.migration import MigrationStep as MigrationStep
-from firecube.ingestor.contracts.migration import NodeView as NodeView
-from firecube.ingestor.contracts.migration import ReleaseRecord as ReleaseRecord
-from firecube.ingestor.contracts.migration import StoreView as StoreView
 from firecube.ingestor.errors import ConfigurationError as ConfigurationError
 from firecube.ingestor.errors import IngestorError as IngestorError
 from firecube.ingestor.errors import ManifestError as ManifestError

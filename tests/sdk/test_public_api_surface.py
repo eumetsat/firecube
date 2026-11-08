@@ -28,8 +28,11 @@ from __future__ import annotations
 import contextlib
 import importlib
 import re
+import subprocess
+import sys
 import warnings
 from collections.abc import Iterator
+from pathlib import Path
 from types import ModuleType
 
 import pytest
@@ -105,8 +108,8 @@ firecube.core.zarr._reserved_attrs assert_attrs_safe
 firecube.ingestor.config.engine EngineConfig config_keys
 firecube.ingestor.contracts.interfaces DatasetProducer Ingestor PipelineHost SourceFile
 firecube.ingestor.contracts.interfaces is_dataset_producer
-firecube.ingestor.contracts.migration ABSENT AttributePatch MetadataPlan MigrationStep NodeView
-firecube.ingestor.contracts.migration ReleaseRecord StoreView
+firecube.core.zarr.metadata_documents ABSENT NodeView
+firecube.core.zarr.migration AttributePatch MetadataPlan MigrationStep ReleaseRecord StoreView
 firecube.ingestor.errors ConfigurationError IngestorError ManifestError RangeOverlapError
 firecube.ingestor.errors ResumeConflictError SchemaDriftError SchemaSizeMismatchError StorageError
 firecube.ingestor.errors UnboundedAxisError WriteIntentRangeError
@@ -225,6 +228,40 @@ def test_ingestor_api_name_stays_importable_as_its_definition(
     )
     if (name, defining_module) not in _INGESTOR_API_UNLISTED_NAMES:
         assert name in module.__all__, f"`{door}.__all__` must list {name!r}."
+
+
+_MIGRATION_CONTRACT = "firecube.core.zarr.migration"
+_SDK_MIGRATION_NAMES = [
+    (n, m) for n, m in _INGESTOR_API_NAMES if m.endswith((".migration", ".metadata_documents"))
+]
+
+
+@pytest.mark.parametrize("name", ["AttributePatch", "MigrationStep", "ReleaseRecord", "StoreView"])
+def test_migration_contract_defining_module(name: str) -> None:
+    module = importlib.import_module(_MIGRATION_CONTRACT)
+
+    assert getattr(module, name).__module__ == _MIGRATION_CONTRACT
+
+
+@pytest.mark.parametrize(("name", "defining"), _SDK_MIGRATION_NAMES)
+def test_sdk_migration_names_are_the_defining_objects(name: str, defining: str) -> None:
+    sdk = importlib.import_module("firecube.sdk")
+
+    assert getattr(sdk, name) is getattr(importlib.import_module(defining), name)
+
+
+def test_migration_contract_imports_no_ingestor_module() -> None:
+    code = (
+        f"import sys, {_MIGRATION_CONTRACT}; "
+        "bad=[m for m in sys.modules if m=='firecube.ingestor' or m.startswith('firecube.ingestor.')]; "
+        "print(bad); raise SystemExit(1 if bad else 0)"
+    )
+    env = {"PYTHONPATH": str(Path(__file__).resolve().parents[2] / "src")}
+    run = subprocess.run(
+        [sys.executable, "-B", "-c", code], env=env, capture_output=True, text=True
+    )
+
+    assert run.returncode == 0, run.stdout + run.stderr
 
 
 @pytest.mark.parametrize(
