@@ -48,20 +48,26 @@ from firecube.core.storage.session import StorageSession
 Examples:
   # archive a local Zarr store with default compression
   firecube archive create \\
-    --target file:///path/to/product.zarr \\
-    --archive file:///tmp/archive.tgm
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --archive file:///data/archives/MY_PRODUCT.tgm
   # archive a specific time range
   firecube archive create \\
-    --target file:///path/to/product.zarr \\
-    --archive file:///tmp/archive.tgm \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
     --start-date 2024-01-01 \\
     --end-date 2024-02-01
   # archive a single group with explicit codec
   firecube archive create \\
-    --target file:///path/to/product.zarr \\
-    --archive file:///tmp/archive.tgm \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
     --group <group> \\
     --compression zstd
+  # write a zip archive and show the plan only
+  firecube archive create \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --archive file:///data/archives/MY_PRODUCT.zip \\
+    --archive-format zip \\
+    --dry-run
 See also: firecube archive restore, firecube archive info, firecube archive validate
 """,
 )

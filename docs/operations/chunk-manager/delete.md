@@ -10,7 +10,7 @@ PRODUCT_NAME="MY_PRODUCT"
 ## Preflight
 
 The full URI locates the product and the storage objects to delete. If you pass
-it to `--product-name`, `chunks delete` needs no storage type and no storage
+it to `--target`, `chunks delete` needs no storage type and no storage
 driver. It needs no `[storage]` section either. This holds for a dry run and a
 real run.
 
@@ -33,7 +33,7 @@ product data.
 Confirm no writer is using the product, then inspect the tracked records:
 
 ```bash
-firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr" --include-span
+firecube chunks list --target "file:///data/products/MY_PRODUCT.zarr" --include-span
 ```
 
 ## Delete Tracked Records And Storage
@@ -42,7 +42,7 @@ Preview first:
 
 ```bash
 firecube chunks delete \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --dry-run
 ```
 
@@ -51,7 +51,7 @@ Expected output:
 ```text
 DRY RUN - Would delete:
   Chunks: 2
-  Products: MY_PRODUCT.zarr
+  Products: MY_PRODUCT
 Records without storage objects: 2 (their data stays in storage; use firecube chunks delete-span to delete span data)
 ```
 
@@ -63,7 +63,7 @@ Delete after the dry-run matches your intent:
 
 ```bash
 firecube chunks delete \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --yes-i-really-mean-it
 ```
 
@@ -77,7 +77,7 @@ Records without storage objects: 2 (their data stays in storage; use firecube ch
 Verify:
 
 ```bash
-firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
@@ -93,7 +93,7 @@ forget the tracked records:
 
 ```bash
 firecube chunks delete \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --manifest-only \
   --yes-i-really-mean-it
 ```
@@ -110,7 +110,7 @@ Preview a date range:
 
 ```bash
 firecube chunks delete \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --range 2024-03-01,2024-03-02 \
   --dry-run
 ```
@@ -119,7 +119,7 @@ Delete it:
 
 ```bash
 firecube chunks delete \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --range 2024-03-01,2024-03-02 \
   --yes-i-really-mean-it
 ```
@@ -133,7 +133,7 @@ timestamp), use `--time-range` instead:
 
 ```bash
 firecube chunks delete \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --time-range 2024-03-01:2024-03-02 \
   --dry-run
 ```
@@ -153,7 +153,7 @@ Preview:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-span-run \
   --dry-run
 ```
@@ -168,7 +168,7 @@ Delete:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-span-run \
   --yes-i-really-mean-it
 ```
@@ -191,7 +191,7 @@ delete spans that are not time-chunk aligned:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-span-run \
   --force \
   --yes-i-really-mean-it
@@ -210,7 +210,7 @@ Find the spans that cover the data time range. Each record's `meta` holds its
 
 ```bash
 firecube chunks list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --time-range 2024-03-01T00:00:00:2024-03-01T23:59:59 \
   --format json
 ```
@@ -219,13 +219,13 @@ Clear each span, then ingest its source data again:
 
 ```bash
 firecube chunks delete-span \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id <run-id> \
   --batch-id <batch-id> \
   --dry-run
 
 firecube chunks delete-span \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id <run-id> \
   --batch-id <batch-id> \
   --yes-i-really-mean-it
@@ -244,7 +244,6 @@ firecube ingest <plugin> \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct \
   --option force_reingest=true
 ```
@@ -269,7 +268,6 @@ firecube ingest <plugin> \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct \
   --option force_reingest=true
 ```
@@ -281,15 +279,15 @@ existing data), incoming or existing duplicates, and NaT values. State=2
 Rebuild the compact cache after a large cleanup or reingest:
 
 ```bash
-firecube chunks compact rebuild --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks compact rebuild --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 ## Failure Recovery
 
 | Symptom | Meaning | Recovery |
 |---|---|---|
-| `Chunk operations require a full product URI or a [storage] configuration` | The run has a bare product name or `--all-products`, and no storage configuration. | Pass the full product URI to `--product-name`. Or set `FIRECUBE_STORAGE_TYPE` and `FIRECUBE_STORAGE_DRIVER`. |
-| `MissingScope` (exit code 2) | The run has neither `--product-name` nor `--all-products`. | Pass `--product-name <product URI>` or `--all-products`. |
+| `--all-products scans the base URI of the [storage] configuration, and none is set.` (exit code 2) | The run has `--all-products` and no `[storage]` section. | Define `[storage]` with a base URI in the configuration file. Or pass `--target <product URI>`. |
+| `Provide exactly one of --target or --all-products.` (exit code 2) | The run has neither flag, or both. | Pass `--target <product URI>` or `--all-products`. |
 | Access denied or no credentials for an `s3://` product | The URI does not supply S3 credentials. | Make credentials available to the default driver. Set the endpoint in the storage configuration if you use one. |
 | Span is not aligned | It does not map cleanly to Zarr time chunks. | Use `--force` only if expanded deletion is acceptable. |
 | `does not contain expected time dimension` | The cube uses a custom time dimension that older span records do not capture. | Re-run with `--time-dim <name>` matching the cube layout. |

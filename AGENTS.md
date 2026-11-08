@@ -58,17 +58,18 @@ The CLI infers storage settings from the URI scheme for commands that take a
 product URI (`file://`→local, `s3://`→s3; driver defaults to `fsspec`). Pass
 `--storage-type` and `--storage-driver` explicitly to override.
 
-**All flags below are required explicitly:**
+**Both flags below are required explicitly:**
 
-- `--product-name <name>` — logical product name (or set `PRODUCT_NAME` on your plugin class)
-- `--target <uri>` — where to write the output product
+- `-t/--target <uri>` — the product URI, the one spelling on every command that takes one
 - `--write-mode [staged|direct]` — write strategy (NOT inferred from local vs remote)
+
+A store records its product label once, in `.firecube/product.json`. A command that takes a target reads the label back, and most refuse a store that records none. The CLI never infers it from the URI path. `--product-name` is optional on write commands. Exit codes, the label record and `ExecutionParams` are in `plans/DESIGN.md`.
 
 Write-tier commands require `--write-mode`, except `zarr multires` (which
 derives pyramid levels in place) and `zarr consolidate-time-coord` (which
 mutates a single existing array in place and has no staging path).
 
-**Product name precedence:** CLI `--product-name` > config `default_product_name` > plugin `PRODUCT_NAME` > hard fail.
+**Product name precedence** (used once, to record the label): CLI `--product-name` > config `default_product_name` > plugin `PRODUCT_NAME` > hard fail.
 
 - URI options: `parse_and_validate_uri` and `parse_and_validate_source_uri` in `src/firecube/cli/_uri_policy.py` admit every storage URI option. `stac://` is a source scheme only, admitted by the `--input-data` of `ingest`, `zarr preallocate` and `zarr slots`. The docstrings there are the spec.
 
@@ -105,7 +106,7 @@ in `plans/TODO.md`.
 - Staged runs: `StorageSession.plan_promotion` and `publish_plan` in `src/firecube/core/storage/session.py` publish a delta planned by `guard/promotion_plan.py`. GenericZarr keeps `upload_tree`. Rules: `plans/DESIGN.md`.
 - Control plane: the `ChunkManager` facade is `src/firecube/core/controlplane/manager.py`. Beside it: `repo.py`, `deletion.py`, `types.py`, `events.py`, `claims.py`. The migrate and release executors are in `src/firecube/ingestor/runtime/`.
 - Claims: `FilesystemClaimService` in `claims.py`. Mixed versions are not compatible: stop every older writer of a product before a new writer writes to it. Firecube never removes or replaces the guard file `.firecube-claims.lock`.
-- Exclusive maintenance claim: `ChunkManager.acquire_exclusive_maintenance` in `manager.py`. Plugin CLI commands and `ensure_slot_index_model` make no check.
+- Exclusive maintenance claim: `ChunkManager.acquire_exclusive_maintenance` in `manager.py`. It binds the recorded label, so a second spelling of the URI cannot bypass it. Plugin CLI commands and `ensure_slot_index_model` make no check.
 - Content-addressed helpers: `src/firecube/core/controlplane/_content_addressed.py`, internal. The snapshot store, the release records and the inventories import it. A module does not import another store's private helpers.
 - Version retention: `src/firecube/ingestor/runtime/release_versions.py`, internal, beside `release_retention.py`. It builds, preflights and verifies `--retain-versions`. `release.py` imports it at call time.
 - Migration steps: the built-in step `firecube:set-attrs` is in `src/firecube/ingestor/runtime/migrations/set_attrs.py`, registered under `firecube.migrations` in `pyproject.toml`. `load_migration_steps` in `src/firecube/cli/plugins/registry.py` reads that group without importing a step.

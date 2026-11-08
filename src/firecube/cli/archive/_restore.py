@@ -53,28 +53,39 @@ from firecube.core.storage.session import StorageSession
 Examples:
   # restore an archive to a local Zarr store
   firecube archive restore \\
-    --archive file:///tmp/archive.tgm \\
-    --target file:///path/to/restored.zarr
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
+    --target file:///data/products/RESTORED.zarr
   # restore and overwrite an existing store
   firecube archive restore \\
-    --archive file:///tmp/archive.tgm \\
-    --target file:///path/to/product.zarr \\
-    --overwrite
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --overwrite --yes-i-really-mean-it
+  # show what a restore would write, and write nothing
+  firecube archive restore \\
+    --archive file:///data/archives/MY_PRODUCT.tgm \\
+    --target file:///data/products/RESTORED.zarr \\
+    --dry-run
   # restore a zip archive to a local Zarr store
   firecube archive restore \\
-    --archive file:///tmp/archive.zip \\
-    --target file:///path/to/restored.zarr
+    --archive file:///data/archives/MY_PRODUCT.zip \\
+    --target file:///data/products/RESTORED.zarr
   # restore an archive without a control plane under a product label
   firecube archive restore \\
-    --archive file:///tmp/data-only.tgm \\
-    --target file:///path/to/restored.zarr \\
+    --archive file:///data/archives/DATA_ONLY.tgm \\
+    --target file:///data/products/RESTORED.zarr \\
     --product-name <label>
 See also: firecube archive create, firecube archive info
 """,
 )
 @archive_uri_option(tier="write")
 @target_uri_option(tier="write")
-@product_name_option(required=False)
+@product_name_option(
+    required=False,
+    help=(
+        "Logical product name. The restored product keeps the label the archive records; "
+        "needed only when the archive records none."
+    ),
+)
 @click.option(
     "--storage-type",
     "storage_type",

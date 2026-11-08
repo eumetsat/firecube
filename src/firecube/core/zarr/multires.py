@@ -57,6 +57,55 @@ class MultiresConfig:
     lon_name: str = "lon"
 
 
+def _plan_layers(
+    session: StorageSession, store_uri: str, cfg: MultiresConfig
+) -> list[dict[str, Any]]:
+    """Plan the layers `build_multires_layers` writes for *cfg*; read and write nothing.
+
+    Each entry names the layer, its coarsening factors and whether a layer there
+    exists already and would be replaced.
+
+    Raises:
+        ValueError: The root dataset cannot be opened.
+        ConfigurationError: A named coordinate is missing, not 1-D, or not on its own dimension.
+    """
+    from firecube.core.errors import Param
+    from firecube.core.zarr.layers import _require_axis
+
+    uri = StorageUri.parse(store_uri)
+    group = cfg.group.strip("/")
+    if group:
+        ds = session.zarr.open_dataset(uri, chunks="auto", group=group)
+    else:
+        try:
+            ds = session.zarr.open_dataset(uri, chunks="auto")
+        except Exception as exc:
+            raise ValueError(
+                f"Cannot open root dataset at {store_uri!r}. "
+                "If the store uses a grouped layout, pass the group explicitly."
+            ) from exc
+    _require_axis(ds, cfg.lat_name, Param("lat_name"))
+    _require_axis(ds, cfg.lon_name, Param("lon_name"))
+    ds = ds.sortby([cfg.lat_name, cfg.lon_name])
+    steps = {
+        name: float(abs(ds[name].diff(name).mean().values)) if ds.sizes.get(name, 0) > 1 else 1.0
+        for name in (cfg.lat_name, cfg.lon_name)
+    }
+    prefix = f"{group}/" if group else ""
+    plan: list[dict[str, Any]] = []
+    for res in cfg.resolutions:
+        layer = f"{prefix}multires/{res}deg"
+        plan.append(
+            {
+                "layer": layer,
+                "lat_factor": max(1, round(res / steps[cfg.lat_name])),
+                "lon_factor": max(1, round(res / steps[cfg.lon_name])),
+                "replaces_existing": session.exists(uri.join(layer)),
+            }
+        )
+    return plan
+
+
 class ZarrMultiresBuilder:
     """Generic multiresolution builder for Zarr products.
 
@@ -146,8 +195,12 @@ class ZarrMultiresBuilder:
             )
         )
 
-    def build(self, cfg: MultiresConfig) -> dict:
-        """Build multiresolution layers for the given configuration."""
+    def build(self, cfg: MultiresConfig, *, dry_run: bool = False) -> dict:
+        """Build multiresolution layers for the given configuration.
+
+        With `dry_run`, make the same checks from reads only, write nothing, and return
+        the plan under `"plan"`, one entry per layer.
+        """
         if not cfg.resolutions:
             raise ValueError("At least one resolution must be provided for multires.")
 
@@ -161,6 +214,16 @@ class ZarrMultiresBuilder:
             manager.close()
 
         store_uri = self._store_uri_for(cfg.product)
+        if dry_run:
+            plan = _plan_layers(session, store_uri, cfg)
+            return {
+                "dry_run": True,
+                "product": cfg.product,
+                "group": cfg.group,
+                "store_uri": store_uri,
+                "layers": [entry["layer"] for entry in plan],
+                "plan": plan,
+            }
         log.info(
             "Building Zarr multiresolution layers",
             extra={

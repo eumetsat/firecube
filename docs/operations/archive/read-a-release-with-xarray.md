@@ -22,8 +22,7 @@ that the archive files are on the machine where you read them.
 
    ```bash
    firecube release show 1.1.0 \
-     --target "file:///data/products/MY_PRODUCT.zarr" \
-     --product-name MY_PRODUCT
+     --target "file:///data/products/MY_PRODUCT.zarr"
    ```
 
    Expected output ends with lines like these:

@@ -154,7 +154,7 @@ def _index_show_args(
         f"file://{target_path}",
     ]
     if json_flag:
-        args.append("--json")
+        args += ["-f", "json"]
     if derived:
         args.append("--derived")
     return args

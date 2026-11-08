@@ -46,15 +46,20 @@ class TestArchiveHelp:
         result = CliRunner().invoke(cli, ["archive", "info", "--help"])
         assert result.exit_code == 0
         assert "--archive" in result.output
-        assert "--format [table|json|csv]" in result.output
-        assert "firecube archive info --archive file:///tmp/archive.tgm" in result.output
+        assert "--format [table|json]" in result.output
+        assert (
+            "firecube archive info --archive file:///data/archives/MY_PRODUCT.tgm" in result.output
+        )
 
     def test_archive_validate_help(self):
         result = CliRunner().invoke(cli, ["archive", "validate", "--help"])
         assert result.exit_code == 0
         assert "--archive" in result.output
         assert "--quick" in result.output
-        assert "firecube archive validate --archive file:///tmp/archive.tgm" in result.output
+        assert (
+            "firecube archive validate --archive file:///data/archives/MY_PRODUCT.tgm"
+            in result.output
+        )
 
 
 class TestArchiveListCommand:

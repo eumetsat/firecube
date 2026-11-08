@@ -24,7 +24,8 @@ firecube plugins install --editable .
 
 The install command reports the Python environment it uses, installs the local
 package, and checks plugin discovery in a fresh Python process. The detected
-plugin list should contain `my_plugin`.
+plugin list should contain `my_plugin`. The command runs `uv pip install`, so
+`uv` must be on your `PATH`. If `uv` is missing, the command exits with code 4.
 
 ## Verify The Installation
 
@@ -35,6 +36,8 @@ firecube plugins list
 firecube plugins describe my_plugin
 firecube ingest my_plugin --show-options
 ```
+
+The command `plugins list` prints the name, the module and the description of each plugin. For a script, add `-f json` or `-f csv`. The default is `-f table`.
 
 Use the ID printed by `plugins list` in later `firecube ingest` commands. The
 generated data-conversion methods can still be incomplete at this point;

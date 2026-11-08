@@ -119,6 +119,24 @@ def test_product_name_exists_iff_label_is_cli_owned(path: tuple[str, ...], entry
     assert ("--product-name" in _options(path)) == (entry.label_source == "cli")
 
 
+_FORMAT_OPTIONS = [
+    (".".join(path), param)
+    for path, cmd in _walk_commands(_root_cli, ())
+    for param in cmd.params
+    if isinstance(param, click.Option) and {"-f", "--format"} & set(param.opts)
+]
+
+
+@pytest.mark.parametrize(
+    ("command", "option"), _FORMAT_OPTIONS, ids=[c for c, _ in _FORMAT_OPTIONS]
+)
+def test_format_option_choices_stay_within_table_json_csv(
+    command: str, option: click.Option
+) -> None:
+    assert isinstance(option.type, click.Choice), f"{command}: -f/--format must be a click.Choice"
+    assert set(option.type.choices) <= {"table", "json", "csv"}
+
+
 def test_short_flags_match_canonical_registry() -> None:
     for path, cmd in _walk_commands(_root_cli, ()):
         allow = SHORT_FLAG_ALLOWLIST.get(path, {})

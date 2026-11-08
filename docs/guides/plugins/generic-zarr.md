@@ -175,7 +175,6 @@ firecube ingest my_plugin \
   --input-data "file://$PWD/path/to/input" \
   --target file:///tmp/my_plugin_out.zarr \
   --product-name my_plugin \
-  --output-format zarr \
   --write-mode direct
 ```
 

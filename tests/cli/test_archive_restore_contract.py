@@ -31,7 +31,12 @@ def _invoke_restore(args: list[str]):
 
 
 def _run(*args: str):
-    return CliRunner().invoke(cli, list(args))
+    confirm = (
+        ["--yes-i-really-mean-it"]
+        if args[:2] in {("migrate", "adopt"), ("release", "create")}
+        else []
+    )
+    return CliRunner().invoke(cli, [*args, *confirm])
 
 
 def _archive(root, fmt="zip", label: str | None = "LBL"):
@@ -54,6 +59,7 @@ def _rewrite(archive, edit):
     return out
 
 
+@pytest.mark.contract
 @pytest.mark.parametrize(
     ("fmt", "label", "legacy", "code"),
     [("zip", "LBL", 0, 0), ("tensogram", "LBL", 0, 0), ("zip", "LBL", 1, 0), ("zip", None, 0, 2)],
@@ -72,6 +78,7 @@ def test_restore_resolves_the_label_before_any_write(tmp_path, fmt, label, legac
         assert "LBL" in (target / ".firecube/product.json").read_text()
 
 
+@pytest.mark.contract
 def test_restore_onto_a_target_stamped_with_another_label_is_refused_untouched(tmp_path) -> None:
     target, archive = _archive(tmp_path / "o", label="OTHER")[0], _archive(tmp_path)[1]
     files = lambda: {p: p.read_bytes() for p in target.rglob("*") if p.is_file()}  # noqa: E731
@@ -81,6 +88,7 @@ def test_restore_onto_a_target_stamped_with_another_label_is_refused_untouched(t
     assert result.exit_code == 2 and files() == before
 
 
+@pytest.mark.contract
 @pytest.mark.parametrize("fmt", ["zip", "tensogram"])
 def test_overwrite_restore_keeps_the_targets_stamp_of_the_same_label(tmp_path, fmt) -> None:
     archive = _archive(tmp_path, fmt)[1]
@@ -96,6 +104,7 @@ def test_overwrite_restore_keeps_the_targets_stamp_of_the_same_label(tmp_path, f
     assert not (target / "old").exists() and (target / "a/zarr.json").exists()
 
 
+@pytest.mark.contract
 def test_restore_refuses_a_backup_chain_member_with_another_label(tmp_path) -> None:
     store, member = _archive(tmp_path)[0], tmp_path / "i.zip"
     for version, path in (("1.0", tmp_path / "f.zip"), ("1.1", member)):

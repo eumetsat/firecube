@@ -137,16 +137,18 @@ def _discover_ingestors_quietly() -> dict[str, type[Any]]:
     epilog="""\b
 Examples:
   # Emit JSON plan for Argo/Kubeflow (resume-aware by default)
-  firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
-      --storage-type local --storage-driver fsspec --write-mode direct
+  firecube zarr slots <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode direct
 
+\b
   # Human-readable table output for inspection
-  firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
-      --storage-type local --storage-driver fsspec --write-mode direct -f table
+  firecube zarr slots <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode direct -f table
 
+\b
   # Override slot partition size
-  firecube zarr slots <plugin> --target file:///tmp/x.zarr --product-name <name> \\
-      --storage-type local --storage-driver fsspec --write-mode direct --slot-size 200
+  firecube zarr slots <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode direct --slot-size 200
 """,
 )
 @click.argument("plugin")

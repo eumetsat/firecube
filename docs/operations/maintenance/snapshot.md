@@ -13,15 +13,15 @@ restores a snapshot, and no command removes one.
 - Stop every writer of the product. A writer that runs during `snapshot take`
   can make the snapshot mix states. See
   [Maintenance Operations](index.md#prerequisites).
-- Make sure that the target is a Zarr store. `snapshot take` needs no control
-  plane.
+- Make sure that the store records a product label. A store that Firecube did
+  not write records none. Run `firecube migrate adopt` on it first. See
+  [Adopt A Foreign Store](adopt-a-foreign-store.md).
 
 ## Take A Snapshot
 
 ```bash
 firecube snapshot take \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
@@ -45,6 +45,28 @@ describes the layout of that directory.
 
 Add `-f json` to print the record as JSON with sorted keys.
 
+## Preview A Snapshot
+
+Add `--dry-run` to `snapshot take`. The command prints the number of documents,
+the manifest and the parent that the snapshot would record. It writes nothing.
+
+```bash
+firecube snapshot take \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
+  --dry-run
+```
+
+Expected output resembles:
+
+```text
+Dry run: nothing is written.
+Label:        MY_PRODUCT (recorded)
+Documents:    7
+Parent:       -
+Manifest:     bfb4d73c990e06806cb6a2524a051c7468785fe6d10f625deae2ac7f3cdfd074
+Would write:  up to 7 blobs, one manifest, one record and refs/latest.json; an existing blob is kept
+```
+
 ## Read The Consistency
 
 The `Consistency` line shows how far you can trust a snapshot:
@@ -63,8 +85,7 @@ and [Create A Release](create-a-release.md).
 
 ```bash
 firecube snapshot list \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 The command prints one line per snapshot, oldest first:
@@ -83,8 +104,7 @@ Pass the full 64-digit identifier from `snapshot list`, or `latest`.
 
 ```bash
 firecube snapshot show latest \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
@@ -110,8 +130,7 @@ Documents:    12
 
 ```bash
 firecube snapshot diff <before-id> latest \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Each of the two arguments is a full identifier or `latest`. Expected output
@@ -142,6 +161,7 @@ exits 0 whether or not the snapshots differ.
 | Symptom | Meaning | Recovery |
 |---|---|---|
 | `is not a snapshot id: expected 64 lowercase hex digits` | The argument is a prefix or contains capital letters. | Copy the full identifier from `snapshot list`, or pass `latest`. |
+| `records no product label. Record one with firecube migrate adopt` (exit 2) | The store records no label. The command wrote nothing. | Run `firecube migrate adopt`. |
 | `No metadata snapshots` | The product has no snapshot. | Run `snapshot take`. |
 | Exit 1 from `show` or `diff` | The identifier names no snapshot of this product. | Run `snapshot list` and copy an identifier. |
 | A snapshot that mixes old and new values | A writer ran while `snapshot take` read the documents. | Stop the writers. Take the snapshot again. |

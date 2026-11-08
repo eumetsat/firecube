@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import click
 
+from firecube.cli._formatter import OPTION_GROUPS
 from firecube.cli.advise import advise as advise_group
 from firecube.cli.archive import archive as archive_group
 from firecube.cli.catalog import catalog as catalog_group
@@ -27,6 +28,30 @@ from firecube.cli.plugins import plugins as plugins_group
 from firecube.cli.release import release as release_group
 from firecube.cli.snapshot import snapshot as snapshot_group
 from firecube.cli.zarr import zarr as zarr_group
+
+_REQUIRED_OPTIONS: dict[str, list[str]] = {
+    "snapshot take": ["--target"],
+    "snapshot list": ["--target"],
+    "snapshot show": ["--target"],
+    "snapshot diff": ["--target"],
+    "migrate run": ["--target"],
+    "migrate adopt": ["--target", "--product-name"],
+    "migrate status": ["--target"],
+    "release create": ["--target"],
+    "release list": ["--target"],
+    "release show": ["--target"],
+    "release verify": ["--target"],
+    "zarr index show": ["--target"],
+    "zarr index verify": ["--target"],
+    "zarr index rebuild": ["--target", "--plugin", "--product-name"],
+    "zarr consolidate-time-coord": ["--target"],
+}
+OPTION_GROUPS.update(
+    {
+        f"firecube {path}": [{"name": "Required", "options": names}]
+        for path, names in _REQUIRED_OPTIONS.items()
+    }
+)
 
 
 def register_groups(cli: click.Group) -> None:

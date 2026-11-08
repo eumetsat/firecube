@@ -127,6 +127,27 @@ def test_repro_multires_coordinate_names(tmp_path: Path) -> None:
 
 
 @pytest.mark.contract
+def test_multires_dry_run_writes_no_level_and_leaves_snapshot_and_control_plane(
+    tmp_path: Path,
+) -> None:
+    store = tmp_path / "x.zarr"
+    ds = xr.Dataset(
+        {"FWI": (["lat", "lon"], np.ones((2, 2), dtype="f4"))},
+        coords={"lat": [0.0, 1.0], "lon": [0.0, 1.0]},
+    )
+    ds.to_zarr(store, zarr_format=3, consolidated=True)
+    stamp_label(store, "pn")
+    before = _store_bytes(store)  # includes `.firecube/`, so no claim, run or stamp either
+
+    flags = ["--storage-type", "local", "--storage-driver", "fsspec", "--resolutions", "45"]
+    result = _invoke_multires(["--target", store.as_uri(), *flags, "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert "45" in result.output
+    assert _store_bytes(store) == before and not (store / "multires").exists()
+
+
+@pytest.mark.contract
 def test_repro_multires_missing_coordinate(tmp_path: Path) -> None:
     store = tmp_path / "x.zarr"
     ds = xr.Dataset(

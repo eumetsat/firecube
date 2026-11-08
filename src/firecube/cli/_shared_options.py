@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal
@@ -134,28 +135,6 @@ def write_mode_option(
     return decorator
 
 
-def _legacy_product_uri_option(tier: Literal["write", "inspect"]) -> Any:
-    """Add the retired `-p, --product` URI option; a command family drops it for `--target`."""
-    help_text = (
-        "Firecube product URI (file:///abs/path or s3://bucket/key); storage flags inferred from URI scheme."
-        if tier == "inspect"
-        else "Firecube product URI; --storage-type must match URI scheme."
-    )
-
-    def decorator(func: Any) -> Any:
-        return click.option(
-            "-p",
-            "--product",
-            "product",
-            required=True,
-            type=str,
-            help=help_text,
-            shell_complete=_uri_shell_complete,
-        )(func)
-
-    return decorator
-
-
 def target_uri_option(tier: Literal["write", "inspect"], *, required: bool = True) -> Any:
     """Add `-t, --target`, the product URI option, as parameter `target`.
 
@@ -242,30 +221,27 @@ def format_option(choices: Sequence[str] = FORMAT_CHOICES, default: str = "table
     return decorator
 
 
-def _legacy_product_filter_option(required: bool = False) -> Any:
-    """Add the retired `-n, --product-name` filter option; `--target` replaces it."""
+def product_name_option(required: bool = True, *, help: str | None = None) -> Any:
+    """Add the long-only `--product-name` option for a command that may record the label.
+
+    With `required=False` and no `help`, the help names the plugin fallbacks for the label,
+    which holds for plugin commands only. A command without a plugin passes its own `help`.
+    """
+    help_text = help or (
+        "Logical product name."
+        if required
+        else (
+            "Logical product name. Optional: overrides the plugin config default_product_name "
+            "and the plugin PRODUCT_NAME. The store refuses a name that differs from the one it records."
+        )
+    )
 
     def decorator(f: Any) -> Any:
         return click.option(
-            "-n",
             "--product-name",
             "product_name",
             required=required,
-            help="Filter by product name.",
-        )(f)
-
-    return decorator
-
-
-def product_name_option(required: bool = True) -> Any:
-    """Add the long-only `--product-name` option for a command that may record the label."""
-
-    def decorator(f: Any) -> Any:
-        return click.option(
-            "--product-name",
-            "product_name",
-            required=required,
-            help="Logical product name.",
+            help=help_text,
         )(f)
 
     return decorator
@@ -291,6 +267,18 @@ def yes_flag(f: Any) -> Any:
     )(f)
 
 
-# Transitional names, outside `__all__`: each goes once no module imports it.
-product_uri_option = _legacy_product_uri_option
-product_filter_option = _legacy_product_filter_option
+def require_confirmation(command: str, *, confirmed: bool, dry_run: bool) -> None:
+    """Ask before `command` changes the store; skip the question for a preview or a confirmed call.
+
+    Raises:
+        click.UsageError: Standard input is not a terminal and the call is not confirmed.
+        click.Abort: The operator declines at the prompt.
+    """
+    if confirmed or dry_run:
+        return
+    if not sys.stdin.isatty():
+        raise click.UsageError(
+            f"Confirmation required: {command} changes the store. Re-run with "
+            "--yes-i-really-mean-it, preview it with --dry-run, or run interactively."
+        )
+    click.confirm(f"Run {command} on this product?", abort=True)

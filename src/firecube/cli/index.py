@@ -30,7 +30,12 @@ from firecube.cli._errors import echo_rendered, render
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._formatter import FirecubeGroup
 from firecube.cli._product import recorded_identity
-from firecube.cli._shared_options import format_option, product_name_option, target_uri_option
+from firecube.cli._shared_options import (
+    dry_run_flag,
+    format_option,
+    product_name_option,
+    target_uri_option,
+)
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.core.controlplane import ChunkManager
@@ -442,6 +447,10 @@ Examples:
   firecube zarr index rebuild --target file:///data/p.zarr --plugin my_plugin --product-name p \\
       --option key=value
 
+\b
+  # show what a rebuild would write, and write nothing
+  firecube zarr index rebuild --target file:///data/p.zarr --plugin my_plugin --product-name p --dry-run
+
 See also: firecube zarr index verify, firecube zarr index show
 """,
 )
@@ -455,10 +464,15 @@ See also: firecube zarr index verify, firecube zarr index show
     type=TypedOptionsParam(),
     help="Plugin option in key=value form.",
 )
+@dry_run_flag
 def rebuild_cmd(
-    target: str, plugin: str, product_name: str, option: tuple[tuple[str, object], ...]
+    target: str,
+    plugin: str,
+    product_name: str,
+    option: tuple[tuple[str, object], ...],
+    dry_run: bool,
 ) -> None:
-    """Rebuild the resolved-index record from a plugin declaration."""
+    """Rebuild the resolved-index record from a plugin declaration; `--dry-run` writes nothing."""
 
     from firecube.ingestor.runtime.index_record import rebuild_index_record
 
@@ -476,6 +490,7 @@ def rebuild_cmd(
                 report=echo_rendered,
                 warn=functools.partial(echo_rendered, err=True),
                 configure=_configurer(target, option),
+                dry_run=dry_run,
             )
         except ResolvedIndexConflictError as exc:
             # The library has already echoed the conflict through ``warn``.

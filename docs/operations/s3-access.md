@@ -50,7 +50,6 @@ firecube ingest PLUGIN_NAME \
   --product-name my_product \
   --storage-type s3 \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged
 ```
 
@@ -63,7 +62,7 @@ Inspect the product's control-plane records:
 
 ```bash
 firecube chunks list \
-  --product-name s3://your-bucket/products/my_product.zarr
+  --target s3://your-bucket/products/my_product.zarr
 ```
 
 See the [Configuration Reference](../reference/config.md#storageconfig) for all

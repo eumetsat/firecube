@@ -329,7 +329,7 @@ def _release_backup_chain(base):
     where = ["--target", store.as_uri()]
 
     def run(*args):
-        assert CliRunner().invoke(cli, [*args, *where]).exit_code == 0
+        assert CliRunner().invoke(cli, [*args, *where, "--yes-i-really-mean-it"]).exit_code == 0
 
     run("migrate", "adopt", "--product-name", "p.zarr")
     run("release", "create", "1.0", "--archive", full.as_uri())

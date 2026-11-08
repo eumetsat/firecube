@@ -42,6 +42,7 @@ from firecube.core.controlplane.types import exclusive_maintenance_domain
 from firecube.core.filesystem.conditional import GUARD_FILE_NAME
 from firecube.core.zarr.guard import metadata_authority
 from tests.helpers.cli_hints import run_hint
+from tests.helpers.storage import make_test_session
 
 pytestmark = [pytest.mark.integration, pytest.mark.contract]
 
@@ -75,7 +76,9 @@ def _store(base: Path, fmt: int, *, applied: bool = False, adopt: bool = True) -
 
 def _cli(store: Path, *args: str, exit_code: int = 0):
     label = ["--product-name", "p.zarr"] if args[:2] == ("migrate", "adopt") else []
-    result = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), *label])
+    asks = args[:2] in {("migrate", "adopt"), ("migrate", "run"), ("release", "create")}
+    confirm = ["--yes-i-really-mean-it"] if asks and "--dry-run" not in args else []
+    result = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), *label, *confirm])
     assert result.exit_code == exit_code, result.output
     return result
 
@@ -393,6 +396,46 @@ def test_dry_run_prints_the_plan_and_writes_nothing(tmp_path, fmt):
     assert planned.output.rstrip().splitlines()[-1].startswith("planned outcome:")
     assert _tree(store) == before  # no claim, no run, no snapshot
     assert _runs(store) == {}
+
+
+@pytest.mark.parametrize(
+    ("args", "adopted"),
+    [
+        (("snapshot", "take"), True),
+        (("migrate", "adopt"), False),
+        (("release", "create", "1.0.0"), True),
+        (("release", "create", "1.0.0", "--archive", "{archive}"), True),
+    ],
+    ids=["snapshot-take", "migrate-adopt", "release-create", "release-archive"],
+)
+def test_maintenance_dry_run_leaves_store_claims_runs_and_archive_untouched(
+    tmp_path, args, adopted
+):
+    store, archive = _store(tmp_path, 3, adopt=adopted), tmp_path / "a.zip"
+
+    def state():  # byte map with `.firecube/`, then claims and runs listed through ChunkManager
+        if not adopted:  # opening a control plane would itself create `.firecube/`
+            return _tree(store), []
+        manager = make_test_session(tmp_path, product="p.zarr").control_plane()
+        try:
+            return _tree(store), [
+                manager.list_claims(product="p.zarr"),
+                manager.list_runs(product="p.zarr"),
+            ]
+        finally:
+            manager.close()
+
+    before = state()
+    _cli(store, *(a.format(archive=archive.as_uri()) for a in args), "--dry-run")
+    assert state() == before and not archive.exists()
+
+
+def test_migrate_run_off_a_tty_without_confirmation_exits_2_and_changes_nothing(tmp_path):
+    store = _store(tmp_path, 3)
+    before = _tree(store)
+    result = CliRunner().invoke(cli, ["migrate", "run", RETITLE, "--target", store.as_uri()])
+    assert result.exit_code == 2 and "--yes-i-really-mean-it" in result.output
+    assert _tree(store) == before and _runs(store) == {}
 
 
 @FORMATS

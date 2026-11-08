@@ -44,7 +44,7 @@ def claims_group() -> None:
     epilog="""\b
 Examples:
   # list claims for a specific product
-  firecube chunks claims list -t file:///data/products/MY_PRODUCT.zarr
+  firecube chunks claims list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # list all claims across all products under the [storage] base URI
@@ -120,23 +120,23 @@ def list_cmd(
     epilog="""\b
 Examples:
   # clear a stale claim (interactive confirmation)
-  firecube chunks claims clear -t file:///data/products/MY_PRODUCT.zarr --domain <domain>
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --domain <domain>
 
 \b
   # clear a stale claim in non-interactive context
-  firecube chunks claims clear -t file:///data/products/MY_PRODUCT.zarr --domain <domain> --yes-i-really-mean-it
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --domain <domain> --yes-i-really-mean-it
 
 \b
   # bypass the is_stale check (--force) and confirm (--yes-i-really-mean-it)
-  firecube chunks claims clear -t file:///data/products/MY_PRODUCT.zarr --domain <domain> --force --yes-i-really-mean-it
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --domain <domain> --force --yes-i-really-mean-it
 
 \b
   # preview every stale claim (bulk mode never prompts)
-  firecube chunks claims clear -t file:///data/products/MY_PRODUCT.zarr --all-stale
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --all-stale
 
 \b
   # clear every stale claim
-  firecube chunks claims clear -t file:///data/products/MY_PRODUCT.zarr --all-stale --yes-i-really-mean-it
+  firecube chunks claims clear --target file:///data/products/MY_PRODUCT.zarr --all-stale --yes-i-really-mean-it
 
 See also: firecube chunks claims list, firecube chunks runs abandon
 """,

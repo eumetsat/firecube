@@ -20,7 +20,7 @@ from typing import Any, cast
 
 import click
 
-from firecube.cli._shared_options import dry_run_flag
+from firecube.cli._shared_options import dry_run_flag, require_confirmation, yes_flag
 from firecube.cli.migrate._common import (
     echo_json,
     echo_progress,
@@ -137,6 +137,7 @@ See also: firecube migrate list, firecube migrate status, firecube snapshot list
     help="firecube:set-attrs only: node path to change; the root group when omitted.",
 )
 @dry_run_flag
+@yes_flag
 @click.pass_context
 def run(
     ctx: click.Context,
@@ -152,6 +153,7 @@ def run(
     removes: tuple[str, ...],
     node: str | None,
     dry_run: bool,
+    yes_i_really_mean_it: bool,
 ) -> None:
     """run one migration step on a product
 
@@ -162,6 +164,8 @@ def run(
     run of the step resumes. --dry-run prints the plan and the attribute classes
     and writes nothing. a store that records no product label is refused: run migrate adopt first. pass --allow interpretation or --allow unknown to change
     attributes of that class. with --format json the progress lines go to stderr.
+    a run asks for confirmation in a terminal and needs --yes-i-really-mean-it
+    elsewhere.
     """
     options = merge_step_options(
         step_id, options=step_options, sets=sets, removes=removes, node=node
@@ -175,6 +179,7 @@ def run(
         storage_anonymous=storage_anonymous,
         writable=True,
     )
+    require_confirmation("migrate run", confirmed=yes_i_really_mean_it, dry_run=dry_run)
     json_out = output_format == "json"
     result = migrate_product(
         session=session,
@@ -197,10 +202,16 @@ Examples:
   # give a Zarr store that Firecube did not write a control plane
   firecube migrate adopt --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT
 
+\b
+  # show what adopting the store would record, and write nothing
+  firecube migrate adopt --target file:///data/products/MY_PRODUCT.zarr --product-name MY_PRODUCT --dry-run
+
 See also: firecube migrate run, firecube migrate status
 """,
 )
 @migrate_options(tier="write", product_name=True)
+@dry_run_flag
+@yes_flag
 @click.pass_context
 def adopt(
     ctx: click.Context,
@@ -210,6 +221,8 @@ def adopt(
     storage_driver: str | None,
     storage_anonymous: bool | None,
     output_format: str,
+    dry_run: bool,
+    yes_i_really_mean_it: bool,
 ) -> None:
     """give an existing Zarr store a control plane
 
@@ -218,7 +231,9 @@ def adopt(
     already a product stays as it is, and gets the product label if it records
     none. a store that records another label is refused. adopting a Zarr format 2
     store prints a warning, because Firecube cannot append to it. with --format
-    json the progress lines go to stderr.
+    json the progress lines go to stderr. --dry-run reports the run and the label
+    it would record and writes nothing. adopt asks for confirmation in a terminal
+    and needs --yes-i-really-mean-it elsewhere.
     """
     session = open_session(
         ctx,
@@ -236,7 +251,21 @@ def adopt(
     control_root = session.product.control_root_uri
     # Refuse another label before anything runs; the library leaves a stamped store untouched.
     stamped = check_product_label(fs, control_root, product_name)
-    result = adopt_product(session=session, report=report, warn=echo_warning)
+    require_confirmation("migrate adopt", confirmed=yes_i_really_mean_it, dry_run=dry_run)
+    result = adopt_product(session=session, report=report, warn=echo_warning, dry_run=dry_run)
+    if dry_run:
+        label = "is recorded" if stamped is not None else "would be recorded"
+        report(f"product label {product_name} {label}")
+        if json_out:
+            echo_json(
+                {
+                    **_adoption_payload(result),
+                    "dry_run": True,
+                    "product_label": product_name,
+                    "label_recorded": stamped is not None,
+                }
+            )
+        return
     if result.outcome == "already-product" and stamped is None:
         # A store with a control plane but no stamp (for example a lone schema.json) is not
         # adopted again, so the label is recorded here.

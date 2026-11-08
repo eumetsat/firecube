@@ -118,7 +118,7 @@ def test_show_help_lists_required_flags() -> None:
     assert result.exit_code == 0, result.output
     assert "--target" in result.output
     assert "--product-name" not in result.output
-    assert "--json" in result.output
+    assert "--format" in result.output
 
 
 def test_show_fresh_cube_exits_one_with_message(tmp_path: Path) -> None:
@@ -158,7 +158,7 @@ def test_show_populated_cube_json_has_five_keys(tmp_path: Path) -> None:
     cube.mkdir()
     record = _seed_record(cube)
 
-    result = CliRunner().invoke(cli, _show_args(cube, "--json"))
+    result = CliRunner().invoke(cli, _show_args(cube, "-f", "json"))
 
     assert result.exit_code == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     parsed = json.loads(result.stdout)

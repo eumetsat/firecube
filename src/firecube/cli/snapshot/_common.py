@@ -72,6 +72,35 @@ def open_manager(
         click.UsageError: The storage type contradicts the scheme, the store records no
             product label, or a writing command is given anonymous access.
     """
+    session = open_session(
+        ctx,
+        target=target,
+        storage_type=storage_type,
+        storage_driver=storage_driver,
+        storage_anonymous=storage_anonymous,
+        writable=writable,
+    )
+    manager = session.control_plane()
+    ctx.call_on_close(manager.close)
+    return manager, session.product.product_name
+
+
+def open_session(
+    ctx: click.Context,
+    *,
+    target: str,
+    storage_type: str | None,
+    storage_driver: str | None,
+    storage_anonymous: bool | None,
+    writable: bool,
+) -> StorageSession:
+    """Admit ``--target`` and return the storage session bound to the recorded product label.
+
+    Raises:
+        click.BadParameter: The target fails the URI rule.
+        click.UsageError: The storage type contradicts the scheme, the store records no
+            product label, or a writing command is given anonymous access.
+    """
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
     storage_config = get_storage_config(
@@ -90,7 +119,4 @@ def open_manager(
         )
     driver = StorageDriverConfig.from_storage_config(storage_config)
     identity = recorded_identity(target_uri, format="zarr", driver=driver)
-    session = StorageSession(StorageBinding(identity=identity, driver=driver))
-    manager = session.control_plane()
-    ctx.call_on_close(manager.close)
-    return manager, identity.product_name
+    return StorageSession(StorageBinding(identity=identity, driver=driver))

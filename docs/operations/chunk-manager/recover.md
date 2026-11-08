@@ -13,7 +13,7 @@ PRODUCT_NAME="MY_PRODUCT"
 
 ## Inspect Runs
 
-Pass the full URI through `--product-name` for every ChunkManager command on
+Pass the product URI through `--target` for every ChunkManager command on
 this page. This binds the command directly to the product without a storage
 configuration.
 
@@ -21,7 +21,7 @@ Start by listing runs:
 
 ```bash
 firecube chunks runs list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr"
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 A stuck run usually appears as `started`:
@@ -44,7 +44,7 @@ Preview the operation:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-started-run \
   --reason "process is no longer active" \
   --dry-run
@@ -53,14 +53,14 @@ firecube chunks runs abandon \
 Expected output:
 
 ```text
-[dry-run] Would abandon run 'docs-started-run' for product 'MY_PRODUCT.zarr' (reason: process is no longer active)
+[dry-run] Would abandon run 'docs-started-run' for product 'MY_PRODUCT' (reason: process is no longer active)
 ```
 
 Abandon the run in a non-interactive shell:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id docs-started-run \
   --reason "process is no longer active" \
   --yes-i-really-mean-it
@@ -69,7 +69,7 @@ firecube chunks runs abandon \
 Expected output:
 
 ```text
-Abandoned run docs-started-run for MY_PRODUCT.zarr
+Abandoned run docs-started-run for MY_PRODUCT
 Released claim MY_PRODUCT:zarr_region:F001
 Released claim MY_PRODUCT:zarr_region:F002
 ```
@@ -96,7 +96,7 @@ Verify:
 
 ```bash
 firecube chunks runs list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr"
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
@@ -113,9 +113,9 @@ If Firecube cannot list the claims of the product, it still records the
 abandon. The command then exits 1 and releases no claim:
 
 ```text
-Error: The write claims of MY_PRODUCT.zarr could not be listed: [Errno 13] Permission denied: '/data/products/MY_PRODUCT.zarr/.firecube/claims'.
+Error: The write claims of MY_PRODUCT could not be listed: [Errno 13] Permission denied: '/data/products/MY_PRODUCT.zarr/.firecube/claims'.
 Run docs-started-run is recorded abandoned; run the abandon again to release its claims:
-  firecube chunks runs abandon --product-name file:///data/products/MY_PRODUCT.zarr --run-id docs-started-run --reason "<reason>"
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --run-id docs-started-run --reason "<reason>"
 ```
 
 Fix the cause of the listing error. Then run the same abandon command again:
@@ -131,7 +131,7 @@ Released claim MY_PRODUCT:zarr_region:F002
 List claims before clearing anything:
 
 ```bash
-firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks claims list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output when a claim exists:
@@ -139,8 +139,8 @@ Expected output when a claim exists:
 ```text
 Product                  State    Owner                    Domain
 --------------------------------------------------------------------------------------------
-MY_PRODUCT.zarr          active   docs-started-run:F001    MY_PRODUCT:zarr_region:F001
-MY_PRODUCT.zarr          active   docs-started-run:F002    MY_PRODUCT:zarr_region:F002
+MY_PRODUCT               active   docs-started-run:F001    MY_PRODUCT:zarr_region:F001
+MY_PRODUCT               active   docs-started-run:F002    MY_PRODUCT:zarr_region:F002
 ```
 
 The `Domain` value is the exact value to pass to `--domain`.
@@ -156,7 +156,7 @@ Clear a stale claim in non-interactive context:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --domain MY_PRODUCT:zarr_region:F001 \
   --yes-i-really-mean-it
 ```
@@ -166,7 +166,7 @@ cleared even though it does not look stale:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --domain MY_PRODUCT:zarr_region:F001 \
   --force \
   --yes-i-really-mean-it
@@ -187,7 +187,7 @@ next acquisition of the domain replaces it.
 Verify:
 
 ```bash
-firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks claims list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
@@ -209,7 +209,6 @@ firecube ingest <plugin> \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct \
   --option resume_existing=true
 ```
@@ -237,7 +236,7 @@ After the retry, verify the new run:
 
 ```bash
 firecube chunks runs list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr"
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 The new run should show `complete`. The earlier run remains `failed` in the
@@ -247,7 +246,7 @@ Validate each affected Zarr group, replacing `data` with its group path:
 
 ```bash
 firecube zarr validate \
-  --product "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --group data
 ```
 
@@ -266,7 +265,7 @@ If you see the note, pass the time dimension of the plugin:
 
 ```bash
 firecube zarr validate \
-  --product "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --group data \
   --time-dim time
 ```
@@ -288,7 +287,7 @@ command then uses the marker of its time coordinate.
 | `ClaimReleaseError`: the claim "was not released" | A heartbeat write was still in flight when the run released the claim. The record stays and goes stale. | Confirm the process has stopped. Wait until the claim is stale, then use `chunks claims clear`. |
 | `chunks claims clear` exits 1 and keeps the claim | Another writer took the claim after the command read it. | List the claims again. Confirm that the new owner is stopped, then clear the claim. |
 | Claim operations fail with `ConfigurationError` on a storage other than `file` and `s3` | The storage cannot write conditionally, so Firecube refuses to acquire, renew or read a claim record. A listing of a missing or empty claims directory still returns no claims. | Use a `file://` or `s3://` product. Do not read an empty listing on such a storage as proof that no writer is active. |
-| `ProductUnderMaintenanceError`: `Product MY_PRODUCT.zarr is under exclusive maintenance by <owner> (claim MY_PRODUCT.zarr:maintenance:exclusive), so <run> is refused. Retry when that maintenance has finished.` | A maintenance run holds the exclusive claim of the product. At run start, Firecube refuses the new run and records it as failed. An index rebuild is refused before any run exists. | Wait for the maintenance run to finish. Then start the run again. If the message says the claim is stale, verify that the owner process is gone. Abandon a run only after its process has stopped. Then follow [Abandon A Stuck Run](#abandon-a-stuck-run) with the owner as `--run-id`. Or follow [Clear A Blocking Claim](#clear-a-blocking-claim) with `--domain MY_PRODUCT.zarr:maintenance:exclusive`. |
+| `ProductUnderMaintenanceError`: `Product MY_PRODUCT is under exclusive maintenance by <owner> (claim MY_PRODUCT:maintenance:exclusive), so <run> is refused. Retry when that maintenance has finished.` | A maintenance run holds the exclusive claim of the product. At run start, Firecube refuses the new run and records it as failed. An index rebuild is refused before any run exists. | Wait for the maintenance run to finish. Then start the run again. If the message says the claim is stale, verify that the owner process is gone. Abandon a run only after its process has stopped. Then follow [Abandon A Stuck Run](#abandon-a-stuck-run) with the owner as `--run-id`. Or follow [Clear A Blocking Claim](#clear-a-blocking-claim) with `--domain MY_PRODUCT:maintenance:exclusive`. |
 | Run ends with `status=failed` and "later batch(es) were not attempted" | Append ingestion stopped before processing all inputs. | Fix the reported error, then [recover the failed batch](#recover-from-a-failed-batch). |
 | Rerun refused: "spans from a failed run exist" | The retry needs an explicit choice about keeping earlier work. | Follow [Recover From A Failed Batch](#recover-from-a-failed-batch) for the original write mode. |
 | Append refuses an insertion | An incoming timestamp is absent from the target but earlier than its latest timestamp. | Rebuild a new target from all required inputs in chronological order. Resume, force-reingest, and span deletion cannot enable insertion into the existing time coordinate. |

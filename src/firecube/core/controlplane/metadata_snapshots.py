@@ -24,7 +24,8 @@ never a chunk. Layout below .firecube/metadata/:
 
 Blobs, manifests and records are created once and never rewritten. Records and
 refs name other files by id, never by an absolute path. Only the ChunkManager
-facade calls the I/O functions here.
+facade writes through the functions here; read-only previews also call
+`latest_snapshot_id` and `plan_snapshot`.
 """
 
 from __future__ import annotations
@@ -294,6 +295,62 @@ def manifest_bytes(entries: Sequence[ManifestEntry]) -> bytes:
                 for entry in entries
             ],
         }
+    )
+
+
+@dataclass(frozen=True)
+class SnapshotPlan:
+    """What taking a snapshot of the live documents would write.
+
+    Attributes:
+        parent: The id the new record would name as its parent, or ``None``.
+        manifest: The sha256 hex of the manifest the documents make.
+        documents: The number of documents the snapshot would capture.
+        blobs: The number of distinct document contents; an existing blob is not rewritten.
+        manifest_recorded: Whether a recorded snapshot names the manifest already, so
+            no blob and no manifest would be written.
+    """
+
+    parent: str | None
+    manifest: str
+    documents: int
+    blobs: int
+    manifest_recorded: bool
+
+
+def latest_snapshot_id(fs: StorageFilesystemFull, product_root: StorageUri) -> str | None:
+    """Return the id ``refs/latest.json`` names, or ``None`` without it, as a take reads it.
+
+    Reads only that ref, so a preflight refuses what `take_snapshot` would refuse.
+
+    Raises:
+        ControlPlaneCorruptionError: ``refs/latest.json`` does not parse or names no id.
+    """
+    return _read_latest_id(fs, metadata_root(product_root))
+
+
+def plan_snapshot(
+    fs: StorageFilesystemFull,
+    product_root: StorageUri,
+    documents: Sequence[MetadataDocument],
+    *,
+    records: Iterable[SnapshotRecord],
+) -> SnapshotPlan:
+    """Plan a snapshot of *documents* against the recorded *records*; write nothing.
+
+    *documents* are the captured documents, as `captured_documents` returns them.
+
+    Raises:
+        ControlPlaneCorruptionError: ``refs/latest.json`` does not parse or names no id.
+    """
+    parent = latest_snapshot_id(fs, product_root)
+    manifest_id = sha256_hex(manifest_bytes(build_manifest(documents)))
+    return SnapshotPlan(
+        parent=parent,
+        manifest=manifest_id,
+        documents=len(documents),
+        blobs=len({document.digest for document in documents}),
+        manifest_recorded=any(record.manifest == manifest_id for record in records),
     )
 
 

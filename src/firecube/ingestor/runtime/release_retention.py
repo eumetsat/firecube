@@ -275,6 +275,82 @@ def _refuse_unrestorable_deletes(
     )
 
 
+def _backup_scope(
+    manager: ChunkManager,
+    product: str,
+    digests: Mapping[str, str],
+    *,
+    version: str,
+    archive_full: bool,
+) -> tuple[StoredRelease | None, list[str], list[str]]:
+    """Return the previous backup's release, the keys to archive and the deleted keys.
+
+    The previous release is `None` for a full backup.
+
+    Raises:
+        ReleaseRefusedError: The product has no `zarr.json`, or an incremental backup
+            would delete a key a backup chain restore refuses.
+    """
+    current = manager.current_release(product)
+    previous = current if not archive_full and _is_zip_retention(current) else None
+    if "zarr.json" not in digests:
+        raise ReleaseRefusedError(
+            Message(
+                "The product {product} has no Zarr v3 root document zarr.json, so it "
+                "cannot be retained in a zip archive.",
+                product=product,
+            ),
+            version=version,
+        )
+    if previous is None:
+        return None, sorted(digests), []
+    previous_inventory = manager.read_inventory(product, retention_text(previous, "inventory"))
+    previous_digests = {item.key: item.digest for item in previous_inventory.objects}
+    keys = sorted(
+        key
+        for key, digest in digests.items()
+        if previous_digests.get(key) != digest or _is_metadata_document(key)
+    )
+    deleted_keys = sorted(set(previous_digests).difference(digests))
+    _refuse_unrestorable_deletes(deleted_keys, previous.version, version=version)
+    return previous, keys, deleted_keys
+
+
+def plan_zip_retention(
+    *,
+    manager: ChunkManager,
+    product: str,
+    version: str,
+    archive: StorageUri,
+    archive_full: bool,
+) -> dict[str, Any]:
+    """Return the retention a zip archive of release `version` would record; write nothing.
+
+    The plan reads and hashes every object of the product now. The run archives the
+    documents and records it writes too, so its counts can be higher.
+
+    Raises:
+        ReleaseRefusedError: As `zip_retention` and its step refuse, before any write.
+    """
+    archive_path = require_local_archive(archive, version=version)
+    refuse_existing_archive(archive_path, version=version)
+    inventory = manager.take_digest_inventory(product)
+    digests = {item.key: str(item.digest) for item in inventory.objects}
+    previous, keys, deleted_keys = _backup_scope(
+        manager, product, digests, version=version, archive_full=archive_full
+    )
+    return {
+        "kind": RETENTION_KIND_ZIP,
+        "uri": archive.to_str(),
+        "format": "zip",
+        "mode": MODE_FULL if previous is None else MODE_INCREMENTAL,
+        "previous_release": None if previous is None else previous.version,
+        "chain_length": 1 if previous is None else _chain_length(previous) + 1,
+        "deleted_key_count": len(deleted_keys),
+        "object_count": len(keys),
+    }
+
+
 def zip_retention(
     *,
     session: StorageSession,
@@ -310,34 +386,11 @@ def zip_retention(
         from firecube.ingestor.runtime.archive import create_archive
 
         refuse_existing_archive(archive_path, version=version)
-        current = manager.current_release(product)
-        previous = current if not archive_full and _is_zip_retention(current) else None
         inventory = manager.take_digest_inventory(product)
         digests = {item.key: str(item.digest) for item in inventory.objects}
-        if "zarr.json" not in digests:
-            raise ReleaseRefusedError(
-                Message(
-                    "The product {product} has no Zarr v3 root document zarr.json, so it "
-                    "cannot be retained in a zip archive.",
-                    product=product,
-                ),
-                version=version,
-            )
-        if previous is None:
-            keys = sorted(digests)
-            deleted_keys: list[str] = []
-        else:
-            previous_inventory = manager.read_inventory(
-                product, retention_text(previous, "inventory")
-            )
-            previous_digests = {item.key: item.digest for item in previous_inventory.objects}
-            keys = sorted(
-                key
-                for key, digest in digests.items()
-                if previous_digests.get(key) != digest or _is_metadata_document(key)
-            )
-            deleted_keys = sorted(set(previous_digests).difference(digests))
-            _refuse_unrestorable_deletes(deleted_keys, previous.version, version=version)
+        previous, keys, deleted_keys = _backup_scope(
+            manager, product, digests, version=version, archive_full=archive_full
+        )
         inventory_id = manager.write_inventory(product, inventory)
         report(f"inventory {inventory_id} lists {len(digests)} objects")
         mode = MODE_FULL if previous is None else MODE_INCREMENTAL

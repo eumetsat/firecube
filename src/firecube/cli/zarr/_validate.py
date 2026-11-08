@@ -46,9 +46,10 @@ from firecube.core.zarr.validation import validate_group_with_fs
     epilog="""\b
 Examples:
   # validate a product group
-  firecube zarr validate -t <target> -g <group>
+  firecube zarr validate --target file:///data/products/MY_PRODUCT.zarr --group <group>
   # validate with a custom config file (config-file precedes subcommand)
-  firecube --config-file /path/config.toml zarr validate -t <target> -g <group>
+  firecube --config-file /data/config/firecube.toml zarr validate \\
+      --target file:///data/products/MY_PRODUCT.zarr --group <group>
 See also: firecube chunks list, firecube parquet validate
 """,
 )
@@ -164,9 +165,8 @@ def validate(
     context_settings={"help_option_names": ["-h", "--help"]},
     epilog="""\b
 Examples:
+  # compare two stores
   firecube zarr compare file:///data/a.zarr file:///data/b.zarr
-  firecube zarr compare file:///data/a.zarr file:///data/b.zarr \\
-      --storage-type local --storage-driver fsspec
 """,
 )
 @click.argument("a_uri")

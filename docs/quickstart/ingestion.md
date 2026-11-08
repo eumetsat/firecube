@@ -21,7 +21,6 @@ firecube ingest quickstart_plugin \
   --product-name quickstart_plugin \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged
 ```
 
@@ -46,7 +45,7 @@ Inspect the product's control-plane records using the full product URI:
 
 ```bash
 firecube chunks list \
-  --product-name "file://${PWD}/sample_data/quickstart_plugin_out.zarr"
+  --target "file://${PWD}/sample_data/quickstart_plugin_out.zarr"
 ```
 
 The result should contain at least one `span` record for the completed run.

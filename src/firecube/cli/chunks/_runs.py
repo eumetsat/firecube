@@ -102,15 +102,15 @@ def _echo_abandon_sweep_result(
     epilog="""\b
 Examples:
   # list all runs for a product
-  firecube chunks runs list -t file:///data/products/MY_PRODUCT.zarr
+  firecube chunks runs list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # filter by status
-  firecube chunks runs list -t file:///data/products/MY_PRODUCT.zarr --status started
+  firecube chunks runs list --target file:///data/products/MY_PRODUCT.zarr --status started
 
 \b
   # output as JSON
-  firecube chunks runs list -t file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks runs list --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks runs abandon, firecube chunks list
 """,
@@ -190,20 +190,20 @@ def list_cmd(
     epilog="""\b
 Examples:
   # preview what would be abandoned
-  firecube chunks runs abandon -t file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "crashed" --dry-run
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "crashed" --dry-run
 
 \b
   # abandon a stuck run in non-interactive context
-  firecube chunks runs abandon -t file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "process crashed" \\
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --reason "process crashed" \\
       --yes-i-really-mean-it
 
 \b
   # preview every stale non-terminal run (bulk mode never prompts)
-  firecube chunks runs abandon -t file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash"
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash"
 
 \b
   # abandon every stale non-terminal run
-  firecube chunks runs abandon -t file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash" \\
+  firecube chunks runs abandon --target file:///data/products/MY_PRODUCT.zarr --all-stale --reason "cluster crash" \\
       --yes-i-really-mean-it
 
 See also: firecube chunks runs list, firecube chunks list

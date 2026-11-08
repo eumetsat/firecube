@@ -25,8 +25,8 @@ import click
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
 from firecube.cli._product import recorded_identity, resolve_product_identity
-from firecube.cli._shared_options import format_option as shared_format_option
 from firecube.cli._shared_options import (
+    format_option,
     product_name_option,
     storage_driver_option,
     storage_type_option,
@@ -39,11 +39,6 @@ from firecube.core.storage.session import StorageSession
 
 SET_ATTRS_ID = "firecube:set-attrs"
 """The built-in step that the ``--set``, ``--remove`` and ``--node`` flags belong to."""
-
-
-def format_option(func: Any) -> Any:
-    """Add the shared ``-f/--format`` option with the table and json choices."""
-    return shared_format_option(("table", "json"))(func)
 
 
 def echo_json(payload: Any) -> None:
@@ -77,7 +72,7 @@ def migrate_options(tier: Literal["write", "inspect"], *, product_name: bool = F
     """
 
     def decorator(func: Any) -> Any:
-        func = format_option(func)
+        func = format_option(("table", "json"))(func)
         func = storage_driver_option(required=False)(func)
         func = storage_type_option(
             required=False,

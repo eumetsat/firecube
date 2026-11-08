@@ -22,23 +22,23 @@ not delete the earlier generations.
 
 ## Check The Cache Status
 
-Pass the full URI through `--product-name` to bind the command directly to the
+Pass the product URI through `--target` to bind the command directly to the
 product without a storage configuration.
 
 ```bash
-firecube chunks compact status --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks compact status --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output when no cache exists:
 
 ```text
-No compact cache found for MY_PRODUCT.zarr
+No compact cache found for MY_PRODUCT
 ```
 
 Expected output after a rebuild resembles:
 
 ```text
-Product:    MY_PRODUCT.zarr
+Product:    MY_PRODUCT
 Age:        3m
 Cutoff:     2026-06-03T15:54:27.100797+00:00
 Generation: 1780502101660654725
@@ -52,7 +52,7 @@ If automation must branch on `exists`, use JSON:
 
 ```bash
 firecube chunks compact status \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --format json
 ```
 
@@ -75,33 +75,33 @@ Preview the rebuild:
 
 ```bash
 firecube chunks compact rebuild \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --dry-run
 ```
 
 Expected output:
 
 ```text
-[dry-run] Would rebuild compact cache for product 'MY_PRODUCT.zarr'
+[dry-run] Would rebuild compact cache for product 'MY_PRODUCT'
 ```
 
 Rebuild the cache:
 
 ```bash
-firecube chunks compact rebuild --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks compact rebuild --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
 
 ```text
-Rebuilt compact cache for MY_PRODUCT.zarr: generation=1780502101660654725 records=4
+Rebuilt compact cache for MY_PRODUCT: generation=1780502101660654725 records=4
 ```
 
 If you need the path of the new generation, use JSON:
 
 ```bash
 firecube chunks compact rebuild \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --format json
 ```
 
@@ -109,7 +109,7 @@ Expected output resembles:
 
 ```json
 {
-  "product": "MY_PRODUCT.zarr",
+  "product": "MY_PRODUCT",
   "generation": "1780502101660654725",
   "records": 4,
   "snapshot_path": "file:///data/products/MY_PRODUCT.zarr/.firecube/compact/compact-1780502101660654725.jsonl",

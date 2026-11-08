@@ -152,7 +152,6 @@ firecube ingest my_plugin \
   --product-name my_product \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct
 ```
 

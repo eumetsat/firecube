@@ -242,7 +242,6 @@ The resolved index lists the same dates and does not open the arrays:
 ```bash
 firecube zarr index show \
   --target file:///tmp/my_product.zarr \
-  --product-name my_product \
   --derived
 ```
 
@@ -331,8 +330,8 @@ Compare the calendar, the count and the two dates with the example. Xarray choos
 | Running `firecube ingest` into a target that is not preallocated | Run `firecube zarr preallocate` first. |
 | Declaring `TimeAxis.observed` with a calendar | Use `TimeAxis.grid` with dates on the grid. |
 | Preallocating again after you change the epoch, `units` or calendar | Firecube refuses and writes no data. Keep the declaration, or preallocate a new target. |
-| Running `firecube archive create --source file:///tmp/my_product.zarr --archive file:///tmp/my_product.tgm` (short flags `-s` and `-a`) on a calendar cube | Without the tensogram extra, the command exits with an error. Install it with `uv pip install 'firecube[tensogram]'`. With the extra, the default `tensogram` format cannot carry `units` and `calendar`, so Firecube refuses the cube. Add `--archive-format zip` and use a `.zip` archive path. A zip archive keeps the whole store, and `firecube archive restore --archive <zip> --target <uri>` returns the coordinate with its `units` and `calendar`. Restoring a `.tgm` archive does not restore the CF `units` and `calendar` of a time coordinate. |
-| Running `firecube chunks list --product-name file:///tmp/my_product.zarr --time-range 2049-02-01:2049-03-01` (short flag `-n`) on a `360_day` store, or the same filter with `firecube chunks delete` | Firecube reads the recorded span bounds as Gregorian dates. If a bound is not a Gregorian date, such as 30 February, the command exits with an error that names the span. `delete` removes nothing. |
+| Running `firecube archive create --target file:///tmp/my_product.zarr --archive file:///tmp/my_product.tgm` (short flags `-t` and `-a`) on a calendar cube | Without the tensogram extra, the command exits with an error. Install it with `uv pip install 'firecube[tensogram]'`. With the extra, the default `tensogram` format cannot carry `units` and `calendar`, so Firecube refuses the cube. Add `--archive-format zip` and use a `.zip` archive path. A zip archive keeps the whole store, and `firecube archive restore --archive <zip> --target <uri>` returns the coordinate with its `units` and `calendar`. Restoring a `.tgm` archive does not restore the CF `units` and `calendar` of a time coordinate. |
+| Running `firecube chunks list --target file:///tmp/my_product.zarr --time-range 2049-02-01:2049-03-01` (short flag `-t`) on a `360_day` store, or the same filter with `firecube chunks delete` | Firecube reads the recorded span bounds as Gregorian dates. If a bound is not a Gregorian date, such as 30 February, the command exits with an error that names the span. `delete` removes nothing. |
 | Appending a Gregorian batch to a `360_day` store | The batch fails, Firecube records the run as failed and appends nothing. Build the batch on the calendar of the store. |
 
 ## Next Steps

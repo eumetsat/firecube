@@ -51,7 +51,6 @@ firecube ingest <plugin> \
   --product-name MY_PRODUCT \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct \
   --option no_progress=true
 ```

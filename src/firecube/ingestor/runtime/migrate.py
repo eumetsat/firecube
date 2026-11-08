@@ -361,12 +361,13 @@ class AdoptionResult:
     Adopting a Zarr format 2 store also sends one warning, because Firecube cannot append to it.
 
     Attributes:
-        outcome: `"adopted"`, or `"already-product"` when the store had a control plane.
+        outcome: `"adopted"`, `"already-product"` when the store had a control plane, or
+            `"dry-run"` when a preview found a store it would adopt.
         run_id: The recorded `adopt` run, or `None`.
         zarr_format: The format of the store, `2` or `3`, or `None` when nothing was adopted.
     """
 
-    outcome: Literal["adopted", "already-product"]
+    outcome: Literal["adopted", "already-product", "dry-run"]
     run_id: str | None
     zarr_format: int | None
 
@@ -1007,6 +1008,7 @@ def adopt_product(
     session: StorageSession,
     report: Callable[[str], None] = _ignore_line,
     warn: Callable[[str], None] = _ignore_line,
+    dry_run: bool = False,
 ) -> AdoptionResult:
     """Give a Zarr store that Firecube did not write a control plane, as one recorded `adopt` run.
 
@@ -1019,6 +1021,7 @@ def adopt_product(
         session: The storage session bound to the store.
         report: Receives the line that names the run.
         warn: Receives each warning line, "Warning: " included. A Zarr format 2 store gets one.
+        dry_run: Read the store and report the run it would record; write nothing.
 
     Returns:
         The outcome, the run id and the store's Zarr format.
@@ -1033,6 +1036,13 @@ def adopt_product(
             report(f"product {product} already has a control plane; nothing to adopt")
             return AdoptionResult(outcome="already-product", run_id=None, zarr_format=None)
         documents = manager.enumerate_metadata_documents(product)
+        if dry_run:
+            zarr_format = _zarr_format({document.path: document for document in documents})
+            report(
+                f"would adopt the store as product {product} in one adopt run "
+                f"(Zarr format {zarr_format}); nothing is written"
+            )
+            return AdoptionResult(outcome="dry-run", run_id=None, zarr_format=zarr_format)
         run_id, zarr_format = _adopt(manager, product, documents, report, warn)
         return AdoptionResult(outcome="adopted", run_id=run_id, zarr_format=zarr_format)
     finally:

@@ -7,6 +7,7 @@ all symbols from `firecube.ingestor.api`.
 {{ render_api_summary("firecube.ingestor.api", [
     "PluginContext",
     "StorageContext",
+    "ExecutionParams",
     "PipelineBatch",
     "PipelineRunState",
     "IngestResult",
@@ -41,6 +42,12 @@ all symbols from `firecube.ingestor.api`.
 ## StorageContext
 
 ::: firecube.ingestor.api.StorageContext
+    options:
+        show_bases: false
+
+## ExecutionParams
+
+::: firecube.ingestor.api.ExecutionParams
     options:
         show_bases: false
 

@@ -20,7 +20,7 @@ runs and clearing claims one at a time.
 PRODUCT_NAME="MY_PRODUCT"
 ```
 
-Pass the full URI through `--product-name` for every ChunkManager command on
+Pass the product URI through `--target` for every ChunkManager command on
 this page. This binds the command directly to the product without a storage
 configuration.
 
@@ -37,7 +37,7 @@ List runs that are still in a non-terminal state (`started`):
 
 ```bash
 firecube chunks runs list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --status started
 ```
 
@@ -53,7 +53,7 @@ run-20260710-def456                  started    stale    1     1
 List all active write claims for the product:
 
 ```bash
-firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks claims list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output when claims are blocking:
@@ -61,9 +61,9 @@ Expected output when claims are blocking:
 ```text
 Product                  State    Owner                    Domain
 --------------------------------------------------------------------------------------------
-MY_PRODUCT.zarr          stale    run-20260710-abc123:F001 MY_PRODUCT.zarr:zarr_region:F001
-MY_PRODUCT.zarr          stale    run-20260710-abc123:F002 MY_PRODUCT.zarr:zarr_region:F002
-MY_PRODUCT.zarr          stale    run-20260710-def456:F003 MY_PRODUCT.zarr:zarr_region:F003
+MY_PRODUCT               stale    run-20260710-abc123:F001 MY_PRODUCT:zarr_region:F001
+MY_PRODUCT               stale    run-20260710-abc123:F002 MY_PRODUCT:zarr_region:F002
+MY_PRODUCT               stale    run-20260710-def456:F003 MY_PRODUCT:zarr_region:F003
 ```
 
 If both lists are empty, the product is already clean. Skip to
@@ -76,7 +76,7 @@ it would release:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --all-stale \
   --reason "cluster-crash" \
   --dry-run
@@ -85,12 +85,12 @@ firecube chunks runs abandon \
 Expected output:
 
 ```text
-[dry-run] Would abandon stale runs for MY_PRODUCT.zarr:
+[dry-run] Would abandon stale runs for MY_PRODUCT:
   - run-20260710-abc123
   - run-20260710-def456
-  Would release claim MY_PRODUCT.zarr:zarr_region:F001
-  Would release claim MY_PRODUCT.zarr:zarr_region:F002
-  Would release claim MY_PRODUCT.zarr:zarr_region:F003
+  Would release claim MY_PRODUCT:zarr_region:F001
+  Would release claim MY_PRODUCT:zarr_region:F002
+  Would release claim MY_PRODUCT:zarr_region:F003
 ```
 
 A `Would release claim` line names a stale claim that the committed sweep
@@ -99,7 +99,7 @@ keeps. The sweep keeps a claim that is fresh or whose owner is ambiguous. The
 dry run judges each claim by its age at the time of the listing:
 
 ```text
-  Would leave claim MY_PRODUCT.zarr:zarr_region:F002
+  Would leave claim MY_PRODUCT:zarr_region:F002
 ```
 
 If the output matches the runs you saw in Step 1, proceed to Step 3. If a run
@@ -113,7 +113,7 @@ Run a dry-run to see which claims `--all-stale` would clear:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --all-stale \
   --dry-run
 ```
@@ -122,9 +122,9 @@ Expected output:
 
 ```text
 Previewed stale claims:
-  - MY_PRODUCT.zarr:zarr_region:F001
-  - MY_PRODUCT.zarr:zarr_region:F002
-  - MY_PRODUCT.zarr:zarr_region:F003
+  - MY_PRODUCT:zarr_region:F001
+  - MY_PRODUCT:zarr_region:F002
+  - MY_PRODUCT:zarr_region:F003
 Dry run only; no claims cleared.
 Skipped fresh claims: 0
 Skipped missing claims: 0
@@ -143,7 +143,7 @@ The sweep keeps any claim whose owner changed since it listed the claim.
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --all-stale \
   --reason "cluster-crash" \
   --yes-i-really-mean-it
@@ -152,13 +152,13 @@ firecube chunks runs abandon \
 Expected output:
 
 ```text
-Abandoned stale runs for MY_PRODUCT.zarr:
+Abandoned stale runs for MY_PRODUCT:
   Abandoned:
     - run-20260710-abc123
     - run-20260710-def456
-  Released claim MY_PRODUCT.zarr:zarr_region:F001
-  Released claim MY_PRODUCT.zarr:zarr_region:F002
-  Released claim MY_PRODUCT.zarr:zarr_region:F003
+  Released claim MY_PRODUCT:zarr_region:F001
+  Released claim MY_PRODUCT:zarr_region:F002
+  Released claim MY_PRODUCT:zarr_region:F003
 ```
 
 A `Left claim` line marks a claim that the sweep kept. Do not clear it
@@ -168,7 +168,7 @@ Clear the remaining stale claims:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --all-stale \
   --yes-i-really-mean-it
 ```
@@ -186,9 +186,9 @@ Verify the product is clean:
 
 ```bash
 firecube chunks runs list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --status started
-firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks claims list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
@@ -204,25 +204,25 @@ After a bulk sweep, rebuild the compact cache to restore fast query
 performance:
 
 ```bash
-firecube chunks compact rebuild --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks compact rebuild --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output:
 
 ```text
-Rebuilt compact cache for MY_PRODUCT.zarr: generation=<n> records=<n>
+Rebuilt compact cache for MY_PRODUCT: generation=<n> records=<n>
 ```
 
 Preview first if you want to confirm what the rebuild will touch:
 
 ```bash
-firecube chunks compact rebuild --product-name "file:///data/products/MY_PRODUCT.zarr" --dry-run
+firecube chunks compact rebuild --target "file:///data/products/MY_PRODUCT.zarr" --dry-run
 ```
 
 Expected output:
 
 ```text
-[dry-run] Would rebuild compact cache for product 'MY_PRODUCT.zarr'
+[dry-run] Would rebuild compact cache for product 'MY_PRODUCT'
 ```
 
 ## Claims the Sweep Leaves
@@ -231,7 +231,7 @@ The sweep prints `Left claim` for a claim that it kept. The dry run prints
 `Would leave claim` for the same claim.
 
 ```text
-  Left claim MY_PRODUCT.zarr:zarr_region:F002
+  Left claim MY_PRODUCT:zarr_region:F002
 ```
 
 The sweep keeps a claim for one of these reasons:
@@ -254,7 +254,7 @@ Release every claim of one run, fresh or stale:
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id <run id> \
   --reason "<text>" \
   --yes-i-really-mean-it
@@ -264,7 +264,7 @@ Release one claim:
 
 ```bash
 firecube chunks claims clear \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --domain <domain> \
   --force \
   --yes-i-really-mean-it
@@ -302,7 +302,6 @@ firecube ingest <plugin> \
   --product-name "$PRODUCT_NAME" \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged \
   --option resume_existing=true
 ```

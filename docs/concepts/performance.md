@@ -110,7 +110,7 @@ budget when you need a bounded check:
 
 ```bash
 firecube zarr validate \
-  --product file:///data/products/MY_PRODUCT.zarr \
+  --target file:///data/products/MY_PRODUCT.zarr \
   --group MY_GROUP \
   --max-chunks 10000 \
   --on-timeout warn
@@ -189,7 +189,6 @@ For CPU-heavy source parsing:
 For tabular Parquet output:
 
 ```bash
---output-format parquet \
 --option pipeline_workers=4 \
 --option pipeline_batch_size=50
 ```

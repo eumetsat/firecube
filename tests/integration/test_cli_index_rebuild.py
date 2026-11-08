@@ -170,6 +170,23 @@ def test_rebuild_help_lists_required_flags() -> None:
     assert "--product-name" in result.output
 
 
+@pytest.mark.contract
+def test_rebuild_dry_run_writes_no_record_run_or_claim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _register_plugins(monkeypatch)
+    cube = tmp_path / "dry_cube"
+    zarr.open_group(str(cube), mode="w", zarr_format=3).create_array("a", shape=(3,), dtype="f8")
+    before = {p: p.read_bytes() for p in cube.rglob("*") if p.is_file()}
+
+    result = CliRunner().invoke(cli, [*_args(cube), "--dry-run"])
+
+    assert result.exit_code == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert not (cube / ".firecube").exists()
+    assert {p: p.read_bytes() for p in cube.rglob("*") if p.is_file()} == before
+    assert _non_terminal_runs(cube) == []
+
+
 def test_rebuild_fresh_cube_lifecycle(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, subtests: pytest.Subtests
 ) -> None:

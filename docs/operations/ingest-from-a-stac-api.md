@@ -123,7 +123,7 @@ the path with the directory of your product.
 To read the status of the run, list the runs of the product:
 
 ```bash
-firecube chunks runs list --product-name file:///data/products/dem.zarr
+firecube chunks runs list --target file:///data/products/dem.zarr
 ```
 
 Expected result: one run with status `complete`. Open the product with the

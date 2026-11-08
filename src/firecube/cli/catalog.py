@@ -59,11 +59,13 @@ def catalog() -> None:
     epilog="""\b
 Examples:
   # generate an Intake catalog for a product
-  firecube catalog intake <plugin> -t <target> -o <path>/catalog.yaml --collection-id <id>
+  firecube catalog intake <plugin> --target file:///data/products/MY_PRODUCT.zarr \\
+      --output file:///data/catalogs/catalog.yaml --collection-id <id>
 
 \b
   # generate without storage_options (for local or public stores)
-  firecube catalog intake <plugin> -t <target> -o <path>/catalog.yaml --collection-id <id> --no-storage-options
+  firecube catalog intake <plugin> --target file:///data/products/MY_PRODUCT.zarr \\
+      --output file:///data/catalogs/catalog.yaml --collection-id <id> --no-storage-options
 
 See also: firecube plugins list, firecube zarr validate
 """,

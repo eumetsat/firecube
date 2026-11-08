@@ -5,22 +5,22 @@ state.
 
 ## List Records
 
-Pass the full URI through `--product-name` for every command on this page. This
+Pass the product URI through `--target` for every command on this page. This
 binds the command directly to the product without a storage configuration.
 
 List the records Firecube tracks for a product:
 
 ```bash
-firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
 
 ```text
-Product         Key                                                          Type   Size (MB)  Date                Meta
------------------------------------------------------------------------------------------------------------------------------------------------------------
-MY_PRODUCT.zarr span_direct_zarr_capable_test_plugin-host-01ad6e032387414... span   0.0        2026-11-06 20:45:40 {"plugin":"direct_zarr_capable_test_p...
-MY_PRODUCT.zarr span_direct_zarr_capable_test_plugin-host-01ad6e032387414... span   0.0        2026-11-06 20:45:39 {"plugin":"direct_zarr_capable_test_p...
+Product    Key                                                          Type   Size (MB)  Date                Meta
+------------------------------------------------------------------------------------------------------------------------------------------------------
+MY_PRODUCT span_direct_zarr_capable_test_plugin-host-01ad6e032387414... span   0.0        2026-11-06 20:45:40 {"plugin":"direct_zarr_capable_test_p...
+MY_PRODUCT span_direct_zarr_capable_test_plugin-host-01ad6e032387414... span   0.0        2026-11-06 20:45:39 {"plugin":"direct_zarr_capable_test_p...
 
 Summary: 2 chunks, 0.0 MB total
 ```
@@ -28,23 +28,23 @@ Summary: 2 chunks, 0.0 MB total
 Include span coverage:
 
 ```bash
-firecube chunks list --product-name "file:///data/products/MY_PRODUCT.zarr" --include-span
+firecube chunks list --target "file:///data/products/MY_PRODUCT.zarr" --include-span
 ```
 
 Expected output adds a `Span` column:
 
 ```text
-Product         Key                                                          Type   Size (MB)  Date                Meta                                     Span
----------------------------------------------------------------------------------------------------------------------------------------------------------------
-MY_PRODUCT.zarr span_direct_zarr_capable_test_plugin-host-01ad6e032387414... span   0.0        2026-11-06 20:45:40 {"plugin":"direct_zarr_capable_test_p... 100
-MY_PRODUCT.zarr span_direct_zarr_capable_test_plugin-host-01ad6e032387414... span   0.0        2026-11-06 20:45:39 {"plugin":"direct_zarr_capable_test_p... 100
+Product    Key                                                          Type   Size (MB)  Date                Meta                                     Span
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+MY_PRODUCT span_direct_zarr_capable_test_plugin-host-01ad6e032387414... span   0.0        2026-11-06 20:45:40 {"plugin":"direct_zarr_capable_test_p... 100
+MY_PRODUCT span_direct_zarr_capable_test_plugin-host-01ad6e032387414... span   0.0        2026-11-06 20:45:39 {"plugin":"direct_zarr_capable_test_p... 100
 ```
 
 Use JSON for scripts:
 
 ```bash
 firecube chunks list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --type span \
   --format json
 ```
@@ -54,7 +54,7 @@ Expected output includes the product, key, type, size, timestamp, manifest URI, 
 ```json
 [
   {
-    "product": "MY_PRODUCT.zarr",
+    "product": "MY_PRODUCT",
     "key": "span_direct_zarr_capable_test_plugin-host-01ad6e032387414aba42a352d9672c30_direct_zarr_capable_test_plugin_batch_0001_data",
     "type": "span",
     "size": 0,
@@ -70,7 +70,7 @@ Expected output includes the product, key, type, size, timestamp, manifest URI, 
     }
   },
   {
-    "product": "MY_PRODUCT.zarr",
+    "product": "MY_PRODUCT",
     "key": "span_direct_zarr_capable_test_plugin-host-01ad6e032387414aba42a352d9672c30_direct_zarr_capable_test_plugin_batch_0000_data",
     "type": "span",
     "size": 0,
@@ -94,7 +94,7 @@ Use `--time-range` when span records include `time_min` and `time_max` metadata:
 
 ```bash
 firecube chunks list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --type span \
   --time-range 2024-03-15T00:00:00:2024-03-15T23:59:59
 ```
@@ -106,7 +106,7 @@ intersects the query window.
 
 ```bash
 firecube chunks runs list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr"
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Expected output resembles:
@@ -121,7 +121,7 @@ Filter by status:
 
 ```bash
 firecube chunks runs list \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --status complete \
   --format json
 ```
@@ -131,7 +131,7 @@ Expected output resembles:
 ```json
 [
   {
-    "product": "MY_PRODUCT.zarr",
+    "product": "MY_PRODUCT",
     "run_id": "direct_zarr_capable_test_plugin-host-01ad6e032387414aba42a352d9672c30",
     "status": "complete",
     "started_at": 1793994339.4308076,
@@ -151,7 +151,7 @@ Expected output resembles:
 ## List Claims
 
 ```bash
-firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks claims list --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 If no writer currently owns a write domain, expected output is:
@@ -165,25 +165,25 @@ When a claim exists, output resembles:
 ```text
 Product                  State    Owner                    Domain
 --------------------------------------------------------------------------------------------
-MY_PRODUCT.zarr          active   run-123:F024             MY_PRODUCT:zarr_region:F024
+MY_PRODUCT               active   run-123:F024             MY_PRODUCT:zarr_region:F024
 ```
 
 ## Check The Compact Cache Status
 
 ```bash
-firecube chunks compact status --product-name "file:///data/products/MY_PRODUCT.zarr"
+firecube chunks compact status --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 If no compact cache exists:
 
 ```text
-No compact cache found for MY_PRODUCT.zarr
+No compact cache found for MY_PRODUCT
 ```
 
 After a rebuild, expected output resembles:
 
 ```text
-Product:    MY_PRODUCT.zarr
+Product:    MY_PRODUCT
 Age:        33s
 Cutoff:     2026-11-06T19:45:40.069527+00:00
 Generation: 1793994372536316463
@@ -194,7 +194,7 @@ Use JSON for automation:
 
 ```bash
 firecube chunks compact status \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --format json
 ```
 

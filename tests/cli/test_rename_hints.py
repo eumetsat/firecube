@@ -24,7 +24,7 @@ from firecube.cli.main import cli
 
 
 def test_renamed_flags_show_replacement_hint(subtests) -> None:
-    tgt = ("--target (-t)", "product URI with --target")
+    tgt = ("Use --target (-t) instead", "product URI with --target")
     out = ("Leave it out", "records the product label")
     rows = {
         "ingest_source": ("ingest cli_test_plugin --source /d", "--input-data (-i)", "strict-URI"),

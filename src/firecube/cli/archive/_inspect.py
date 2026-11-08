@@ -124,15 +124,15 @@ def _tgm_listing_payload(listing: Any) -> dict[str, Any]:
     epilog="""\b
 Examples:
   # show metadata for an archive
-  firecube archive info --archive file:///tmp/archive.tgm
+  firecube archive info --archive file:///data/archives/MY_PRODUCT.tgm
 
 \b
   # output metadata as JSON
-  firecube archive info --archive file:///tmp/archive.tgm -f json
+  firecube archive info --archive file:///data/archives/MY_PRODUCT.tgm -f json
 
 \b
   # show metadata for a zip archive
-  firecube archive info --archive file:///tmp/archive.zip
+  firecube archive info --archive file:///data/archives/MY_PRODUCT.zip
 
 See also: firecube archive list, firecube archive validate
 """,
@@ -175,15 +175,15 @@ def info(ctx: click.Context, archive: str, output_format: str) -> None:
     epilog="""\b
 Examples:
   # validate an archive and check exit code
-  firecube archive validate --archive file:///tmp/archive.tgm && echo "ok"
+  firecube archive validate --archive file:///data/archives/MY_PRODUCT.tgm && echo "ok"
 
 \b
   # quick structure-only validation
-  firecube archive validate --archive file:///tmp/archive.tgm --quick
+  firecube archive validate --archive file:///data/archives/MY_PRODUCT.tgm --quick
 
 \b
   # validate a zip archive
-  firecube archive validate --archive file:///tmp/archive.zip
+  firecube archive validate --archive file:///data/archives/MY_PRODUCT.zip
 
 See also: firecube archive info, firecube archive create
 """,
@@ -248,11 +248,11 @@ def validate(ctx: click.Context, archive: str, quick: bool, output_format: str) 
     epilog="""\b
 Examples:
   # list archive contents
-  firecube archive list --archive file:///tmp/archive.tgm
+  firecube archive list --archive file:///data/archives/MY_PRODUCT.tgm
 
 \b
   # list zip archive contents
-  firecube archive list --archive file:///tmp/archive.zip
+  firecube archive list --archive file:///data/archives/MY_PRODUCT.zip
 
 See also: firecube archive info, firecube archive restore
 """,

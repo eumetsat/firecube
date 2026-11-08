@@ -31,11 +31,6 @@ def _invoke_create(args: list[str]):
     return CliRunner().invoke(cli, ["archive", "create", *args])
 
 
-def test_create_names_target_for_the_removed_source_flag() -> None:
-    result = _invoke_create(["-s", "file:///tmp/x.zarr", "--archive", "file:///tmp/x.tgm"])
-    assert result.exit_code == 2 and "Use --target" in result.output
-
-
 def test_create_rejects_storage_type_source_uri_mismatch() -> None:
     result = _invoke_create(
         [

@@ -83,7 +83,7 @@ firecube zarr preallocate <plugin> \
   --dry-run
 ```
 
-The dry-run output is the same JSON format as `firecube zarr index show --json`.
+The dry-run output is the same JSON format as `firecube zarr index show -f json`.
 No Zarr arrays, claim files, or index records are created.
 
 ## 2. Plan Slot Ranges
@@ -165,7 +165,6 @@ firecube ingest <plugin> \
   --product-name my_product \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct \
   --option pipeline_workers=1 \
   --slot-start 0 \
@@ -189,7 +188,6 @@ firecube ingest <plugin> \
   --product-name my_product \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct \
   --option pipeline_workers=1 \
   --slot-start 144 \
@@ -219,7 +217,6 @@ firecube ingest <plugin> \
   --product-name my_product \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode direct \
   --option pipeline_workers=1 \
   --slot-group <group>
@@ -236,7 +233,7 @@ Inspect the runs after the workers finish:
 
 ```bash
 firecube chunks runs list \
-  --product-name file:///data/products/my_product.zarr
+  --target file:///data/products/my_product.zarr
 ```
 
 Every planned range should have a completed run. If a retry remains blocked,

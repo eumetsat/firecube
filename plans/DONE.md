@@ -1,5 +1,23 @@
 # Done
 
+## 2026-11-07 — One CLI surface: the recorded label, `-t/--target` and one exit-code table
+
+**Decision.** A store records its product label once, and every command that needs a label reads it back. `-t/--target` is the one spelling of the product URI. One error boundary at the root maps every exception to one exit-code table. The entries below cite the node IDs of the plan `2026-11-06-cli-surface-rework`.
+
+- Label record (n2, n3, 2026-11-06). The first control-plane write creates `.firecube/product.json`. Nothing rewrites it. A store without it takes the label that its run records and held claims agree on. A writer, a claim read or a facade method that names another label raises `ProductLabelMismatchError`. The CLI never infers the label from the URI path. Rules: `plans/DESIGN.md`.
+- Unlabelled stores (n7, n9, n12, 2026-11-07). Every command that reads the recorded label refuses a store that records none. The refusal exits 2 and names `migrate adopt`. `zarr slots` refuses a name that differs from the recorded label. `ingest`, `zarr preallocate` and `zarr slots` read the label before any work.
+- Exclusivity (n2, 2026-11-06). The exclusive maintenance claim binds the recorded label. A second spelling of the URI no longer bypasses it. `chunks delete` binds each store by its recorded label. A probe showed that a label different from the directory name deleted the object of a sibling store. The maintainer widened n7 to `deletion.py` on 2026-11-07.
+- Flags (n6 to n12, 2026-11-07). `-t/--target` replaces `-s` and `--source` on `archive create`, `-p` and `--product` on `advise`, `catalog intake`, `parquet` and `zarr validate`, and `-n` and `--product-name` on `chunks`. The rework drops `--output-format`, `--option dry_run` and `chunks --quiet`. A rename hint names the new spelling. `plans/STYLE.md` records that 1.0 drops the hints.
+- Exit codes (n4, n5, 2026-11-07). One table behind a root error boundary, with the root option `--debug`. Library `ValueError` refusals exit 70 until the sites raise `ConfigurationError` (`plans/TODO.md`).
+- Formats and dry runs (n19, n20, 2026-11-07). `-f/--format` takes `table`, `json` or `csv` on every command that has it. `--dry-run` exists on `ingest`, `snapshot take`, `migrate run`, `migrate adopt`, `release create`, `zarr multires`, `zarr index rebuild` and `zarr preallocate`. `migrate run`, `migrate adopt` and `release create` ask for confirmation on a terminal and need `--yes-i-really-mean-it` off a terminal.
+- Execution parameters (n14, 2026-11-07). `ExecutionParams` is public in `firecube.ingestor.api` and holds the write mode, the slot window and the dry run. The plugin class owns the output format. An SDK run without a write mode uses staged. The maintainer widened the scope to `src/firecube/cli/zarr/_common.py` on 2026-11-07.
+- `default_product_name` (n12, 2026-11-07). The engine consumes the key before plugin option validation (commit f9d0d4e). The ledger kept this change beyond the node because the precedence statement is untestable without it. Reverse with `git revert f9d0d4e`.
+- Fixed with the rework. The label-split bypass of exclusive maintenance, the exit codes of `parquet validate` and `zarr consolidate-time-coord`, and the refusal text for a half credential. `zarr compare` reports `attrs[<key>] <left> != <right>` and treats equal NaN attrs as equal.
+- Test budget (2026-11-07). The maintainer raised the test budget from 900 to 1700 added lines for this run. The count passed 1700 before the last tester nodes ended.
+- What stays open. The items under "Open after the CLI surface rework (2026-11-07)" in `plans/TODO.md`.
+
+---
+
 ## 2026-11-06 — Conditional claim transitions and the lost-claim stop
 
 **Decision.** Every transition of `FilesystemClaimService` is a compare-and-swap against the revision it last read, through the new `ConditionalWrite` capability of both storage drivers. A claim record has `state` (`held` or `released`), `incarnation` and `revision`. A run that loses a claim records the loss in a run-level latch, admits no further batch and records `failed` with `ClaimLostError`. The decisions of 2026-11-05 and the later decisions of the maintainer on 2026-11-06 govern it.

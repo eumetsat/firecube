@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, cast
 
 import pyarrow as pa
 import pytest
@@ -31,6 +32,7 @@ from direct_zarr_capable_test_plugin import DirectZarrCapableTestIngestor
 
 from firecube.cli.main import cli
 from firecube.core.controlplane import ChunkManager
+from firecube.core.controlplane.types import WriteDomain
 from firecube.ingestor.api import GenericParquetIngestor
 from firecube.ingestor.registry import loader
 from tests.helpers.storage import make_test_binding
@@ -176,7 +178,7 @@ class _OtherCadence(DirectZarrCapableTestIngestor):
 
     def index_spec(self, ctx):
         spec = super().index_spec(ctx)
-        return dataclasses.replace(spec, groups={"data": dataclasses.replace(spec.groups["data"], cadence_s=2)})  # fmt: skip
+        return dataclasses.replace(spec, groups={"data": dataclasses.replace(cast(Any, spec.groups["data"]), cadence_s=2)})  # fmt: skip
 
 
 def _ingest(root, plugin, *extra, dry=True, driver="fsspec"):
@@ -251,3 +253,37 @@ def test_dry_run_exits_1_and_names_the_blocking_check(tmp_path, monkeypatch, blo
     assert result.exit_code == 1, result.output
     assert manifest["plan"]["blocked"] == [blocker] and manifest["plan"][blocker]["reason"]
     assert _tree(tmp_path / "t.zarr") == before
+
+
+@pytest.mark.parametrize("driver", ["fsspec", "obstore"])
+@pytest.mark.parametrize("stale", [False, True], ids=["live", "stale"])
+def test_dry_run_refuses_a_held_fresh_output_claim_the_real_run_refuses(tmp_path, monkeypatch, driver, stale):  # fmt: skip
+    monkeypatch.setitem(loader.AVAILABLE_INGESTORS, _Parquet.name, _Parquet)
+    label = _Parquet.PRODUCT_NAME
+    binding = make_test_binding(tmp_path, product="t.zarr", label=label, driver=driver, format="parquet")  # fmt: skip
+    manager = ChunkManager(binding=binding, workspace=tmp_path / "ws")
+    domain = WriteDomain(product=label, category="fresh_output", name="product")
+    handle = manager.acquire_claim(product=label, domain=domain, owner_id="peer")
+    if stale:  # age the heartbeat so the claim reads as stale
+        path = Path(handle.info.claim_path.removeprefix("file://"))
+        record = json.loads(path.read_bytes())
+        record["last_heartbeat_at"] = record["acquired_at"] - 100000
+        path.write_bytes(json.dumps(record, separators=(",", ":")).encode())
+        aged = manager.repo.read_claim_by_domain(product=label, domain=domain.identifier)
+        assert aged is not None and aged.stale
+    before = _tree(tmp_path)
+    result, manifest = _ingest(tmp_path, _Parquet.name, *RESUME, driver=driver)
+    reason = manifest["plan"]["fresh_output"]["reason"]
+    assert result.exit_code == 1, result.output
+    assert manifest["plan"]["blocked"] == ["fresh_output"], manifest["plan"]
+    assert "fresh_output:product" in reason and "peer" in reason and ("stale" if stale else "live") in reason  # fmt: skip
+    assert _tree(tmp_path) == before, "preview changed the input, target or .firecube"
+    real = _ingest_real_exit(tmp_path, driver)
+    assert real.exit_code == 1 and "fresh_output:product" in real.output, real.output
+    manager.close()
+
+
+def _ingest_real_exit(root, driver):
+    args = ["ingest", _Parquet.name, "--input-data", root.as_uri(), "--write-mode", "direct"]
+    args += ["--target", (root / "t.zarr").as_uri(), "--storage-type", "local", "--option", "no_progress=true", "--storage-driver", driver, *RESUME]  # fmt: skip
+    return CliRunner().invoke(cli, args)

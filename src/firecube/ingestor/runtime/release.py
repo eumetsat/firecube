@@ -29,7 +29,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 
 from firecube.core.controlplane.types import (
     INVENTORY_KIND_S3_VERSIONS,
@@ -39,16 +39,18 @@ from firecube.core.controlplane.types import (
     RELEASE_ATTR,
     canonical_json_bytes,
 )
-from firecube.core.errors import FirecubeError, Message, Param
+from firecube.core.errors import ExclusiveMaintenanceRefusedError, FirecubeError, Message, Param
 from firecube.core.zarr.metadata_documents import ABSENT
 from firecube.ingestor.contracts.migration import AttributePatch, ReleaseRecord
 
 if TYPE_CHECKING:
     from firecube.core.controlplane.manager import ChunkManager
     from firecube.core.controlplane.releases import ReleaseVerification, StoredRelease
+    from firecube.core.filesystem import StorageFilesystemFull
     from firecube.core.storage.session import StorageSession
     from firecube.core.storage.uri import StorageUri
     from firecube.core.zarr.metadata_documents import MetadataDocument
+    from firecube.ingestor.runtime.migrate import PlannedDocument
 
 _RUN_PREFIX: Final = "release-"
 _SNAPSHOT_TRIGGER: Final = "release-create"
@@ -116,6 +118,29 @@ class ReleaseCreateResult:
     run_id: str | None
     release: ReleaseRecord
     documents: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ReleasePlan:
+    """What a release create would do, from live reads; the preview wrote nothing.
+
+    Attributes:
+        version: The release version.
+        outcome: `"create"` when it would write the record, `"resume"` when it would make
+            an existing record current, `"already-current"` when nothing is left to do.
+        previous: The version the record names as previous, or `None` for the first.
+        note: The note the record would keep.
+        documents: The root documents the stamp would write, in write order.
+        retention: The retention the record would carry, without the ids and digests
+            only the run can know, or `None` when it retains nothing.
+    """
+
+    version: str
+    outcome: Literal["create", "resume", "already-current"]
+    previous: str | None
+    note: str | None
+    documents: tuple[str, ...]
+    retention: Mapping[str, Any] | None
 
 
 @dataclass(frozen=True)
@@ -300,12 +325,33 @@ def _stamp_release(
     Raises:
         ReleaseRefusedError: A migration that did not complete stamped `version`.
     """
-    from firecube.ingestor.runtime.migrate import (
-        apply_metadata_plan,
-        open_metadata_target,
-        plan_consolidated_image,
-        plan_documents,
+    from firecube.ingestor.runtime.migrate import apply_metadata_plan, open_metadata_target
+
+    planned = _planned_stamp(
+        manager=manager, product=product, version=version, run_id=run_id, report=report
     )
+    if not planned:
+        return ()
+    target = open_metadata_target(session=session, manager=manager)
+    written = apply_metadata_plan(target=target, owner_id=run_id, documents=planned)
+    report(f"wrote {', '.join(written) or 'no documents'}")
+    return written
+
+
+def _planned_stamp(
+    *,
+    manager: ChunkManager,
+    product: str,
+    version: str,
+    run_id: str,
+    report: Callable[[str], None],
+) -> tuple[PlannedDocument, ...]:
+    """Plan the root documents the release stamp writes, from live reads; write nothing.
+
+    Raises:
+        ReleaseRefusedError: A migration that did not complete stamped `version`.
+    """
+    from firecube.ingestor.runtime.migrate import plan_consolidated_image, plan_documents
 
     documents = manager.enumerate_metadata_documents(product)
     attrs = _root_attributes(documents)
@@ -339,12 +385,7 @@ def _stamp_release(
         }
         patch = AttributePatch("", set={RELEASE_ATTR: version, LAST_MODIFIER_ATTR: stamp})
         planned = plan_documents(documents, (patch,))
-    if not planned:
-        return ()
-    target = open_metadata_target(session=session, manager=manager)
-    written = apply_metadata_plan(target=target, owner_id=run_id, documents=planned)
-    report(f"wrote {', '.join(written) or 'no documents'}")
-    return written
+    return tuple(planned)
 
 
 def _close(manager: ChunkManager, warn: Callable[[str], None]) -> None:
@@ -438,6 +479,127 @@ def _require_recorded_versions(existing: StoredRelease) -> None:
     )
 
 
+def _refuse_held_maintenance(manager: ChunkManager, product: str) -> None:
+    """Refuse, from reads only, what the exclusive maintenance claim of a run would refuse.
+
+    Raises:
+        ProductUnderMaintenanceError: Another owner holds the exclusive maintenance claim.
+        ExclusiveMaintenanceRefusedError: Other claims, or unfinished or unreadable runs, exist.
+    """
+    manager.check_exclusive_maintenance(product=product, owner_id=f"{_RUN_PREFIX}dry-run")
+    claims = manager.list_claims(product=product)
+    runs, unreadable = manager.scan_runs(product=product)
+    unfinished = [run for run in runs if not run.is_terminal]
+    if not (claims or unfinished or unreadable):
+        return
+    details: list[str] = []
+    if claims:
+        named = ", ".join(f"{claim.domain} (owner={claim.owner_id})" for claim in claims)
+        details.append(f"active write claim(s) exist: {named}")
+    if unfinished or unreadable:
+        named = ", ".join(
+            [f"{run.run_id} (status={run.status})" for run in unfinished]
+            + [f"{run_id} (unreadable: {error})" for run_id, error in unreadable]
+        )
+        details.append(f"non-terminal or unreadable run(s) exist: {named}")
+    raise ExclusiveMaintenanceRefusedError(
+        f"A release of product {product} would be refused its exclusive maintenance claim: "
+        + "; ".join(details),
+        product=product,
+        claims=[claim.domain for claim in claims],
+        runs=[run.run_id for run in unfinished] + [run_id for run_id, _error in unreadable],
+    )
+
+
+def _existing_plan(
+    existing: StoredRelease, outcome: Literal["resume", "already-current"]
+) -> ReleasePlan:
+    """Return the plan of a release whose record exists; only its ref can be left to write."""
+    return ReleasePlan(
+        version=existing.version,
+        outcome=outcome,
+        previous=existing.previous,
+        note=existing.note,
+        documents=(),
+        retention=existing.retention,
+    )
+
+
+def _new_plan(
+    *,
+    manager: ChunkManager,
+    product: str,
+    version: str,
+    note: str | None,
+    archive: StorageUri | None,
+    archive_full: bool,
+    retention: Mapping[str, Any] | None,
+    report: Callable[[str], None],
+) -> ReleasePlan:
+    """Plan a new release from live reads: the stamp, the retention and the previous release.
+
+    Raises:
+        ReleaseRefusedError: The stamp or the zip retention would refuse the run.
+    """
+    documents = _planned_stamp(
+        manager=manager,
+        product=product,
+        version=version,
+        run_id=f"{_RUN_PREFIX}dry-run",
+        report=report,
+    )
+    if archive is not None:
+        from firecube.ingestor.runtime.release_retention import plan_zip_retention
+
+        retention = plan_zip_retention(
+            manager=manager,
+            product=product,
+            version=version,
+            archive=archive,
+            archive_full=archive_full,
+        )
+    current = manager.current_release(product)
+    report(f"would record release {version!r} and make it current; nothing is written")
+    return ReleasePlan(
+        version=version,
+        outcome="create",
+        previous=None if current is None else current.version,
+        note=note,
+        documents=tuple(document.path for document in documents),
+        retention=retention,
+    )
+
+
+@overload
+def create_release_for_product(
+    *,
+    session: StorageSession,
+    version: str,
+    note: str | None = ...,
+    report: Callable[[str], None] = ...,
+    warn: Callable[[str], None] = ...,
+    archive: StorageUri | None = ...,
+    archive_full: bool = ...,
+    retain_versions: bool = ...,
+    dry_run: Literal[False] = ...,
+) -> ReleaseCreateResult: ...
+
+
+@overload
+def create_release_for_product(
+    *,
+    session: StorageSession,
+    version: str,
+    note: str | None = ...,
+    report: Callable[[str], None] = ...,
+    warn: Callable[[str], None] = ...,
+    archive: StorageUri | None = ...,
+    archive_full: bool = ...,
+    retain_versions: bool = ...,
+    dry_run: Literal[True],
+) -> ReleasePlan: ...
+
+
 def create_release_for_product(
     *,
     session: StorageSession,
@@ -448,7 +610,8 @@ def create_release_for_product(
     archive: StorageUri | None = None,
     archive_full: bool = False,
     retain_versions: bool = False,
-) -> ReleaseCreateResult:
+    dry_run: bool = False,
+) -> ReleaseCreateResult | ReleasePlan:
     """Create release `version` of the session's product as one recorded maintenance run.
 
     Under the exclusive maintenance claim, the run writes `firecube_release` and
@@ -477,9 +640,12 @@ def create_release_for_product(
             must be on s3 with the fsspec driver and a bucket with versioning enabled,
             and every current object needs a version id. Exclusive with `archive`. The
             listing is coherent only while the operator keeps every other writer stopped.
+        dry_run: Make every refusal the run would make before its first write, from
+            reads only, and return the plan. The call writes no claim, run, stamp,
+            snapshot, inventory, archive or record. A zip plan hashes every object.
 
     Returns:
-        The outcome, the run and the release record.
+        The outcome, the run and the release record; with `dry_run`, the plan.
 
     Raises:
         TypeError: `version` or `note` is not a string.
@@ -496,6 +662,8 @@ def create_release_for_product(
         ReleaseConflictError: A record of `version` exists, and the live metadata differs
             from its snapshot.
         ClaimConflictError: Another owner holds the exclusive maintenance claim.
+        ProductUnderMaintenanceError: With `dry_run`, another owner holds the exclusive
+            maintenance claim.
         ExclusiveMaintenanceRefusedError: Other claims or unfinished runs exist.
         MetadataStateError: A document changed while the run wrote.
         ArchiveConversionError: The archive could not be written; the run is recorded failed.
@@ -505,6 +673,7 @@ def create_release_for_product(
     archive_path = _admit_archive(version, archive, archive_full)
     manager = session.control_plane()
     product = session.product.product_name
+    versions_plan: Mapping[str, Any] | None = None
     try:
         # Refuse an unstorable record name before a driver reads it or the root is stamped.
         manager.check_release_version(product, version)
@@ -515,6 +684,13 @@ def create_release_for_product(
                 version=version,
             )
         existing = manager.find_release(product, version)
+        if existing is None:
+            from firecube.core.controlplane.metadata_snapshots import latest_snapshot_id
+
+            # The run's snapshot reads this ref after the stamp; refuse a bad one before it.
+            latest_snapshot_id(
+                cast("StorageFilesystemFull", session.fs()), session.product.product_uri
+            )
         if existing is None and archive_path is not None:
             from firecube.ingestor.runtime.release_retention import refuse_existing_archive
 
@@ -524,7 +700,7 @@ def create_release_for_product(
             from firecube.ingestor.runtime.release_versions import preflight_version_retention
 
             # Read-only refusals before any claim, run or write; the step lists again under the claim.
-            preflight_version_retention(session, version=version)
+            versions_plan = preflight_version_retention(session, version=version)
         if existing is not None:
             # Read-only refusal or no-op before any claim or run.
             _require_match(manager, product, existing)
@@ -535,12 +711,29 @@ def create_release_for_product(
             current = manager.current_release(product)
             if current is not None and current.version == version:
                 report(f"release {version!r} is current already")
+                if dry_run:
+                    return _existing_plan(existing, "already-current")
                 return ReleaseCreateResult(
                     outcome=OUTCOME_ALREADY_CURRENT,
                     run_id=None,
                     release=to_release_record(existing),
                     documents=(),
                 )
+        if dry_run:
+            _refuse_held_maintenance(manager, product)
+            if existing is not None:
+                report(f"would make release {version!r} current; no other file is written")
+                return _existing_plan(existing, "resume")
+            return _new_plan(
+                manager=manager,
+                product=product,
+                version=version,
+                note=note,
+                archive=archive,
+                archive_full=archive_full,
+                retention=versions_plan,
+                report=report,
+            )
         run_id = f"{_RUN_PREFIX}{uuid.uuid4()}"
         handle = manager.acquire_exclusive_maintenance(product=product, run_id=run_id)
         try:

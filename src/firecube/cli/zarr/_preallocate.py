@@ -58,12 +58,23 @@ if TYPE_CHECKING:
     epilog="""\b
 Examples:
   # Pre-allocate arrays (idempotent — safe to re-run)
-  firecube zarr preallocate <plugin> --product-name <name> \\
-      --target file:///tmp/x.zarr --storage-type local --storage-driver fsspec --write-mode staged
+  firecube zarr preallocate <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode staged
 
-  # Re-run on same target: exits 0, logs "no-op (matches nominal grid)" for each matching array
+\b
+  # Name the product when neither the plugin nor the config sets a label
   firecube zarr preallocate <plugin> --product-name <name> \\
-      --target file:///tmp/x.zarr --storage-type local --storage-driver fsspec --write-mode staged
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode staged
+
+\b
+  # Re-run on the same target: matching arrays are left as they are and the command exits 0
+  firecube zarr preallocate <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode staged
+
+\b
+  # Print the resolved-index manifest as JSON and write nothing
+  firecube zarr preallocate <plugin> \\
+      --target file:///data/products/MY_PRODUCT.zarr --write-mode staged --dry-run
 
 See also: firecube zarr slots, firecube zarr validate
 """,

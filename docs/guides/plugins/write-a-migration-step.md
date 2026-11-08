@@ -159,8 +159,12 @@ my-plugin:0.1.0->0.2.0  my-plugin  0.2.0
 ```bash
 firecube migrate adopt \
   --target "file:///tmp/rain.zarr" \
-  --product-name rain
+  --product-name rain \
+  --yes-i-really-mean-it
 ```
+
+Off a terminal, `migrate adopt` and `migrate run` exit with code 2 unless you pass
+`--yes-i-really-mean-it`. On a terminal, they ask for confirmation. `--dry-run` skips the question.
 
 ```text
 adopted the store as product rain (run adopt-aee4c651-d814-4963-8179-dffaa476710b, Zarr format 3)
@@ -171,7 +175,6 @@ Run the plan without a write. Quote the step id, because the shell reads `>`:
 ```bash
 firecube migrate run 'my-plugin:0.1.0->0.2.0' \
   --target "file:///tmp/rain.zarr" \
-  --product-name rain \
   --option level=L3 \
   --dry-run
 ```
@@ -192,8 +195,8 @@ without `--dry-run`:
 ```bash
 firecube migrate run 'my-plugin:0.1.0->0.2.0' \
   --target "file:///tmp/rain.zarr" \
-  --product-name rain \
-  --option level=L3
+  --option level=L3 \
+  --yes-i-really-mean-it
 ```
 
 ```text

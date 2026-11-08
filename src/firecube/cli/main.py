@@ -301,7 +301,7 @@ OPTION_GROUPS.update(
                 "options": ["--target", "--group"],
             },
             {
-                "name": "Options",
+                "name": "Validation",
                 "options": [
                     "--timeout",
                     "--max-chunks",
@@ -315,20 +315,18 @@ OPTION_GROUPS.update(
         "firecube zarr slots": [
             {
                 "name": "Required",
-                "options": [
-                    "--target",
-                    "--storage-type",
-                    "--storage-driver",
-                    "--storage-anonymous",
-                    "--write-mode",
-                ],
+                "options": ["--target", "--write-mode"],
             },
             {
                 "name": "Input",
                 "options": ["--input-data", "--input-filters", "--product-name"],
             },
             {
-                "name": "Options",
+                "name": "Storage",
+                "options": ["--storage-type", "--storage-driver", "--storage-anonymous"],
+            },
+            {
+                "name": "Planning",
                 "options": ["--slot-size", "--no-resume", "--format", "--yes-i-really-mean-it"],
             },
         ],
@@ -343,24 +341,22 @@ OPTION_GROUPS.update(
                 ],
             },
             {
-                "name": "Options",
+                "name": "Levels",
                 "options": ["--resolutions"],
             },
         ],
         "firecube zarr preallocate": [
             {
                 "name": "Required",
-                "options": [
-                    "--target",
-                    "--storage-type",
-                    "--storage-driver",
-                    "--storage-anonymous",
-                    "--write-mode",
-                ],
+                "options": ["--target", "--write-mode"],
             },
             {
                 "name": "Input",
                 "options": ["--input-data", "--input-filters", "--product-name"],
+            },
+            {
+                "name": "Storage",
+                "options": ["--storage-type", "--storage-driver", "--storage-anonymous"],
             },
             {
                 "name": "Advanced",
@@ -458,7 +454,7 @@ OPTION_GROUPS.update(
                 "options": ["--archive"],
             },
             {
-                "name": "Options",
+                "name": "Checks",
                 "options": ["--quick"],
             },
         ],
@@ -552,27 +548,26 @@ Examples:
   firecube ingest <plugin> --show-options
   # run ingestion from a local source to a local target
   firecube ingest <plugin> \\
-    --input-data file:///path/to/input \\
-    --target file:///path/to/output.zarr \\
+    --input-data file:///data/raw \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
     --product-name <name> \\
-    --storage-type local \\
-    --storage-driver fsspec \\
     --write-mode direct
   # run with staged write mode (write locally then upload)
   firecube ingest <plugin> \\
     --input-data file:///data/raw \\
-    --target s3://bucket/output.zarr \\
+    --target s3://bucket/MY_PRODUCT.zarr \\
     --product-name <name> \\
-    --storage-type s3 \\
-    --storage-driver fsspec \\
     --write-mode staged
+  # show what a run would do, and write nothing
+  firecube ingest <plugin> \\
+    --input-data file:///data/raw \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
+    --write-mode direct \\
+    --dry-run
   # pass plugin-specific options
   firecube ingest <plugin> \\
-    --input-data file:///data/ \\
-    --target file:///tmp/output.zarr \\
-    --product-name <name> \\
-    --storage-type local \\
-    --storage-driver fsspec \\
+    --input-data file:///data/raw \\
+    --target file:///data/products/MY_PRODUCT.zarr \\
     --write-mode direct \\
     --option horizon=LST \\
     --option no_progress=true

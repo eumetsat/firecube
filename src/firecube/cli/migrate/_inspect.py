@@ -20,7 +20,8 @@ import datetime
 
 import click
 
-from firecube.cli.migrate._common import echo_json, format_option, migrate_options, open_session
+from firecube.cli._shared_options import format_option
+from firecube.cli.migrate._common import echo_json, migrate_options, open_session
 from firecube.cli.plugins.registry import load_migration_steps
 from firecube.ingestor.runtime.migrate import list_migrations
 
@@ -40,7 +41,7 @@ Examples:
 See also: firecube migrate run
 """,
 )
-@format_option
+@format_option(("table", "json"))
 def list_cmd(output_format: str) -> None:
     """list the installed migration steps
 

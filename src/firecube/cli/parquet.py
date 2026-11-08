@@ -119,7 +119,7 @@ def _check_parquet_magic(fs: StorageFilesystem, path: StorageUri) -> tuple[bool,
     epilog="""\b
 Examples:
   # validate all Parquet files for a product
-  firecube parquet validate -t <target>
+  firecube parquet validate --target file:///data/products/MY_PRODUCT.parquet
 
 See also: firecube parquet consolidate, firecube chunks list
 """,
@@ -210,11 +210,13 @@ def validate(
     epilog="""\b
 Examples:
   # consolidate a product into a single file with default zstd compression
-  firecube parquet consolidate -t <target> -o file:///tmp/consolidated.parquet
+  firecube parquet consolidate --target file:///data/products/MY_PRODUCT.parquet \\
+      --output file:///data/consolidated/MY_PRODUCT.parquet
 
 \b
   # consolidate with explicit codec
-  firecube parquet consolidate -t <target> -o file:///tmp/consolidated.parquet --codec snappy
+  firecube parquet consolidate --target file:///data/products/MY_PRODUCT.parquet \\
+      --output file:///data/consolidated/MY_PRODUCT.parquet --codec snappy
 
 See also: firecube parquet validate
 """,

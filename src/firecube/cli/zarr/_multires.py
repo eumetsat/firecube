@@ -24,6 +24,7 @@ from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
 from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
+    dry_run_flag,
     storage_driver_option,
     storage_type_option,
     target_uri_option,
@@ -48,12 +49,16 @@ Examples:
 
 \b
   Explicit resolution levels:
-  firecube zarr multires --target s3://b/p.zarr --resolutions 1.0 --resolutions 0.5
+  firecube zarr multires --target file:///data/p.zarr --resolutions 1.0 --resolutions 0.5
 
 \b
   Dataset in a group, with coordinates not named lat and lon:
   firecube zarr multires --target file:///data/p.zarr --group data \\
       --lat-name latitude --lon-name longitude
+
+\b
+  Show the layers it would write, and write nothing:
+  firecube zarr multires --target file:///data/p.zarr --dry-run
 
 \b
 See also: firecube zarr validate
@@ -93,6 +98,7 @@ See also: firecube zarr validate
     required=False, extra_help="Inferred from URI scheme when omitted (file://→local, s3://→s3)."
 )
 @storage_driver_option(required=False)
+@dry_run_flag
 @click.pass_context
 def multires(
     ctx: click.Context,
@@ -104,8 +110,13 @@ def multires(
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
+    dry_run: bool,
 ) -> None:
-    """Build multi-resolution Zarr pyramid for an existing product."""
+    """Build multi-resolution Zarr pyramid for an existing product.
+
+    --dry-run makes the same checks, prints each layer it would write or replace,
+    and writes nothing.
+    """
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
     storage_config = get_storage_config(
@@ -138,7 +149,7 @@ def multires(
             product_name=identity.product_name,
             product_uri=identity.product_uri,
             session=session,
-        ).build(config)
+        ).build(config, dry_run=dry_run)
     except ValueError as exc:
         raise click.ClickException(render(exc)) from exc
 

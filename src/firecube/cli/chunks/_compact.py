@@ -41,15 +41,15 @@ def snapshots_alias_group() -> None:
     epilog="""\b
 Examples:
   # preview a compact cache rebuild
-  firecube chunks compact rebuild -t file:///data/products/MY_PRODUCT.zarr --dry-run
+  firecube chunks compact rebuild --target file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # rebuild the compact cache for a product
-  firecube chunks compact rebuild -t file:///data/products/MY_PRODUCT.zarr
+  firecube chunks compact rebuild --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # rebuild and output result as JSON
-  firecube chunks compact rebuild -t file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks compact rebuild --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks compact status, firecube chunks list
 """,
@@ -102,11 +102,11 @@ def rebuild_cmd(
     epilog="""\b
 Examples:
   # check compact cache status for a product
-  firecube chunks compact status -t file:///data/products/MY_PRODUCT.zarr
+  firecube chunks compact status --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # output as JSON
-  firecube chunks compact status -t file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks compact status --target file:///data/products/MY_PRODUCT.zarr -f json
 
 See also: firecube chunks compact rebuild, firecube chunks list
 """,

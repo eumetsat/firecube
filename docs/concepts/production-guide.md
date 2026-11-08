@@ -20,7 +20,6 @@ firecube ingest <plugin> \
   --product-name MY_PRODUCT \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged
 ```
 
@@ -29,8 +28,23 @@ and one set of ChunkManager records to inspect.
 
 Use full product URIs such as `file:///data/products/MY_PRODUCT.zarr` or
 `s3://bucket/products/MY_PRODUCT.zarr`. Firecube infers storage type from the
-URI and defaults the driver to configured settings or `fsspec`. Product name,
-output format, and write mode remain separate choices.
+URI and defaults the driver to configured settings or `fsspec`. The write mode
+remains a separate choice. The plugin class owns the output format. The store
+records the product name once, and every later command reads it back.
+
+## Preview A Run
+
+Add `--dry-run` to the command to see the plan before a job writes anything:
+
+```bash
+firecube ingest <plugin> \
+  --input-data file:///data/source \
+  --target file:///data/products/MY_PRODUCT.zarr \
+  --write-mode staged \
+  --dry-run
+```
+
+A dry run writes nothing. It prints the batches, the groups and the result of the resume guard. If a check would block the real run, the command exits with code 1. Exit code 2 means the invocation is wrong. The [exit-code table](../reference/config.md#exit-codes) lists every code.
 
 ## Keep ChunkManager Records With The Product
 
@@ -57,7 +71,6 @@ firecube ingest <plugin> \
   --product-name MY_PRODUCT \
   --storage-type local \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged \
   --option resume_existing=true
 ```
@@ -110,7 +123,6 @@ firecube ingest <plugin> \
   --product-name MY_PRODUCT \
   --storage-type s3 \
   --storage-driver fsspec \
-  --output-format zarr \
   --write-mode staged \
   --option workspace=/tmp/firecube \
   --option cleanup_workspace=true

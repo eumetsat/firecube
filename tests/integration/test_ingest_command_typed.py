@@ -271,8 +271,9 @@ class _ParquetProbe(api.GenericParquetIngestor):
 def test_manifest_records_the_class_output_format(tmp_path: Path) -> None:
     ctx = make_test_context(tmp_path, product="probe", format="parquet")
     ctx.output_format = None  # unset: the ingestor class decides
-    _ParquetProbe().run(ctx)
+    result = _ParquetProbe().run(ctx)
 
+    assert result.manifest is not None and result.manifest["output_format"] == "parquet"
     runs = tmp_path / "probe" / ".firecube" / "runs"
     started = json.loads(next(runs.glob("*/events-00000.jsonl")).read_text().splitlines()[0])
     assert started["record"]["run"]["output_format"] == "parquet"

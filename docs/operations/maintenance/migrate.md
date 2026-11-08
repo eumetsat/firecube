@@ -15,8 +15,8 @@ A real run has these properties:
 
 - Stop every writer of the product. See
   [Maintenance Operations](index.md#prerequisites).
-- Make sure that the product has a control plane. If it has none, run
-  `firecube migrate adopt` first. See
+- Make sure that the product records a product label and has a control plane.
+  If it has none, run `firecube migrate adopt` first. See
   [Adopt A Foreign Store](adopt-a-foreign-store.md).
 - Find the identifier of the step. List the installed steps:
 
@@ -43,7 +43,6 @@ nothing, not even `.firecube/`.
 ```bash
 firecube migrate run firecube:set-attrs \
   --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT \
   --set title="Daily temperature" \
   --dry-run
 ```
@@ -75,13 +74,21 @@ never creates one.
 
 ## Run The Step
 
-Run the same command without `--dry-run`:
+Run the same command without `--dry-run`. On a terminal, the command asks for
+confirmation. Off a terminal, the command exits 2 and writes nothing until you
+add `--yes-i-really-mean-it`:
 
 ```bash
 firecube migrate run firecube:set-attrs \
   --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT \
-  --set title="Daily temperature"
+  --set title="Daily temperature" \
+  --yes-i-really-mean-it
+```
+
+The refusal without the flag reads:
+
+```text
+Error: Confirmation required: migrate run changes the store. Re-run with --yes-i-really-mean-it, preview it with --dry-run, or run interactively.
 ```
 
 Expected output for a Zarr v2 store with a consolidated `.zmetadata`:
@@ -92,10 +99,10 @@ class /:title: descriptive, allowed
 write .zattrs
 write .zmetadata (consolidated image)
 outcome: executed
-before snapshot a827266280f251f9…
+before snapshot fb7ffe6294783fd5b5ea227168566a4e01d0f83c17b00a628eddbc1c458c3567
 wrote 2 of 2 planned documents
-after snapshot efd16ef6fe8ce243…
-step firecube:set-attrs executed in run migrate-2e97c56b-…
+after snapshot ad48a4d79070aeec27462b37e7979254159e137f964200d6bdac82f30d9e9675
+step firecube:set-attrs executed in run migrate-4b00e9dc-87f8-43be-b76a-d337e8552786
 ```
 
 Expected output for a Zarr v3 store with consolidated metadata:
@@ -122,18 +129,14 @@ The built-in step takes these options:
 A step from a plugin takes `--option KEY=VALUE`. A key that you give once is a
 string. A key that you give more than once is a list in the order given.
 
-If the store has no control plane, a real run exits 1 and writes nothing:
+If the store records no product label, both a real run and a dry run exit 2 and
+write nothing:
 
 ```text
-Error: the store of product MY_PRODUCT has no control plane; adopt it with firecube migrate adopt before running a migration
+Error: The product at file:///data/products/MY_PRODUCT.zarr records no product label. Record one with firecube migrate adopt --target file:///data/products/MY_PRODUCT.zarr --product-name <label>.
 ```
 
-Run `firecube migrate adopt`, then run the step again. A dry run on such a
-store prints the plan after this line and writes nothing:
-
-```text
-the store of product MY_PRODUCT has no control plane; a real run needs firecube migrate adopt first
-```
+Run `firecube migrate adopt`, then run the step again.
 
 ## Verify
 
@@ -141,8 +144,7 @@ the store of product MY_PRODUCT has no control plane; a real run needs firecube 
 
    ```bash
    firecube migrate status \
-     --target "file:///data/products/MY_PRODUCT.zarr" \
-     --product-name MY_PRODUCT
+     --target "file:///data/products/MY_PRODUCT.zarr"
    ```
 
    Expected output resembles:
@@ -159,8 +161,7 @@ the store of product MY_PRODUCT has no control plane; a real run needs firecube 
 
    ```bash
    firecube snapshot diff <before-id> <after-id> \
-     --target "file:///data/products/MY_PRODUCT.zarr" \
-     --product-name MY_PRODUCT
+     --target "file:///data/products/MY_PRODUCT.zarr"
    ```
 
    The diff lists your attribute and `firecube_last_modifier`. It lists no
@@ -226,8 +227,8 @@ A crash can leave the exclusive claim and an unfinished run in place.
 2. List the claim and the run:
 
    ```bash
-   firecube chunks claims list --product-name "file:///data/products/MY_PRODUCT.zarr"
-   firecube chunks runs list --product-name "file:///data/products/MY_PRODUCT.zarr" --status started
+   firecube chunks claims list --target "file:///data/products/MY_PRODUCT.zarr"
+   firecube chunks runs list --target "file:///data/products/MY_PRODUCT.zarr" --status started
    ```
 
 3. Clear the claim of the stopped migration. Do not abandon the run. A claim
@@ -235,12 +236,13 @@ A crash can leave the exclusive claim and an unfinished run in place.
 
    ```bash
    firecube chunks claims clear \
-     --product-name "file:///data/products/MY_PRODUCT.zarr" \
+     --target "file:///data/products/MY_PRODUCT.zarr" \
      --domain MY_PRODUCT:maintenance:exclusive \
      --force --yes-i-really-mean-it
    ```
 
-4. Run the same `migrate run` command again. The rerun resumes the journal of
+4. Run the same `migrate run` command again, with `--yes-i-really-mean-it` off a
+   terminal. The rerun resumes the journal of
    the interrupted run under the same run id and applies the journaled bytes.
    Example for a run that stopped after the first of two document writes:
 
@@ -262,7 +264,7 @@ snapshot. It does not apply the bytes of the abandoned run.
 
 ```bash
 firecube chunks runs abandon \
-  --product-name "file:///data/products/MY_PRODUCT.zarr" \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
   --run-id <run-id> \
   --reason "migrate process killed" \
   --yes-i-really-mean-it
@@ -277,7 +279,8 @@ stays with the status `abandoned`.
 
 | Symptom | Meaning | Recovery |
 |---|---|---|
-| `has no control plane; adopt it with firecube migrate adopt` | The store was not written by Firecube and is not adopted. The run wrote nothing. | Run `firecube migrate adopt`. See [Adopt A Foreign Store](adopt-a-foreign-store.md). |
+| `records no product label. Record one with firecube migrate adopt` (exit 2) | The store was not written by Firecube and is not adopted. The run wrote nothing. | Run `firecube migrate adopt`. See [Adopt A Foreign Store](adopt-a-foreign-store.md). |
+| `Confirmation required: migrate run changes the store` (exit 2) | The run is off a terminal and has no `--yes-i-really-mean-it`. | Preview with `--dry-run`. Then add `--yes-i-really-mean-it`. |
 | `Write-domain claim conflict for …:maintenance:exclusive` | Another run or a crash holds the claim. | Follow [Recover From An Interrupted Run](#recover-from-an-interrupted-run). |
 | `changes attributes it may not change: … (interpretation)` | The step touches an interpretation attribute. | Pass `--allow interpretation`, or change the step. |
 | `changes attributes it may not change: … (unknown)` | The attribute is in no list. | Pass `--allow unknown`, or use a descriptive name. |

@@ -30,7 +30,9 @@ uv pip install firecube
 ```
 
 The next step installs the existing Quickstart plugin in this environment so
-the Firecube CLI can discover it.
+the Firecube CLI can discover it. The command `firecube plugins install` runs
+`uv pip install`. Keep `uv` on your `PATH` in the shell that runs it. If `uv` is
+missing, the command prints `No such file or directory: 'uv'` and exits with code 4.
 
 ## Verify The Installation
 

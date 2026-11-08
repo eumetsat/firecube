@@ -25,7 +25,7 @@ import click
 
 from firecube.core.controlplane.releases import ReleaseVerification
 from firecube.ingestor.api import ReleaseRecord
-from firecube.ingestor.runtime.release import ReleaseCreateResult, ReleaseListing
+from firecube.ingestor.runtime.release import ReleaseCreateResult, ReleaseListing, ReleasePlan
 
 if TYPE_CHECKING:
     from firecube.ingestor.runtime.release_retention import RetentionVerification
@@ -41,6 +41,7 @@ _RETENTION_FIELDS = (
     ("digest", "Digest"),
     ("bucket_versioning", "Bucket versioning"),
     ("object_count", "Objects"),
+    ("delete_marker_count", "Delete markers"),
     ("inventory", "Inventory"),
     ("created_by_run", "Run"),
 )
@@ -89,6 +90,39 @@ def create_payload(result: ReleaseCreateResult) -> dict[str, Any]:
         "release": release_payload(result.release),
         "documents": list(result.documents),
     }
+
+
+def plan_payload(plan: ReleasePlan) -> dict[str, Any]:
+    """Return the JSON-ready fields of a release create plan, marked as a dry run."""
+    return {
+        "dry_run": True,
+        "outcome": plan.outcome,
+        "version": plan.version,
+        "previous": plan.previous,
+        "note": plan.note,
+        "documents": list(plan.documents),
+        "retention": None if plan.retention is None else _plain(plan.retention),
+    }
+
+
+_PLAN_OUTCOMES = {
+    "create": "record the release and make it current",
+    "resume": "make the recorded release current",
+    "already-current": "nothing; the release is current",
+}
+
+
+def echo_plan(plan: ReleasePlan) -> None:
+    """Print what a release create would write, one field per line."""
+    click.echo("Dry run: nothing is written.")
+    click.echo(f"Release:      {plan.version}")
+    click.echo(f"Would:        {_PLAN_OUTCOMES[plan.outcome]}")
+    click.echo(f"Previous:     {plan.previous if plan.previous is not None else '-'}")
+    click.echo(f"Note:         {plan.note if plan.note is not None else '-'}")
+    click.echo(f"Documents:    {', '.join(plan.documents) or '-'}")
+    _echo_retention_fields(plan.retention)
+    if plan.outcome == "create" and plan.retention and "object_count" in plan.retention:
+        click.echo("  (current-cut counts; the run also retains the documents it writes)")
 
 
 def listing_payload(listing: ReleaseListing) -> dict[str, Any]:
@@ -158,17 +192,17 @@ def echo_record(record: ReleaseRecord) -> None:
     click.echo(f"Runs since:   {len(record.runs_since_previous)}")
     for run_id in record.runs_since_previous:
         click.echo(f"  {run_id}")
-    _echo_retention(record)
+    _echo_retention_fields(record.retention)
 
 
-def _echo_retention(record: ReleaseRecord) -> None:
-    """Print the ``Retention:`` block: one line per field the record holds, or ``none``."""
-    if record.retention is None:
+def _echo_retention_fields(retention: Mapping[str, Any] | None) -> None:
+    """Print the ``Retention:`` block: one line per field the mapping holds, or ``none``."""
+    if retention is None:
         click.echo("Retention:    none")
         return
     click.echo("Retention:")
     for key, label in _RETENTION_FIELDS:
-        value = record.retention.get(key)
+        value = retention.get(key)
         if value is not None:
             click.echo(f"  {label + ':':<19}{value}")
 

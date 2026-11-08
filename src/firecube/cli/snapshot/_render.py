@@ -28,6 +28,7 @@ from firecube.core.controlplane.metadata_snapshots import (
     NodeDiff,
     Snapshot,
     SnapshotDiff,
+    SnapshotPlan,
     SnapshotRecord,
 )
 from firecube.core.zarr.metadata_documents import ABSENT
@@ -129,6 +130,35 @@ def echo_record(record: SnapshotRecord) -> None:
     click.echo(f"Consistency:  {record.consistency}")
     click.echo(f"Trigger:      {record.trigger}")
     click.echo(f"Run:          {record.run_id or '-'}")
+
+
+def plan_payload(plan: SnapshotPlan, *, label_recorded: bool) -> dict[str, Any]:
+    """Return the JSON-ready fields of a snapshot plan, marked as a dry run."""
+    return {
+        "dry_run": True,
+        "parent": plan.parent,
+        "manifest": plan.manifest,
+        "documents": plan.documents,
+        "blobs": plan.blobs,
+        "manifest_recorded": plan.manifest_recorded,
+        "label_recorded": label_recorded,
+    }
+
+
+def echo_plan(plan: SnapshotPlan, *, label: str, label_recorded: bool) -> None:
+    """Print what a snapshot would write, one field per line."""
+    click.echo("Dry run: nothing is written.")
+    click.echo(f"Label:        {label} ({'recorded' if label_recorded else 'would be recorded'})")
+    click.echo(f"Documents:    {plan.documents}")
+    click.echo(f"Parent:       {plan.parent or '-'}")
+    click.echo(f"Manifest:     {plan.manifest}")
+    if plan.manifest_recorded:
+        click.echo("Would write:  one record and refs/latest.json; the manifest is recorded")
+    else:
+        click.echo(
+            f"Would write:  up to {plan.blobs} blobs, one manifest, one record and "
+            "refs/latest.json; an existing blob is kept"
+        )
 
 
 def echo_record_line(record: SnapshotRecord) -> None:

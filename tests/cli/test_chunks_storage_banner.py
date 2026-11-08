@@ -156,13 +156,6 @@ def test_chunks_scope_needs_exactly_one_of_target_and_all_products(command, flag
     assert "Provide exactly one of --target or --all-products." in result.output
 
 
-def test_chunks_bare_n_gets_the_target_rename_hint() -> None:
-    result = CliRunner().invoke(cli, ["chunks", "list", "-n", "file:///tmp/p.zarr"])
-
-    assert result.exit_code == 2
-    assert "Use --target (-t) instead" in result.output
-
-
 @pytest.mark.parametrize("command", [["list"], ["claims", "list"], ["delete", "--dry-run"]])
 def test_all_products_reports_each_stores_recorded_label_and_uri(
     command, monkeypatch, tmp_path: Path

@@ -44,6 +44,11 @@ ARRAY_DOC = {2: "temp/.zattrs", 3: "temp/zarr.json"}
 RELEASING = "cli-test:release"  # the fixture step whose `to_release` is 0.1.1
 
 
+def _needs_confirmation(args: tuple[str, ...]) -> bool:
+    asks = args[:2] in {("migrate", "adopt"), ("migrate", "run"), ("release", "create")}
+    return asks and "--dry-run" not in args
+
+
 def _store(base: Path, fmt: int) -> Path:
     store = base / "p.zarr"
     data = {"temp": (("time", "x"), np.arange(12.0).reshape(4, 3), {"units": "K"})}
@@ -54,7 +59,8 @@ def _store(base: Path, fmt: int) -> Path:
 
 def _cli(store: Path, *args: str, exit_code: int = 0):
     label = ["--product-name", "p.zarr"] if args[:2] == ("migrate", "adopt") else []
-    out = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), *label])
+    confirm = ["--yes-i-really-mean-it"] if _needs_confirmation(args) else []
+    out = CliRunner().invoke(cli, [*args, "--target", store.as_uri(), *label, *confirm])
     assert out.exit_code == exit_code, out.output
     return out
 
@@ -438,7 +444,8 @@ def _s3_cli(client: Any, *args: str, exit_code: int = 0):
     env = s3_env(
         client.meta.endpoint_url, access_key="testing", secret_key="testing", region="us-east-1"
     )
-    out = CliRunner().invoke(cli, [*args, *target], env=env)
+    confirm = ["--yes-i-really-mean-it"] if _needs_confirmation(args) else []
+    out = CliRunner().invoke(cli, [*args, *target, *confirm], env=env)
     assert out.exit_code == exit_code, out.output
     return out
 

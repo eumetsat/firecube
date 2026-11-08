@@ -16,17 +16,51 @@ a release later, see [Verify A Release](verify-a-release.md).
 
 - Stop every writer of the product. See
   [Maintenance Operations](index.md#prerequisites).
-- Make sure that the product has a control plane. If it has none, run
-  `firecube migrate adopt` first. See
+- Make sure that the product records a product label and has a control plane.
+  If it has none, run `firecube migrate adopt` first. See
   [Adopt A Foreign Store](adopt-a-foreign-store.md).
 
-## Create A Release
+## Preview A Release
+
+Add `--dry-run` to see what the command would record. A dry run makes its
+refusals from reads only and writes nothing. It asks no confirmation.
 
 ```bash
 firecube release create 1.0.0 \
   --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT \
-  --note "first release"
+  --note "first release" \
+  --dry-run
+```
+
+Expected output resembles:
+
+```text
+would record release '1.0.0' and make it current; nothing is written
+Dry run: nothing is written.
+Release:      1.0.0
+Would:        record the release and make it current
+Previous:     -
+Note:         first release
+Documents:    zarr.json
+Retention:    none
+```
+
+A dry run with `--archive` or `--retain-versions` also prints the retention
+block. The object counts in that block are current-cut counts: the run also
+retains the documents that it writes. See
+[Retain The Chunk Bytes](#retain-the-chunk-bytes).
+
+## Create A Release
+
+`release create` changes the store. On a terminal, the command asks for
+confirmation. Off a terminal, the command exits 2 and writes nothing until you
+add `--yes-i-really-mean-it`.
+
+```bash
+firecube release create 1.0.0 \
+  --target "file:///data/products/MY_PRODUCT.zarr" \
+  --note "first release" \
+  --yes-i-really-mean-it
 ```
 
 Expected output for a Zarr v2 store with a consolidated `.zmetadata`:
@@ -65,8 +99,7 @@ It exits 0 and writes nothing.
 
 ```bash
 firecube release list \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 The command prints one line per release, oldest first. A `*` marks the current
@@ -82,8 +115,7 @@ Show one release with its note and the runs since the previous release:
 
 ```bash
 firecube release show 1.0.0 \
-  --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT
+  --target "file:///data/products/MY_PRODUCT.zarr"
 ```
 
 Without a version, the command shows the current release. It exits 1 when the
@@ -115,8 +147,22 @@ version that no record uses. Add `--archive` with a `file://` URI:
 ```bash
 firecube release create 1.1.0 \
   --target "file:///data/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT \
-  --archive "file:///data/archives/MY_PRODUCT-1.1.0.zip"
+  --archive "file:///data/archives/MY_PRODUCT-1.1.0.zip" \
+  --yes-i-really-mean-it
+```
+
+A dry run of the same command prints the planned retention. The output
+resembles:
+
+```text
+Retention:
+  Kind:              zip
+  Archive:           file:///data/archives/MY_PRODUCT-1.1.0.zip
+  Mode:              full
+  Chain length:      1
+  Deleted keys:      0
+  Objects:           52
+  (current-cut counts; the run also retains the documents it writes)
 ```
 
 The archive is a local ZIP file. The product can be remote. The product must be
@@ -222,10 +268,10 @@ object. This copies no bytes:
 ```bash
 firecube release create 2.0.0 \
   --target "s3://my-bucket/products/MY_PRODUCT.zarr" \
-  --product-name MY_PRODUCT \
   --storage-type s3 \
   --storage-driver fsspec \
-  --retain-versions
+  --retain-versions \
+  --yes-i-really-mean-it
 ```
 
 Expected output ends with these lines:
@@ -309,7 +355,7 @@ new `release create` always starts a new run, so abandon the old run.
 
    ```bash
    firecube chunks runs abandon \
-     --product-name "file:///data/products/MY_PRODUCT.zarr" \
+     --target "file:///data/products/MY_PRODUCT.zarr" \
      --run-id <run-id> \
      --reason "release process killed" \
      --yes-i-really-mean-it
@@ -319,12 +365,13 @@ new `release create` always starts a new run, so abandon the old run.
 
    ```bash
    firecube chunks claims clear \
-     --product-name "file:///data/products/MY_PRODUCT.zarr" \
+     --target "file:///data/products/MY_PRODUCT.zarr" \
      --domain MY_PRODUCT:maintenance:exclusive \
      --force --yes-i-really-mean-it
    ```
 
-4. Run the same `release create` command again.
+4. Run the same `release create` command again, with `--yes-i-really-mean-it`
+   off a terminal.
 
 See [Recover Runs And Claims](../chunk-manager/recover.md) for more detail.
 
@@ -332,6 +379,8 @@ See [Recover Runs And Claims](../chunk-manager/recover.md) for more detail.
 
 | Symptom | Meaning | Recovery |
 |---|---|---|
+| `Confirmation required: release create changes the store` (exit 2) | The run is off a terminal and has no `--yes-i-really-mean-it`. | Preview with `--dry-run`. Then add `--yes-i-really-mean-it`. |
+| `records no product label. Record one with firecube migrate adopt` (exit 2) | The store records no label. The command wrote nothing. | Run `firecube migrate adopt`. |
 | `release '…' exists and names snapshot …, and the store's metadata no longer matches it` | The version exists, and the metadata changed since. | Choose another version. |
 | `release version '…' cannot be stored` | The version has an ASCII control character, or the record of the release does not fit the storage limits. | Use a shorter version without control characters. See the limits below this table. |
 | `Write-domain claim conflict for …:maintenance:exclusive` | Another run or a crash holds the claim. | Follow [Recover From An Interrupted Create](#recover-from-an-interrupted-create). |

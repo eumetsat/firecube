@@ -28,7 +28,7 @@ from firecube.cli.main import cli
 
 
 def _cli(*args: str) -> None:
-    result = CliRunner().invoke(cli, list(args))
+    result = CliRunner().invoke(cli, [*args, "--yes-i-really-mean-it"])
     assert result.exit_code == 0, result.output
 
 

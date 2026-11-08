@@ -33,7 +33,7 @@ Replace `PLUGIN_NAME` if the product came from another plugin:
 mkdir -p catalogs
 
 firecube catalog intake PLUGIN_NAME \
-  --product "file://${PWD}/quickstart-output/weather.zarr" \
+  --target "file://${PWD}/quickstart-output/weather.zarr" \
   --collection-id quickstart_weather \
   --output "file://${PWD}/catalogs/quickstart_weather.yaml" \
   --no-storage-options

@@ -27,6 +27,25 @@ Zarr restored: file:///data/restored/MY_PRODUCT.zarr
   Control-plane: restored
 ```
 
+The restored product takes the product label that the archive records. An
+archive that records no label needs `--product-name <label>`:
+
+```text
+Error: The archive file:///data/archives/MY_PRODUCT.zarr.zip records no product label. Name the restored product with --product-name <label>.
+```
+
+A name that differs from the recorded label exits 2:
+
+```text
+Error: Product label 'WRONG' is refused: the archive file:///data/archives/MY_PRODUCT.tgm records the label 'MY_PRODUCT'.
+```
+
+Add `--dry-run` to preview the restore. The command writes nothing:
+
+```text
+[dry-run] Would restore: /data/archives/MY_PRODUCT.tgm -> file:///data/restored/MY_PRODUCT.zarr
+```
+
 A `.tgm` archive carries the spans, the runs and the claims of the product. A
 restore replays the spans and the runs that own them. It writes a record of the
 restore itself and a `schema.json`. It does not restore the claims, the metadata
@@ -131,7 +150,7 @@ after it takes the inventory. The copy is not a live process. While it stays
 2. List the runs of the restored product that are still `started`:
 
    ```bash
-   firecube chunks runs list --product-name "$RESTORED_URI" --status started
+   firecube chunks runs list --target "$RESTORED_URI" --status started
    ```
 
    The run to abandon has an ID that starts with `release-`. It is the run of
@@ -147,7 +166,7 @@ after it takes the inventory. The copy is not a live process. While it stays
 
    ```bash
    firecube chunks runs abandon \
-     --product-name "$RESTORED_URI" \
+     --target "$RESTORED_URI" \
      --run-id "<run-id>" \
      --reason "copied from the archive; original writer stopped" \
      --yes-i-really-mean-it
@@ -159,11 +178,11 @@ after it takes the inventory. The copy is not a live process. While it stays
    ```bash
    firecube release create "restored-1.2.0" \
      --target "$RESTORED_URI" \
-     --product-name MY_PRODUCT
+     --yes-i-really-mean-it
    ```
 
-To check the result, run `firecube release show --target "$RESTORED_URI"
---product-name MY_PRODUCT`. The current release is the new version.
+To check the result, run `firecube release show --target "$RESTORED_URI"`. The
+current release is the new version.
 
 If you skip steps 1 to 3, the create command exits 1 and names the run:
 
@@ -176,7 +195,7 @@ Error: Cannot run exclusive maintenance for product MY_PRODUCT: non-terminal or 
 Inspect the restored product's run history:
 
 ```bash
-firecube chunks runs list --product-name "$RESTORED_URI"
+firecube chunks runs list --target "$RESTORED_URI"
 ```
 
 Expected output resembles:
@@ -191,7 +210,7 @@ direct_zarr_capable_test_plugin-...  complete  active  1     7
 Inspect restored ChunkManager records:
 
 ```bash
-firecube chunks list --product-name "$RESTORED_URI"
+firecube chunks list --target "$RESTORED_URI"
 ```
 
 ## Overwrite An Existing Restore Target
@@ -251,7 +270,7 @@ as before, so it need not leave a run to find. Take these steps:
 1. List the runs and read the status of the restore run:
 
    ```bash
-   firecube chunks runs list --product-name "$RESTORED_URI"
+   firecube chunks runs list --target "$RESTORED_URI"
    ```
 
 2. If the restore run is still `started`, abandon it. Its ID starts with
@@ -259,7 +278,7 @@ as before, so it need not leave a run to find. Take these steps:
 
    ```bash
    firecube chunks runs abandon \
-     --product-name "$RESTORED_URI" \
+     --target "$RESTORED_URI" \
      --run-id "<run-id>" \
      --reason "interrupted restore" \
      --yes-i-really-mean-it
@@ -284,7 +303,10 @@ The target can hold a partial restore until step 3 ends.
 | `Invalid Tensogram archive <path>` | The archive failed its structural check. Firecube deleted and replaced no existing data. | Do not restore this archive. Create a new archive from the source product. |
 | `holds a symlink at` | The target or a kept path under `.firecube/` is a symlink. Firecube deleted nothing. | Replace the symlink with a real directory, or restore to another target. |
 | `Warning: archive restore failure not recorded` | The restore failed and Firecube could not record the failure. | Follow the steps in "Recover From An Interrupted Overwrite". |
-| `Warning: claim <domain> at <path> not released` | The restore ended and Firecube could not release its claim. | Clear the claim: `firecube chunks claims clear --product-name "$RESTORED_URI" --domain "<domain>" --yes-i-really-mean-it`. |
+| `Warning: claim <domain> at <path> not released` | The restore ended and Firecube could not release its claim. | Clear the claim: `firecube chunks claims clear --target "$RESTORED_URI" --domain "<domain>" --yes-i-really-mean-it`. |
+| `records no product label. Name the restored product with --product-name <label>` (exit 2) | The archive records no label. | Add `--product-name <label>`. |
+| `Product label '…' is refused` (exit 2) | `--product-name` differs from the label that the archive records. | Omit `--product-name`, or pass the recorded label. |
+| `--overwrite requires --yes-i-really-mean-it in non-TTY` (exit 2) | The run is off a terminal. | Add `--yes-i-really-mean-it`. |
 | Restore target exists | Firecube will not replace it by default. | Use `--overwrite` with `--yes-i-really-mean-it`. |
 | `requires the tensogram extras` | Archive support is not installed. | Install `firecube[tensogram]` in the active environment. |
 | `Restoring a .zip archive to a remote target is not yet supported` | Zip restores write locally only. | Restore to a local target, then copy it to S3. |

@@ -220,6 +220,7 @@ def _claim(label):
     }
 
 
+@pytest.mark.contract
 def test_stamp_is_written_once_and_another_label_is_refused_without_a_claims_directory(
     tmp_path, new_manager
 ):
@@ -234,6 +235,7 @@ def test_stamp_is_written_once_and_another_label_is_refused_without_a_claims_dir
     assert (firecube / "product.json").read_bytes() == first and not (firecube / "claims").exists()
 
 
+@pytest.mark.contract
 def test_simultaneous_first_writers_with_different_labels_leave_one_stamp(
     tmp_path, new_manager, monkeypatch
 ):
@@ -259,6 +261,7 @@ def test_simultaneous_first_writers_with_different_labels_leave_one_stamp(
     assert sorted(results.values()) == ["refused", "wrote"] and results[stamp["product"]] == "wrote"
 
 
+@pytest.mark.contract
 def test_corrupt_stamp_fails_closed_and_writes_nothing(tmp_path, new_manager):
     firecube = tmp_path / "cube.zarr" / ".firecube"
     firecube.mkdir(parents=True)
@@ -268,6 +271,7 @@ def test_corrupt_stamp_fails_closed_and_writes_nothing(tmp_path, new_manager):
     assert not list(firecube.rglob("run.json"))
 
 
+@pytest.mark.contract
 def test_legacy_label_comes_from_run_json_not_orphans_and_is_stamped_on_first_write(
     tmp_path, new_manager
 ):
@@ -281,6 +285,7 @@ def test_legacy_label_comes_from_run_json_not_orphans_and_is_stamped_on_first_wr
     assert json.loads(stamp.read_text())["product"] == "alpha"
 
 
+@pytest.mark.contract
 @pytest.mark.parametrize(
     "call",
     [lambda m: m.recorded_product_label(), lambda m: _start(m, "alpha")],
@@ -296,6 +301,7 @@ def test_legacy_runs_that_disagree_raise_a_label_conflict_and_stamp_nothing(
     assert not (tmp_path / "cube.zarr/.firecube/product.json").exists()
 
 
+@pytest.mark.contract
 def test_legacy_store_holding_only_a_claim_refuses_another_label(tmp_path, new_manager):
     with new_manager("alpha").acquire_claim(**_claim("alpha"), owner_id="o"):
         (tmp_path / "cube.zarr/.firecube/product.json").unlink()  # legacy: no stamp
@@ -305,6 +311,7 @@ def test_legacy_store_holding_only_a_claim_refuses_another_label(tmp_path, new_m
             beta.acquire_claim(**_claim("beta"), owner_id="x")
 
 
+@pytest.mark.contract
 def test_failed_stamp_write_leaves_no_run_and_no_claim(tmp_path, new_manager, monkeypatch):
     def disk_full():
         raise OSError("disk full")
@@ -318,6 +325,7 @@ def test_failed_stamp_write_leaves_no_run_and_no_claim(tmp_path, new_manager, mo
     assert not list((tmp_path / "cube.zarr").rglob("run.json")) and alpha.list_claims() == []
 
 
+@pytest.mark.contract
 def test_manager_bound_to_old_label_is_refused_after_store_is_recreated(tmp_path, new_manager):
     alpha = new_manager("alpha")
     _start(alpha, "alpha")  # alpha has seen the stamp record its own label
@@ -329,6 +337,7 @@ def test_manager_bound_to_old_label_is_refused_after_store_is_recreated(tmp_path
     assert not (tmp_path / "cube.zarr/.firecube/runs/r2").exists()
 
 
+@pytest.mark.contract
 @pytest.mark.parametrize(
     ("writer", "args", "kwargs"),
     [
@@ -358,6 +367,7 @@ def test_writer_under_a_second_label_is_refused_and_leaves_the_tree_unchanged(
 moto_s3_endpoint, s3_bucket = s3_env.moto_s3_endpoint, s3_env.s3_bucket
 
 
+@pytest.mark.contract
 @pytest.mark.s3
 def test_second_label_is_refused_on_s3_and_the_stamp_keeps_the_first(
     moto_s3_endpoint, s3_bucket, tmp_path

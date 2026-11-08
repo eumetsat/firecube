@@ -8,7 +8,9 @@ Anti-patterns are named so reviewers can cite them by name in PR comments withou
 
 These patterns have caused real bugs or maintenance pain. If a change introduces any of them, it must be rejected at review:
 
-- **BASENAME heuristics**: CLI guesses `output_name` from the target path basename when `--product-name` is not provided. Forbidden because implicit naming breaks idempotency and makes runs non-reproducible. Always require `--product-name` explicitly.
+- **BASENAME heuristics**: CLI guesses the product label from the target path basename. Forbidden because implicit naming breaks idempotency and makes runs non-reproducible. The store records the label once in `.firecube/product.json`, and every command reads it back. The first write takes the label from `--product-name`, the config or the plugin, and never from the URI path.
+
+  **Note**: a removed CLI flag keeps a rename hint that names the new spelling (`src/firecube/cli/_rename_hints.py`). A hint is a tombstone. Delete every rename hint at 1.0. The delete leaves no alias. A hint never accepts the old spelling.
 
 - **Magic Output Detection**: `main.py` inspects plugin result dicts for specific keys to resolve local paths. Forbidden because it couples the engine to plugin internals. Plugin results must use `PipelineResult(outputs=OutputPaths(primary=...))`. No key sniffing.
 

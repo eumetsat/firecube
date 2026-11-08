@@ -31,7 +31,7 @@ from ._manager import BoundProduct, scoped_products
     epilog="""\b
 Examples:
   # list chunks for a specific product
-  firecube chunks list -t file:///data/products/MY_PRODUCT.zarr
+  firecube chunks list --target file:///data/products/MY_PRODUCT.zarr
 
 \b
   # list all chunks across all products under the [storage] base URI
@@ -39,14 +39,13 @@ Examples:
 
 \b
   # filter by date range
-  firecube chunks list -t file:///data/products/MY_PRODUCT.zarr --start-date 2024-01-01 --end-date 2024-06-30
+  firecube chunks list --target file:///data/products/MY_PRODUCT.zarr --start-date 2024-01-01 --end-date 2024-06-30
 
 \b
   # output as JSON for scripting
-  firecube chunks list -t file:///data/products/MY_PRODUCT.zarr -f json
+  firecube chunks list --target file:///data/products/MY_PRODUCT.zarr -f json
 
-See also: firecube chunks delete, firecube chunks runs list,
-          firecube chunks compact status
+See also: firecube chunks delete, firecube chunks runs list, firecube chunks compact status
 """,
 )
 @click.option(

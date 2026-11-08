@@ -65,7 +65,7 @@ def advise(ctx: click.Context) -> None:
     epilog="""\b
 Examples:
   # get recommended batch size for a product group
-  firecube advise batch-size -t <target> -g <group>
+  firecube advise batch-size --target file:///data/products/MY_PRODUCT.zarr --group <group>
 
 See also: firecube ingest, firecube zarr validate
 """,
@@ -164,11 +164,11 @@ def _find_time_chunk_size(grp: zarr.Group) -> int | None:
     epilog="""\b
 Examples:
   # run Tier-1 CF-1.8 checks on a local cube root
-  firecube advise compliance --profile cf-18 -t /path/to/cube.zarr -g .
+  firecube advise compliance --profile cf-18 --target file:///data/products/MY_PRODUCT.zarr --group .
   # check a nested group, emit JSON for downstream tooling
-  firecube advise compliance --profile cf-18 -t s3://bucket/x.zarr -g F024/FWI --storage-type s3 --storage-driver fsspec --format json
-  # fail (exit 2) on any warning or info finding
-  firecube advise compliance --profile cf-18 -t ./cube.zarr -g . --strict
+  firecube advise compliance --profile cf-18 --target file:///data/products/MY_PRODUCT.zarr --group F024/FWI --format json
+  # fail (exit 3) on any warning or info finding
+  firecube advise compliance --profile cf-18 --target file:///data/products/MY_PRODUCT.zarr --group . --strict
 
 See also: firecube zarr validate
 """,

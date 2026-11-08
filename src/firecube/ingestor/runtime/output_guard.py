@@ -93,8 +93,20 @@ def fresh_output_findings(
     """
     if not required:
         return {"status": "pass", "required": False, "reason": None}
+    session = _output_session(ctx)
+    product = session.product.product_name
+    # The run's acquire refuses any held record, stale or live, even one under its own owner.
+    domain = WriteDomain(product=product, category="fresh_output", name="product")
+    holder = manager.repo.read_claim_by_domain(product=product, domain=domain.identifier)
+    if holder is not None:
+        state = "stale" if holder.stale else "live"
+        reason = (
+            f"claim {holder.domain} is held by {holder.owner_id} ({state}), "
+            "so the run could not take ownership of the target"
+        )
+        return {"status": "blocked", "required": True, "reason": reason}
     try:
-        _refuse_reused_output(_output_session(ctx), manager, format_label=format_label)
+        _refuse_reused_output(session, manager, format_label=format_label)
     except ResumeConflictError as exc:
         return {"status": "blocked", "required": True, "reason": str(exc)}
     return {"status": "pass", "required": True, "reason": None}

@@ -44,8 +44,8 @@ resume_existing = true
 ```
 
 `[storage].type` and `FIRECUBE_STORAGE_TYPE` apply only to commands that do not
-take a product URI (e.g. `chunks/*`); for URI-bearing commands the storage type
-comes from the URI scheme or an explicit `--storage-type`.
+take a product URI, for example `chunks --all-products`. For a command that takes a URI,
+the storage type comes from the URI scheme. An explicit `--storage-type` overrides it.
 
 `[plugins.<name>]` only applies when that plugin is installed in the current
 environment. Use these commands to inspect the effective keys for a plugin:
@@ -68,9 +68,51 @@ For storage settings loaded through `StorageConfig`, precedence is:
 4. Built-in defaults
 
 For `firecube ingest`, `--target` and `--write-mode` remain explicit. Pass
-`--input-data` when the plugin reads command-supplied input, and pass
-`--product-name` when the plugin has no `PRODUCT_NAME` or the run needs an
-override.
+`--input-data` when the plugin reads command-supplied input. Pass
+`--product-name` only to record the label of a new store when the plugin has no
+`PRODUCT_NAME`. The store records the label once in `.firecube/product.json`.
+
+## Command-Line Conventions
+
+These rules apply to every command. The [CLI Reference](cli.md) lists the flags of each command.
+
+### Target And Label
+
+Every command that takes one product URI uses `-t` or `--target`. `firecube zarr compare` is the exception. It takes two stores as positional arguments.
+
+The store records its product label once, in `.firecube/product.json`. A command that needs the recorded label refuses a store without one and exits with code 2. The message names `firecube migrate adopt`. Pure storage readers and first writes do not refuse such a store. Examples are `zarr validate`, `parquet validate`, `catalog intake`, `advise` and `archive create`.
+
+`--product-name` is optional on write commands. It records the label of a new store, and the store refuses a different name later. `firecube migrate adopt` and `firecube zarr index rebuild` require it. `firecube archive restore` needs it only when the archive records no label.
+
+### Output Format
+
+A command with an output format takes `-f` or `--format`. The values are `table`, `json` and `csv`. A command lists only the values it supports. For example, `firecube plugins list` supports all three, and `firecube zarr index show` supports `table` and `json`. The default is `table`, except for `firecube zarr slots`, which defaults to `json`.
+
+### Dry Run And Confirmation
+
+These commands take `--dry-run`: `ingest`, `snapshot take`, `migrate run`, `migrate adopt`, `release create`, `zarr multires`, `zarr index rebuild` and `zarr preallocate`. A dry run writes nothing. `migrate run`, `migrate adopt` and `release create` ask for confirmation on a terminal. Off a terminal, they need `--yes-i-really-mean-it` and otherwise exit with code 2. `--dry-run` skips the question.
+
+### Root Options
+
+| Option | Effect |
+|---|---|
+| `--config-file PATH` | Reads the configuration from the file at `PATH`. |
+| `--debug` | Prints the traceback of an error. It sets `FIRECUBE_DEBUG=1`. |
+| `--version` | Prints the version and exits. |
+
+### Exit Codes
+
+| Code | Meaning |
+|---|---|
+| 0 | The command did what it was asked. |
+| 1 | A check found a problem, or the library refused the operation. |
+| 2 | The invocation or the configuration is wrong. |
+| 3 | A `--strict` check found warnings and no errors. |
+| 4 | Storage, a path or an optional dependency failed the command. |
+| 70 | An unexpected error ended the command. It is a bug. |
+| 130 | The operator interrupted or declined the command. |
+
+An unexpected error exits with code 70. The command prints one error line and one hint line. The hint names `--debug` and `FIRECUBE_DEBUG=1`. With `--debug`, the command prints the full traceback.
 
 ## Generated Schemas
 

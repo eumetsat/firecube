@@ -123,6 +123,19 @@ def test_compare_reports_changed_removed_and_added_attr_keys(tmp_path: Path) -> 
     assert "attrs differ" not in result.stderr
 
 
+@pytest.mark.contract
+def test_compare_identical_nan_attrs_are_equivalent(tmp_path: Path) -> None:
+    stores = [_make_store(tmp_path / f"{name}.zarr") for name in "ab"]
+    for store in stores:
+        attrs = zarr.open_array(store=str(store), path="data/values", mode="r+").attrs
+        attrs.update({"valid_min": float("nan"), "range": [1.0, float("nan")]})
+
+    result = _invoke_compare(_required_args(*stores))
+
+    assert result.exit_code == 0, result.output
+    assert result.stderr == ""
+
+
 def test_compare_help_lists_required_flags() -> None:
     result = _invoke_compare(["--help"])
 

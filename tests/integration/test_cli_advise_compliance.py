@@ -131,7 +131,7 @@ def test_advise_compliance_cf18_broken_reports_cf001(broken_cube):
 
 
 @pytest.mark.integration
-def test_advise_compliance_cf18_text_format(broken_cube):
+def test_advise_compliance_cf18_table_format(broken_cube):
     r = subprocess.run(
         [
             "uv",
@@ -147,7 +147,7 @@ def test_advise_compliance_cf18_text_format(broken_cube):
             ".",
             *_LOCAL_STORAGE_FLAGS,
             "--format",
-            "text",
+            "table",
         ],
         capture_output=True,
         text=True,

@@ -114,19 +114,19 @@ def _echo_records_without_storage(count: int) -> None:
     epilog="""\b
 Examples:
   # preview what would be deleted (always do this first)
-  firecube chunks delete -t file:///data/products/MY_PRODUCT.zarr --dry-run
+  firecube chunks delete --target file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # delete all chunks for a product
-  firecube chunks delete -t file:///data/products/MY_PRODUCT.zarr --yes-i-really-mean-it
+  firecube chunks delete --target file:///data/products/MY_PRODUCT.zarr --yes-i-really-mean-it
 
 \b
   # delete chunks in a record-time range
-  firecube chunks delete -t file:///data/products/MY_PRODUCT.zarr --range 2024-01-01,2024-03-31 --dry-run
+  firecube chunks delete --target file:///data/products/MY_PRODUCT.zarr --range 2024-01-01,2024-03-31 --dry-run
 
 \b
   # delete spans overlapping a data-time range
-  firecube chunks delete -t file:///data/products/MY_PRODUCT.zarr --time-range 2024-01-01:2024-03-31 --dry-run
+  firecube chunks delete --target file:///data/products/MY_PRODUCT.zarr --time-range 2024-01-01:2024-03-31 --dry-run
 
 \b
   # preview deletions across all products under the [storage] base URI
@@ -136,8 +136,7 @@ Examples:
   # delete across all products (requires explicit confirmation)
   firecube chunks delete --all-products --yes-i-really-mean-it
 
-See also: firecube chunks list, firecube chunks delete-span,
-          firecube chunks compact rebuild
+See also: firecube chunks list, firecube chunks delete-span, firecube chunks compact rebuild
 """,
 )
 @click.option(
@@ -351,15 +350,15 @@ def delete_cmd(
     epilog="""\b
 Examples:
   # preview span deletion for a product
-  firecube chunks delete-span -t file:///data/products/MY_PRODUCT.zarr --dry-run
+  firecube chunks delete-span --target file:///data/products/MY_PRODUCT.zarr --dry-run
 
 \b
   # delete spans for a specific run
-  firecube chunks delete-span -t file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --yes-i-really-mean-it
+  firecube chunks delete-span --target file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --yes-i-really-mean-it
 
 \b
   # force-delete non-aligned spans
-  firecube chunks delete-span -t file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --force --yes-i-really-mean-it
+  firecube chunks delete-span --target file:///data/products/MY_PRODUCT.zarr --run-id <run-id> --force --yes-i-really-mean-it
 
 See also: firecube chunks delete, firecube chunks runs list
 """,

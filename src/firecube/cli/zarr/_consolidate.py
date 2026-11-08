@@ -19,7 +19,7 @@ from __future__ import annotations
 import click
 
 from firecube.cli._ctx import get_storage_config
-from firecube.cli._errors import echo_rendered, exit_with_error, render
+from firecube.cli._errors import echo_rendered, exit_with_error
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
@@ -105,10 +105,7 @@ def consolidate_time_coord(
     Use it for existing cubes with chunks=(1,) on the time coordinate.
     Always run with --dry-run first. Exits 1 when no group has a time coordinate.
     """
-    from firecube.core.zarr.coord_consolidation import (
-        ProductIdentityError,
-        consolidate_time_coords,
-    )
+    from firecube.core.zarr.coord_consolidation import consolidate_time_coords
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)
@@ -132,18 +129,15 @@ def consolidate_time_coord(
     identity = recorded_identity(
         target_uri, format="zarr", driver=StorageDriverConfig.from_storage_config(storage_config)
     )
-    try:
-        summary = consolidate_time_coords(
-            target=target,
-            product_name=identity.product_name,
-            storage_config=storage_config,
-            chunk_size=chunk_size,
-            time_dim=time_dim,
-            dry_run=dry_run,
-            report=echo_rendered,
-        )
-    except ProductIdentityError as exc:
-        raise click.UsageError(render(exc)) from exc
+    summary = consolidate_time_coords(
+        target=target,
+        product_name=identity.product_name,
+        storage_config=storage_config,
+        chunk_size=chunk_size,
+        time_dim=time_dim,
+        dry_run=dry_run,
+        report=echo_rendered,
+    )
 
     if dry_run:
         click.echo("Summary:")
