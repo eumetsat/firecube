@@ -34,8 +34,7 @@ from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
 from firecube.core import observability
 from firecube.core.cf import CFReport
 from firecube.core.cf.validator import validate_cf18
-from firecube.core.product.open import open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.operations import StorageDriverConfig, open_product
 
 _ROOT_GROUP_ALIASES = frozenset({".", "/", ""})
 _COMPLIANCE_PROFILE_VALIDATORS: dict[str, Callable[..., CFReport]] = {

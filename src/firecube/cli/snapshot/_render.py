@@ -28,10 +28,9 @@ from firecube.core.controlplane.metadata_snapshots import (
     NodeDiff,
     Snapshot,
     SnapshotDiff,
-    SnapshotPlan,
-    SnapshotRecord,
 )
 from firecube.core.zarr.metadata_documents import ABSENT
+from firecube.operations import SnapshotPlan, SnapshotRecord
 
 _MAX_VALUE_CHARS = 120
 _DIGEST_SHOWN = len("sha256:") + 12

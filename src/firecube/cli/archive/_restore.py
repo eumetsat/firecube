@@ -40,8 +40,7 @@ from firecube.cli.archive._common import (
     _local_archive,
     _require_overwrite_confirmation,
 )
-from firecube.core.product.open import open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.operations import StorageDriverConfig, open_product
 
 
 @click.command(
@@ -156,7 +155,7 @@ def restore(
         cache=False,
     )
 
-    from firecube.ingestor.runtime.archive import (
+    from firecube.operations import (
         ArchiveRestorePlan,
         read_restore_source,
         restore_archive,

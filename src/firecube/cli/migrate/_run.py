@@ -30,11 +30,11 @@ from firecube.cli.migrate._common import (
     migrate_options,
     open_target,
 )
-from firecube.ingestor.registry.loader import load_migration_steps
-from firecube.ingestor.runtime.migrate import (
+from firecube.operations import (
     AdoptionResult,
     MigrationResult,
     adopt_product,
+    load_migration_steps,
     migrate_product,
 )
 

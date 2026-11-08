@@ -27,7 +27,7 @@ from firecube.cli.snapshot._render import (
     plan_payload,
     record_payload,
 )
-from firecube.core.controlplane.metadata_snapshots import take_snapshot_for_product
+from firecube.operations import take_snapshot_for_product
 
 
 @click.command(

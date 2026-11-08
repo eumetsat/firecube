@@ -495,13 +495,15 @@ def _preflight_create(
     """Make each refusal of `create_archive` that reads can make, and return its plan.
 
     Reads only: the call takes no claim and writes nothing. The order is the run's: the
-    options, the held claims, then the archive path and the source.
+    options, the held claims, the product's label, then the archive path and the source.
 
     Raises:
         ValueError: `archive_format` is unknown, or a tensogram archive gets `keys` or `marker`.
         ConfigurationError: A zip archive gets a group, a variable list or a date.
         ArchiveClaimError: `holder_run_id` names a store that is not a product, or the
             product's held claims refuse the claim.
+        ProductLabelMismatchError: The product's store records another label than `product`.
+        ProductLabelConflictError: An unstamped product's records name several labels.
         ArchiveConversionError: The archive path or the source fails the writer's first checks.
     """
     if archive_format not in _ARCHIVE_FORMATS:
@@ -534,6 +536,9 @@ def _preflight_create(
             operation="archive_create",
         )
     if is_product:
+        # Call-time import, as everywhere in this module: no archive module loads at import.
+        from firecube.core.archive._common import refuse_other_product_label
+
         manager = product.session.control_plane()
         try:
             _admit_maintenance_claim(
@@ -544,6 +549,8 @@ def _preflight_create(
             )
         finally:
             manager.close()
+        # The run's claim refuses another label; a label stamped after this check refuses there.
+        refuse_other_product_label(product.session, product.label)
     try:
         _admit_create_paths(
             product,
@@ -699,6 +706,10 @@ def create_archive(
         ArchiveClaimError: The product's claims refuse the archive, another owner holds
             its exclusive maintenance claim, or `holder_run_id` does not hold it or names a
             plain store; the call records no run. The dry run refuses held claims too.
+        ProductLabelMismatchError: The product's store records another label, before the
+            claim or at it; the call records no run. The dry run refuses it too.
+        ProductLabelConflictError: An unstamped product's records name several labels; the
+            call records no run.
         ArchiveConversionError: The archive path or the source fails the writer's first
             checks, before the claim or under it before the writer; the call records no run.
             Or the conversion raises `FileExistsError`, `ValueError`, `ImportError` or
@@ -981,18 +992,21 @@ def _preflight_restore(
     archive_format: str,
     overwrite: bool,
     source: ArchiveRestoreSource | None,
-) -> ArchiveRestorePlan:
+) -> tuple[ArchiveRestorePlan, ArchiveClaimError | None]:
     """Make each refusal of `restore_archive` that reads can make, and return its plan.
 
     Reads only: the call takes no claim and writes nothing. In the run's order, it checks
     the labels, the target's key paths, the held claims, the archive, then the target store.
+    A claim refusal is returned with the plan, unraised, and ends the checks.
+
+    Returns:
+        The plan, and the held claims' refusal or `None`. The run records a refused run.
 
     Raises:
         ValueError: `archive_format` is unknown, or `source` was read from another path or format.
         ProductLabelMismatchError: The archive or the target records another label than `product`.
         ProductLabelConflictError: The archive or an unstamped target names several labels.
         BackupChainError: A marker or backup chain is refused, or a target key path holds a symlink.
-        ArchiveClaimError: The product's held claims refuse the claim.
         FileNotFoundError: The archive file does not exist.
         ArchiveConversionError: `read_restore_source` or the restore's first checks refuse the
             archive, or the target holds a store and `overwrite` is not set.
@@ -1019,19 +1033,22 @@ def _preflight_restore(
     refuse_other_product_label(product.session, label)
     if source.backup_chain is not None:
         refuse_symlinked_target(source.backup_chain, product.session)
+    target = product.identity.product_uri.to_str()
+    plan = ArchiveRestorePlan(source=source, target=target, label=label, overwrite=overwrite)
     manager = product.session.control_plane()
     try:
         _admit_maintenance_claim(manager=manager, product=label, operation="archive_restore")
+    except ArchiveClaimError as exc:
+        return plan, exc
     finally:
         manager.close()
-    target = product.identity.product_uri.to_str()
     try:
         _admit_restore_archive(source)
         _refuse_existing_target(target, archive_format=archive_format, overwrite=overwrite)
     except (FileExistsError, ImportError, ValueError) as exc:
         # The run wraps the restore's refusals the same way.
         raise ArchiveConversionError(_error_text(exc), archive=archive) from exc
-    return ArchiveRestorePlan(source=source, target=target, label=label, overwrite=overwrite)
+    return plan, None
 
 
 def _admit_restore_archive(source: ArchiveRestoreSource) -> None:
@@ -1229,10 +1246,10 @@ def restore_archive(
             and records no run.
         ProductLabelConflictError: The archive or an unstamped target holds run records
             that name several labels; the call refuses it before the claim.
-        ArchiveClaimError: The product's held claims refuse the restore, before the claim
-            and with no run record. Or the acquisition conflicts, or another owner holds the
-            exclusive maintenance claim; the call tries to record the run as started and
-            failed, once each.
+        ArchiveClaimError: The product's held claims refuse the restore before the claim,
+            the acquisition conflicts, or another owner holds the exclusive maintenance
+            claim; the call tries to record the run as started and failed, once each. The
+            dry run records no run.
         ArchiveConversionError: `read_restore_source` or the restore's first checks refuse
             the archive, or the target holds a store without `overwrite`; before the claim,
             or under it before the run, with no run record. Or the restore raises
@@ -1245,7 +1262,7 @@ def restore_archive(
             and records no run. A backup chain check that fails inside the run raises it
             after the call records the run failed.
     """
-    plan = _preflight_restore(
+    plan, claim_refusal = _preflight_restore(
         product,
         archive=archive,
         archive_path=archive_path,
@@ -1254,6 +1271,8 @@ def restore_archive(
         source=source,
     )
     if dry_run:
+        if claim_refusal is not None:
+            raise claim_refusal
         return plan
     is_zip = archive_format == "zip"
     # Call-time imports: callers and tests replace these converters on their modules.
@@ -1348,6 +1367,9 @@ def restore_archive(
     claim_handle: Any = None
     try:
         try:
+            # The preflight's claim refusal is recorded here, as an acquisition refusal is.
+            if claim_refusal is not None:
+                raise claim_refusal
             _claim_domain, claim_handle = _acquire_maintenance_claim(
                 manager=manager,
                 product=product_name,

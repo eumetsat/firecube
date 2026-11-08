@@ -109,9 +109,9 @@ in `plans/TODO.md`.
 - Exclusive maintenance claim: `ChunkManager.acquire_exclusive_maintenance` in `manager.py`. It binds the recorded label, so a second spelling of the URI cannot bypass it. Plugin CLI commands and `ensure_slot_index_model` make no check.
 - Content-addressed helpers: `src/firecube/core/controlplane/_content_addressed.py`, internal. The snapshot store, the release records and the inventories import it. A module does not import another store's private helpers.
 - Version retention: `src/firecube/ingestor/runtime/release_versions.py`, internal, beside `release_retention.py`. It builds, preflights and verifies `--retain-versions`. `release.py` imports it at call time.
-- Migration steps: the built-in step `firecube:set-attrs` is in `src/firecube/ingestor/runtime/migrations/set_attrs.py`, registered under `firecube.migrations` in `pyproject.toml`. `load_migration_steps` in `src/firecube/cli/plugins/registry.py` reads that group without importing a step.
+- Migration steps: the built-in step `firecube:set-attrs` is in `src/firecube/ingestor/runtime/migrations/set_attrs.py`, registered under `firecube.migrations` in `pyproject.toml`. `load_migration_steps` in `src/firecube/ingestor/registry/loader.py` reads that group without importing a step.
 - Time-coordinate consolidation: `consolidate_time_coords` in `src/firecube/core/zarr/coord_consolidation.py` bypasses `guarded_write` and `MetadataAuthority` and takes no claim. Do not copy that pattern.
-- CLI boundary gate: `tests/architecture/test_cli_boundary.py`. A new violation is not given a row.
+- CLI and public operations: a command calls `firecube.operations` in `src/firecube/operations.py`. An operation takes the `Product` that `open_product` returns, in `src/firecube/core/product/open.py`. Reference: `docs/reference/operations.md`. Import gate: `tests/architecture/test_cli_boundary.py`. A new violation is not given a row.
 
 ### Plugin-specific CLI helpers (optional)
 - Core CLI hosts plugin utilities under `firecube plugins <plugin> ...` when a plugin registers a Click group under the `firecube.plugin_cli` entry-point group (e.g. in `pyproject.toml`: `[project.entry-points."firecube.plugin_cli"]` with `my_plugin = "my_plugin.plugin_cli:cli"`). Merely creating a `plugin_cli` module is not enough — the entry point must be declared.

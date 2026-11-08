@@ -35,9 +35,8 @@ from firecube.core.intake import (
     build_intake_catalog,
     discover_catalog_groups,
 )
-from firecube.core.product.open import open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.ingestor.registry.loader import discover_ingestors
+from firecube.operations import StorageDriverConfig, open_product
 
 log = logging.getLogger("firecube.cli")
 

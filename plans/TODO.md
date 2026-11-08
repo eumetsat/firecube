@@ -302,6 +302,47 @@ Internal contributor material. These are the gaps the snapshot-leftovers plan (`
 
 ---
 
+### Open after the CLI and API building blocks plan (2026-11-07)
+
+Internal contributor material. The plan added `firecube.operations` and `open_product` (`plans/DONE.md`, 2026-11-07). Each item is recorded, not scheduled. The label names the evidence.
+
+- **Phase B is not scheduled (recorded, read).** The gate in `tests/architecture/test_cli_boundary.py` keeps `UNTIL phase-b` rows for these commands. Each needs an operation behind it.
+    - `ingest` runs behind an operation.
+    - `chunks delete` and `chunks list` work on more than one store.
+    - `zarr index show` derives coordinates.
+    - `parquet validate` and `parquet consolidate`.
+    - `advise batch-size` and `advise compliance`.
+    - `archive inspect` dispatch.
+- **49 import rows carry `UNTIL unscheduled` (recorded, read).** The rows are CLI modules that import from outside the allowed list. Grouped by reason:
+    - Config (5 rows): `firecube.core.config` and `firecube.core.runtime`, from `_ctx.py`, `_input_filters.py`, `archive/_create.py` and `zarr/_slots.py`.
+    - Observability (11 rows): `firecube.core.observability`, from 11 modules, `_errors.py` among them.
+    - Plugin registry and tooling (12 rows): `firecube.ingestor.registry.loader`, `firecube.ingestor.registry.metadata`, `firecube.ingestor.devtools.scaffolding`, `firecube.ingestor.config.engine` and `firecube.ingestor.config.coercion`.
+    - Source admission (4 rows): `firecube.core.discovery`, from `_input_filters.py`, `_input_sources.py`, `_typed_options.py` and `_uri_policy.py`.
+    - Catalog (1 row): `firecube.core.intake`, from `catalog.py`.
+    - Render types (4 rows): `firecube.core.controlplane.types`, `firecube.core.controlplane.metadata_snapshots` and `firecube.core.zarr.metadata_documents`, from `chunks/` and `snapshot/`.
+    - Error classes (3 rows): `firecube.ingestor.errors` and `firecube.ingestor.runtime.preflight`.
+    - Runtime-defined errors (3 rows): `IndexRecordError`, `SlotWindowError`, the slot-plan errors and `PLAN_RANGE_CEILING`.
+    - Plugin setup helpers (6 rows): `configure_ingestor`, `capture_producer`, `DirectZarrIngestor`, `firecube.core.zarr.layers` and `firecube.core.zarr.validation`.
+- **`--codec` is interpolated into SQL (found, not fixed, read).** The option is in `src/firecube/cli/parquet.py`. Bind the value or check it against a list of codecs.
+- **`firecube.core.api` exports the private name `_compute_group_identity_hash` (found, not fixed, read).** Rename it or drop it from the facade.
+- **Two classes are named `SlotWindowError` (found, not fixed, read).** One is in `src/firecube/core/errors.py` and one in `src/firecube/ingestor/runtime/preallocate.py`. The runtime class is not a subclass of the core class.
+- **Plugin suites fail against this branch (found, not fixed, ran).** The suites of `firecube-mtg-fci-l1c` and `firecube-sentinel3-slstr-aod` read or pass `engine_config.write_mode`. Other plugin suites fail through the removed `--output-format` and `write_mode` option. Migrate each plugin to `ctx.execution.write_mode`.
+- **`tests/integration/test_cli_input_data_presence.py::test_override_discovery_no_input_data_succeeds` fails in the full lane (found, not fixed, ran).** It fails by test order with `tests/integration/test_phase3_single_group_preserved.py` and passes alone. It fails on the base commit too.
+- **`ChunkManager` allocates a `firecube_chunks_*` temporary workspace that close never removes (found, not fixed, read).** The code is in `src/firecube/core/controlplane/manager.py` and `repo.py`. The defect is older than the plan.
+- **Some `ChunkManager` method docstrings carry private-caller prose (found, not fixed, read).** A docs page that renders the members would publish it. `docs/reference/operations.md` renders the class without members for this reason.
+- **The archive dry runs are weaker than the real run (found, not fixed, read).** They do not read every entry of a standalone (full) zip archive for its CRC. An incremental backup chain is read in full, so its dry run does check the CRC. With `--overwrite` they do not refuse a symlink at a kept target path. The real run refuses it inside the run.
+- **`tgm_product_label` returns `None` for a missing or unopenable `.tgm` (found, not fixed, read).** `archive restore` without `--product-name` then says the archive records no label. It does not say the file is missing.
+- **A real archive restore validates the zip metadata, or the tensogram structure, twice (recorded, read).** The preflight and the run each validate.
+- **`zarr slots` resume coverage builds its own manager (found, not fixed, read).** It builds the manager from a storage configuration without the anonymous override.
+- **`zarr index rebuild` reports the label mismatch first (recorded, ran).** The case is an unknown plugin with a different `--product-name`. The error used to name the plugin first.
+- **`zarr index show`, `zarr index verify` and the `--all-products` scan of `chunks` read the label more than once (recorded, read).**
+- **The docs-coverage test checks the prefix of a `firecube.operations.` directive, not that the name is in `__all__` (found, not fixed, read).**
+- **Six literal aliases of result records are not exported from `firecube.operations` (recorded, read).** They are `ReleaseOutcome`, `ArchiveState`, `BackupChainState`, `RecordedState`, `InventoryState` and `CheckedScope`.
+- **Plugin hooks receive the run id `zarr-preallocate`, and the control plane records `preallocate:<hex>` (found, not fixed, read).** Decide which id the hooks get.
+- **`open_product` with `require_label=False` and no name labels an unlabelled store with its URI (recorded, read).**
+
+---
+
 ### Open after the CLI surface rework (2026-11-07)
 
 Internal contributor material. The rework recorded the product label once and made `-t/--target` the one spelling of the product URI (`plans/DONE.md`, 2026-11-07). Each item below is recorded, not scheduled. The label names the evidence.

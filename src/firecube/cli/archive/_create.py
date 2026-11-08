@@ -36,8 +36,7 @@ from firecube.cli._uri_policy import (
 )
 from firecube.cli.archive._common import _require_overwrite_confirmation
 from firecube.core.config import get_archive_defaults
-from firecube.core.product.open import open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.operations import StorageDriverConfig, open_product
 
 
 @click.command(
@@ -200,7 +199,7 @@ def create(
         )
     )
 
-    from firecube.ingestor.runtime.archive import ArchiveCreatePlan, create_archive
+    from firecube.operations import ArchiveCreatePlan, create_archive
 
     created = create_archive(
         product,

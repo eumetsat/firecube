@@ -696,7 +696,7 @@ def test_zarr_slots_closes_its_planning_chunk_manager(
         def _boom(*_: Any, **__: Any) -> Any:
             raise RuntimeError("planning failed after the manager was built")
 
-        monkeypatch.setattr(slot_plan, "plan_slots", _boom)
+        monkeypatch.setattr("firecube.cli.zarr._slots.plan_slots", _boom)
 
     result = CliRunner().invoke(cli, _required_args(tmp_path, "slots_test_capable"))
 

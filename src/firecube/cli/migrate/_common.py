@@ -33,8 +33,7 @@ from firecube.cli._shared_options import (
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
 from firecube.core.errors import Message, Param
-from firecube.core.product.open import Product, open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.operations import Product, StorageDriverConfig, open_product
 
 SET_ATTRS_ID = "firecube:set-attrs"
 """The built-in step that the ``--set``, ``--remove`` and ``--node`` flags belong to."""

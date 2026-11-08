@@ -94,8 +94,8 @@ Move interrupting sections to their canonical owner and link them.
 - Start with the reader's question and dominant need.
 - Explain the user consequence before the architecture.
 - Use public CLI flags and public SDK imports only. Public SDK imports come from
-  `firecube.ingestor.api` and `firecube.core.api`. An explicitly internal page is
-  the exception.
+  `firecube.ingestor.api`, `firecube.core.api` and `firecube.operations`. An
+  explicitly internal page is the exception.
 - Default terminal examples to an activated virtual environment: show
   `source .venv/bin/activate` in setup, then use `firecube` and `python` directly.
   Installation may mention `uv run firecube` as an alternative to activation.
@@ -125,8 +125,8 @@ source-code concern. Docstring conventions live in `plans/STYLE.md`.
   symbol fail `mkdocs build --strict` with an ambiguous-anchor error. A second
   page covers the symbol with prose and a link, never a second render.
 - **Directives target public facades only** (`firecube.ingestor.api`,
-  `firecube.core.api`, `firecube.ingestor.extensions`). Internal module paths
-  must not appear in the reference.
+  `firecube.core.api`, `firecube.ingestor.extensions`, `firecube.operations`).
+  Internal module paths must not appear in the reference.
 - **Every facade export is documented or allowlisted.** Exports with no
   directive need an entry in the docs-coverage test allowlist stating why.
   Both rules are enforced by `tests/sdk/test_api_docs_coverage.py`.

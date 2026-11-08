@@ -46,7 +46,7 @@ These apply to all new code in `src/` and to plugin implementations.
 
 ## Docstrings On Public Surfaces
 
-Anything exported from `firecube.ingestor.api`, `firecube.core.api`, or `firecube.ingestor.extensions` is rendered verbatim into the public API reference. The docstring is the reference text, so it carries the same bar as a docs page.
+Anything exported from `firecube.ingestor.api`, `firecube.core.api`, `firecube.operations`, or `firecube.ingestor.extensions` is rendered verbatim into the public API reference. The docstring is the reference text, so it carries the same bar as a docs page.
 
 - **Write the docstring with the code**: every public function, class, method, dataclass, and exported type alias ships with a docstring in the same change that introduces it. Adding a name to a facade `__all__` without one is an incomplete change — `tests/sdk/test_api_docs_coverage.py` fails until the symbol has both a reference entry and docstring text. Type aliases need an attribute docstring (a string literal on the line below); a `#` comment is invisible to the reference.
 - **Non-public code**: write a docstring whenever intent is not obvious from the name and signature — anything with non-trivial control flow, a side effect, a failure mode, or a non-obvious return. Do not pad trivial helpers with restatements of their own signature.

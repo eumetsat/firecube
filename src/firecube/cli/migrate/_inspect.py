@@ -22,8 +22,7 @@ import click
 
 from firecube.cli._shared_options import format_option
 from firecube.cli.migrate._common import echo_json, migrate_options, open_target
-from firecube.ingestor.registry.loader import load_migration_steps
-from firecube.ingestor.runtime.migrate import list_migrations
+from firecube.operations import list_migrations, load_migration_steps
 
 
 def _iso(timestamp: float) -> str:

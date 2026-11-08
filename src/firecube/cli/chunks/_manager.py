@@ -24,12 +24,9 @@ import click
 from firecube.cli._ctx import get_config, get_storage_config
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.core.config import StorageConfig
-from firecube.core.controlplane import ChunkManager
 from firecube.core.product.identity import ProductIdentity
-from firecube.core.product.open import Product, open_product
 from firecube.core.runtime import identity_from_storage_config
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.uri import StorageUri
+from firecube.operations import ChunkManager, Product, StorageDriverConfig, StorageUri, open_product
 
 log = logging.getLogger("firecube.cli")
 

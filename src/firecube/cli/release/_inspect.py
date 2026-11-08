@@ -28,7 +28,7 @@ from firecube.cli.release._render import (
     release_payload,
     verification_payload,
 )
-from firecube.ingestor.runtime.release import (
+from firecube.operations import (
     list_releases_for_product,
     read_release_for_product,
     verify_release_for_product,

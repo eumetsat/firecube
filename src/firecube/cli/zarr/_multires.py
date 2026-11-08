@@ -32,10 +32,13 @@ from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
-from firecube.core.product.open import open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.zarr.layers import DEFAULT_MULTIRES_RESOLUTIONS
-from firecube.core.zarr.multires import MultiresConfig, ZarrMultiresBuilder
+from firecube.operations import (
+    MultiresConfig,
+    StorageDriverConfig,
+    ZarrMultiresBuilder,
+    open_product,
+)
 
 
 @click.command(

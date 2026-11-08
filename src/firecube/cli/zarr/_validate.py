@@ -34,9 +34,8 @@ from firecube.cli._uri_policy import (
     validate_uri_storage_coherence,
 )
 from firecube.core.api import compare_zarr_stores
-from firecube.core.product.open import open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.zarr.validation import validate_group_with_fs
+from firecube.operations import StorageDriverConfig, open_product
 
 
 @click.command(

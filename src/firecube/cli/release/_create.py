@@ -28,7 +28,7 @@ from firecube.cli.release._common import (
     release_options,
 )
 from firecube.cli.release._render import create_payload, echo_plan, echo_record, plan_payload
-from firecube.ingestor.runtime.release import create_release_for_product
+from firecube.operations import create_release_for_product
 
 
 @click.command(

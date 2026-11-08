@@ -14,7 +14,7 @@
 
 """Architectural gate for the CLI boundary, with a tagged allowlist of today's debt.
 
-Six checks walk ``src/firecube`` with :mod:`ast`:
+Seven checks walk ``src/firecube`` with :mod:`ast`:
 
 1. Click is imported only below ``src/firecube/cli/``.
 2. ``firecube.cli`` is imported only below ``src/firecube/cli/``.
@@ -25,6 +25,9 @@ Six checks walk ``src/firecube`` with :mod:`ast`:
    covered by ``test_cli_no_private_cross_subsystem_imports.py``.
 5. Every ``cli/`` module stays at or under ``CLI_MODULE_LINE_CEILING`` lines.
 6. Only ``cli/_uri_policy.py`` parses URIs; other ``cli/`` calls are rows keyed by function.
+7. ``cli/`` imports from ``firecube`` only ``firecube.cli``, ``firecube.operations``,
+   ``firecube.core.api``, ``firecube.ingestor.api`` and ``firecube.core.errors``; imports
+   under ``TYPE_CHECKING`` and inside functions count. Other imports are rows.
 
 Existing debt is listed in the row tables below. Each row carries a tag,
 ``PERMANENT: <reason>`` or ``UNTIL <owner>: <reason>``. Rows only shrink by
@@ -93,6 +96,91 @@ _URI_PARSE_ROWS = {  # "path below src/firecube | qualified scope | callee xN" -
     "cli/chunks/_manager.py | _storage_uri_from_base | StorageUri.parse x1": (
         "PERMANENT: parses the base URI of the [storage] config, not a CLI value"
     ),
+}
+_PUBLIC_SURFACE = frozenset(
+    {
+        "firecube.cli",
+        "firecube.operations",
+        "firecube.core.api",
+        "firecube.ingestor.api",
+        "firecube.core.errors",
+    }
+)
+# One row per file and module: "path below src/firecube/cli | imported module | reason".
+_SURFACE_PHASE_B = """
+advise.py | firecube.core.cf | advise on the facade
+advise.py | firecube.core.cf.validator | advise on the facade
+archive/_inspect.py | firecube.core.archive.tensogram.inspection | inspect dispatch
+archive/_inspect.py | firecube.core.archive.zip.archive | inspect dispatch
+chunks/_delete.py | firecube.core.controlplane.types | chunks multi-store
+chunks/_list.py | firecube.core.controlplane.types | chunks multi-store
+chunks/_manager.py | firecube.core.config | chunks multi-store
+chunks/_manager.py | firecube.core.product.identity | chunks multi-store
+chunks/_manager.py | firecube.core.runtime | chunks multi-store
+index.py | firecube.core.time.calendar | derived coordinates
+index.py | firecube.core.zarr.time_decode | derived coordinates
+main.py | firecube.core.config | ingest on the facade
+main.py | firecube.core.observability | ingest on the facade
+main.py | firecube.core.product.resolver | ingest on the facade
+main.py | firecube.ingestor.registry.loader | ingest on the facade
+main.py | firecube.ingestor.runtime.configure | ingest on the facade
+parquet.py | firecube.core.filesystem | parquet on the facade
+"""
+_SURFACE_UNSCHEDULED = """
+_ctx.py | firecube.core.config | config
+_ctx.py | firecube.core.runtime | config
+_errors.py | firecube.core.observability.logging | observability
+_errors.py | firecube.ingestor.runtime.preflight | error classes
+_input_filters.py | firecube.core.config | config
+_input_filters.py | firecube.core.discovery | source admission
+_input_sources.py | firecube.core.discovery | source admission
+_typed_options.py | firecube.core.discovery | source admission
+_typed_options.py | firecube.ingestor.config.coercion | plugin option tooling
+_typed_options.py | firecube.ingestor.config.engine | plugin option tooling
+_typed_options.py | firecube.ingestor.errors | error classes
+_uri_policy.py | firecube.core.discovery | source admission
+advise.py | firecube.core.observability | observability
+archive/__init__.py | firecube.core.observability | observability
+archive/_create.py | firecube.core.config | config
+catalog.py | firecube.core.intake | catalog
+catalog.py | firecube.core.observability | observability
+catalog.py | firecube.ingestor.registry.loader | plugin registry
+chunks/__init__.py | firecube.core.observability | observability
+chunks/_claims.py | firecube.core.controlplane.types | claim rendering types
+chunks/_runs.py | firecube.core.controlplane.types | abandon-sweep rendering
+index.py | firecube.ingestor.registry.loader | plugin registry
+index.py | firecube.ingestor.runtime.index_record | IndexRecordError
+migrate/__init__.py | firecube.core.observability | observability
+parquet.py | firecube.core.observability | observability
+plugins/commands.py | firecube.core.observability | observability
+plugins/commands.py | firecube.ingestor.devtools.scaffolding | plugin tooling
+plugins/commands.py | firecube.ingestor.registry.metadata | plugin registry
+plugins/introspect.py | firecube.ingestor.registry.metadata | plugin registry
+plugins/mgmt.py | firecube.ingestor.registry.loader | plugin registry
+plugins/registry.py | firecube.ingestor.config.engine | plugin option tooling
+plugins/registry.py | firecube.ingestor.registry.loader | plugin registry
+release/__init__.py | firecube.core.observability | observability
+snapshot/__init__.py | firecube.core.observability | observability
+snapshot/_render.py | firecube.core.controlplane.metadata_snapshots | render types
+snapshot/_render.py | firecube.core.zarr.metadata_documents | render types
+zarr/__init__.py | firecube.core.observability | observability
+zarr/_common.py | firecube.ingestor.errors | error classes
+zarr/_common.py | firecube.ingestor.runtime.configure | configure_ingestor
+zarr/_multires.py | firecube.core.zarr.layers | default multires resolutions
+zarr/_preallocate.py | firecube.ingestor.registry.loader | plugin registry
+zarr/_preallocate.py | firecube.ingestor.runtime.preallocate | SlotWindowError
+zarr/_preallocate.py | firecube.ingestor.runtime.producer | capture_producer
+zarr/_preallocate.py | firecube.ingestor.templates.direct_zarr | DirectZarrIngestor type check
+zarr/_slots.py | firecube.core.config | config
+zarr/_slots.py | firecube.ingestor.registry.loader | plugin registry
+zarr/_slots.py | firecube.ingestor.runtime.slot_plan | slot-plan errors, PLAN_RANGE_CEILING
+zarr/_slots.py | firecube.ingestor.templates.direct_zarr | DirectZarrIngestor type check
+zarr/_validate.py | firecube.core.zarr.validation | validation
+"""
+_SURFACE_ROWS: dict[str, str] = {
+    f"{path} | {module}": f"UNTIL {owner}: {why}"
+    for owner, table in (("phase-b", _SURFACE_PHASE_B), ("unscheduled", _SURFACE_UNSCHEDULED))
+    for path, module, why in (row.split(" | ") for row in table.strip().splitlines())
 }
 
 
@@ -436,8 +524,35 @@ def test_cli_exits_only_through_exit_code() -> None:
     _fail("cli/ must end a command with click.exceptions.Exit(ExitCode.X)", offenders, [])
 
 
+def test_cli_imports_only_the_public_surface() -> None:
+    found: set[str] = set()
+    for path in _py_files(_CLI_ROOT):
+        tree = _parse(path)
+        targets = [t for _, t in _dynamic_import_targets(tree)]
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import | ast.ImportFrom):
+                mods = [m for _, m in _imported_modules(path, ast.Module([node], []))]
+                # `from pkg import a, b`: pkg itself counts when any name is a symbol
+                symbol = any(f"{mods[0]}.{a.name}" not in mods for a in node.names)
+                targets += mods if symbol else mods[1:]
+        for module in targets:
+            if module.split(".")[0] != "firecube" or module.startswith("firecube.cli."):
+                continue
+            if module not in _PUBLIC_SURFACE:
+                found.add(f"{path.relative_to(_CLI_ROOT).as_posix()} | {module}")
+    _fail(
+        "cli/ imports firecube beyond the public surface (row key: path | module)",
+        [
+            f"not allowed, add a tagged row or use the facade: {key!r}"
+            for key in found - _SURFACE_ROWS.keys()
+        ],
+        _stale_keys(_SURFACE_ROWS, found, "public-surface import"),
+    )
+
+
 def test_allowlist_tags_are_well_formed() -> None:
     tags = [
+        *_SURFACE_ROWS.values(),
         *_CLICK_ROWS.values(),
         *_CLI_IMPORT_ROWS.values(),
         *_CLI_TEXT_ROWS.values(),

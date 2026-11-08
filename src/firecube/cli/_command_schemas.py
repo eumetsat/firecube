@@ -24,7 +24,7 @@ from firecube.cli._errors import render
 from firecube.cli._input_filters import load_plugin_defaults
 from firecube.cli._uri_policy import parse_and_validate_uri, validate_uri_storage_coherence
 from firecube.core.errors import ConfigurationError
-from firecube.core.product.identity import resolve_product_name as core_resolve_product_name
+from firecube.operations import resolve_product_name as core_resolve_product_name
 
 
 def resolve_product_name(

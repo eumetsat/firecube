@@ -15,7 +15,7 @@
 """Docs-coverage contract for the public SDK facades.
 
 Invariant: every name exported from a public facade (``firecube.ingestor.api``,
-``firecube.core.api``, ``firecube.ingestor.extensions``) is either rendered in
+``firecube.core.api``, ``firecube.ingestor.extensions``, ``firecube.operations``) is either rendered in
 the API reference through a mkdocstrings ``:::`` directive or listed in
 ``INTENTIONALLY_UNDOCUMENTED`` with a reason. A new export fails this test
 until it is documented or consciously excluded, and a documented name may not
@@ -48,6 +48,7 @@ PUBLIC_MODULES = (
     "firecube.ingestor.api",
     "firecube.core.api",
     "firecube.ingestor.extensions",
+    "firecube.operations",
 )
 
 # Exports deliberately kept out of the public API reference. Each entry needs
@@ -119,6 +120,7 @@ INTENTIONALLY_UNDOCUMENTED: dict[str, dict[str, str]] = {
         "resolve_dataset_target": "engine target resolution helper",
     },
     "firecube.ingestor.extensions": {},
+    "firecube.operations": {},
 }
 
 

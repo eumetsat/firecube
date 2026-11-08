@@ -41,15 +41,17 @@ from firecube.core.api import (
     ATTR_COORD_MANAGED,
     ATTR_PREALLOCATED,
 )
-from firecube.core.controlplane import ChunkManager
-from firecube.core.product.open import open_product
-from firecube.core.runtime import resolve_slot_window
-from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+from firecube.operations import (
+    ChunkManager,
+    StorageDriverConfig,
+    open_product,
+    resolve_slot_window,
+)
 
 if TYPE_CHECKING:
-    from firecube.ingestor.runtime.preallocate import PreallocateDryRunGroup
+    from firecube.operations import PreallocateDryRunGroup
 
 
 @click.command(
@@ -180,8 +182,9 @@ def preallocate(
     input_filters = resolve_input_filters(ctx, plugin, input_filters)
 
     from firecube.ingestor.api import BaseIngestor, ExecutionParams
-    from firecube.ingestor.runtime.preallocate import SlotWindowError, preallocate_product
+    from firecube.ingestor.runtime.preallocate import SlotWindowError
     from firecube.ingestor.runtime.producer import capture_producer
+    from firecube.operations import preallocate_product
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)

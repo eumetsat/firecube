@@ -54,14 +54,11 @@ from firecube.cli._typed_options import (
 from firecube.cli._uri_policy import parse_and_validate_source_uri
 from firecube.core.config import get_plugin_defaults, load_config_file
 from firecube.core.observability import set_current_span_attribute, span
-from firecube.core.product.open import open_product
 from firecube.core.product.resolver import ProductResolver
-from firecube.core.runtime import resolve_slot_window
-from firecube.core.storage.driver_config import StorageDriverConfig
-from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.api import BaseIngestor, ExecutionParams, IngestContext, StorageContext
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.runtime.configure import ensure_run_id
+from firecube.operations import StorageDriverConfig, StorageUri, open_product, resolve_slot_window
 
 log = logging.getLogger("firecube.cli")
 

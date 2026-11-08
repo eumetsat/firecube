@@ -37,22 +37,21 @@ from firecube.cli._shared_options import (
 )
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import parse_and_validate_uri
-from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import (
     ManifestError,
     Message,
     Operation,
     ResolvedIndexConflictError,
 )
-from firecube.core.product.open import open_product
 from firecube.core.time.calendar import is_gregorian_like
 from firecube.ingestor.registry import loader as ingestor_loader
+from firecube.operations import ChunkManager, open_product
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from firecube.ingestor.api import PluginContext
-    from firecube.ingestor.runtime.index_record import IndexVerification
+    from firecube.operations import IndexVerification
 
 logger = logging.getLogger(__name__)
 
@@ -337,7 +336,8 @@ See also: firecube zarr index show, firecube zarr index rebuild
 def verify_cmd(target: str, plugin: str | None, option: tuple[tuple[str, object], ...]) -> None:
     """Verify the current resolved-index record and mirrored root attr."""
 
-    from firecube.ingestor.runtime.index_record import IndexRecordError, verify_index_record
+    from firecube.ingestor.runtime.index_record import IndexRecordError
+    from firecube.operations import verify_index_record
 
     if option and plugin is None:
         raise click.UsageError("--option requires --plugin")
@@ -463,7 +463,7 @@ def rebuild_cmd(
 ) -> None:
     """Rebuild the resolved-index record from a plugin declaration; `--dry-run` writes nothing."""
 
-    from firecube.ingestor.runtime.index_record import rebuild_index_record
+    from firecube.operations import rebuild_index_record
 
     uri = parse_and_validate_uri(target, param_hint="--target")
     with open_product(

@@ -24,7 +24,8 @@ import click
 from firecube.cli._errors import render
 from firecube.core.config import StorageConfig, load_config_file
 from firecube.core.errors import FirecubeError
-from firecube.core.runtime import identity_from_storage_config, resolve_storage_config
+from firecube.core.runtime import identity_from_storage_config
+from firecube.operations import resolve_storage_config
 
 log = logging.getLogger("firecube.cli")
 

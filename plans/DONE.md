@@ -1,5 +1,21 @@
 # Done
 
+## 2026-11-07 — CLI and API building blocks: `firecube.operations` and `open_product`
+
+**Decision.** The CLI calls one public Python facade, `firecube.operations`. A library caller reaches the same operations with the same refusals. The decisions D1 to D6 of 2026-11-07 govern it.
+
+- D1. `open_product` and `Product` are in `src/firecube/core/product/open.py`. The function reads the recorded label and refuses a store with another label or none. It closes the manager it built. The refusal is a core error that the root error boundary maps to exit 2. `src/firecube/cli/_product.py`, `recorded_identity`, `session_identity` and `check_recorded_label` are deleted.
+- D2. The precedence rules are pure core functions. `resolve_product_name` applies the order of the product name. `resolve_slot_window` applies the slot window rule. Both raise `ConfigurationError` and import no Click.
+- D3. An operation takes the `Product` as its first argument. The CLI opens the product and passes it. A library caller does the same.
+- D4. There is one facade, and no operation moves. The code stays where it is. The facade re-exports it.
+- D5. The facade is the module `src/firecube/operations.py`. It has 56 exports with canonical names and no alias. A moved name leaves no alias.
+- D6. The CLI import gate is check 7 of `tests/architecture/test_cli_boundary.py`. It allows only `firecube.cli*`, `firecube.operations`, `firecube.core.api`, `firecube.ingestor.api` and `firecube.core.errors`. Every other import is a tagged row. A new violation is not given a row.
+- Behaviour that changed. `archive create` and `archive restore` take `dry_run` and share one preflight with the real run. The real run checks again under the claim. `adopt_product` owns the label. `EngineConfig(write_mode=...)` raises `ConfigurationError`. `resolve_storage_config` exports nothing to the environment by default. The user-visible list is in `CHANGELOG.md`.
+- Evidence. `tests/architecture/test_cli_boundary.py` holds the import gate. `tests/cli/test_click_error_boundary.py` pins the operation table of the error boundary. `tests/unit/test_cli_zarr_preallocate.py` holds the run id shape test.
+- What stays open. The items under "Open after the CLI and API building blocks plan (2026-11-07)" in `plans/TODO.md`.
+
+---
+
 ## 2026-11-07 — One CLI surface: the recorded label, `-t/--target` and one exit-code table
 
 **Decision.** A store records its product label once, and every command that needs a label reads it back. `-t/--target` is the one spelling of the product URI. One error boundary at the root maps every exception to one exit-code table. The entries below cite the node IDs of the plan `2026-11-06-cli-surface-rework`.

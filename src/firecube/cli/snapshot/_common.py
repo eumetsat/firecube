@@ -28,9 +28,7 @@ from firecube.cli._shared_options import (
     target_uri_option,
 )
 from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
-from firecube.core.controlplane import ChunkManager
-from firecube.core.product.open import Product, open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.operations import ChunkManager, Product, StorageDriverConfig, open_product
 
 
 def snapshot_options(tier: Literal["write", "inspect"]) -> Any:

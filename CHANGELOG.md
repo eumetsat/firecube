@@ -9,6 +9,24 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Added
 
+- The module `firecube.operations` is the public Python surface of the CLI.
+  The commands listed below call it, and so can your code. `ingest` and the
+  other deferred commands do not run through it yet. Each operation uses the
+  canonical name of its function. The module keeps no alias.
+- `open_product` in `firecube.operations` opens a product store. Use it as a
+  context manager. It yields a `Product` and reads the recorded label. It
+  refuses a store that records another label, and by default a store that
+  records none. It closes the manager it built on exit.
+- Each operation takes a `Product` first. The operations are `migrate_product`,
+  `adopt_product`, `list_migrations`, `create_archive`, `restore_archive`,
+  `create_release_for_product`, `list_releases_for_product`,
+  `read_release_for_product`, `verify_release_for_product`,
+  `take_snapshot_for_product`, `rebuild_index_record`,
+  `verify_index_record`, `preallocate_product`, `plan_slots`,
+  `consolidate_time_coords` and `ZarrMultiresBuilder`.
+  `verify_release_for_product` returns a `ReleaseCheck`.
+- `preallocate_product` mints the run id `preallocate:<16 hex>` when the caller
+  gives none.
 - Run records name the producer of the run in `meta.producer`. The record holds
   the plugin name, distribution and version, the Firecube version and a digest
   of the run configuration. The `source.kind` field is `vcs`, `editable`,
@@ -173,6 +191,37 @@ and Firecube package versions follow PEP 440-compatible Semantic Versioning.
 
 ### Changed
 
+- `resolve_storage_config` no longer exports storage settings to the
+  environment by default. Pass `export_env=True` to export storage settings.
+  The CLI passes it.
+- `EngineConfig(write_mode=...)` now raises `ConfigurationError`. The message
+  names `ExecutionParams(write_mode=...)`. Move the write mode to
+  `ExecutionParams`. Read `ctx.execution.write_mode` instead of
+  `engine_config.write_mode`.
+- `firecube archive create --dry-run` and `firecube archive restore --dry-run`
+  now refuse four cases that only the real run refused before.
+  - A missing input, or a malformed archive or source structure.
+  - An existing destination without `--overwrite`.
+  - A held write claim.
+  - A label conflict.
+
+  Two checks remain real-run-only. One is the CRC check of the payload of a
+  standalone (full) zip archive. The dry run of an incremental backup chain
+  reads the whole chain, and so reads every member for its CRC. The other is the
+  refusal of a symlink at a kept target path under `--overwrite`.
+- `firecube archive create` exits 2, not 1, when a ZIP-only option is refused.
+  The message is unchanged.
+- A command that needs a recorded label refuses an unlabelled store with the
+  same message as before. It no longer prints the `Usage:` and `Try ... --help`
+  lines. The exit code stays 2. The commands are `chunks list`, `chunks runs
+  list`, `zarr index show`, `zarr index verify`, `zarr multires`,
+  `zarr consolidate-time-coord`, `release list` and `snapshot list`.
+- The text of `MissingProductNameError` now reads `Option:  --product-name
+  <name>`. It read `CLI flag:  --product-name <name>`.
+- `firecube zarr index rebuild` records the canonical target URI in its run
+  record. It recorded the URI as the user typed it.
+- `firecube zarr multires` and `firecube zarr consolidate-time-coord` leave one
+  temporary `firecube_chunks_*` directory fewer.
 - Releasing a claim now raises `ClaimReleaseError` when its heartbeat write is
   still in flight after `stale_threshold_s`. The claim goes stale. Clear it
   with `firecube chunks claims clear` after its process has stopped.

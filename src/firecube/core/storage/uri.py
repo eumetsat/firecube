@@ -71,6 +71,20 @@ def _normalize_path(path: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class StorageUri:
+    """A parsed storage location: protocol, authority and path.
+
+    The protocol is `file` or `memory` (local) or `s3` or `gs` (remote). The instance is
+    immutable. The constructor normalizes the path and validates the protocol and authority.
+    `parse` reads a URI string, `from_local_path` builds a `file` URI from an absolute path
+    and `to_str` returns the canonical string. `join`, `parent` and `with_protocol` return
+    storage URI values, and `is_remote` tells a remote location from a local one.
+
+    Attributes:
+        protocol: The lowercase scheme: `file`, `memory`, `s3` or `gs`.
+        authority: The bucket of an `s3` or `gs` URI; ``None`` for `file` and `memory`.
+        path: The absolute path, with duplicate slashes collapsed and no trailing slash except the root.
+    """
+
     protocol: str
     authority: str | None
     path: str

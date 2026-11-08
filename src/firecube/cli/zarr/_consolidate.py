@@ -30,8 +30,7 @@ from firecube.cli._uri_policy import (
     apply_smart_default,
     parse_and_validate_uri,
 )
-from firecube.core.product.open import open_product
-from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.operations import StorageDriverConfig, open_product
 
 
 @click.command(
@@ -105,7 +104,7 @@ def consolidate_time_coord(
     Use it for existing cubes with chunks=(1,) on the time coordinate.
     Always run with --dry-run first. Exits 1 when no group has a time coordinate.
     """
-    from firecube.core.zarr.coord_consolidation import consolidate_time_coords
+    from firecube.operations import consolidate_time_coords
 
     target_uri = parse_and_validate_uri(target, param_hint="--target")
     storage_type = apply_smart_default(target_uri, storage_type)

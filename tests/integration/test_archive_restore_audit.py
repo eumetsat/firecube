@@ -415,6 +415,47 @@ def test_clean_dry_run_takes_no_claim_and_records_no_run(labelled_zip, op, monke
     assert not (labelled_zip / "new.zip").exists() and not (target / "zarr.json").exists()
 
 
+@pytest.mark.parametrize(("dry_run", "failed_runs"), [(False, 1), (True, 0)], ids=["real", "dry"])
+@pytest.mark.parametrize("claim_kind", ["writer", "exclusive"])
+def test_restore_refused_by_a_held_claim_records_a_failed_run(
+    labelled_zip, dry_run, failed_runs, claim_kind
+):
+    target = labelled_zip / "r.zarr"
+    with _open(target) as product:
+        if claim_kind == "writer":
+            _hold_write_claim(product)
+        else:
+            product.manager.acquire_exclusive_maintenance(product="LBL", run_id="other-maint")
+        with pytest.raises(ArchiveClaimError):
+            restore_archive(product, **_zip_args(labelled_zip / "made.zip"), dry_run=dry_run)
+        runs = [
+            r for r in product.manager.list_runs(product="LBL") if "archive-restore-" in r.run_id
+        ]
+    assert [r.status for r in runs] == ["failed"] * failed_runs
+    lifecycle = [
+        [
+            e["event_type"]
+            for e in _read_run_events(target, r.run_id)
+            if e["event_type"].startswith("run_")
+        ]
+        for r in runs
+    ]
+    assert lifecycle == [["run_started", "run_failed"]] * failed_runs
+    assert not (target / "zarr.json").exists()
+
+
+def test_create_dry_run_refuses_after_label_drift(labelled_zip):
+    store = labelled_zip / "s.zarr"
+    with _open(store) as product:
+        before = [r.run_id for r in product.manager.list_runs(product="LBL")]
+        (store / ".firecube" / "product.json").write_text('{"product": "OTHER"}')
+        with pytest.raises(ProductLabelMismatchError):
+            create_archive(product, **_zip_args(labelled_zip / "new.zip"), dry_run=True)
+        assert product.manager.list_claims(product="LBL") == []
+        assert [r.run_id for r in product.manager.list_runs(product="LBL")] == before
+    assert not (labelled_zip / "new.zip").exists()
+
+
 def test_restore_refuses_a_label_stamped_between_the_preflight_and_the_claim(
     labelled_zip, monkeypatch
 ):
