@@ -20,7 +20,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.runtime.zarr import batch_runner
 from firecube.ingestor.runtime.zarr.append_failure import (
     AppendBatchFailed,
@@ -30,6 +29,7 @@ from firecube.ingestor.runtime.zarr.append_failure import (
 from firecube.ingestor.templates import generic as generic_module
 from firecube.ingestor.templates.generic import GenericZarrIngestor
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     PipelineBatch,
     PluginContext,
@@ -67,7 +67,6 @@ class _FakeStrategy:
 
 def _make_subject(monkeypatch: pytest.MonkeyPatch, *, write_mode: str = "direct"):
     ingestor = _DummyZarrIngestor(name="dummy_zarr")
-    ingestor.engine_config = EngineConfig(write_mode=write_mode)
     ingestor.template_config = None
 
     batch = PipelineBatch(
@@ -78,7 +77,11 @@ def _make_subject(monkeypatch: pytest.MonkeyPatch, *, write_mode: str = "direct"
     )
     runtime_ctx = RuntimeIngestContext.from_ingest_context(
         IngestContext(
-            source=".", target="out.zarr", output_format="zarr", options={"resume_existing": True}
+            source=".",
+            target="out.zarr",
+            output_format="zarr",
+            options={"resume_existing": True},
+            execution=ExecutionParams(write_mode=write_mode),
         ),
         run_id="run-1",
         temp_root=None,

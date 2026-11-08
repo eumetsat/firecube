@@ -171,14 +171,13 @@ def test_describe_options_structure():
 
 def test_configure_is_pure_no_context_side_effects():
     ingestor = MockIngestor()
-    options = {"force_reingest": True, "incremental": True, "dry_run": True}
+    options = {"force_reingest": True, "incremental": True}
     ctx = IngestContext(source=".", target=".", options=dict(options))
 
     engine_cfg, _, _ = ingestor._configurator.configure(ctx)
 
     assert engine_cfg.force_reingest is True
     assert engine_cfg.incremental is True
-    assert engine_cfg.dry_run is True
     assert ctx.options == options
     assert not hasattr(ctx, "force_reingest")
     assert not hasattr(ctx, "incremental")

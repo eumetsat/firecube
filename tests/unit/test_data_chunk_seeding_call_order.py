@@ -36,7 +36,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from firecube.ingestor.api import GenericZarrIngestor, PluginContext
+from firecube.ingestor.api import ExecutionParams, GenericZarrIngestor, PluginContext
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.unit
@@ -88,7 +88,6 @@ def _make_ctx(
     source_dir.mkdir(exist_ok=True)
     (source_dir / "input.nc").touch()
     options: dict[str, Any] = {
-        "write_mode": write_mode,
         "resume_existing": resume_existing,
         "pipeline_batch_size": 1,
         "pipeline_workers": 1,
@@ -104,6 +103,7 @@ def _make_ctx(
         source=str(source_dir),
         product=product,
         options=options,
+        execution=ExecutionParams(write_mode=write_mode),
     )
 
 

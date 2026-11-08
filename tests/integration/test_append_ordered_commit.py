@@ -34,6 +34,7 @@ import xarray as xr
 from precip_daily_test_plugin.ingestor import PrecipDailyIngestor
 
 from firecube.core.controlplane import ChunkManager
+from firecube.ingestor.api import ExecutionParams
 from firecube.ingestor.types.context import (
     IngestContext,
     PipelineBatch,
@@ -102,10 +103,10 @@ def test_parallel_workers_commit_appends_in_batch_order(tmp_path: Path) -> None:
         options={
             "pipeline_batch_size": _BATCH_SIZE,
             "pipeline_workers": _WORKERS,
-            "write_mode": "direct",
             "no_progress": True,
             "layout": "areastats",
         },
+        execution=ExecutionParams(write_mode="direct"),
         storage=StorageContext(output=session),
         run_id="ordered-commit-run",
     )

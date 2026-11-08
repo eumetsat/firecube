@@ -226,8 +226,6 @@ def _ingest_args(target: Path, source: Path) -> list[str]:
         "local",
         "--storage-driver",
         "fsspec",
-        "--output-format",
-        "zarr",
         "--write-mode",
         "direct",
         "--option",

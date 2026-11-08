@@ -66,8 +66,6 @@ def _ingest(
             "local",
             "--storage-driver",
             "fsspec",
-            "--output-format",
-            "zarr",
             "--write-mode",
             "direct",
             "--option",

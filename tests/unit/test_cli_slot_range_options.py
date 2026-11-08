@@ -22,7 +22,6 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
-from firecube.ingestor.config.engine import EngineConfig, config_keys
 
 
 def _base_args(tmp_path: Path) -> list[str]:
@@ -93,11 +92,9 @@ def test_valid_slot_range_accepted(tmp_path: Path) -> None:
 
     def fake_run(self: Any, ctx: IngestContext) -> IngestResult:
         captured["ctx"] = ctx
-        engine_options = {k: v for k, v in ctx.options.items() if k in config_keys(EngineConfig)}
-        engine_cfg = EngineConfig.from_options(engine_options)
-        assert engine_cfg.slot_start == 0
-        assert engine_cfg.slot_end == 100
-        assert engine_cfg.slot_size is None
+        assert ctx.execution.slot_start == 0
+        assert ctx.execution.slot_end == 100
+        assert ctx.execution.slot_size is None
         return IngestResult(
             outputs=OutputPaths(primary=str(ctx.target)),
             output_format=str(ctx.output_format),
@@ -111,5 +108,5 @@ def test_valid_slot_range_accepted(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     assert "ctx" in captured
-    assert captured["ctx"].options["slot_start"] == 0
-    assert captured["ctx"].options["slot_end"] == 100
+    assert captured["ctx"].execution.slot_start == 0
+    assert captured["ctx"].execution.slot_end == 100

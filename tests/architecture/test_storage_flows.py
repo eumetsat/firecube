@@ -40,6 +40,7 @@ from firecube.ingestor.api import (
 )
 from firecube.ingestor.runtime.engine import PipelineExecutor
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     PipelineBatch,
     PipelineResult,
     PipelineRunState,
@@ -101,7 +102,8 @@ def _runtime_ctx(
         target=target,
         output_format="zarr",
         storage=StorageContext(output=session),
-        options={"write_mode": write_mode, "no_progress": True},
+        options={"no_progress": True},
+        execution=ExecutionParams(write_mode=write_mode),
         run_id="storage-flow-run",
         identity=RuntimeIdentity(run_id="storage-flow-run"),
     )
@@ -361,7 +363,7 @@ def test_bt2_poison_ingest_write_flow(tmp_path: Path, driver: Literal["fsspec", 
         target=str(target),
         output_format="zarr",
         storage=StorageContext(output=session),
-        options={"write_mode": "staged", "no_progress": True},
+        options={"no_progress": True},
         run_id=f"poison-ingest-run-{driver}",
         identity=RuntimeIdentity(run_id=f"poison-ingest-run-{driver}"),
     )
@@ -771,7 +773,7 @@ def test_local_completion_uses_bound_product_prefix(
         target=str(out_base / "product.zarr"),
         output_format="zarr",
         storage=StorageContext(output=make_test_session(out_base, product="product.zarr")),
-        options={"write_mode": "staged", "no_progress": True},
+        options={"no_progress": True},
         run_id="t1-local-prefix",
         identity=RuntimeIdentity(run_id="t1-local-prefix"),
     )

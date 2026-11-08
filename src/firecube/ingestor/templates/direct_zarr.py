@@ -1452,7 +1452,7 @@ class DirectZarrIngestor(BaseIngestor):
         treated as skip (backward-compat with pre-hash stores and fresh
         ingests that have not yet run ``firecube zarr preallocate``).
         """
-        write_mode = self.engine_config.write_mode
+        write_mode = ctx.execution.write_mode
         try:
             store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
         except ConfigurationError:
@@ -1506,7 +1506,7 @@ class DirectZarrIngestor(BaseIngestor):
         if self._parallel_execution_state is None:
             return
 
-        write_mode = self.engine_config.write_mode
+        write_mode = ctx.execution.write_mode
         store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
         product = session.product
         run_id = session.run_id
@@ -1580,7 +1580,7 @@ class DirectZarrIngestor(BaseIngestor):
         """Build this run's write session, closing any earlier run's.
 
         Called on the main thread before any batch or worker. Window, slot
-        group and write mode come from ``engine_config``; a staged session
+        group and write mode come from ``ctx.execution``; a staged session
         also gets the workspace URI, for its seeding authority, and the final
         target, opened at promotion for the authority promoted metadata is
         published under. An earlier session whose close still fails (its
@@ -1590,16 +1590,15 @@ class DirectZarrIngestor(BaseIngestor):
         if previous is not None:
             previous.close()
             self._zarr_write_session = None
-        engine_config = self.engine_config
-        start = getattr(engine_config, "slot_start", None)
-        end = getattr(engine_config, "slot_end", None)
-        write_mode = str(engine_config.write_mode)
+        execution = ctx.execution
+        start, end = execution.slot_start, execution.slot_end
+        write_mode = execution.write_mode
         session = ZarrWriteSession(
             product=_ctx_product_name(ctx, self.name),
             run_id=str(ctx.run_id or ctx.option("run_id", "unknown")),
             write_mode=write_mode,
-            window=(start, end) if isinstance(start, int) and isinstance(end, int) else None,
-            slot_group=getattr(engine_config, "slot_group", None),
+            window=(start, end) if start is not None and end is not None else None,
+            slot_group=execution.slot_group,
             acquire_claim=lambda **kwargs: self._chunk_manager.acquire_claim(**kwargs),
             open_root=lambda uri: _open_zarr_root_for_read(uri, self._chunk_manager.storage_config),
             # In staged mode the workspace never holds engine-owned chunks:
@@ -1734,7 +1733,7 @@ class DirectZarrIngestor(BaseIngestor):
             session = self._write_session()
             prep_metrics = self.prepare_batch_data(batch, ctx) or {}
 
-            write_mode = self.engine_config.write_mode
+            write_mode = ctx.execution.write_mode
             store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
 
             schema = self._cached_zarr_schema(ctx)
@@ -1876,16 +1875,10 @@ class DirectZarrIngestor(BaseIngestor):
                     slot_group=session.slot_group,
                     codec_pipelines_by_array=codec_pipelines_by_array,
                     region_write_concurrency=region_write_concurrency,
-                    suppress_static_emission_for_non_owner=getattr(
-                        self.engine_config,
-                        "suppress_static_emission_for_non_owner",
-                        False,
+                    suppress_static_emission_for_non_owner=(
+                        ctx.execution.suppress_static_emission_for_non_owner
                     ),
-                    static_owner_slot_start=getattr(
-                        self.engine_config,
-                        "static_owner_slot_start",
-                        None,
-                    ),
+                    static_owner_slot_start=ctx.execution.static_owner_slot_start,
                     zarr_write_empty_chunks=zarr_write_empty_chunks,
                     zarr_unit_write_buffer=zarr_unit_write_buffer,
                     on_write=(

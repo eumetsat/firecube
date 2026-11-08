@@ -95,8 +95,6 @@ def _ingest(source: Path, target: Path, *extra: str) -> subprocess.CompletedProc
         "local",
         "--storage-driver",
         "fsspec",
-        "--output-format",
-        "zarr",
         "--write-mode",
         "direct",
         "--option",
@@ -110,7 +108,7 @@ def _ingest(source: Path, target: Path, *extra: str) -> subprocess.CompletedProc
 
 
 def _validate(target: Path) -> subprocess.CompletedProcess[str]:
-    return _firecube("zarr", "validate", "-p", target.as_uri(), "-g", "default")
+    return _firecube("zarr", "validate", "--target", target.as_uri(), "-g", "default")
 
 
 def _failed_store(tmp_path: Path) -> tuple[Path, Path, subprocess.CompletedProcess[str]]:

@@ -25,6 +25,7 @@ import click
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
 from firecube.cli._product import recorded_identity, resolve_product_identity
+from firecube.cli._shared_options import format_option as shared_format_option
 from firecube.cli._shared_options import (
     product_name_option,
     storage_driver_option,
@@ -41,16 +42,8 @@ SET_ATTRS_ID = "firecube:set-attrs"
 
 
 def format_option(func: Any) -> Any:
-    """Add the ``-f/--format`` option."""
-    return click.option(
-        "-f",
-        "--format",
-        "output_format",
-        type=click.Choice(["text", "json"], case_sensitive=False),
-        default="text",
-        show_default=True,
-        help="Output format; json prints sorted keys.",
-    )(func)
+    """Add the shared ``-f/--format`` option with the table and json choices."""
+    return shared_format_option(("table", "json"))(func)
 
 
 def echo_json(payload: Any) -> None:

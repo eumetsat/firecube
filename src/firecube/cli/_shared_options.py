@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal
 
@@ -214,13 +215,25 @@ def archive_uri_option(tier: Literal["write", "inspect"]) -> Any:
     return decorator
 
 
-def format_option(default: str = "table") -> Any:
+FORMAT_CHOICES: tuple[str, ...] = ("table", "json", "csv")
+"""The output formats a command may offer through `format_option`."""
+
+
+def format_option(choices: Sequence[str] = FORMAT_CHOICES, default: str = "table") -> Any:
+    """Add the shared case-insensitive `-f, --format` option, bound to `output_format`.
+
+    Raises:
+        ValueError: `choices` is not a subset of `FORMAT_CHOICES` or lacks `default`.
+    """
+    if not set(choices) <= set(FORMAT_CHOICES) or default not in choices:
+        raise ValueError(f"format choices {tuple(choices)!r} and default {default!r} are invalid")
+
     def decorator(f: Any) -> Any:
         return click.option(
             "-f",
             "--format",
             "output_format",
-            type=click.Choice(["table", "json", "csv"], case_sensitive=False),
+            type=click.Choice(list(choices), case_sensitive=False),
             default=default,
             show_default=True,
             help="Output format.",

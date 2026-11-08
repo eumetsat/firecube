@@ -19,7 +19,7 @@ from pathlib import Path
 
 import click
 
-from firecube.cli._shared_options import dry_run_flag, target_uri_option
+from firecube.cli._shared_options import dry_run_flag, format_option, target_uri_option
 
 from ._manager import target_product
 
@@ -56,14 +56,7 @@ See also: firecube chunks compact status, firecube chunks list
 )
 @target_uri_option("inspect")
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json"]),
-    default="table",
-    help="output format",
-)
+@format_option(("table", "json"))
 @dry_run_flag
 @click.pass_context
 def rebuild_cmd(
@@ -120,14 +113,7 @@ See also: firecube chunks compact rebuild, firecube chunks list
 )
 @target_uri_option("inspect")
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json"]),
-    default="table",
-    help="output format",
-)
+@format_option(("table", "json"))
 @click.pass_context
 def status_cmd(
     ctx: click.Context,

@@ -316,8 +316,6 @@ def test_dry_run_and_preallocate_produce_equal_identity_hash(tmp_path: Any) -> N
             "show",
             "--target",
             target_uri,
-            "--product-name",
-            "irregular_axis_safe",
             "--json",
         ],
     )

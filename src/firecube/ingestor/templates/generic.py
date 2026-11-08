@@ -356,7 +356,7 @@ class GenericZarrIngestor(BaseIngestor):
                 groups = ["default"]
             zarr_config = self.get_zarr_config(ctx)
             validate_zarr_writer_dict(zarr_config)
-            write_mode = self.engine_config.write_mode
+            write_mode = ctx.execution.write_mode
             resume_existing, force_reingest = _runtime_reingest_options(ctx)
             store_uri, final_target_uri = _resolve_zarr_batch_targets(self, ctx, write_mode)
             time_dim_name = self._resolve_time_dim_name()
@@ -485,6 +485,7 @@ class GenericParquetIngestor(BaseIngestor):
     """
 
     template_config_class = ParquetTemplateConfig
+    output_format: ClassVar[str] = "parquet"
     requires_fresh_target: ClassVar[bool] = True
     fresh_target_format_label: ClassVar[str] = "Parquet"
 
@@ -602,7 +603,7 @@ class GenericParquetIngestor(BaseIngestor):
         try:
             prep_metrics = self.prepare_batch_data(batch, ctx) or {}
 
-            write_mode = self.engine_config.write_mode
+            write_mode = ctx.execution.write_mode
             base_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
             self._log.debug(
                 "Parquet Output Resolution: target=%s base_uri=%s", ctx.target, base_uri

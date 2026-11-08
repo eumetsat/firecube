@@ -142,7 +142,7 @@ class CFTimeDimValueDedupIngestor(DirectZarrIngestor):
     def build_write_intents(self, batch: PipelineBatch, ctx: PluginContext) -> list[WriteIntent]:
         import zarr
 
-        write_mode = self.engine_config.write_mode
+        write_mode = ctx.execution.write_mode
         store_uri = self.resolve_output_uri(ctx, write_mode=write_mode)
         ts_iso = str(ctx.option("x_ts_iso", _VDEDUP_T1))
         ts_val = np.datetime64(ts_iso, "s")

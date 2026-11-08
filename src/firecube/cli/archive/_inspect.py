@@ -28,8 +28,8 @@ from firecube.cli._errors import exit_with_error
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._shared_options import (
     archive_uri_option,
+    format_option,
 )
-from firecube.cli._typed_options import display_format_option
 from firecube.cli.archive._common import _is_zip_archive, _local_archive
 
 
@@ -83,6 +83,42 @@ def _echo_archive_info(info_dict: dict[str, Any], *, as_json: bool, format_label
             )
 
 
+def _echo_validation_json(
+    path: str, issues: list[str], *, message_count: int | None = None
+) -> None:
+    """Print the validation verdict of one archive as JSON."""
+    payload: dict[str, Any] = {"path": path, "valid": not issues, "issues": issues}
+    if message_count is not None:
+        payload["message_count"] = message_count
+    click.echo(json.dumps(payload, indent=2))
+
+
+def _tgm_listing_payload(listing: Any) -> dict[str, Any]:
+    """Return the messages of an open .tgm listing as a JSON-ready mapping."""
+    messages: list[dict[str, Any]] = []
+    for message in listing.messages():
+        entry: dict[str, Any] = {"index": message.index, "is_controlplane": message.is_controlplane}
+        if message.is_controlplane:
+            entry["product"] = message.product
+        else:
+            entry["group"] = message.group_name
+            if message.has_firecube_metadata:
+                entry["source_uri"] = message.source_uri
+                entry["compression"] = message.compression
+            entry["objects"] = [
+                {
+                    "index": obj.index,
+                    "name": obj.name,
+                    "shape": obj.shape,
+                    "dtype": obj.dtype,
+                    "compression": obj.compression,
+                }
+                for obj in message.objects()
+            ]
+        messages.append(entry)
+    return {"format": "tgm", "message_count": listing.message_count, "messages": messages}
+
+
 @click.command(
     "info",
     epilog="""\b
@@ -102,7 +138,7 @@ See also: firecube archive list, firecube archive validate
 """,
 )
 @archive_uri_option(tier="inspect")
-@display_format_option(default="table")
+@format_option(("table", "json"))
 @click.pass_context
 def info(ctx: click.Context, archive: str, output_format: str) -> None:
     """show metadata for a .tgm or .zip archive
@@ -156,8 +192,9 @@ See also: firecube archive info, firecube archive create
 @click.option(
     "--quick", is_flag=True, default=False, help="structure-only check (no hash verification)"
 )
+@format_option(("table", "json"))
 @click.pass_context
-def validate(ctx: click.Context, archive: str, quick: bool) -> None:
+def validate(ctx: click.Context, archive: str, quick: bool, output_format: str) -> None:
     """check integrity of a .tgm or .zip archive
 
     reads the archive header and validates internal structure without fully
@@ -165,35 +202,44 @@ def validate(ctx: click.Context, archive: str, quick: bool) -> None:
     entry. exits with code 0 if the archive is valid, code 1 if it is
     corrupted or incomplete.
     """
+    as_json = output_format == "json"
     local_path = _local_archive(archive)
     if _is_zip_archive(archive):
         from firecube.core.archive.zip.archive import validate_zip
 
         zip_issues = validate_zip(local_path, quick=quick)
-        if not zip_issues:
+        if as_json:
+            _echo_validation_json(local_path, [str(issue) for issue in zip_issues])
+        elif not zip_issues:
             click.echo(f"VALID: {local_path} (no issues)")
-            return
-        click.echo(f"INVALID: {local_path} ({len(zip_issues)} issue(s))")
-        for zip_issue in zip_issues:
-            click.echo(f"  {zip_issue}")
-        raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
+        else:
+            click.echo(f"INVALID: {local_path} ({len(zip_issues)} issue(s))")
+            for zip_issue in zip_issues:
+                click.echo(f"  {zip_issue}")
+        if zip_issues:
+            raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
+        return
 
     from firecube.core.archive.tensogram.inspection import validate_tgm
 
     validation = validate_tgm(local_path, quick=quick, operation="firecube archive validate")
     hard_issues = validation.issues
+    lines = [
+        f"[file] offset={issue.get('byte_offset')}: {issue.get('description')}"
+        if scope == "file"
+        else f"[{scope}] {issue}"
+        for scope, issue in hard_issues
+    ]
 
-    if not hard_issues:
+    if as_json:
+        _echo_validation_json(local_path, lines, message_count=validation.message_count)
+    elif not hard_issues:
         click.echo(f"VALID: {local_path} ({validation.message_count} message(s), no issues)")
     else:
         click.echo(f"INVALID: {local_path} ({len(hard_issues)} issue(s))")
-        for scope, issue in hard_issues:
-            if scope == "file":
-                click.echo(
-                    f"  [file] offset={issue.get('byte_offset')}: {issue.get('description')}"
-                )
-            else:
-                click.echo(f"  [{scope}] {issue}")
+        for line in lines:
+            click.echo(f"  {line}")
+    if hard_issues:
         raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
 
 
@@ -212,19 +258,35 @@ See also: firecube archive info, firecube archive restore
 """,
 )
 @archive_uri_option(tier="inspect")
+@format_option(("table", "json"))
 @click.pass_context
-def list_cmd(ctx: click.Context, archive: str) -> None:
+def list_cmd(ctx: click.Context, archive: str, output_format: str) -> None:
     """list contents of a .tgm or .zip archive
 
     displays per-variable group entries including name, dimensions, and time
     range. a .zip archive is shown as one xarray dataset per group. no data is
     decoded; useful for reviewing archive contents before restoring.
+    with -f json, a .zip archive lists every variable of each group.
     """
+    as_json = output_format == "json"
     local_path = _local_archive(archive)
     if _is_zip_archive(archive):
         from firecube.core.archive.zip.archive import list_zip
 
         listing = list_zip(local_path)
+        if as_json:
+            from firecube.core.archive.zip.archive import zip_info
+
+            details = {g["group"]: g["variables"] for g in zip_info(local_path)["group_details"]}
+            groups = [
+                {
+                    "group": name,
+                    "variables": [{"name": v, **meta} for v, meta in details[name].items()],
+                }
+                for name, _dataset in listing
+            ]
+            click.echo(json.dumps({"format": "zip", "groups": groups}, indent=2))
+            return
         click.echo(f"Groups: {len(listing)}")
         for group_name, dataset in listing:
             click.echo(f"\nGroup: {group_name or '(root)'}")
@@ -234,6 +296,9 @@ def list_cmd(ctx: click.Context, archive: str) -> None:
     from firecube.core.archive.tensogram.inspection import open_tgm_listing
 
     with open_tgm_listing(local_path, operation="firecube archive list") as listing:
+        if as_json:
+            click.echo(json.dumps(_tgm_listing_payload(listing), indent=2, default=str))
+            return
         click.echo(f"Messages: {listing.message_count}")
         for message in listing.messages():
             if message.is_controlplane:

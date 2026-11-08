@@ -33,6 +33,7 @@ from firecube.core.controlplane.types import (
     ResolvedIndexRecord,
     compute_resolved_index_identity_hash,
 )
+from tests.helpers.storage import stamp_test_label
 
 pytestmark = pytest.mark.integration
 
@@ -67,6 +68,7 @@ def _seed_regular_time_record(
     index_dir = cube_dir / ".firecube" / INDEX_DIRNAME
     index_dir.mkdir(parents=True, exist_ok=True)
     (index_dir / INDEX_CURRENT_FILENAME).write_bytes(record.to_json_bytes())
+    stamp_test_label(cube_dir)
     return record
 
 
@@ -77,8 +79,6 @@ def _show_args(cube_dir: Path) -> list[str]:
         "show",
         "--target",
         f"file://{cube_dir}",
-        "--product-name",
-        "test_product",
         "--derived",
     ]
 

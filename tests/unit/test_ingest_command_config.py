@@ -49,7 +49,7 @@ _ACCEPTED: tuple[tuple[str, dict[str, object], dict[str, object]], ...] = (
     (
         "test_valid_config_constructs",
         {},
-        {"plugin": "cli_test_plugin", "output_format": "zarr", "options": {}},
+        {"plugin": "cli_test_plugin", "options": {}},
     ),
     (
         "test_missing_storage_type_is_valid",

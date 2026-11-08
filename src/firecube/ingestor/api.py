@@ -102,6 +102,7 @@ from firecube.ingestor.templates.config import (
 )
 from firecube.ingestor.types.config import PluginConfig
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     IngestResult,
     OutputPaths,
@@ -150,6 +151,7 @@ __all__ = [
     "DirectZarrIngestor",
     "DuplicateIrregularCoordinateError",
     "EngineConfig",
+    "ExecutionParams",
     "ExtentUnknownError",
     "GenericParquetIngestor",
     "GenericTensogramIngestor",

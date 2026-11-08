@@ -102,6 +102,8 @@ def seed_staged_metadata_pre_batch(
 ) -> tuple[str, frozenset[str]] | None:
     """Runtime-level staged metadata seeding hook for Zarr batch execution.
 
+    The write mode comes from ``ctx.execution``.
+
     ``authority`` is the host's seeding authority (DirectZarr: its session's
     ``PROCESS_LOCAL`` authority over the workspace); ``None`` seeds as before.
 
@@ -109,8 +111,7 @@ def seed_staged_metadata_pre_batch(
         The workspace URI and the coordinate paths `seed_staged_metadata_for_batch`
         returns; ``None`` when the write mode does not seed or the target is unresolved.
     """
-    engine_config = getattr(host, "engine_config", None)
-    write_mode = str(getattr(engine_config, "write_mode", ""))
+    write_mode = ctx.execution.write_mode
     if not write_mode_policy(write_mode).seeds_staged_metadata:
         return None
 

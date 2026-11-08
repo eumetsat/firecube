@@ -23,7 +23,6 @@ from unittest.mock import MagicMock
 import pytest
 import xarray as xr
 
-from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.contracts.interfaces import PipelineHost
 from firecube.ingestor.runtime.engine import PipelineExecutor, _process_batch_timed
 from firecube.ingestor.templates import generic as generic_module
@@ -144,7 +143,6 @@ def test_phase_spans_emitted(tmp_path, monkeypatch):
         acquire_claim=lambda **kwargs: nullcontext(),
     )
     ingestor = _DummyZarrIngestor(name="dummy_zarr", chunk_manager=chunk_manager)
-    ingestor.engine_config = EngineConfig(write_mode="staged")
     ingestor.template_config = None
 
     monkeypatch.setattr(generic_module, "fs_kwargs_for_uri", lambda *args, **kwargs: {})
@@ -182,7 +180,6 @@ def test_spans_safe_with_none_telemetry(tmp_path, monkeypatch):
         acquire_claim=lambda **kwargs: nullcontext(),
     )
     ingestor = _DummyZarrIngestor(name="dummy_zarr", chunk_manager=chunk_manager)
-    ingestor.engine_config = EngineConfig(write_mode="staged")
     ingestor.template_config = None
     monkeypatch.setattr(generic_module, "fs_kwargs_for_uri", lambda *args, **kwargs: {})
     monkeypatch.setattr(

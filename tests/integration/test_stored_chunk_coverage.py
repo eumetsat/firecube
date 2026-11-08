@@ -68,8 +68,6 @@ def _ingest(source: Path, target: Path, *, chunk_len: int) -> None:
             "local",
             "--storage-driver",
             "fsspec",
-            "--output-format",
-            "zarr",
             "--write-mode",
             "direct",
             "--option",

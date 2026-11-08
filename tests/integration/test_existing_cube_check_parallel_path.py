@@ -25,6 +25,7 @@ import zarr
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
+    ExecutionParams,
     PipelineBatch,
     PluginContext,
     WriteIntent,
@@ -107,9 +108,8 @@ def test_slot_range_parallel_path_runs_existing_cube_mismatch_check(tmp_path, ca
             "no_progress": True,
             "pipeline_batch_size": 1,
             "pipeline_workers": 2,
-            "slot_start": 0,
-            "slot_end": 1,
         },
+        execution=ExecutionParams(slot_start=0, slot_end=1),
     )
     plugin = _ParallelDirectZarrTestIngestor()  # type: ignore[abstract]
 

@@ -52,6 +52,7 @@ from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.api import (
     DirectZarrIngestor,
+    ExecutionParams,
     GenericParquetIngestor,
     GenericZarrIngestor,
     PluginContext,
@@ -519,15 +520,20 @@ def test_run_loss_of_startup_or_output_claim_records_run_failed(
     )
     monkeypatch.setattr(ChunkManager, "acquire_claim", acquire_claim)
     monkeypatch.setattr(owner, name, after(getattr(owner, name)))
-    options = {"pipeline_workers": 1, "pipeline_batch_size": 1, "write_mode": "direct"}
+    options = {"pipeline_workers": 1, "pipeline_batch_size": 1}
+    execution = ExecutionParams(write_mode="direct")
     if case == "resolved_index":
         product = "output.zarr"
         binding = make_test_binding(tmp_path, product=product)
         host = IndexedProbe(chunk_manager=ChunkManager(binding=binding, workspace=tmp_path / "cm"))
-        ctx = make_test_context(tmp_path, source=str(tmp_path), product=product, options=options)
+        ctx = make_test_context(
+            tmp_path, source=str(tmp_path), product=product, options=options, execution=execution
+        )
     else:
         product, host = "run_loss_parquet", ParquetProbe()
-        ctx = make_test_context(tmp_path, product=product, format="parquet", options=options)
+        ctx = make_test_context(
+            tmp_path, product=product, format="parquet", options=options, execution=execution
+        )
     names = raised_names(lambda: host.run(ctx))
 
     statuses = sorted(r.status for r in host._chunk_manager.list_runs(product=product))
@@ -575,8 +581,14 @@ def test_run_loss_in_final_batch_records_run_failed(
     repair = Mock(wraps=append_module.repair_failed_group)
     monkeypatch.setattr(append_module, "write_dataset_to_zarr", write_then_lose)
     monkeypatch.setattr(append_module, "repair_failed_group", repair)
-    options = {"pipeline_workers": 1, "input_filters": ["*.nc"], "write_mode": "direct"}
-    ctx = make_test_context(tmp_path, source=str(tmp_path), product=product, options=options)
+    options = {"pipeline_workers": 1, "input_filters": ["*.nc"]}
+    ctx = make_test_context(
+        tmp_path,
+        source=str(tmp_path),
+        product=product,
+        options=options,
+        execution=ExecutionParams(write_mode="direct"),
+    )
     names = raised_names(lambda: Ingestor(chunk_manager=manager).run(ctx))
 
     assert {run.status for run in manager.list_runs(product=product)} == {"failed"}

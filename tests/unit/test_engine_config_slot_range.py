@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import pytest
 
-from firecube.ingestor.config.engine import EngineConfig
+from firecube.ingestor.types.context import ExecutionParams
 
 
 def test_slot_range_valid() -> None:
-    cfg = EngineConfig(slot_start=0, slot_end=100)
+    cfg = ExecutionParams(slot_start=0, slot_end=100)
 
     assert cfg.slot_start == 0
     assert cfg.slot_end == 100
@@ -28,16 +28,16 @@ def test_slot_range_valid() -> None:
 
 def test_slot_range_unpaired_start_only() -> None:
     with pytest.raises(ValueError, match="must be provided together"):
-        EngineConfig(slot_start=0)
+        ExecutionParams(slot_start=0)
 
 
 def test_slot_range_inverted() -> None:
     with pytest.raises(ValueError, match="slot_start must be < slot_end"):
-        EngineConfig(slot_start=100, slot_end=50)
+        ExecutionParams(slot_start=100, slot_end=50)
 
 
 def test_slot_range_none_is_default() -> None:
-    cfg = EngineConfig()
+    cfg = ExecutionParams()
 
     assert cfg.slot_start is None
     assert cfg.slot_end is None

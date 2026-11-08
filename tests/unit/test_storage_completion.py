@@ -53,7 +53,12 @@ from firecube.ingestor.templates.direct_zarr import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
-from firecube.ingestor.types.context import RuntimeIdentity, RuntimeIngestContext, StorageContext
+from firecube.ingestor.types.context import (
+    ExecutionParams,
+    RuntimeIdentity,
+    RuntimeIngestContext,
+    StorageContext,
+)
 from firecube.ingestor.types.result_metrics import StorageMetrics
 from tests.helpers.storage import begin_write_session, make_test_binding
 
@@ -84,7 +89,8 @@ def _ctx(
         target=session.product.product_uri.to_str(),
         output_format="zarr",
         storage=StorageContext(output=session),
-        options={"write_mode": write_mode, "upload_workers": upload_workers},
+        options={"upload_workers": upload_workers},
+        execution=ExecutionParams(write_mode=write_mode),
         run_id="completion-run",
         identity=RuntimeIdentity(run_id="completion-run"),
     )
@@ -873,7 +879,6 @@ class _StagedBatchIngestor(DirectZarrIngestor):
             storage_config=None, acquire_claim=lambda **_kw: nullcontext()
         )
         super().__init__(name="staged_promotion_probe", chunk_manager=cast(Any, chunk_manager))
-        self.engine_config = cast(Any, SimpleNamespace(write_mode="staged", slot_group=None))
         self.shape = shape
         self.intents: list[WriteIntent] = []
 
@@ -906,7 +911,12 @@ def _staged_batch_run(
         "resolve_output_uri",
         lambda ctx, write_mode: str(workspace if write_mode == "staged" else target),
     )
-    ctx = SimpleNamespace(run_id="run-1", storage=None, option=lambda key, default=None: default)
+    ctx = SimpleNamespace(
+        run_id="run-1",
+        storage=None,
+        execution=ExecutionParams(write_mode="staged"),
+        option=lambda key, default=None: default,
+    )
     session = begin_write_session(ingestor, ctx)
 
     def run_batch(writes: list[tuple[int, int]]) -> None:

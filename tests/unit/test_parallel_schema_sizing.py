@@ -35,6 +35,7 @@ from firecube.ingestor.templates.direct_zarr import (
     ZarrGroupSpec,
     _setup_global_zarr_schema,
 )
+from firecube.ingestor.types.context import ExecutionParams
 from tests.helpers.storage import begin_write_session
 
 pytestmark = pytest.mark.unit
@@ -76,10 +77,6 @@ class _CapableIngestor(DirectZarrIngestor):
 
     def __init__(self, *, intents: list[WriteIntent], chunk_manager: Any) -> None:
         super().__init__(name="schema_test", chunk_manager=chunk_manager)
-        self.engine_config = cast(
-            Any,
-            SimpleNamespace(write_mode="direct", slot_start=0, slot_end=10, slot_group=None),
-        )
         self._intents = intents
 
     def index_spec(self, ctx) -> IndexSpec:
@@ -156,6 +153,7 @@ def test_parallel_schema_uses_global_expected_not_batch_local(
         _ctx=object(),
         run_id="run-1",
         storage=None,
+        execution=ExecutionParams(write_mode="direct", slot_start=0, slot_end=10),
         option=lambda key, default=None: default,
     )
     begin_write_session(ingestor, ctx)
@@ -245,10 +243,6 @@ def test_no_slot_range_uses_phase2_batch_local_path(
 
     manager = _ChunkManager()
     ingestor = _CapableIngestor(intents=[_intent(3)], chunk_manager=manager)
-    ingestor.engine_config = cast(
-        Any,
-        SimpleNamespace(write_mode="direct", slot_start=None, slot_end=None, slot_group=None),
-    )
     monkeypatch.setattr(
         ingestor, "resolve_output_uri", lambda ctx, write_mode: str(tmp_path / "out.zarr")
     )
@@ -259,6 +253,7 @@ def test_no_slot_range_uses_phase2_batch_local_path(
         _ctx=SimpleNamespace(_parallel_global_schema={"data": 1000}),
         run_id="run-1",
         storage=None,
+        execution=ExecutionParams(write_mode="direct"),
         option=lambda key, default=None: default,
     )
     begin_write_session(ingestor, ctx)

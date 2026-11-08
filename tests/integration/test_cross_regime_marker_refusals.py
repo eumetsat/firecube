@@ -41,6 +41,7 @@ from firecube.core.api import ATTR_COORD_MANAGED, ATTR_PREALLOCATED
 from firecube.core.errors import SchemaDriftError
 from firecube.core.zarr.coord_materialization import materialize_regular_coord_array
 from firecube.core.zarr.region_writer import RegionZarrWriter
+from tests.helpers.storage import stamp_test_label
 
 pytestmark = pytest.mark.integration
 
@@ -67,6 +68,7 @@ def _managed_store(tmp_path: Path, *, extra_attrs: dict[str, Any] | None = None)
     arr.attrs[ATTR_COORD_MANAGED] = True
     for key, value in (extra_attrs or {}).items():
         arr.attrs[key] = value
+    stamp_test_label(target)
     return target
 
 
@@ -83,8 +85,6 @@ def _consolidate(target: Path) -> Any:
             "consolidate-time-coord",
             "--target",
             f"file://{target}",
-            "--product-name",
-            target.name,
             "--storage-type",
             "local",
             "--storage-driver",

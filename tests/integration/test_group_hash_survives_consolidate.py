@@ -33,6 +33,7 @@ from click.testing import CliRunner
 
 from firecube.cli.main import cli
 from firecube.core.api import FIRECUBE_GROUP_IDENTITY_HASH_ATTR
+from tests.helpers.storage import stamp_test_label
 
 pytestmark = pytest.mark.integration
 
@@ -57,6 +58,7 @@ def _build_unsealed_time_coord_with_stamp(target_path: Path) -> None:
         attributes={FIRECUBE_GROUP_IDENTITY_HASH_ATTR: _STAMPED_HASH},
     )
     arr[...] = values
+    stamp_test_label(target_path)
 
 
 def _consolidate_args(target_path: Path) -> list[str]:
@@ -65,8 +67,6 @@ def _consolidate_args(target_path: Path) -> list[str]:
         "consolidate-time-coord",
         "--target",
         f"file://{target_path}",
-        "--product-name",
-        target_path.name,
         "--storage-type",
         "local",
         "--storage-driver",

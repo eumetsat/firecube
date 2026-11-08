@@ -32,9 +32,17 @@ from typing import Any, ClassVar, cast, get_type_hints
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.claims import ClaimLossLatch, reporting_claim_loss
 from firecube.core.controlplane.metrics import collect_wal_metrics
-from firecube.core.controlplane.types import IndexEnsuredOutcome
+from firecube.core.controlplane.types import IndexEnsuredOutcome, WriteDomain
 from firecube.core.discovery import DiscoveryRequest, SourceItem, discover
-from firecube.core.errors import ClaimLostError, Message, Param, PluginOption
+from firecube.core.errors import (
+    ClaimLostError,
+    LegacyIndexRecordError,
+    Message,
+    Param,
+    PluginOption,
+    ProductUnderMaintenanceError,
+    SchemaDriftError,
+)
 from firecube.core.filesystem import collect_filesystem_metrics
 from firecube.core.index_resolve import ExtentUnknownError
 from firecube.core.intake import CatalogGroupInfo
@@ -46,8 +54,8 @@ from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.uri import StorageUri
 from firecube.core.uris import infer_target_protocol
 from firecube.ingestor.config.engine import SYSTEM_KEYS, EngineConfig, config_keys
-from firecube.ingestor.contracts.interfaces import Ingestor, is_dataset_producer
-from firecube.ingestor.errors import ConfigurationError
+from firecube.ingestor.contracts.interfaces import Ingestor
+from firecube.ingestor.errors import ConfigurationError, ResumeConflictError
 from firecube.ingestor.runtime.aggregation import merge_batch_metrics
 from firecube.ingestor.runtime.base_hooks import BaseIngestorHookMixin
 from firecube.ingestor.runtime.batching import BatchPlanHost, BatchPlanner
@@ -58,7 +66,7 @@ from firecube.ingestor.runtime.configure import (
     ensure_chunk_manager_config,
     ensure_run_id,
 )
-from firecube.ingestor.runtime.engine import run_sequential
+from firecube.ingestor.runtime.engine import _create_batches_with_parallel_filter, run_sequential
 from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
 from firecube.ingestor.runtime.parallel_run_id import derive_pod_run_id
 from firecube.ingestor.runtime.preflight import preflight
@@ -70,6 +78,7 @@ from firecube.ingestor.runtime.zarr.existing_cube_check import verify_dim_compat
 from firecube.ingestor.templates.config import TemplateConfig
 from firecube.ingestor.types.config import PluginConfig
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     IngestResult,
     PipelineBatch,
@@ -86,6 +95,11 @@ __all__ = [
     "BaseIngestor",
     "LocalSourceFile",
 ]
+
+# A dry-run plan lists at most this many batches and sets batches_truncated beyond it.
+_DRY_RUN_BATCH_LIMIT = 100
+# A dry-run finding with one of these statuses blocks the run.
+_BLOCKING_STATUSES = frozenset({"blocked", "conflict"})
 
 
 def _claim_loss_behind(exc: BaseException) -> ClaimLostError | None:
@@ -127,25 +141,24 @@ def _maybe_run_storage_preflight(
         preflight(storage.output)
 
 
-def _select_output_format_strategy(ingestor: Any, ctx: IngestContext) -> None:
-    """Wire output-format-specific template config and batch strategy."""
-    if str(ctx.output_format or "").lower() != "tensogram":
+def _refuse_other_output_format(ingestor_cls: type[BaseIngestor], ctx: IngestContext) -> None:
+    """Refuse a context that names an output format the ingestor class does not declare.
+
+    Raises:
+        ConfigurationError: ``ctx.output_format`` is set and differs from the class value.
+    """
+    declared = ingestor_cls.output_format
+    if ctx.output_format is None or ctx.output_format == declared:
         return
-    if not is_dataset_producer(type(ingestor)):
-        raise ConfigurationError(
-            f"{type(ingestor).__name__} does not implement DatasetProducer; "
-            "cannot use output_format='tensogram'."
+    raise ConfigurationError(
+        Message(
+            "{plugin} writes {declared!r}; the context names output format {given!r}. "
+            "The ingestor class declares its output format: leave "
+            "IngestContext.output_format unset or name {declared!r}.",
+            plugin=ingestor_cls.__name__,
+            declared=declared,
+            given=ctx.output_format,
         )
-
-    from firecube.ingestor.runtime.configure import TierConfigurator
-    from firecube.ingestor.templates.generic_tensogram import bind_tensogram_strategy
-
-    bind_tensogram_strategy(ingestor)
-    routed_ingestor = cast(Any, ingestor)
-    routed_ingestor._configurator = TierConfigurator(
-        routed_ingestor.template_config_class,
-        routed_ingestor.plugin_config_class,
-        plugin_name=routed_ingestor.name,
     )
 
 
@@ -166,12 +179,42 @@ def _minimal_binding(product: str, fmt: str = "zarr") -> StorageBinding:
     )
 
 
-def _binding_from_context(ctx: IngestContext, product: str) -> StorageBinding:
+_UNSET: Any = object()
+"""Marks an ingestor attribute that is built on first read."""
+
+
+def _dry_run_workspace() -> Path:
+    """The existing temporary directory, named so a dry run's control plane creates none.
+
+    A control plane bound to a product reads its workspace only when it has no base URI.
+    """
+    import tempfile
+
+    return Path(tempfile.gettempdir())
+
+
+def _batch_plan(batch: PipelineBatch) -> dict[str, Any]:
+    """What a dry-run plan reports of one planned batch."""
+    return {
+        "batch_id": batch.batch_id,
+        "files_count": batch.files_count,
+        "size_bytes": batch.size_bytes,
+        "groups": list(batch.groups),
+    }
+
+
+def _slot_range(execution: ExecutionParams) -> tuple[int, int] | None:
+    """The slot window of a run, or ``None`` for a run without one."""
+    if execution.slot_start is None or execution.slot_end is None:
+        return None
+    return (execution.slot_start, execution.slot_end)
+
+
+def _binding_from_context(ctx: IngestContext, product: str, fmt: str) -> StorageBinding:
     session = _output_storage_session(ctx)
     if session is not None:
         return StorageBinding(identity=session.product, driver=session.driver)
 
-    fmt = ctx.output_format or "zarr"
     if ctx.target:
         return StorageBinding(
             identity=ProductIdentity.from_uri(
@@ -282,11 +325,14 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             URI. ``True``: the `SourceItem` itself, which also carries the
             STAC collection, item id, asset key, datetime, bbox, media type
             and roles of a ``stac://`` source.
+        output_format: The format this ingestor writes. ``"zarr"`` by default;
+            the Parquet and Tensogram templates declare ``"parquet"`` and ``"tensogram"``.
     """
 
     PRODUCT_NAME: ClassVar[str]
     time_dim_name: ClassVar[str] = "timestamp"
     SOURCE_ITEMS: ClassVar[bool] = False
+    output_format: ClassVar[str] = "zarr"
     # Whether the runner stops at the first failed batch. Templates whose
     # batches build on each other (append-style Zarr) set this to True so
     # nothing lands past a gap; independent-batch templates keep False.
@@ -388,12 +434,10 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         self.name = name or getattr(self, "name", self.__class__.__name__.lower())
         self._log = logging.getLogger(f"firecube.ingestor.{self.name}")
 
-        if chunk_manager is not None:
-            self._chunk_manager = chunk_manager
-            self._owns_chunk_manager = False
-        else:
-            self._chunk_manager = ChunkManager(binding=_minimal_binding(self.name))
-            self._owns_chunk_manager = True
+        # Without a given manager, the placeholder and its temporary directories are
+        # made on the first read of `_chunk_manager`; `run` replaces it unread.
+        self._chunk_manager_value: Any = _UNSET if chunk_manager is None else chunk_manager
+        self._owns_chunk_manager = chunk_manager is None
 
         # Composition
         self._workspace = WorkspaceManager(self.name)
@@ -403,7 +447,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             plugin_name=self.name,
         )
         self._batch_planner = BatchPlanner()
-        self._span_recorder = SpanRecorder(self._chunk_manager)
+        self._span_recorder_value: Any = _UNSET
 
         self._firecube_engine = None  # Lazy init for PipelineExecutor
         self._parallel_execution_state: _ParallelExecutionState | None = None
@@ -416,6 +460,30 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         self._resolved_index_stamped: bool = False
         # Records the loss of any claim of the current run; `run` replaces it per run.
         self._run_claim_latch = ClaimLossLatch()
+
+    @property
+    def _chunk_manager(self) -> ChunkManager:
+        """The control plane; a placeholder under a new temporary root until `run` binds one."""
+        manager = self.__dict__.get("_chunk_manager_value", _UNSET)
+        if manager is _UNSET:
+            manager = self._chunk_manager_value = ChunkManager(binding=_minimal_binding(self.name))
+        return manager
+
+    @_chunk_manager.setter
+    def _chunk_manager(self, manager: ChunkManager) -> None:
+        self._chunk_manager_value = manager
+
+    @property
+    def _span_recorder(self) -> SpanRecorder:
+        """The span recorder, built on the control plane at its first read."""
+        recorder = self.__dict__.get("_span_recorder_value", _UNSET)
+        if recorder is _UNSET:
+            recorder = self._span_recorder_value = SpanRecorder(self._chunk_manager)
+        return recorder
+
+    @_span_recorder.setter
+    def _span_recorder(self, recorder: SpanRecorder) -> None:
+        self._span_recorder_value = recorder
 
     # --- BatchPlanHost Protocol Implementation ---
 
@@ -502,7 +570,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         if not files:
             engine_cfg: EngineConfig | None = getattr(self, "engine_config", None)
             allow_empty = engine_cfg is not None and engine_cfg.allow_empty_source
-            in_slot_range = engine_cfg is not None and engine_cfg.slot_start is not None
+            in_slot_range = ctx.execution.slot_start is not None
             if not allow_empty and not in_slot_range:
                 kinds = {infer_target_protocol(source) == "stac" for source in ctx.sources}
                 context = {"plugin": self.name, "product_uri": ctx.target, "run_id": ctx.run_id}
@@ -939,6 +1007,281 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     f"{cls.__name__}.{method_name} must use RuntimeIngestContext, not PluginContext."
                 )
 
+    def _runtime_context(
+        self, ctx: IngestContext, *, temp_root: Path | None, output_format: str
+    ) -> RuntimeIngestContext:
+        """Configure the tiers and return the run's runtime copy of ``ctx``, with its pod run id."""
+        # Resolve run_id without mutating the caller context.
+        base_run_id = ensure_run_id(ctx=ctx, plugin_name=self.name)
+        runtime_ctx = RuntimeIngestContext.from_ingest_context(
+            ctx,
+            run_id=base_run_id,
+            temp_root=temp_root,
+            materializer=self._materialize,
+        )
+        runtime_ctx.output_format = output_format
+        execution = runtime_ctx.execution
+        # The run reads only the sources it discovers itself.
+        self._forget_discovery()
+
+        self.engine_config, self.template_config, self.plugin_config = self._configurator.configure(
+            runtime_ctx
+        )
+        runtime_ctx.flags = RuntimeFlags(
+            force_reingest=bool(self.engine_config.force_reingest),
+            incremental=bool(self.engine_config.incremental),
+            dry_run=execution.dry_run,
+        )
+
+        # Derive slot-aware run_id for parallel mode (single-pod returns base unchanged).
+        run_id = derive_pod_run_id(
+            base_run_id,
+            execution.slot_start,
+            execution.slot_end,
+            slot_group=execution.slot_group,
+        )
+        if run_id != base_run_id:
+            runtime_ctx.run_id = run_id
+            runtime_ctx.identity.run_id = run_id
+            runtime_ctx.options["run_id"] = run_id
+        return runtime_ctx
+
+    def _check_at_startup(self, ctx: PluginContext) -> None:
+        """Bind the index, refuse a bad schema and gate slot-range parallelism, before any write."""
+        execution = ctx.execution
+        self._bind_index_at_startup(ctx)
+
+        # Schema refusals of the root group run after this context's index
+        # is bound and before anything touches the target.
+        from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+
+        schema_host: Any = self
+        if isinstance(schema_host, DirectZarrIngestor):
+            schema_host._cached_zarr_schema(ctx)
+
+        binding = getattr(self, "_index_binding", None)
+        if binding is not None:
+            from firecube.ingestor.errors import UnboundedAxisError
+            from firecube.ingestor.runtime.parallel_gate import (
+                validate_global_expected_subset_of_schema,
+                warn_on_chunk_alignment,
+            )
+
+            ingestor_self: Any = self
+            if isinstance(ingestor_self, DirectZarrIngestor):
+                serial_run = execution.slot_start is None and execution.slot_end is None
+                global_expected: dict[str, int] = {}
+                for group in binding.resolved.groups:
+                    try:
+                        global_expected[group] = binding.resolved.size(group)
+                    except ExtentUnknownError as exc:
+                        if not serial_run:
+                            raise UnboundedAxisError(group) from exc
+                        # A serial run may legitimately declare an axis
+                        # without a horizon (RegularTimeAxis with neither
+                        # slot_count nor end_date); arrays grow via
+                        # allow_grow. Skip extent validation for the
+                        # group. Parallel runs still fail loudly above.
+                        continue
+                schema = ingestor_self.zarr_schema(ctx)
+                if schema:
+                    validate_global_expected_subset_of_schema(global_expected, schema)
+                    warn_on_chunk_alignment(global_expected, schema)
+
+        # Capability gate for slot-range parallel ingestion
+        from firecube.ingestor.runtime.parallel_gate import validate_parallel_capability
+
+        parallel_binding = validate_parallel_capability(
+            ingestor=self,
+            slot_start=execution.slot_start,
+            slot_end=execution.slot_end,
+            ctx=ctx,
+            slot_group=execution.slot_group,
+        )
+        self._parallel_execution_state = (
+            _ParallelExecutionState(
+                global_expected={
+                    group: parallel_binding.resolved.size(group)
+                    for group in parallel_binding.resolved.groups
+                }
+            )
+            if parallel_binding is not None
+            else None
+        )
+
+    def _new_resume_guard(self) -> ResumeGuard:
+        return ResumeGuard(
+            plugin_name=self.name,
+            chunk_manager=self._chunk_manager,
+            log=self._log,
+            slice_meta_keys=self.slice_meta_keys(),
+            time_dim_name=self._resolve_time_dim_name(),
+        )
+
+    def _enforce_resume_guard(
+        self,
+        guard: ResumeGuard,
+        runtime_ctx: RuntimeIngestContext,
+        ctx: PluginContext,
+        product: str,
+    ) -> None:
+        guard.enforce(
+            ctx=runtime_ctx,
+            product=product,
+            slice_meta=self.slice_meta(ctx),
+            slot_range=_slot_range(runtime_ctx.execution),
+            slot_group=runtime_ctx.execution.slot_group,
+            validation_group=self.validation_group(ctx),
+        )
+
+    def _plan_dry_run(
+        self, ctx: IngestContext, *, product: str, output_format: str
+    ) -> IngestResult:
+        """Plan the run and report what would block it, writing nothing.
+
+        It makes no workspace, claim, run record, label stamp or store byte, and emits no
+        run telemetry. Discovery, index binding, the schema checks and batching run as in a
+        real run; their refusals raise as they would there.
+
+        Returns:
+            The result whose manifest carries ``dry_run`` and the ``plan``.
+        """
+        from firecube.ingestor.runtime.output_guard import fresh_output_findings
+        from firecube.ingestor.types.manifest import IngestManifest
+
+        runtime_ctx = self._runtime_context(ctx, temp_root=None, output_format=output_format)
+        plugin_ctx = PluginContext(runtime_ctx)
+        run_id = str(runtime_ctx.run_id)
+        _maybe_run_storage_preflight(runtime_ctx, self.engine_config)
+        try:
+            self._check_at_startup(plugin_ctx)
+            findings: dict[str, dict[str, Any]] = {
+                "resume_guard": self._resume_guard_finding(runtime_ctx, plugin_ctx, product)
+            }
+            self._discovered_source_files = self.discovered_source_files(plugin_ctx)
+            findings["fresh_output"] = fresh_output_findings(
+                runtime_ctx,
+                self._chunk_manager,
+                required=self.requires_fresh_target,
+                format_label=self.fresh_target_format_label,
+            )
+            findings["maintenance"] = self._maintenance_finding(product, run_id)
+            findings["index"] = self._index_finding(plugin_ctx, product, run_id)
+            # The real runners' planner: the slot window filters the items first.
+            batches = _create_batches_with_parallel_filter(
+                host=self,
+                ctx=runtime_ctx,
+                batch_size=int(self.engine_config.pipeline_batch_size),
+                log=self._log,
+                refuse_sparse_window=False,
+            )
+        finally:
+            self._discovered_source_files = None
+            self._forget_discovery()
+            self._parallel_execution_state = None
+
+        slot_range = _slot_range(runtime_ctx.execution)
+        plan: dict[str, Any] = {
+            "batches": [_batch_plan(batch) for batch in batches[:_DRY_RUN_BATCH_LIMIT]],
+            "batches_total": len(batches),
+            "batches_truncated": len(batches) > _DRY_RUN_BATCH_LIMIT,
+            "groups": sorted({group for batch in batches for group in batch.groups}),
+            "slot_range": list(slot_range) if slot_range is not None else None,
+            **findings,
+            "blocked": [
+                name
+                for name, finding in findings.items()
+                if finding["status"] in _BLOCKING_STATUSES
+            ],
+        }
+        target = str(runtime_ctx.target or "")
+        manifest = IngestManifest(
+            plugin=self.name,
+            output_format=output_format,
+            stored_at=target,
+            files=None,
+            bytes=None,
+            duration_s=None,
+            run_id=run_id,
+            product=product,
+        ).to_dict()
+        manifest.update(dry_run=True, plan=plan)
+        return IngestResult(
+            outputs=OutputPaths(primary=target), output_format=output_format, manifest=manifest
+        )
+
+    def _resume_guard_finding(
+        self, runtime_ctx: RuntimeIngestContext, ctx: PluginContext, product: str
+    ) -> dict[str, Any]:
+        """Run the resume guard and report its refusal instead of raising it."""
+        try:
+            self._enforce_resume_guard(self._new_resume_guard(), runtime_ctx, ctx, product)
+        except ResumeConflictError as exc:
+            return {"status": "blocked", "reason": str(exc)}
+        return {"status": "pass", "reason": None}
+
+    def _maintenance_finding(self, product: str, run_id: str) -> dict[str, Any]:
+        """Report another owner's exclusive maintenance claim; reads the claim, never takes it."""
+        try:
+            self._chunk_manager.check_exclusive_maintenance(product=product, owner_id=run_id)
+        except ProductUnderMaintenanceError as exc:
+            return {"status": "blocked", "reason": str(exc)}
+        return {"status": "pass", "reason": None}
+
+    def _index_finding(self, ctx: PluginContext, product: str, run_id: str) -> dict[str, Any]:
+        """Report what the startup index negotiation would do, reading only.
+
+        The status is ``none`` (no index), ``unbounded`` (no full record),
+        ``would_create``, ``unchanged`` or ``conflict``.
+        """
+        from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
+
+        binding = getattr(self, "_index_binding", None)
+        host: Any = self
+        if binding is None or not isinstance(host, DirectZarrIngestor):
+            return {"status": "none", "reason": None}
+        # A calendar group without a preallocated coordinate raises, as in a real run.
+        host._verify_calendar_axes_preallocated_at_startup(ctx, binding.resolved)
+        manager = self._chunk_manager
+        try:
+            self._check_legacy_index_record_at_startup(product=product, plugin_name=self.name)
+            record = binding.resolved.as_resolved_index_record(run_id=run_id)
+        except LegacyIndexRecordError as exc:
+            return {"status": "conflict", "reason": str(exc)}
+        except ExtentUnknownError:
+            try:
+                host._verify_per_group_identity_at_startup(ctx, binding.resolved)
+            except SchemaDriftError as exc:
+                return {"status": "conflict", "reason": str(exc)}
+            return {"status": "unbounded", "reason": None}
+        stored = manager.get_resolved_index(product=product)
+        attrs_hash = manager.read_resolved_index_attrs_hash(product=product)
+        declared = record.identity_hash
+        if stored is None and attrs_hash is None:
+            # A held claim refuses the run's acquire, even a stale one, and the run then
+            # waits for a record that its holder never wrote.
+            domain = WriteDomain(product=product, category="resolved_index", name="current")
+            holder = manager.repo.read_claim_by_domain(product=product, domain=domain.identifier)
+            if holder is None:
+                return {"status": "would_create", "reason": None}
+            state = "stale" if holder.stale else "live"
+            reason = (
+                f"claim {holder.domain} is held by {holder.owner_id} ({state}) and the store "
+                "has no resolved-index record, so the run would not converge on one"
+            )
+        elif stored is None:
+            reason = "zarr root attrs have a resolved-index identity hash but no record"
+        elif stored.identity_hash != declared:
+            reason = f"stored={stored.identity_hash[:16]} declared={declared[:16]}"
+        elif attrs_hash is None:
+            # The run mirrors the stored record onto the root attributes.
+            return {"status": "would_create", "reason": None}
+        elif attrs_hash != declared:
+            reason = f"zarr root attrs have drifted: attrs_hash={attrs_hash[:16]!r}"
+        else:
+            return {"status": "unchanged", "reason": None}
+        return {"status": "conflict", "reason": reason}
+
     # --- Orchestration ---
 
     def run(self, ctx: IngestContext) -> IngestResult:
@@ -951,6 +1294,11 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
         ``ctx.storage.output`` must already be populated by the caller
         (CLI/SDK boundary) before invoking ``run()``; this method does not
         auto-construct sessions.
+
+        With ``ctx.execution.dry_run`` it returns a plan and writes nothing.
+
+        Raises:
+            ConfigurationError: ``ctx.output_format`` names a format other than the class's.
         """
         if ctx.storage is None or ctx.storage.output is None:
             raise ValueError(
@@ -961,54 +1309,32 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
 
         self._validate_context_hook_signatures()
 
-        _select_output_format_strategy(self, ctx)
+        output_format = type(self).output_format
+        _refuse_other_output_format(type(self), ctx)
 
         product = _output_product_name(ctx, self.name)
         if self._owns_chunk_manager:
-            self._chunk_manager = ChunkManager(binding=_binding_from_context(ctx, product))
+            self._chunk_manager = ChunkManager(
+                binding=_binding_from_context(ctx, product, output_format),
+                workspace=_dry_run_workspace() if ctx.execution.dry_run else None,
+            )
             self._span_recorder = SpanRecorder(self._chunk_manager)
         ensure_chunk_manager_config(self._chunk_manager, ctx)
         self._workspace._storage_config = self._chunk_manager.storage_config
 
+        if ctx.execution.dry_run:
+            return self._plan_dry_run(ctx, product=product, output_format=output_format)
+
         # 1. Workspace Cleanup/Setup
         workspace_root = self._workspace.setup(ctx)
 
-        # Resolve run_id without mutating the caller context.
-        _base_run_id = ensure_run_id(ctx=ctx, plugin_name=self.name)
-
-        # Create a runtime-enriched copy for use within this run.
-        runtime_ctx = RuntimeIngestContext.from_ingest_context(
-            ctx,
-            run_id=_base_run_id,
-            temp_root=workspace_root,
-            materializer=self._materialize,
-        )
-        runtime_plugin_ctx = PluginContext(runtime_ctx)
-        # The run reads only the sources it discovers itself.
-        self._forget_discovery()
-
         # 2. Configuration
-        self.engine_config, self.template_config, self.plugin_config = self._configurator.configure(
-            runtime_ctx
+        runtime_ctx = self._runtime_context(
+            ctx, temp_root=workspace_root, output_format=output_format
         )
-        runtime_ctx.flags = RuntimeFlags(
-            force_reingest=bool(self.engine_config.force_reingest),
-            incremental=bool(self.engine_config.incremental),
-            dry_run=bool(self.engine_config.dry_run),
-        )
-
-        # 2a. Derive slot-aware run_id for parallel mode (single-pod returns base unchanged).
-        run_id = derive_pod_run_id(
-            _base_run_id,
-            self.engine_config.slot_start,
-            self.engine_config.slot_end,
-            slot_group=self.engine_config.slot_group,
-        )
-        if run_id != _base_run_id:
-            runtime_ctx.run_id = run_id
-            runtime_ctx.identity.run_id = run_id
-            runtime_ctx.options["run_id"] = run_id
-            runtime_plugin_ctx = PluginContext(runtime_ctx)
+        execution = runtime_ctx.execution
+        run_id = str(runtime_ctx.run_id)
+        runtime_plugin_ctx = PluginContext(runtime_ctx)
 
         _maybe_run_storage_preflight(runtime_ctx, self.engine_config)
 
@@ -1018,8 +1344,8 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
             runtime_ctx.telemetry = create_ingestion_telemetry(
                 plugin=self.name,
                 product=product,
-                output_format=str(runtime_ctx.output_format or ""),
-                write_mode=str(getattr(self.engine_config, "write_mode", "")),
+                output_format=output_format,
+                write_mode=execution.write_mode,
                 run_id=run_id,
                 base_meta=self.slice_meta(runtime_plugin_ctx),
             )
@@ -1063,93 +1389,12 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 reporting_claim_loss(claim_latch),
                 contextlib.ExitStack() as output_ownership,
             ):
-                self._bind_index_at_startup(runtime_plugin_ctx)
-
-                # Schema refusals of the root group run after this context's index
-                # is bound and before anything touches the target.
-                from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
-
-                schema_host: Any = self
-                if isinstance(schema_host, DirectZarrIngestor):
-                    schema_host._cached_zarr_schema(runtime_plugin_ctx)
-
-                binding = getattr(self, "_index_binding", None)
-                if binding is not None:
-                    from firecube.ingestor.errors import UnboundedAxisError
-                    from firecube.ingestor.runtime.parallel_gate import (
-                        validate_global_expected_subset_of_schema,
-                        warn_on_chunk_alignment,
-                    )
-                    from firecube.ingestor.templates.direct_zarr import DirectZarrIngestor
-
-                    ingestor_self: Any = self
-                    if isinstance(ingestor_self, DirectZarrIngestor):
-                        serial_run = (
-                            self.engine_config.slot_start is None
-                            and self.engine_config.slot_end is None
-                        )
-                        global_expected: dict[str, int] = {}
-                        for group in binding.resolved.groups:
-                            try:
-                                global_expected[group] = binding.resolved.size(group)
-                            except ExtentUnknownError as exc:
-                                if not serial_run:
-                                    raise UnboundedAxisError(group) from exc
-                                # A serial run may legitimately declare an axis
-                                # without a horizon (RegularTimeAxis with neither
-                                # slot_count nor end_date); arrays grow via
-                                # allow_grow. Skip extent validation for the
-                                # group. Parallel runs still fail loudly above.
-                                continue
-                        schema = ingestor_self.zarr_schema(runtime_plugin_ctx)
-                        if schema:
-                            validate_global_expected_subset_of_schema(global_expected, schema)
-                            warn_on_chunk_alignment(global_expected, schema)
-
-                # 3.5 Capability gate for slot-range parallel ingestion
-                from firecube.ingestor.runtime.parallel_gate import validate_parallel_capability
-
-                parallel_binding = validate_parallel_capability(
-                    ingestor=self,
-                    slot_start=self.engine_config.slot_start,
-                    slot_end=self.engine_config.slot_end,
-                    ctx=runtime_plugin_ctx,
-                    slot_group=self.engine_config.slot_group,
-                )
-                self._parallel_execution_state = (
-                    _ParallelExecutionState(
-                        global_expected={
-                            group: parallel_binding.resolved.size(group)
-                            for group in parallel_binding.resolved.groups
-                        }
-                    )
-                    if parallel_binding is not None
-                    else None
-                )
+                self._check_at_startup(runtime_plugin_ctx)
 
                 # 4. Resume Guard
-                slot_range_for_record: tuple[int, int] | None = (
-                    (self.engine_config.slot_start, self.engine_config.slot_end)
-                    if self.engine_config.slot_start is not None
-                    and self.engine_config.slot_end is not None
-                    else None
-                )
-                guard = ResumeGuard(
-                    plugin_name=self.name,
-                    chunk_manager=self._chunk_manager,
-                    log=self._log,
-                    slice_meta_keys=self.slice_meta_keys(),
-                    time_dim_name=self._resolve_time_dim_name(),
-                )
-                resume_guard = guard
-                guard.enforce(
-                    ctx=runtime_ctx,
-                    product=product,
-                    slice_meta=self.slice_meta(runtime_plugin_ctx),
-                    slot_range=slot_range_for_record,
-                    slot_group=self.engine_config.slot_group,
-                    validation_group=self.validation_group(runtime_plugin_ctx),
-                )
+                slot_range_for_record = _slot_range(execution)
+                guard = resume_guard = self._new_resume_guard()
+                self._enforce_resume_guard(guard, runtime_ctx, runtime_plugin_ctx, product)
 
                 self._discovered_source_files = self.discovered_source_files(runtime_plugin_ctx)
                 output_ownership.enter_context(
@@ -1170,6 +1415,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     plugin_cls=type(self),
                     configs={
                         "engine": self.engine_config,
+                        "execution": execution,
                         "template": self.template_config,
                         "plugin": self.plugin_config,
                     },
@@ -1179,10 +1425,10 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                     run_id=run_id,
                     product=product,
                     output_path=str(runtime_ctx.target or ""),
-                    output_format=str(runtime_ctx.output_format or ""),
+                    output_format=output_format,
                     slice_meta={**slice_meta, "producer": producer},
                     slot_range=slot_range_for_record,
-                    slot_group=self.engine_config.slot_group,
+                    slot_group=execution.slot_group,
                 )
                 run_started_recorded = True
 
@@ -1209,7 +1455,6 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                         host=self,
                         product=product,
                         batch_size=int(self.engine_config.pipeline_batch_size),
-                        engine_config=self.engine_config,
                         log=self._log,
                     )
                     if not state.batches:
@@ -1235,7 +1480,7 @@ class BaseIngestor(BaseIngestorHookMixin, Ingestor, ABC):
                 # staged upload actually finished. If complete_output() then raised,
                 # the exception path skipped register_run_failure() because
                 # execution_result.registered was already True.
-                if self.requires_fresh_target and self.engine_config.write_mode == "staged":
+                if self.requires_fresh_target and execution.write_mode == "staged":
                     require_empty_data_target(
                         ctx.storage.output, format_label=self.fresh_target_format_label
                     )

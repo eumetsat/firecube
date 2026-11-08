@@ -33,6 +33,7 @@ from click.testing import CliRunner, Result
 
 from firecube.cli.main import cli
 from firecube.core.zarr.time_decode import decode_time_array
+from firecube.ingestor.api import ExecutionParams
 from tests.helpers.storage import make_test_context
 
 pytestmark = pytest.mark.integration
@@ -65,7 +66,6 @@ def _run_staged_ingest(
         source=str(source_dir),
         product=_PRODUCT,
         options={
-            "write_mode": write_mode,
             "resume_existing": resume_existing,
             "pipeline_batch_size": 1,
             "pipeline_workers": 1,
@@ -74,6 +74,7 @@ def _run_staged_ingest(
             "x_ts_iso": ts_iso,
             "x_sentinel": sentinel,
         },
+        execution=ExecutionParams(write_mode=write_mode),
     )
     ingestor = CFTimeDimValueDedupIngestor()
     result = ingestor.run(ctx)

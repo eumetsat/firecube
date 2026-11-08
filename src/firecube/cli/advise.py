@@ -26,6 +26,7 @@ from firecube.cli._ctx import get_storage_config
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._product import session_identity
 from firecube.cli._shared_options import (
+    format_option,
     storage_driver_option,
     storage_type_option,
     target_uri_option,
@@ -186,14 +187,7 @@ See also: firecube zarr validate
     required=True,
     help="group path inside the cube ('.' or '/' for root, otherwise e.g. F024/FWI)",
 )
-@click.option(
-    "--format",
-    "output_format",
-    type=click.Choice(["text", "json"]),
-    default="text",
-    show_default=True,
-    help="output format for the report",
-)
+@format_option(("table", "json"))
 @click.option(
     "--strict",
     is_flag=True,
@@ -217,7 +211,7 @@ def compliance(
     """run structural compliance checks
 
     Opens a Zarr cube and runs the selected compliance profile. Findings are
-    emitted as human-readable text (default) or as JSON. Exit codes: 0 on clean
+    emitted as a human-readable table (default) or as JSON. Exit codes: 0 on clean
     (or warnings/info without --strict), 1 if any error finding is reported,
     3 if warnings/info appear under --strict.
     """

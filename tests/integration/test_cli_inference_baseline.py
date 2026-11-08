@@ -54,8 +54,6 @@ def _run_ingest(
                 source.as_uri(),
                 "--target",
                 target,
-                "--output-format",
-                "zarr",
                 "--storage-type",
                 "local" if target.startswith("file://") else "s3",
                 "--storage-driver",

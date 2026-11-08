@@ -90,7 +90,7 @@ def _make_ctx(source: Path) -> RuntimeIngestContext:
         target=target,
         output_format="zarr",
         storage=StorageContext(output=session),
-        options={"write_mode": "staged", "upload_workers": 4},
+        options={"upload_workers": 4},
         run_id="test-run",
         identity=RuntimeIdentity(run_id="test-run"),
     )

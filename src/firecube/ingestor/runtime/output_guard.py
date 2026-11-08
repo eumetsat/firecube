@@ -37,6 +37,25 @@ def require_empty_data_target(session: StorageSession, *, format_label: str) -> 
             )
 
 
+def _output_session(ctx: RuntimeIngestContext) -> StorageSession:
+    if ctx.storage is None or ctx.storage.output is None:
+        raise ConfigurationError("Fresh-target validation requires output storage.")
+    return ctx.storage.output
+
+
+def _refuse_reused_output(
+    session: StorageSession, manager: ChunkManager, *, format_label: str
+) -> None:
+    """Refuse a product with a recorded run or with payload outside the control plane."""
+    if manager.list_runs(product=session.product.product_name):
+        raise ResumeConflictError(
+            f"{format_label} ingestion requires a fresh target with no previous runs. "
+            "Resume and force-reingest are not supported for this template. "
+            "Write to a new target."
+        )
+    require_empty_data_target(session, format_label=format_label)
+
+
 @contextmanager
 def fresh_output_run(
     ctx: RuntimeIngestContext,
@@ -49,20 +68,33 @@ def fresh_output_run(
     if not required:
         yield
         return
-    if ctx.storage is None or ctx.storage.output is None:
-        raise ConfigurationError("Fresh-target validation requires output storage.")
-    session = ctx.storage.output
+    session = _output_session(ctx)
     product = session.product.product_name
     with manager.acquire_claim(
         product=product,
         domain=WriteDomain(product=product, category="fresh_output", name="product"),
         owner_id=str(ctx.run_id),
     ):
-        if manager.list_runs(product=product):
-            raise ResumeConflictError(
-                f"{format_label} ingestion requires a fresh target with no previous runs. "
-                "Resume and force-reingest are not supported for this template. "
-                "Write to a new target."
-            )
-        require_empty_data_target(session, format_label=format_label)
+        _refuse_reused_output(session, manager, format_label=format_label)
         yield
+
+
+def fresh_output_findings(
+    ctx: RuntimeIngestContext,
+    manager: ChunkManager,
+    *,
+    required: bool,
+    format_label: str,
+) -> dict[str, object]:
+    """Report what `fresh_output_run` would refuse, reading only and taking no claim.
+
+    Returns:
+        ``status`` (``"pass"`` or ``"blocked"``), ``required`` and ``reason``, the refusal or ``None``.
+    """
+    if not required:
+        return {"status": "pass", "required": False, "reason": None}
+    try:
+        _refuse_reused_output(_output_session(ctx), manager, format_label=format_label)
+    except ResumeConflictError as exc:
+        return {"status": "blocked", "required": True, "reason": str(exc)}
+    return {"status": "pass", "required": True, "reason": None}

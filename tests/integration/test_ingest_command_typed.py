@@ -14,15 +14,23 @@
 
 from __future__ import annotations
 
+import dataclasses
+import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+import pyarrow as pa
 import pytest
 from click.testing import CliRunner
 
+import firecube.cli.zarr._common as zarr_common
+import firecube.ingestor.api as api
 from firecube.cli.main import cli
 from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
+from tests.helpers.storage import make_test_context
+
+pytestmark = pytest.mark.contract
 
 
 def _base_args(tmp_path: Path) -> list[str]:
@@ -72,9 +80,6 @@ def test_all_required_ingest_flags_reach_ingestor(tmp_path: Path) -> None:
         )
 
     args = _required_args(tmp_path)
-    # --output-format is omitted: the typed config default ('zarr') must still
-    # reach the context (the CLI must not drop it by reading the raw Click param).
-    assert "--output-format" not in args
     with patch("cli_test_plugin.CliTestIngestor.run", autospec=True, side_effect=fake_run):
         result = CliRunner().invoke(cli, [*args, "--option", "test_int=42"])
 
@@ -84,7 +89,8 @@ def test_all_required_ingest_flags_reach_ingestor(tmp_path: Path) -> None:
     assert ctx.target == (tmp_path / "qa.zarr").as_uri()
     assert ctx.output_format == "zarr"
     assert ctx.options["test_int"] == 42
-    assert ctx.options["write_mode"] == "direct"
+    assert ctx.execution.write_mode == "direct"
+    assert "write_mode" not in ctx.options
     assert ctx.storage is not None
     assert ctx.storage.output is not None
     assert ctx.storage.output.product.product_name == "qa"
@@ -125,6 +131,39 @@ def test_unknown_option_key_reports_plugin_and_valid_keys(tmp_path: Path) -> Non
     assert "test_int" in result.output
     assert "test_str" in result.output
     assert "test_bool" in result.output
+
+
+def test_output_format_flag_is_refused(tmp_path: Path) -> None:
+    source = tmp_path / "src"
+    source.mkdir()
+    args = [*_required_args(tmp_path), "--input-data", source.as_uri()]
+    result = CliRunner().invoke(
+        cli, [*args, "--option", "allow_empty_source=true", "--output-format", "parquet"]
+    )
+
+    assert result.exit_code == 2, result.output
+    assert not (tmp_path / "qa.zarr").exists()
+
+
+def test_option_write_mode_is_refused(tmp_path: Path) -> None:
+    result = CliRunner().invoke(cli, [*_required_args(tmp_path), "--option", "write_mode=staged"])
+
+    assert result.exit_code == 2, result.output
+    assert "write_mode" in result.output
+    assert not (tmp_path / "qa.zarr").exists()
+
+
+def test_option_dry_run_is_refused(tmp_path: Path) -> None:
+    source = tmp_path / "src"
+    source.mkdir()
+    args = [*_required_args(tmp_path), "--input-data", source.as_uri()]
+    result = CliRunner().invoke(
+        cli, [*args, "--option", "allow_empty_source=true", "--option", "dry_run=true"]
+    )
+
+    assert result.exit_code == 2, result.output
+    assert "dry_run" in result.output
+    assert not (tmp_path / "qa.zarr").exists()
 
 
 @pytest.mark.parametrize(
@@ -200,3 +239,96 @@ def test_coherent_s3_target_and_s3_storage_type_passes_validation(
     assert "incompatible with --storage-type" not in result.output, result.output
     assert "is not supported" not in result.output, result.output
     assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize(
+    ("template", "declared"),
+    [
+        ("GenericZarrIngestor", "zarr"),
+        ("DirectZarrIngestor", "zarr"),
+        ("GenericParquetIngestor", "parquet"),
+        ("GenericTensogramIngestor", "tensogram"),
+    ],
+)
+def test_template_declares_its_output_format(template: str, declared: str) -> None:
+    assert getattr(api, template).output_format == declared
+
+
+_seen: list[api.ExecutionParams] = []
+
+
+class _ParquetProbe(api.GenericParquetIngestor):
+    PRODUCT_NAME = name = "probe"
+
+    def discover_source_files(self, ctx: Any) -> list[str]:
+        _seen.append(ctx.execution)
+        return ["a"]
+
+    def build_dataset(self, group: str, batch: Any, ctx: Any) -> pa.Table:
+        return pa.table({"item": batch.items})
+
+
+def test_manifest_records_the_class_output_format(tmp_path: Path) -> None:
+    ctx = make_test_context(tmp_path, product="probe", format="parquet")
+    ctx.output_format = None  # unset: the ingestor class decides
+    _ParquetProbe().run(ctx)
+
+    runs = tmp_path / "probe" / ".firecube" / "runs"
+    started = json.loads(next(runs.glob("*/events-00000.jsonl")).read_text().splitlines()[0])
+    assert started["record"]["run"]["output_format"] == "parquet"
+
+
+def test_sdk_context_hands_its_execution_params_to_the_plugin(tmp_path: Path) -> None:
+    execution = api.ExecutionParams(write_mode="direct")
+    _seen.clear()
+    _ParquetProbe().run(
+        make_test_context(tmp_path, product="probe", format="parquet", execution=execution)
+    )
+
+    assert _seen == [execution]
+
+
+@pytest.mark.parametrize("show", ["ingest {} --show-options", "plugins describe {}"])
+@pytest.mark.parametrize("key", [f.name for f in dataclasses.fields(api.ExecutionParams)])
+def test_plugin_listings_name_no_execution_parameter(show: str, key: str) -> None:
+    result = CliRunner().invoke(cli, show.format("direct_zarr_capable_test_plugin").split())
+
+    assert result.exit_code == 0 and "pipeline_workers" in result.output, result.output
+    assert key not in result.output
+
+
+def test_plugin_config_table_write_mode_is_refused(tmp_path: Path) -> None:
+    args = _required_args(tmp_path)
+    Path(args[1]).write_text('[plugins.cli_test_plugin]\nwrite_mode = "staged"\n', encoding="utf-8")
+
+    result = CliRunner().invoke(cli, args)
+
+    assert result.exit_code == 2 and "write_mode" in result.output, result.output
+    assert not (tmp_path / "qa.zarr").exists()
+
+
+@pytest.mark.parametrize("last", [["slots", "--slot-size=200"], ["preallocate", "--dry-run"]])
+def test_zarr_commands_hand_the_cli_write_mode_to_the_plugin_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, last: list[str]
+) -> None:
+    seen: list[str] = []
+    real = zarr_common.configure_ingestor
+
+    def recording(ingestor: Any, **kwargs: Any) -> Any:
+        ctx = real(ingestor, **kwargs)
+        seen.append(ctx.execution.write_mode)
+        return ctx
+
+    monkeypatch.setattr(zarr_common, "configure_ingestor", recording)
+    argv = [
+        *_base_args(tmp_path)[:2],
+        "zarr",
+        last[0],
+        "direct_zarr_capable_test_plugin",
+        *last[1:],
+    ]
+    argv += ["--target", (tmp_path / "s.zarr").as_uri(), "--write-mode", "direct"]
+
+    result = CliRunner().invoke(cli, argv)
+
+    assert result.exit_code == 0 and seen == ["direct"], result.output

@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 from firecube.core.controlplane import ChunkManager
-from firecube.ingestor.api import BaseIngestor, OutputPaths
+from firecube.ingestor.api import BaseIngestor, ExecutionParams, OutputPaths
 from firecube.ingestor.runtime.engine import PipelineFailedBatchesError
 from firecube.ingestor.types.context import (
     IngestContext,
@@ -81,9 +81,9 @@ def test_mixed_batches_yield_failed_status(tmp_path: Path) -> None:
         output_format="zarr",
         options={
             "pipeline_batch_size": 1,
-            "write_mode": "direct",
             "no_progress": True,
         },
+        execution=ExecutionParams(write_mode="direct"),
         storage=StorageContext(output=session),
         run_id=run_id,
     )

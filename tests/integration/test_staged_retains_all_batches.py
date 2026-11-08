@@ -126,8 +126,6 @@ def _ingest_staged(
             storage_type,
             "--storage-driver",
             "fsspec",
-            "--output-format",
-            "zarr",
             "--write-mode",
             "staged",
             "--option",

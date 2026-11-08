@@ -39,15 +39,19 @@ import pytest
 from firecube.core.controlplane import ChunkManager
 from firecube.core.controlplane.claims import FilesystemClaimService
 from firecube.core.controlplane.types import ClaimInfo, ClearSweepResult, WriteDomain
+from firecube.core.errors import ProductLabelMismatchError
 from firecube.core.storage.uri import StorageUri
 from tests.helpers.storage import make_test_binding
 from tests.unit._helpers.counting_fs import CountingFilesystem, make_counting_local_fs
 
 
-def _manager(tmp_path: Path, *, product: str = "product.zarr") -> ChunkManager:
+def _manager(
+    tmp_path: Path, *, product: str = "product.zarr", label: str | None = None
+) -> ChunkManager:
     workspace = tmp_path / "workspace"
     workspace.mkdir(exist_ok=True)
-    return ChunkManager(binding=make_test_binding(tmp_path, product=product), workspace=workspace)
+    binding = make_test_binding(tmp_path, product=product, label=label)
+    return ChunkManager(binding=binding, workspace=workspace)
 
 
 class _PathCountingFilesystem(CountingFilesystem):
@@ -100,12 +104,13 @@ def _write_claim(
     domain: WriteDomain,
     last_heartbeat_at: float,
     stale_threshold_s: int = 120,
+    label: str | None = None,
 ) -> Path:
     claims_dir = _claims_dir(tmp_path, product)
     claims_dir.mkdir(parents=True, exist_ok=True)
     claim_path = _claim_path(tmp_path, product, domain)
     payload = {
-        "product": product,
+        "product": label or product,
         "domain": domain.identifier,
         "owner_id": f"owner:{domain.identifier}",
         "claim_path": StorageUri.from_local_path(claim_path).to_str(),
@@ -182,7 +187,7 @@ def test_clears_only_stale_claims_leaving_fresh_alone(tmp_path: Path) -> None:
 
 def test_bulk_clear_stale_with_uri_and_mismatched_logical_name(tmp_path: Path) -> None:
     product = "logical_name_20260501.zarr"
-    manager = _manager(tmp_path, product=product)
+    manager = _manager(tmp_path, product=product, label="logical_name")
     now = time.time()
 
     stale_domain = WriteDomain(product="logical_name", category="zarr_region", name="F001")
@@ -192,16 +197,21 @@ def test_bulk_clear_stale_with_uri_and_mismatched_logical_name(tmp_path: Path) -
         product=product,
         domain=stale_domain,
         last_heartbeat_at=now - 300,
+        label="logical_name",
     )
     fresh_file = _write_claim(
         tmp_path,
         product=product,
         domain=fresh_domain,
         last_heartbeat_at=time.time(),
+        label="logical_name",
     )
 
     try:
-        result = manager.clear_stale_claims(product=product, dry_run=False)
+        with pytest.raises(ProductLabelMismatchError):
+            manager.clear_stale_claims(product=product, dry_run=False)
+        assert stale_file.exists(), "a refused label must clear nothing"
+        result = manager.clear_stale_claims(product="logical_name", dry_run=False)
     finally:
         manager.close()
 

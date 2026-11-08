@@ -164,6 +164,7 @@ class StorageCompleter:
         Args:
             result: The run's result; ``outputs`` names the staged output.
             ctx: The run context; ``ctx.storage.output`` is the target session.
+                ``ctx.execution.write_mode`` applies when the result records no write mode.
             staged_units: Given by a staged run that proved what it wrote:
                 promotion then publishes the object delta (puts, deletes of
                 units the run left all fill, ``zarr.json`` documents through
@@ -182,7 +183,7 @@ class StorageCompleter:
             raise StorageError("Storage completion requires ctx.storage.output.")
         storage_config = storage_config_from_binding(session._binding)
 
-        effective_write_mode = str(result.metrics.write_mode or ctx.option("write_mode") or "")
+        effective_write_mode = str(result.metrics.write_mode or ctx.execution.write_mode)
         product_uri = session.product.product_uri
         if staged_units is None:
             if not product_uri.is_remote():

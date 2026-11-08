@@ -103,8 +103,6 @@ def _ingest(source: Path, target: Path, *, resume_existing: bool = False) -> dic
         "local",
         "--storage-driver",
         "fsspec",
-        "--output-format",
-        "zarr",
         "--write-mode",
         "direct",
         "--option",

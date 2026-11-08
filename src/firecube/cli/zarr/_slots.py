@@ -29,10 +29,7 @@ from firecube.cli._command_schemas import check_recorded_label, resolve_product_
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import exit_with_error, render
 from firecube.cli._exit_codes import ExitCode
-from firecube.cli._input_filters import (
-    input_filters_option,
-    resolve_input_filters,
-)
+from firecube.cli._input_filters import input_filters_option, resolve_input_filters
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._product import resolve_product_identity
 from firecube.cli._shared_options import (
@@ -51,6 +48,7 @@ from firecube.core.controlplane import ChunkManager
 from firecube.core.errors import Message, Operation, Placeholder
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
+from firecube.ingestor.api import ExecutionParams
 from firecube.ingestor.registry import loader as ingestor_loader
 from firecube.ingestor.registry.loader import discover_ingestors
 from firecube.ingestor.runtime import slot_plan
@@ -292,6 +290,7 @@ def slots(
             stac_search=stac_search,
             sources=sources,
             run_id="zarr-slots",
+            execution=ExecutionParams(write_mode=write_mode, slot_size=slot_size),
         )
 
     def coverage_storage_config() -> StorageConfig:

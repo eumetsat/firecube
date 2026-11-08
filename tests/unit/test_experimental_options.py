@@ -23,7 +23,7 @@ from firecube.cli._typed_options import TypedOptionsParam
 from firecube.ingestor.config.engine import is_experimental_option_key
 from firecube.ingestor.runtime.configure import TierConfigurator
 from firecube.ingestor.types.config import PluginConfig
-from firecube.ingestor.types.context import IngestContext
+from firecube.ingestor.types.context import ExecutionParams, IngestContext
 
 
 @dataclass
@@ -65,7 +65,8 @@ def test_x_write_mode_does_not_shadow_typed_write_mode() -> None:
 
     ctx = IngestContext(
         source="input",
-        options={"write_mode": "direct", "x_write_mode": "staged"},
+        options={"x_write_mode": "staged"},
+        execution=ExecutionParams(write_mode="direct"),
     )
     configurator = TierConfigurator(
         template_config_class=None,
@@ -74,7 +75,8 @@ def test_x_write_mode_does_not_shadow_typed_write_mode() -> None:
     )
     engine_config, _template, _plugin = configurator.configure(ctx)
 
-    assert engine_config.write_mode == "direct"
+    assert not hasattr(engine_config, "write_mode")
+    assert ctx.execution.write_mode == "direct"
     assert ctx.options["x_write_mode"] == "staged"
 
     with pytest.raises(click.BadParameter):

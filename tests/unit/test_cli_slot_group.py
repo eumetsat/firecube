@@ -23,8 +23,7 @@ from click.testing import CliRunner
 
 from firecube.cli._slot_env import resolve_slot_range_from_env
 from firecube.cli.main import cli
-from firecube.ingestor.api import IngestContext, IngestResult, OutputPaths
-from firecube.ingestor.config.engine import EngineConfig, config_keys
+from firecube.ingestor.api import ExecutionParams, IngestContext, IngestResult, OutputPaths
 
 
 def _base_args(tmp_path: Path) -> list[str]:
@@ -55,33 +54,31 @@ def _required_args(tmp_path: Path) -> list[str]:
 
 
 def test_slot_group_default_none() -> None:
-    assert EngineConfig().slot_group is None
+    assert ExecutionParams().slot_group is None
 
 
 def test_slot_group_valid_string_accepted() -> None:
-    cfg = EngineConfig(slot_group="data_1km")
+    execution = ExecutionParams(slot_group="data_1km")
 
-    assert cfg.slot_group == "data_1km"
+    assert execution.slot_group == "data_1km"
 
 
 def test_slot_group_empty_string_fails() -> None:
     with pytest.raises(ValueError, match="non-empty string"):
-        EngineConfig(slot_group="")
+        ExecutionParams(slot_group="")
 
 
 def test_slot_group_whitespace_only_fails() -> None:
     with pytest.raises(ValueError, match="non-empty string"):
-        EngineConfig(slot_group="   ")
+        ExecutionParams(slot_group="   ")
 
 
-def test_cli_passes_slot_group_to_engine_config(tmp_path: Path) -> None:
+def test_cli_passes_slot_group_to_execution_params(tmp_path: Path) -> None:
     captured: dict[str, IngestContext] = {}
 
     def fake_run(self: Any, ctx: IngestContext) -> IngestResult:
         captured["ctx"] = ctx
-        engine_options = {k: v for k, v in ctx.options.items() if k in config_keys(EngineConfig)}
-        engine_cfg = EngineConfig.from_options(engine_options)
-        assert engine_cfg.slot_group == "data_1km"
+        assert ctx.execution.slot_group == "data_1km"
         return IngestResult(
             outputs=OutputPaths(primary=str(ctx.target)),
             output_format=str(ctx.output_format),
@@ -95,7 +92,8 @@ def test_cli_passes_slot_group_to_engine_config(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     assert "ctx" in captured
-    assert captured["ctx"].options["slot_group"] == "data_1km"
+    assert captured["ctx"].execution.slot_group == "data_1km"
+    assert "slot_group" not in captured["ctx"].options
 
 
 def test_env_slot_group_used_when_cli_absent(monkeypatch: pytest.MonkeyPatch) -> None:

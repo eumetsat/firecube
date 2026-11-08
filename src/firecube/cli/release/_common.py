@@ -25,6 +25,7 @@ from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import render
 from firecube.cli._product import recorded_identity
 from firecube.cli._shared_options import (
+    format_option,
     storage_driver_option,
     storage_type_option,
     target_uri_option,
@@ -33,19 +34,6 @@ from firecube.cli._uri_policy import apply_smart_default, parse_and_validate_uri
 from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
-
-
-def format_option(func: Any) -> Any:
-    """Add the ``-f/--format`` option."""
-    return click.option(
-        "-f",
-        "--format",
-        "output_format",
-        type=click.Choice(["text", "json"], case_sensitive=False),
-        default="text",
-        show_default=True,
-        help="Output format; json prints sorted keys.",
-    )(func)
 
 
 def echo_json(payload: Any) -> None:
@@ -71,7 +59,7 @@ def release_options(tier: Literal["write", "inspect"]) -> Any:
     """
 
     def decorator(func: Any) -> Any:
-        func = format_option(func)
+        func = format_option(("table", "json"))(func)
         func = storage_driver_option(required=False)(func)
         func = storage_type_option(
             required=False,

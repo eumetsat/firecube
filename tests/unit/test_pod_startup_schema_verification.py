@@ -31,6 +31,7 @@ from firecube.ingestor.templates.direct_zarr import (
     ZarrArraySpec,
     ZarrGroupSpec,
 )
+from firecube.ingestor.types.context import ExecutionParams
 
 pytestmark = pytest.mark.unit
 
@@ -83,10 +84,6 @@ class _CapableIngestor(DirectZarrIngestor):
         self, *, chunk_manager: _ChunkManager, intents: list[WriteIntent] | None = None
     ) -> None:
         super().__init__(name="schema_startup_test", chunk_manager=cast(Any, chunk_manager))
-        self.engine_config = cast(
-            Any,
-            SimpleNamespace(write_mode="direct", slot_start=0, slot_end=10, slot_group=None),
-        )
         self._intents = intents if intents is not None else [_intent()]
 
     def index_spec(self, ctx: Any) -> IndexSpec:
@@ -134,7 +131,11 @@ def _intent() -> WriteIntent:
 
 def _ctx() -> Any:
     return SimpleNamespace(
-        _ctx=object(), run_id="run-1", storage=None, option=lambda key, default=None: default
+        _ctx=object(),
+        run_id="run-1",
+        storage=None,
+        execution=ExecutionParams(write_mode="direct", slot_start=0, slot_end=10),
+        option=lambda key, default=None: default,
     )
 
 

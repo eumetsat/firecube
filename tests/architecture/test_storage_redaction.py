@@ -47,6 +47,7 @@ from firecube.core.storage.uri import StorageUri
 from firecube.ingestor.api import IngestResult, OutputPaths, PipelineMetrics, ResultMetrics
 from firecube.ingestor.runtime.engine import PipelineExecutor
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     RuntimeIdentity,
     RuntimeIngestContext,
     StorageContext,
@@ -86,7 +87,8 @@ def _build_runtime_ctx(
         source="source",
         target=target,
         output_format="zarr",
-        options={"write_mode": write_mode, "no_progress": True},
+        options={"no_progress": True},
+        execution=ExecutionParams(write_mode=write_mode),
         storage=storage,
         run_id="redaction-probe-run",
         identity=RuntimeIdentity(run_id="redaction-probe-run"),

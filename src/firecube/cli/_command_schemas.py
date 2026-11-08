@@ -101,7 +101,6 @@ class IngestCommandConfig:
     storage_type: str | None
     storage_driver: str | None
     product_name: str | None = None
-    output_format: str = "zarr"
     in_memory: bool = False
     options: dict[str, Any] = field(default_factory=dict)
 

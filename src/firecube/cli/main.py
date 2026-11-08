@@ -33,6 +33,7 @@ from firecube.cli._command_schemas import (
 )
 from firecube.cli._ctx import get_storage_config
 from firecube.cli._errors import enable_debug, render
+from firecube.cli._exit_codes import ExitCode
 from firecube.cli._formatter import (
     COMMAND_GROUPS,
     OPTION_GROUPS,
@@ -44,6 +45,7 @@ from firecube.cli._input_filters import input_filters_option, resolve_input_filt
 from firecube.cli._input_sources import admit_sources, input_data_option, stac_search_option
 from firecube.cli._rename_hints import install_rename_hints
 from firecube.cli._shared_options import (
+    dry_run_flag,
     storage_driver_option,
     storage_type_option,
     write_mode_option,
@@ -61,7 +63,7 @@ from firecube.core.storage.binding import StorageBinding
 from firecube.core.storage.driver_config import StorageDriverConfig
 from firecube.core.storage.session import StorageSession
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import IngestContext, StorageContext
+from firecube.ingestor.api import BaseIngestor, ExecutionParams, IngestContext, StorageContext
 from firecube.ingestor.registry.loader import discover_ingestors
 
 log = logging.getLogger("firecube.cli")
@@ -102,7 +104,6 @@ OPTION_GROUPS.update(
                     "--input-filters",
                     "--target",
                     "--product-name",
-                    "--output-format",
                 ],
             },
             {
@@ -116,6 +117,7 @@ OPTION_GROUPS.update(
                     "--slot-start",
                     "--slot-end",
                     "--slot-size",
+                    "--dry-run",
                 ],
             },
             {
@@ -555,7 +557,6 @@ Examples:
     --product-name <name> \\
     --storage-type local \\
     --storage-driver fsspec \\
-    --output-format zarr \\
     --write-mode direct
   # run with staged write mode (write locally then upload)
   firecube ingest <plugin> \\
@@ -564,7 +565,6 @@ Examples:
     --product-name <name> \\
     --storage-type s3 \\
     --storage-driver fsspec \\
-    --output-format zarr \\
     --write-mode staged
   # pass plugin-specific options
   firecube ingest <plugin> \\
@@ -573,7 +573,6 @@ Examples:
     --product-name <name> \\
     --storage-type local \\
     --storage-driver fsspec \\
-    --output-format zarr \\
     --write-mode direct \\
     --option horizon=LST \\
     --option no_progress=true
@@ -600,9 +599,6 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
         "and the plugin class PRODUCT_NAME. The store refuses a name that differs "
         "from the one it records."
     ),
-)
-@click.option(
-    "--output-format", required=False, help="output format to deliver (e.g. parquet, zarr)"
 )
 @storage_type_option(
     required=False,
@@ -670,6 +666,7 @@ See also: firecube plugins list, firecube chunks list, firecube advise batch-siz
     ),
 )
 @click.option("--in-memory", is_flag=True, help="use in-memory DuckDB")
+@dry_run_flag
 @click.option(
     "--option",
     "extra_options",
@@ -694,7 +691,6 @@ def ingest(
     storage_type: str | None,
     storage_driver: str | None,
     storage_anonymous: bool | None,
-    output_format: str | None,
     write_mode: str | None,
     slot_start: int | None,
     slot_end: int | None,
@@ -703,6 +699,7 @@ def ingest(
     suppress_static_emission_for_non_owner: bool,
     static_owner_slot_start: int | None,
     in_memory: bool,
+    dry_run: bool,
     extra_options,
     show_options: bool,
 ) -> None:
@@ -711,7 +708,8 @@ def ingest(
     The plugin handles source reading; firecube manages write strategy (staged
     or direct), pipeline parallelism, and chunk tracking. Use --option to pass
     plugin-specific overrides, or --show-options to list available options for
-    a plugin.
+    a plugin. --dry-run prints the plan and writes nothing; it exits 1 when a
+    check would block the run.
     """
     extra_options = coerce_options_for_plugin(plugin, extra_options)
     ingest_cfg: IngestCommandConfig | None = None
@@ -734,7 +732,6 @@ def ingest(
                 storage_type=storage_type_resolved,
                 storage_driver=storage_driver,
                 product_name=product_name,
-                output_format=output_format or "zarr",
                 in_memory=in_memory,
                 options=dict(extra_options),
             )
@@ -756,6 +753,9 @@ def ingest(
     if show_options:
         _print_plugin_options(plugin, ingestor_cls)
         return
+    # Only the engine's own run() plans; another one would write.
+    if dry_run and getattr(ingestor_cls, "run", None) is not BaseIngestor.run:
+        raise click.UsageError(f"--dry-run needs a BaseIngestor plugin that keeps run(): {plugin}")
 
     explicit_config = ctx.obj.get("config_file")
     cfg = load_config_file(explicit_config, strict=explicit_config is not None)
@@ -801,23 +801,28 @@ def ingest(
                     slot_group,
                 )
             )
-            options["slot_start"] = resolved_slot_start
-            options["slot_end"] = resolved_slot_end
-            options["slot_size"] = slot_size
-            options["slot_group"] = resolved_slot_group
-            options["suppress_static_emission_for_non_owner"] = (
-                suppress_static_emission_for_non_owner
+            execution = ExecutionParams(
+                write_mode=str(ingest_cfg.write_mode),
+                slot_start=resolved_slot_start,
+                slot_end=resolved_slot_end,
+                slot_size=slot_size,
+                slot_group=resolved_slot_group,
+                suppress_static_emission_for_non_owner=suppress_static_emission_for_non_owner,
+                static_owner_slot_start=static_owner_slot_start,
+                dry_run=dry_run,
             )
-            options["static_owner_slot_start"] = static_owner_slot_start
+            set_current_span_attribute("firecube.write_mode", execution.write_mode)
             resolved_product_name = resolve_product_name(
                 ctx, plugin, ingestor_cls, ingest_cfg.product_name
             )
 
             target_str = ingest_cfg.target
+            # The plugin class declares the format; BaseIngestor declares "zarr".
+            output_format = str(getattr(ingestor_cls, "output_format", "zarr"))
             try:
                 identity = ProductResolver.resolve(
                     target_str,
-                    format=ingest_cfg.output_format,
+                    format=output_format,
                     product_name=resolved_product_name,
                 )
             except ValueError as exc:
@@ -840,24 +845,6 @@ def ingest(
             check_recorded_label(binding)
             session = StorageSession(binding)
 
-            # Per HIGH-3 fix: read every option from the validated typed config, not raw Click params.
-            # IngestCommandConfig has applied defaults and validation; the raw params are inputs to
-            # its construction only. This ensures typed defaults (e.g. output_format="zarr") flow through.
-            final_write_mode = ingest_cfg.write_mode
-            set_current_span_attribute("firecube.write_mode", str(final_write_mode))
-            options["write_mode"] = final_write_mode
-
-            final_output_format = ingest_cfg.output_format
-            if final_output_format == "tensogram":
-                from firecube.ingestor.api import is_dataset_producer
-
-                if not is_dataset_producer(ingestor_cls):
-                    raise click.ClickException(
-                        f"Plugin '{plugin}' does not support --output-format tensogram. "
-                        "It must implement the DatasetProducer protocol "
-                        "(build_dataset + get_batch_groups)."
-                    )
-
             # Instantiate the ingestor *after* setting the global storage config so
             # BaseIngestor can initialise ChunkManager with the correct output base.
             ingestor = ingestor_cls()
@@ -879,7 +866,7 @@ def ingest(
                 plugin_target,
                 identity.product_name,
                 resolved_product_name,
-                final_write_mode,
+                execution.write_mode,
                 storage_config.storage_type,
             )
 
@@ -895,15 +882,18 @@ def ingest(
                 sources=tuple(sources),
                 target=plugin_target,
                 in_memory=ingest_cfg.in_memory,
-                output_format=final_output_format,
+                output_format=output_format,
                 options=options,
                 storage=StorageContext(output=session),
                 run_id=run_id,
+                execution=execution,
             )
             result = ingestor.run(ingest_ctx)
 
             if result.manifest:
                 click.echo(json.dumps(result.manifest, indent=2))
+                if dry_run and result.manifest["plan"]["blocked"]:
+                    raise click.exceptions.Exit(ExitCode.CHECK_FAILED)
             else:
                 click.echo(
                     json.dumps(

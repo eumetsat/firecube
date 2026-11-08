@@ -23,6 +23,7 @@ import click
 from firecube.cli._shared_options import (
     all_products_flag,
     dry_run_flag,
+    format_option,
     target_uri_option,
     yes_flag,
 )
@@ -55,14 +56,7 @@ See also: firecube chunks claims clear, firecube chunks runs list
 @target_uri_option("inspect", required=False)
 @all_products_flag
 @click.option("--workspace", type=click.Path(path_type=Path), help="workspace directory override")
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json"]),
-    default="table",
-    help="output format",
-)
+@format_option(("table", "json"))
 @click.pass_context
 def list_cmd(
     ctx: click.Context,

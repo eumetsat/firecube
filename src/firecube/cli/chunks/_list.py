@@ -19,7 +19,7 @@ from pathlib import Path
 
 import click
 
-from firecube.cli._shared_options import all_products_flag, target_uri_option
+from firecube.cli._shared_options import all_products_flag, format_option, target_uri_option
 from firecube.core.controlplane.types import ChunkInfo
 
 from ._common import parse_datetime, parse_meta_filters, parse_time_range
@@ -74,14 +74,7 @@ See also: firecube chunks delete, firecube chunks runs list,
     type=click.Path(path_type=Path),
     help="workspace directory override (local path)",
 )
-@click.option(
-    "-f",
-    "--format",
-    "output_format",
-    type=click.Choice(["table", "json", "csv"]),
-    default="table",
-    help="output format",
-)
+@format_option()
 @click.option("--limit", type=int, help="limit number of results")
 @click.option(
     "--include-span",

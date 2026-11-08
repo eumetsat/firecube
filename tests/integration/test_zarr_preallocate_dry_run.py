@@ -88,8 +88,6 @@ def _index_show_args(target_dir: Path) -> list[str]:
         "show",
         "--target",
         f"file://{target_dir}",
-        "--product-name",
-        PRODUCT_NAME,
         "--json",
     ]
 

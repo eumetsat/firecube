@@ -22,10 +22,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.runtime.zarr import batch_runner as batch_runner_module
 from firecube.ingestor.templates.generic import GenericZarrIngestor
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     IngestResult,
     PipelineBatch,
@@ -70,7 +70,6 @@ def _run_process_batch(monkeypatch: pytest.MonkeyPatch):
         acquire_claim=MagicMock(return_value=nullcontext()),
     )
     ingestor = _DummyZarrIngestor(name="dummy_zarr", chunk_manager=chunk_manager)
-    ingestor.engine_config = EngineConfig(write_mode="direct")
     ingestor.template_config = None
 
     batch = PipelineBatch(
@@ -80,7 +79,12 @@ def _run_process_batch(monkeypatch: pytest.MonkeyPatch):
         metadata={},
     )
     runtime_ctx = RuntimeIngestContext.from_ingest_context(
-        IngestContext(source=".", target="out.zarr", output_format="zarr"),
+        IngestContext(
+            source=".",
+            target="out.zarr",
+            output_format="zarr",
+            execution=ExecutionParams(write_mode="direct"),
+        ),
         run_id="run-1",
         temp_root=None,
         materializer=lambda source: Path(source),

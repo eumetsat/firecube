@@ -30,7 +30,7 @@ from firecube.cli._errors import echo_rendered, render
 from firecube.cli._exit_codes import ExitCode
 from firecube.cli._formatter import FirecubeGroup
 from firecube.cli._product import recorded_identity
-from firecube.cli._shared_options import product_name_option, target_uri_option
+from firecube.cli._shared_options import format_option, product_name_option, target_uri_option
 from firecube.cli._typed_options import TypedOptionsParam
 from firecube.cli._uri_policy import parse_and_validate_uri
 from firecube.core.controlplane import ChunkManager
@@ -259,7 +259,7 @@ See also: firecube zarr index verify, firecube zarr index rebuild
 """,
 )
 @target_uri_option(tier="inspect")
-@click.option("--json", "as_json", is_flag=True, help="Emit the raw record as JSON.")
+@format_option(("table", "json"))
 @click.option(
     "--derived/--no-derived",
     default=False,
@@ -270,15 +270,15 @@ See also: firecube zarr index verify, firecube zarr index rebuild
         "NEVER persists anything."
     ),
 )
-def show_cmd(target: str, as_json: bool, derived: bool) -> None:
-    """Show the current resolved-index record."""
+def show_cmd(target: str, output_format: str, derived: bool) -> None:
+    """Show the current resolved-index record; `-f json` emits the raw record."""
 
     manager, product_name = _recorded_manager(target)
     try:
         record = _load_record(manager, product_name)
         if record is None:
             _exit_no_record()
-        if as_json:
+        if output_format == "json":
             click.echo(record.to_json_bytes().decode("utf-8"))
             return
         click.echo(f"schema_version: {record.schema_version}")

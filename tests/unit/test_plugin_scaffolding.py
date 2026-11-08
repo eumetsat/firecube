@@ -82,13 +82,6 @@ FORBIDDEN_DEPS: dict[str, list[str]] = {
     "direct_zarr": ["xarray", "pandas", "pyarrow"],
 }
 
-OUTPUT_FORMAT_PER_TEMPLATE: dict[str, str] = {
-    "base": "zarr",
-    "zarr": "zarr",
-    "parquet": "parquet",
-    "direct_zarr": "zarr",
-}
-
 # Minimal stand-in for PluginContext: the generated hooks only touch these two.
 _CTX = SimpleNamespace(materialize=lambda item: Path(item), target="file:///tmp/demo_foo_out")
 _ITEM = "observation.nc"
@@ -195,12 +188,12 @@ def test_generated_readme_names_reader_and_documents_the_flow(
         "--input-data file:///path/to/your/input",
         "--target file:///tmp/demo_foo_out",
         "--product-name demo_foo",
-        f"--output-format {OUTPUT_FORMAT_PER_TEMPLATE[template_type]}",
         "--write-mode",
         "--input-filters",
     ):
         assert flag in readme, flag
-    # Storage type and driver are inferred from the file:// URI.
+    # The ingestor class owns its output format; storage type and driver are inferred from the URI.
+    assert "--output-format" not in readme
     assert "--storage-type" not in readme
     assert "--storage-driver" not in readme
     for command in ("plugins install --editable .", "plugins list", "plugins describe demo_foo"):

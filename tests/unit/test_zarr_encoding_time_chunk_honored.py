@@ -88,8 +88,6 @@ def _ingest_args(
         "fsspec",
         "--write-mode",
         "direct",
-        "--output-format",
-        "zarr",
     ]
     if chunk_shape is not None:
         args.extend(["--option", f"zarr_chunk_shape={json.dumps(chunk_shape)}"])

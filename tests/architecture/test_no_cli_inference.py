@@ -123,8 +123,6 @@ def test_omitted_input_data_does_not_become_literal_none(tmp_path: Path) -> None
                 "cli_test_plugin",
                 "--target",
                 target.as_uri(),
-                "--output-format",
-                "zarr",
                 "--storage-type",
                 "local",
                 "--storage-driver",

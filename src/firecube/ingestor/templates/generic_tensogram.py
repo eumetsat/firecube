@@ -17,11 +17,10 @@
 from __future__ import annotations
 
 import contextlib
-import types
 from abc import abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import xarray as xr
 
@@ -149,12 +148,6 @@ def process_tensogram_batch(self: Any, batch: PipelineBatch, ctx: PluginContext)
         self.batch_teardown(ctx)
 
 
-def bind_tensogram_strategy(ingestor: Any) -> None:
-    """Bind Tensogram batch processing to a dataset-producer ingestor instance."""
-    ingestor.template_config_class = TensogramTemplateConfig
-    ingestor._process_batch = types.MethodType(process_tensogram_batch, ingestor)
-
-
 class GenericTensogramIngestor(BaseIngestor):
     """Template for plugins that write directly to Tensogram ``.tgm`` archives.
 
@@ -165,6 +158,7 @@ class GenericTensogramIngestor(BaseIngestor):
     """
 
     template_config_class = TensogramTemplateConfig
+    output_format: ClassVar[str] = "tensogram"
 
     @abstractmethod
     def build_dataset(self, group: str, items: list[Any], ctx: PluginContext) -> xr.Dataset | None:

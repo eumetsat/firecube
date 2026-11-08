@@ -169,7 +169,7 @@ def preallocate(
 
     input_filters = resolve_input_filters(ctx, plugin, input_filters)
 
-    from firecube.ingestor.api import BaseIngestor
+    from firecube.ingestor.api import BaseIngestor, ExecutionParams
     from firecube.ingestor.runtime.preallocate import SlotWindowError, preallocate_product
     from firecube.ingestor.runtime.producer import capture_producer
 
@@ -231,6 +231,7 @@ def preallocate(
             input_filters=input_filters,
             stac_search=stac_search,
             run_id="zarr-preallocate",
+            execution=ExecutionParams(write_mode=write_mode),
         )
         # A dry run records no run, so it captures no producer.
         producer = (

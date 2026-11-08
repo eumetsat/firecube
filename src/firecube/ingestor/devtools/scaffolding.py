@@ -171,7 +171,6 @@ compression, and sharding defaults live in `ZarrStorageConfig` in the ingestor."
 _README_SUBSTITUTIONS_PER_TEMPLATE: dict[str, dict[str, str]] = {
     "base": {
         "hook_summary": "write_product_item()",
-        "output_format": "zarr",
         "output_suffix": "",
         "write_mode_default": "direct",
         "extra_incomplete_note": "",
@@ -190,7 +189,6 @@ relying on `--write-mode staged`.""",
     },
     "zarr": {
         "hook_summary": "read_dataset()",
-        "output_format": "zarr",
         "output_suffix": ".zarr",
         "write_mode_default": "direct",
         "extra_incomplete_note": (
@@ -210,7 +208,6 @@ print(xr.open_zarr("/tmp/{plugin_name}_out.zarr", group="default", consolidated=
     },
     "parquet": {
         "hook_summary": "read_table()",
-        "output_format": "parquet",
         "output_suffix": ".parquet",
         "write_mode_default": "direct",
         "extra_incomplete_note": "",
@@ -231,7 +228,6 @@ writes the part files in a local workspace and uploads them at the end.""",
     },
     "direct_zarr": {
         "hook_summary": "read_product_item()",
-        "output_format": "zarr",
         "output_suffix": ".zarr",
         "write_mode_default": "direct",
         "extra_incomplete_note": _DIRECT_ZARR_EXTRA_INCOMPLETE_NOTE,
@@ -275,7 +271,6 @@ uv run firecube ingest {plugin_name} \\
   --input-data file:///path/to/your/input \\
   --target file:///tmp/{plugin_name}_out.zarr \\
   --product-name {plugin_name} \\
-  --output-format zarr \\
   --write-mode direct \\
   --slot-start 0 \\
   --slot-end 24

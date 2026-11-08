@@ -25,7 +25,7 @@ import pytest
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
 from firecube.ingestor.api import (
     DirectZarrIngestor,
-    EngineConfig,
+    ExecutionParams,
     IngestContext,
     IngestResult,
     OutputPaths,
@@ -41,8 +41,10 @@ from tests.helpers.storage import begin_write_session
 pytestmark = pytest.mark.unit
 
 
-def _runtime_ctx() -> RuntimeIngestContext:
-    return RuntimeIngestContext(source="/tmp/source", target="/tmp/target")
+def _runtime_ctx(execution: ExecutionParams | None = None) -> RuntimeIngestContext:
+    return RuntimeIngestContext(
+        source="/tmp/source", target="/tmp/target", execution=execution or ExecutionParams()
+    )
 
 
 def _batch() -> PipelineBatch:
@@ -138,18 +140,16 @@ class _SlotFilteringHost(DirectZarrIngestor):
 
 
 def test_run_sequential_filters_batches_to_configured_slot_range() -> None:
-    ctx = _runtime_ctx()
+    ctx = _runtime_ctx(ExecutionParams(slot_start=1, slot_end=4))
     host = _SlotFilteringHost(_batch())
-    cfg = EngineConfig(slot_start=1, slot_end=4)
     host._bind_index_at_startup(PluginContext(ctx))
-    begin_write_session(host, PluginContext(ctx), engine_config=cfg)
+    begin_write_session(host, PluginContext(ctx))
 
     state = engine_module.run_sequential(
         ctx=ctx,
         host=host,  # type: ignore[arg-type]
         product="product",
         batch_size=2,
-        engine_config=cfg,
         log=host._log,
     )
 
@@ -173,7 +173,6 @@ def test_run_sequential_no_slot_falls_through() -> None:
         host=host,
         product="product",
         batch_size=10,
-        engine_config=EngineConfig(),
         log=host._log,
     )
 

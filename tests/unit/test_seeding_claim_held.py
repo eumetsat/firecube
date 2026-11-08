@@ -97,7 +97,6 @@ def _make_ctx(
     source_dir.mkdir(exist_ok=True)
     (source_dir / "input.nc").touch()
     options: dict[str, Any] = {
-        "write_mode": "staged",
         "resume_existing": resume_existing,
         "pipeline_batch_size": 1,
         "pipeline_workers": 1,

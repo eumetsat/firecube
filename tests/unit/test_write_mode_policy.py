@@ -26,7 +26,6 @@ from firecube.core.controlplane import ChunkManager
 from firecube.core.product import resolve_dataset_target
 from firecube.core.storage.completion import StorageCompleter
 from firecube.ingestor.api import IngestResult, OutputPaths
-from firecube.ingestor.config.engine import EngineConfig
 from firecube.ingestor.runtime.base import BaseIngestor
 from firecube.ingestor.runtime.zarr import batch_runner
 from firecube.ingestor.templates import generic as generic_module
@@ -37,6 +36,7 @@ from firecube.ingestor.templates.direct_zarr import (
     ZarrGroupSpec,
 )
 from firecube.ingestor.types.context import (
+    ExecutionParams,
     IngestContext,
     PipelineBatch,
     PluginContext,
@@ -86,9 +86,14 @@ class _DirectMetricsIngestor(DirectZarrIngestor):
         ]
 
 
-def _plugin_ctx(tmp_path: Path) -> PluginContext:
+def _plugin_ctx(tmp_path: Path, write_mode: str = "staged") -> PluginContext:
     runtime_ctx = RuntimeIngestContext.from_ingest_context(
-        IngestContext(source=".", target="out.zarr", output_format="zarr"),
+        IngestContext(
+            source=".",
+            target="out.zarr",
+            output_format="zarr",
+            execution=ExecutionParams(write_mode=write_mode),
+        ),
         run_id="run-1",
         temp_root=tmp_path,
         materializer=lambda source: Path(source),
@@ -187,7 +192,6 @@ def test_direct_zarr_storage_handled_metric_matches_write_mode(
     storage_handled: bool,
 ) -> None:
     ingestor = _DirectMetricsIngestor()
-    ingestor.engine_config = EngineConfig(write_mode=write_mode)
     cast(Any, ingestor)._chunk_manager = SimpleNamespace(
         storage_config=object(), acquire_claim=MagicMock(return_value=object())
     )
@@ -199,7 +203,7 @@ def test_direct_zarr_storage_handled_metric_matches_write_mode(
         ingestor, "resolve_output_uri", MagicMock(return_value=str(tmp_path / "out.zarr"))
     )
     batch = PipelineBatch(batch_id="batch-1", data_path=tmp_path, items=["source.nc"])
-    ctx = _plugin_ctx(tmp_path)
+    ctx = _plugin_ctx(tmp_path, write_mode)
 
     begin_write_session(ingestor, ctx)
     result = ingestor._process_batch(batch, ctx)

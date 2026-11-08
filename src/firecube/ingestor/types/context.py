@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import re
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
@@ -40,6 +42,82 @@ if TYPE_CHECKING:
 
 # Internal constants
 BATCH_META_TIMESTAMPS = "timestamps"
+
+_SLOT_GROUP_SAFE = re.compile(r"^[A-Za-z0-9_.\-]+$")
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionParams:
+    """How one run executes: its write mode, slot window, static-array owner and dry run.
+
+    Options and plugin configuration never carry these fields. Construction validates them.
+
+    Attributes:
+        write_mode: ``"staged"`` builds the output in a workspace, then uploads it; ``"direct"``
+            writes the target in place.
+        slot_start: First slot index of an orchestrated parallel run.
+        slot_end: One past the last slot index of an orchestrated parallel run.
+        slot_size: Slot width the CLI used to derive the slot range from the environment.
+        slot_group: The Zarr group this worker owns in a multi-group slot run.
+        suppress_static_emission_for_non_owner: Skip static-array writes unless ``slot_start``
+            equals ``static_owner_slot_start``.
+        static_owner_slot_start: The slot start of the worker that writes static arrays.
+        dry_run: Plan the run and report what would block it, without writing anything.
+    """
+
+    write_mode: str = "staged"
+    slot_start: int | None = None
+    slot_end: int | None = None
+    slot_size: int | None = None
+    slot_group: str | None = None
+    suppress_static_emission_for_non_owner: bool = False
+    static_owner_slot_start: int | None = None
+    dry_run: bool = False
+
+    def __post_init__(self) -> None:
+        if self.suppress_static_emission_for_non_owner and self.static_owner_slot_start is None:
+            raise ConfigurationError(
+                "suppress_static_emission_for_non_owner=True requires static_owner_slot_start"
+            )
+        if self.suppress_static_emission_for_non_owner and self.slot_start is None:
+            raise ConfigurationError(
+                "suppress_static_emission_for_non_owner=True requires slot_start to be set "
+                "(serial runs would silently skip all static writes without a slot boundary)"
+            )
+
+        if self.slot_group is not None and not self.slot_group.strip():
+            raise ValueError(
+                "slot_group must be a non-empty string when set; got empty or whitespace string."
+            )
+        if self.slot_group is not None and not _SLOT_GROUP_SAFE.match(self.slot_group):
+            warnings.warn(
+                f"slot_group={self.slot_group!r} contains characters outside [A-Za-z0-9_.-]; "
+                f"will be URL-encoded in run_id and WAL paths. This works correctly but may "
+                f"make run IDs less human-readable. Consider sanitizing your zarr_schema() "
+                f"group names if you control them.",
+                stacklevel=2,
+            )
+
+        if self.slot_start is None and self.slot_end is None:
+            return
+
+        if self.slot_start is None or self.slot_end is None:
+            raise ValueError(
+                Message(
+                    "{slot_start} and {slot_end} must be provided together",
+                    slot_start=Param("slot_start"),
+                    slot_end=Param("slot_end"),
+                )
+            )
+
+        if self.slot_start < 0:
+            raise ValueError(f"slot_start must be non-negative, got {self.slot_start}")
+        if self.slot_end < 0:
+            raise ValueError(f"slot_end must be non-negative, got {self.slot_end}")
+        if self.slot_start >= self.slot_end:
+            raise ValueError(
+                f"slot_start must be < slot_end, got [{self.slot_start}, {self.slot_end})"
+            )
 
 
 @dataclass(slots=True)
@@ -77,6 +155,11 @@ class IngestContext:
     ``stac://`` URI. A library caller may pass a local path. Use
     ``local_path_from_target`` from ``firecube.core.api`` for the local path of a
     ``file://`` value.
+
+    The ingestor class declares the output format. Leave ``output_format`` unset or name that
+    format; ``run`` refuses another with ``ConfigurationError``.
+
+    ``execution`` holds the write mode and slot window of the run, as `ExecutionParams`.
     """
 
     source: str = ""
@@ -94,6 +177,7 @@ class IngestContext:
     telemetry: IngestionTelemetry | None = None
 
     sources: tuple[str, ...] = ()
+    execution: ExecutionParams = field(default_factory=ExecutionParams)
 
     def __post_init__(self) -> None:
         if self.sources:
@@ -164,6 +248,7 @@ class RuntimeIngestContext(IngestContext):
             storage=ctx.storage,
             run_id=run_id,
             telemetry=ctx.telemetry,
+            execution=ctx.execution,
             identity=RuntimeIdentity(run_id=run_id, temp_root=temp_root),
             services=RuntimeServices(materializer=materializer),
         )
@@ -200,12 +285,12 @@ class RuntimeIngestContext(IngestContext):
 
     @property
     def dry_run(self) -> bool:
-        """Whether side-effecting writes should be suppressed when supported."""
+        """Whether this run only plans and writes nothing."""
         return self.flags.dry_run
 
     @dry_run.setter
     def dry_run(self, value: bool) -> None:
-        """Set dry-run behavior for this runtime execution."""
+        """Set whether this run only plans."""
         self.flags.dry_run = bool(value)
 
     @property
@@ -330,12 +415,16 @@ class PluginContext:
 
     @property
     def output_format(self) -> str | None:
-        """Requested output format for this run, or ``None`` when unset.
+        """The output format the ingestor class declares in ``output_format``.
 
-        One of ``"zarr"``, ``"parquet"``, or ``"tensogram"`` for the
-        built-in templates; the CLI defaults it to ``"zarr"``.
+        The built-in templates declare ``"zarr"``, ``"parquet"`` or ``"tensogram"``.
         """
         return self._ctx.output_format
+
+    @property
+    def execution(self) -> ExecutionParams:
+        """The write mode and slot window of this run, as frozen `ExecutionParams`."""
+        return self._ctx.execution
 
     @property
     def storage(self) -> StorageContext | None:
@@ -377,11 +466,11 @@ class PluginContext:
 
     @property
     def dry_run(self) -> bool:
-        """Whether side-effecting writes should be suppressed when supported.
+        """Whether the engine is planning a dry run (``ingest --dry-run``).
 
-        Engine-owned flag; read-only for plugins. Plugins that honor it
-        should skip persistent writes while still exercising the rest of
-        their processing.
+        Engine-owned flag; read-only for plugins. A dry run calls only the
+        planning hooks, such as discovery, filtering and grouping. It
+        processes no batch.
         """
         return self._ctx.dry_run
 

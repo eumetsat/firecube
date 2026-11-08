@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 
 from firecube.core.index_spec import IndexSpec, ItemInfo, RegularTimeAxis
-from firecube.ingestor.api import ConfigurationError, DirectZarrIngestor
+from firecube.ingestor.api import ConfigurationError, DirectZarrIngestor, ExecutionParams
 from firecube.ingestor.runtime.parallel_execution_state import _ParallelExecutionState
 from firecube.ingestor.templates.direct_zarr import WriteIntent, ZarrArraySpec, ZarrGroupSpec
 from tests.helpers.storage import begin_write_session
@@ -75,23 +75,12 @@ def _make_ingestor(
     schema_groups: list[str],
     global_expected: dict[str, int],
     intents: list[WriteIntent],
-    slot_start: int | None = 0,
-    slot_end: int | None = 10,
 ) -> DirectZarrIngestor:
     class _Ingestor(DirectZarrIngestor):
         PRODUCT_NAME: ClassVar[str] = "global_expected_test"
 
         def __init__(self) -> None:
             super().__init__(name="global_expected_test", chunk_manager=cast(Any, _ChunkManager()))
-            self.engine_config = cast(
-                Any,
-                SimpleNamespace(
-                    write_mode="direct",
-                    slot_start=slot_start,
-                    slot_end=slot_end,
-                    slot_group=None,
-                ),
-            )
 
         def index_spec(self, ctx) -> IndexSpec:
             _ = ctx
@@ -138,6 +127,7 @@ def _run_process_batch(
     ingestor: DirectZarrIngestor,
     global_schema: dict[str, int],
     setup_stub: Any,
+    execution: ExecutionParams | None = None,
 ):
     import firecube.ingestor.api as api
     import firecube.ingestor.templates.direct_zarr as direct_zarr
@@ -163,6 +153,7 @@ def _run_process_batch(
         _ctx=object(),
         run_id="run-1",
         storage=None,
+        execution=execution or ExecutionParams(write_mode="direct", slot_start=0, slot_end=10),
         option=lambda key, default=None: default,
     )
     begin_write_session(ingestor, ctx)
@@ -287,8 +278,6 @@ def test_non_parallel_mode_skip_check(
         schema_groups=["A", "B"],
         global_expected={"A": 1000, "B": 1000},
         intents=[_intent("A")],
-        slot_start=None,
-        slot_end=None,
     )
 
     result, captured = _run_process_batch(
@@ -297,6 +286,7 @@ def test_non_parallel_mode_skip_check(
         ingestor=ingestor,
         global_schema={"A": 1000, "B": 1000},
         setup_stub=lambda **kwargs: (_ for _ in ()).throw(AssertionError("setup must not run")),
+        execution=ExecutionParams(write_mode="direct"),
     )
 
     assert result.success is True

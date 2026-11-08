@@ -83,8 +83,6 @@ def _ingest_args(tmp_path: Path, target: Path, *extra: str) -> list[str]:
         "fsspec",
         "--write-mode",
         "direct",
-        "--output-format",
-        "zarr",
         *extra,
     ]
 

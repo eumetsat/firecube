@@ -24,6 +24,7 @@ from firecube.cli._errors import render
 from firecube.core.controlplane import ChunkManager, SpanCoverage
 from firecube.core.controlplane.types import EVENT_REPLACEMENT_COMMITTED
 from firecube.core.errors import ManifestError, StorageError
+from firecube.ingestor.api import ExecutionParams
 from firecube.ingestor.runtime.recording import SpanRecorder
 from firecube.ingestor.types.context import (
     IngestResult,
@@ -316,9 +317,14 @@ def test_force_reingest_of_a_real_run_replaces_prior_spans_and_spans_carry_no_pr
             return xr.Dataset({"v": (("timestamp",), np.ones(len(items)))}, {"timestamp": t})
 
     for force in (False, True):
-        opts = {"write_mode": "direct", "pipeline_workers": 1, "no_progress": True}
+        opts = {"pipeline_workers": 1, "no_progress": True}
         _Plugin().run(
-            make_test_context(tmp_path, product="p.zarr", options={**opts, "force_reingest": force})
+            make_test_context(
+                tmp_path,
+                product="p.zarr",
+                options={**opts, "force_reingest": force},
+                execution=ExecutionParams(write_mode="direct"),
+            )
         )
 
     manager = ChunkManager(binding=make_test_binding(tmp_path), workspace=tmp_path)

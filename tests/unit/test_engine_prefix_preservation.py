@@ -56,7 +56,7 @@ def _make_ctx(source: Path, *, target: str) -> RuntimeIngestContext:
         target=target,
         output_format="zarr",
         storage=StorageContext(output=_session(target)),
-        options={"write_mode": "staged", "upload_workers": 4},
+        options={"upload_workers": 4},
         run_id="test-run",
         identity=RuntimeIdentity(run_id="test-run"),
     )
@@ -222,7 +222,7 @@ def test_sessionless_completion_preserves_prefix_from_ctx_target(
         target=target,
         output_format="zarr",
         storage=StorageContext(output=_session(target)),
-        options={"write_mode": "staged", "upload_workers": 4},
+        options={"upload_workers": 4},
         run_id="test-run",
         identity=RuntimeIdentity(run_id="test-run"),
     )

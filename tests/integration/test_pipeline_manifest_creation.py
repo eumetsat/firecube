@@ -21,7 +21,12 @@ import xarray as xr
 
 from firecube.core.controlplane import ChunkManager
 from firecube.core.storage.uri import StorageUri
-from firecube.ingestor.api import GenericZarrIngestor, PluginContext, register_ingestor
+from firecube.ingestor.api import (
+    ExecutionParams,
+    GenericZarrIngestor,
+    PluginContext,
+    register_ingestor,
+)
 from tests.helpers.storage import make_test_binding, make_test_context
 
 
@@ -62,8 +67,8 @@ def test_pipeline_manifest_creation(tmp_path, pipeline_workers):
             "pipeline_workers": pipeline_workers,
             "pipeline_batch_size": 1,
             "input_filters": ["*.nc"],
-            "write_mode": "direct",
         },
+        execution=ExecutionParams(write_mode="direct"),
     )
 
     ingestor = PipelineIngestorForTesting()
